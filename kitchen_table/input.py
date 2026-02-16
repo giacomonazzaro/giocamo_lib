@@ -79,26 +79,13 @@ def handle_mouse_press(state: Table_State) -> None:
         #     gs.remove_card_from_stack(card_id, state.stacks[stack_idx], state)
         # else:
         #     gs.remove_loose_card(card_id, state)
-    print('press', drag)
 
 
 def handle_mouse_release(state: Table_State) -> None:
     """Handle mouse button release - drop card."""
     drag = state.drag_state
-    print('release', drag)
     if drag.card_id < 0:
         return
-
-    # mx = get_mouse_x()
-    # my = get_mouse_y()
-
-    # # Check if dropping on a stack
-    # target_stack_idx = find_stack_at(mx, my, state)
-    # if target_stack_idx >= 0:
-    #     gs.add_card_to_stack(drag.card_id, state.stacks[target_stack_idx], state)
-    # else:
-    #     # Drop as loose card if not on a stack
-    #     gs.add_loose_card(drag.card_id, state)
 
     # Clear drag state
     stack_id = drag.source_stack
@@ -114,23 +101,25 @@ def handle_mouse_move(state: Table_State) -> None:
     """Update dragged card position."""
     drag = state.drag_state
 
-    if drag.card_id >= 0:
-        mx = get_mouse_x()
-        my = get_mouse_y()
-        card = state.cards[drag.card_id]
-        card.x = mx - drag.offset_x
-        card.y = my - drag.offset_y
+    if drag.card_id < 0:
+        return
+    
+    mx = get_mouse_x()
+    my = get_mouse_y()
+    card = state.cards[drag.card_id]
+    card.x = mx - drag.offset_x
+    card.y = my - drag.offset_y
 
-        target_stack_idx = find_stack_at(mx, my, state)
-        if drag.source_stack != target_stack_idx:
-            # gs.move_card_to_stack(drag.card_id, state.stacks[drag.source_stack], state.stacks[target_stack_idx], state)
-            state.stacks[drag.source_stack].cards.remove(drag.card_id)
-            gs.update_card_positions(state.stacks[drag.source_stack], state)
-            state.stacks[target_stack_idx].cards.append(drag.card_id)
-            drag.source_stack = target_stack_idx
+    target_stack_idx = find_stack_at(mx, my, state)
+    if drag.source_stack != target_stack_idx:
+        # gs.move_card_to_stack(drag.card_id, state.stacks[drag.source_stack], state.stacks[target_stack_idx], state)
+        state.stacks[drag.source_stack].cards.remove(drag.card_id)
+        gs.update_card_positions(state.stacks[drag.source_stack], state)
+        state.stacks[target_stack_idx].cards.append(drag.card_id)
+        drag.source_stack = target_stack_idx
 
+    gs.update_card_positions(state.stacks[target_stack_idx], state)
 
-        gs.update_card_positions(state.stacks[target_stack_idx], state)
 
 def handle_rotate_card(state: Table_State, clockwise: bool = True) -> None:
     """Rotate the card under the cursor by 90 degrees."""
