@@ -23,6 +23,7 @@ def remove_card_from_stack(card_id: int, stack: Stack, state: Table_State) -> in
 def update_card_positions(stack: Stack, state: Table_State) -> None:
     """Update x,y positions of all cards in a stack based on spread values."""
     n = len(stack.cards)
+    stack.cards.sort(key = lambda card_id: state.cards[card_id].x)
     spread_x = stack.spread_x
     spread_y = stack.spread_y
     card_width = tweak["card_width"]
@@ -36,6 +37,8 @@ def update_card_positions(stack: Stack, state: Table_State) -> None:
     start_x = mid_x - (total_spread_x + card_width) / 2
     start_y = stack.y - total_spread_y / 2
     for i, card_id in enumerate(stack.cards):
+        if card_id == state.drag_state.card_id:
+            continue
         card = state.cards[card_id]
         card.x = start_x + i * spread_x
         card.y = start_y + i * spread_y
