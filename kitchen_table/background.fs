@@ -136,15 +136,6 @@ void main() {
     
     vec3 col = combine(a, b);
     col = max(col, 0.1 * fbm(uv + t * 0.1));
-    float dd = vor;
-    //col = vec3();
-    //col *= vor;
-    //col = vec3(vor);
-    // Dark shifting color palette
-    // vec3 col;
-    // col.r = 0.08 + 0.04 * sin(v * 3.14);
-    // col.g = 0.09 + 0.04 * sin(v * 3.14 + 0.5);
-    // col.b = 0.13 + 0.06 * sin(v * 3.14 + 1.0);
 
     fragColor = vec4(col, 1.0);
 }

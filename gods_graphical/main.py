@@ -14,7 +14,7 @@ import kitchen_table.models as kt
 from kitchen_table.game_state import update_card_positions
 from kitchen_table.config import tweak
 from kitchen_table.rendering import draw_table, draw_background
-from kitchen_table.input import find_card_at
+from kitchen_table.input import find_card_at, update_input
 
 from gods_graphical.agent_ui import Agent_UI, update_stacks
 from gods_graphical.ui import (
@@ -130,8 +130,7 @@ def setup_online_game(host: str = "localhost", port: int = 9999):
     return player_index, seed, sock
 
 
-def play(gods_state: Game_State, table_state: kt.Table_State, ui_state: UI_State, agent_local: Agent, agent_opponent: Agent, player_index: int):
-    agent = Agent_Duel(agent_local, agent_opponent, swap=player_index != 0)
+def play(gods_state: Game_State, table_state: kt.Table_State, ui_state: UI_State, agent: Agent | None, player_index: int):
     table_state.draw_callback = lambda table: draw_hud(gods_state, table_state, bottom_player=player_index)
 
     def display(state):
@@ -142,11 +141,12 @@ def play(gods_state: Game_State, table_state: kt.Table_State, ui_state: UI_State
     init_window(tweak["window_width"], tweak["window_height"], "Gods Online")
     set_target_fps(tweak["target_fps"])
 
-    game_thread = threading.Thread(
-        target=lambda: game_loop(gods_state, agent, display),
-        daemon=True,
-    )
-    game_thread.start()
+    if agent:
+        game_thread = threading.Thread(
+            target=lambda: game_loop(gods_state, agent, display),
+            daemon=True,
+        )
+        game_thread.start()
 
     while not window_should_close():
         if gods_state.game_over:
@@ -159,6 +159,9 @@ def play(gods_state: Game_State, table_state: kt.Table_State, ui_state: UI_State
             table_state.zoomed_card_id = result[0] if result else -1
         else:
             table_state.zoomed_card_id = -1
+
+        if not agent:
+            update_input(table_state)
 
         begin_drawing()
         draw_background()
@@ -184,20 +187,27 @@ def play(gods_state: Game_State, table_state: kt.Table_State, ui_state: UI_State
     close_window()
 
 if __name__ == "__main__":
-    import sys
-    if len(sys.argv) > 2:
-        host = sys.argv[1] if len(sys.argv) > 1 else "localhost"
-        port = int(sys.argv[2]) if len(sys.argv) > 2 else 9999
-        player_index, seed, sock = setup_online_game(host, port)
+    import argparse
+
+    parser = argparse.ArgumentParser(description="Gods - graphical card game")
+    parser.add_argument("--seed", type=int, default=None, help="random seed for game setup")
+    parser.add_argument("--host", type=str, default="localhost", help="server host for online play")
+    parser.add_argument("--port", type=int, default=9999, help="server port for online play")
+    parser.add_argument("--online", action="store_true", help="connect to an online game server")
+    parser.add_argument("--no-game-logic", action="store_true", default=False, help="playground")
+    args = parser.parse_args()
+
+    if args.online:
+        player_index, seed, sock = setup_online_game(args.host, args.port)
     else:
         player_index = 0
-        seed = None
+        seed = args.seed
         sock = None
-    
+
     gods_state = quick_setup(seed)
     table_state = init_table_state(gods_state, bottom_player=player_index)
     ui_state = UI_State()
-    
+
     agent_ui = Agent_UI(table_state, ui_state, bottom_player=player_index)
     if sock is not None:
         agent_local = Agent_Local_Online(agent_ui, sock)
@@ -205,8 +215,13 @@ if __name__ == "__main__":
     else:
         agent_local = agent_ui
         agent_opponent = Agent_Minimax_Stochastic()
-
-    play(gods_state, table_state, ui_state, agent_local, agent_opponent, player_index)
     
+    if args.no_game_logic:
+        agent = None
+    else:
+        agent = Agent_Duel(agent_local, agent_opponent, swap=player_index != 0)
+
+    play(gods_state, table_state, ui_state, agent, player_index)
+
     if sock is not None:
         sock.close()
