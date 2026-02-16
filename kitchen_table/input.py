@@ -14,19 +14,23 @@ def point_in_card(px: float, py: float, card: Card) -> bool:
 
 def point_in_stack_area(px: float, py: float, stack: Stack, state: Table_State) -> bool:
     """Check if point is in the stack's general area (for drop targets)."""
-    w = tweak["card_width"]
+    # w = tweak["card_width"]
     h = tweak["card_height"]
 
-    if stack.cards:
-        # Calculate bounds including all cards in stack
-        last_card_id = stack.cards[-1]
-        last_card = state.cards[last_card_id]
-        max_x = last_card.x + w
-        max_y = last_card.y + h
-        return (stack.x <= px <= max_x and stack.y <= py <= max_y)
-    else:
+    def point_in_rect(mx: float, my: float, x: float, y: float, w: float, h: float) -> bool:
+        return x <= mx <= x + w and y <= my <= y + h
+
+    return point_in_rect(px, py, stack.x, stack.y, stack.width, h)
+    # if stack.cards:
+    #     # Calculate bounds including all cards in stack
+    #     last_card_id = stack.cards[-1]
+    #     last_card = state.cards[last_card_id]
+    #     max_x = last_card.x + w
+    #     max_y = last_card.y + h
+    #     return (stack.x <= px <= max_x and stack.y <= py <= max_y)
+    # else:
         # Empty stack - just check base position
-        return (stack.x <= px <= stack.x + w and stack.y <= py <= stack.y + h)
+    # return (stack.x <= px <= stack.x + w and stack.y <= py <= stack.y + h)
 
 
 def find_card_at(px: float, py: float, state: Table_State) -> tuple[int, int] | None:
