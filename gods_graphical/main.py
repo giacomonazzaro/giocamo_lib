@@ -36,8 +36,6 @@ from gods_online.setup import peer_to_peer, setup_online_game
 
 app = typer.Typer()
 
-STUN_SERVER = os.getenv('STUN_SERVER', 'stun.l.google.com')
-STUN_PORT = int(os.getenv('STUN_PORT', '19302'))
 
 def init_table_state(gods_state: Game_State, bottom_player: int = 0) -> kt.Table_State:
     cards = []
@@ -192,15 +190,15 @@ def p2p(
     main(*setup_online_game(sock, local))
 
 @app.command()
-def agent():
-    main(player_index=0, seed=None, sock=None, no_game_logic=False)
+def agent(game_logic: bool = True):
+    main(player_index=0, seed=None, sock=None, game_logic=game_logic)
 
 def main(
         player_index: int = 0, 
         seed: int | None = None, 
         sock: socket.socket | None = None,
         friend_addr: tuple[str, int] | None = None,
-        no_game_logic: bool = False
+        game_logic: bool = False
 ):
     gods_state = quick_setup(seed)
     table_state = init_table_state(gods_state, bottom_player=player_index)
@@ -214,7 +212,7 @@ def main(
         agent_local = agent_ui
         agent_opponent = Agent_Minimax_Stochastic()
     
-    if no_game_logic:
+    if not game_logic:
         agent = None
     else:
         agent = Agent_Duel(agent_local, agent_opponent, swap=player_index != 0)

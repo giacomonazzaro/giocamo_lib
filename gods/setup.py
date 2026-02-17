@@ -50,7 +50,7 @@ def create_game(player1_deck: list[Card], player2_deck: list[Card], people_cards
                 player.hand.append(card)
     return game
 
-def quick_setup(seed: int) -> Game_State:
+def quick_setup(seed: int | None) -> Game_State:
     if seed is not None:
         random.seed(seed)
 

@@ -3,6 +3,10 @@ import random
 import struct
 import time
 import socket
+import os
+
+STUN_SERVER = os.getenv('STUN_SERVER', 'stun.l.google.com')
+STUN_PORT = int(os.getenv('STUN_PORT', '19302'))
 
 def get_ip_info(sock):
     """

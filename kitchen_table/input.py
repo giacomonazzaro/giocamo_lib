@@ -111,14 +111,14 @@ def handle_mouse_move(state: Table_State) -> None:
     card.y = my - drag.offset_y
 
     target_stack_idx = find_stack_at(mx, my, state)
-    if drag.source_stack != target_stack_idx:
-        # gs.move_card_to_stack(drag.card_id, state.stacks[drag.source_stack], state.stacks[target_stack_idx], state)
+    if target_stack_idx >= 0 and drag.source_stack != target_stack_idx:
         state.stacks[drag.source_stack].cards.remove(drag.card_id)
         gs.update_card_positions(state.stacks[drag.source_stack], state)
         state.stacks[target_stack_idx].cards.append(drag.card_id)
         drag.source_stack = target_stack_idx
 
-    gs.update_card_positions(state.stacks[target_stack_idx], state)
+    if target_stack_idx >= 0:
+        gs.update_card_positions(state.stacks[target_stack_idx], state)
 
 
 def handle_rotate_card(state: Table_State, clockwise: bool = True) -> None:

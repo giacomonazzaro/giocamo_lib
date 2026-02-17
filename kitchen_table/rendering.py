@@ -354,12 +354,18 @@ def draw_table(table_state: Table_State) -> None:
     for stack in table_state.stacks:
         for card_id in stack.cards:
             card = table_state.animated_cards[card_id]
+            if table_state.drag_state.card_id == card_id:
+                continue
             draw_card(card, face_up=stack.face_up)
 
     # Draw loose cards
     for card_id in table_state.loose_cards:
         card = table_state.animated_cards[card_id]
         draw_card(card, face_up=True)
+
+    if table_state.drag_state.card_id >= 0:
+        card = table_state.animated_cards[table_state.drag_state.card_id]
+        draw_card(card)
 
     if table_state.draw_callback is not None:
         table_state.draw_callback(table_state)
