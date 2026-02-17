@@ -222,9 +222,9 @@ def setup_online_game(sock: socket.socket, local: bool) -> tuple[int, int, socke
 
     # send seed to the other player
     sock.sendto(json.dumps({"type": "init", "seed": seed}).encode(), friend_addr)
-    typer.echo("joining")
+    typer.echo("[*] Waiting for friend to join...")
     listener.join()
-    print(f"You are Player {(player_index := game_init['player_index']) + 1}. Seed: {(seed := game_init['seed'])}")
+    print(f"[*] You are Player {(player_index := game_init['player_index']) + 1}. Seed: {(seed := game_init['seed'])}. Let's start the game!")
     return player_index, seed, sock, friend_addr
 
 
