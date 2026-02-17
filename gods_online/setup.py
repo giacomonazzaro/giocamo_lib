@@ -4,6 +4,8 @@ import struct
 import time
 import socket
 import os
+import typer
+import threading
 
 STUN_SERVER = os.getenv('STUN_SERVER', 'stun.l.google.com')
 STUN_PORT = int(os.getenv('STUN_PORT', '19302'))
