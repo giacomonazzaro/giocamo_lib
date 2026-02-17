@@ -6,7 +6,6 @@ import time
 import uuid
 import queue
 
-# --- CONFIGURATION ---
 MAX_PACKET_SIZE = 65507  # Max safe UDP payload
 RETRY_INTERVAL = 1.0     # Seconds between retries
 MAX_RETRIES = 5          # Give up after 5 tries
@@ -83,7 +82,6 @@ class ReliableUDPState:
         ack = {"t": "ACK", "i": msg_id}
         self.sock.sendto(json.dumps(ack).encode("utf-8"), addr)
 
-# --- GLOBAL STORE ---
 # We need to map the user's raw socket object to our "ReliableState" manager
 _socket_managers = {}
 
@@ -92,8 +90,6 @@ def _get_manager(sock: socket.socket) -> ReliableUDPState:
     if sock not in _socket_managers:
         _socket_managers[sock] = ReliableUDPState(sock)
     return _socket_managers[sock]
-
-# --- YOUR REQUESTED FUNCTIONS ---
 
 def send_message(sock: socket.socket, data: dict, addr: tuple[str, int]) -> None:
     """
@@ -127,6 +123,4 @@ def recv_message(sock: socket.socket) -> dict:
     # Get the next message from the queue (blocking)
     payload, sender_addr = manager.incoming_queue.get()
     
-    # Optional: If you need the sender address, you might want to return it too.
-    # But to match your original signature, we just return the dict.
     return payload
