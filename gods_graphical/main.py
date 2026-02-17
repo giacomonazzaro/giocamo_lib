@@ -1,28 +1,46 @@
 from __future__ import annotations
+
+import json
+import os
+import random
+import socket
+import struct
 import threading
+import time
+from typing import Annotated
 
-from pyray import *
+import pyray
+import typer
 
-from gods.models import Game_State, effective_power
-from gods.setup import quick_setup
-from gods.game import game_loop, compute_player_score
+import kitchen_table.models as kt
 from gods.agents.duel import Agent_Duel
 from gods.agents.minimax_stochastic import Agent_Minimax_Stochastic
-
-from gods_online.agent_remote import Agent_Local_Online, Agent_Remote
-import kitchen_table.models as kt
-from kitchen_table.game_state import update_card_positions
-from kitchen_table.config import tweak
-from kitchen_table.rendering import draw_table, draw_background
-from kitchen_table.input import find_card_at, update_input
-
+from gods.game import compute_player_score, game_loop
+from gods.models import Game_State, effective_power
+from gods.setup import quick_setup
 from gods_graphical.agent_ui import Agent_UI, update_stacks
 from gods_graphical.ui import (
-    UI_State, get_image_path, get_table_layout, draw_card_power_badge, draw_buttons,
-    draw_card_highlights, draw_player_hud, draw_people_ownership_bars,
-    draw_final_round_indicator, draw_game_over_screen,
+    UI_State,
+    draw_buttons,
+    draw_card_highlights,
+    draw_card_power_badge,
+    draw_final_round_indicator,
+    draw_game_over_screen,
+    draw_people_ownership_bars,
+    draw_player_hud,
+    get_image_path,
+    get_table_layout,
 )
+from gods_online.agent_remote import Agent_Local_Online, Agent_Remote
+from kitchen_table.config import tweak
+from kitchen_table.game_state import update_card_positions
+from kitchen_table.input import find_card_at, update_input
+from kitchen_table.rendering import draw_background, draw_table
 
+app = typer.Typer()
+
+STUN_SERVER = os.getenv('STUN_SERVER', 'stun.l.google.com')
+STUN_PORT = int(os.getenv('STUN_PORT', '19302'))
 
 def init_table_state(gods_state: Game_State, bottom_player: int = 0) -> kt.Table_State:
     cards = []
@@ -112,22 +130,109 @@ def draw_highlighted_cards(highlighted_cards: list, gods_state: Game_State, tabl
             continue
     draw_card_highlights(kt_ids, table_state)
 
-    
+def get_ip_info(sock):
+    """
+    Sends a raw STUN Binding Request to Google to find out our Public IP/Port.
+    We use the SAME socket that we will later use for chatting.
+    """
+    sock.settimeout(2)
+    try:
+        print(struct)
+        # STUN Binding Request (Header: 0x0001, Length: 0)
+        # We don't need a full STUN library for a simple binding request
+        data = struct.pack('!H', 0x0001) + struct.pack('!H', 0) + b'\x00'*16
+        
+        print(f"[*] Querying STUN server ({STUN_SERVER})...")
+        sock.sendto(data, (STUN_SERVER, STUN_PORT))
+        
+        response, _ = sock.recvfrom(2048)
+        
+        # Parse STUN Response (This is a simplified parser for IPv4)
+        # Skip header (20 bytes) -> look for MAPPED-ADDRESS attribute (0x0001)
+        offset = 20
+        while offset < len(response):
+            attr_type, attr_len = struct.unpack('!HH', response[offset:offset+4])
+            if attr_type == 0x0001: # MAPPED-ADDRESS
+                # Skip family(1) and port(2)
+                port = struct.unpack('!H', response[offset+6:offset+8])[0]
+                ip_octets = struct.unpack('!BBBB', response[offset+8:offset+12])
+                ip = ".".join(map(str, ip_octets))
+                return ip, port
+            offset += 4 + attr_len
+            
+    except Exception as e:
+        raise
+        print(f"[!] STUN failed: {e}")
+        return None, None
+    finally:
+        sock.settimeout(None) # Remove timeout for chat mode
 
-def setup_online_game(host: str = "localhost", port: int = 9999):
-    import socket
-    from gods_online.protocol import recv_message
 
-    # Connect and receive init
-    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    sock.connect((host, port))
-    print(f"Connected to {host}:{port}")
+def pick_seed(sock: socket.socket, seed: int, game_init: dict):
+    typer.echo("[*] Waiting to receive seed from friend...")
+    while True:
+        try:
+            data, _ = sock.recvfrom(1024)
+            msg = data.decode().strip()
+            # If we receive "PUNCH", just print a notification, don't clutter chat
+            if msg == "PUNCH":
+                typer.echo("[*] Received hole punch packet from friend, router should have opened the path.")
+                continue
+            elif "init" in json.loads(msg)["type"]:
+                typer.echo("[*] Received seed from friend, determining player order...")
+                # player with lower seed is player 0
+                if seed < (friend_seed := int(json.loads(msg)["seed"])):
+                    game_init.update({"seed": seed, "player_index": 0})
+                    break
+                else:
+                    game_init.update({"seed": friend_seed, "player_index": 1})
+                    break
+        except Exception as e:
+            typer.echo(f"[!] Error receiving seed: {e}")
+            break
 
-    msg = recv_message(sock)
-    seed = msg["seed"]
-    player_index = msg["player_index"]
-    print(f"You are Player {player_index + 1}. Seed: {seed}")
-    return player_index, seed, sock
+def setup_online_game(sock: socket.socket, local: bool) -> tuple[int, int, socket.socket, tuple[str, int]]:
+    """Send or receive init"""
+
+    # Keep-Alive Loop (Background)
+    # Because manual copy-pasting takes time, the router might close the port.
+    # We send a tiny packet to the STUN server every 20s to keep the port open
+    # while you are typing.
+    stop_keepalive = False
+    def keep_alive():
+        while not stop_keepalive:
+            sock.sendto(b'', (STUN_SERVER, STUN_PORT))
+            time.sleep(10)
+    if not local:
+        threading.Thread(target=keep_alive, daemon=True).start()
+
+    friend_ip = typer.prompt("What is your friend's public IP address")
+    friend_port = typer.prompt("What is your friend's public port", type=int)
+
+    # Stop the keep-alive to STUN server
+    stop_keepalive = True
+    friend_addr = (friend_ip, friend_port)
+
+    seed = random.randint(0, 2**32 - 1)
+    game_init: dict[str, int] = {}
+    # Start Listener
+    listener = threading.Thread(target=pick_seed, args=(sock, seed, game_init), daemon=True)
+    listener.start()
+
+    if not local:
+        # Hole Punching & Chat Loop
+        # Send a few punch packets to force the router to open the path
+        for _ in range(5):
+            typer.echo(f"[*] Sending hole punch packet to {friend_addr}...")
+            sock.sendto(b"PUNCH", friend_addr)
+            time.sleep(0.5)
+
+    # send seed to the other player
+    sock.sendto(json.dumps({"type": "init", "seed": seed}).encode(), friend_addr)
+    typer.echo("joining")
+    listener.join()
+    print(f"You are Player {(player_index := game_init['player_index']) + 1}. Seed: {(seed := game_init['seed'])}")
+    return player_index, seed, sock, friend_addr
 
 
 def play(gods_state: Game_State, table_state: kt.Table_State, ui_state: UI_State, agent: Agent | None, player_index: int):
@@ -137,9 +242,9 @@ def play(gods_state: Game_State, table_state: kt.Table_State, ui_state: UI_State
         update_stacks(table_state, gods_state, bottom_player=player_index)
 
     # Window
-    set_config_flags(ConfigFlags.FLAG_WINDOW_HIGHDPI)
-    init_window(tweak["window_width"], tweak["window_height"], "Gods Online")
-    set_target_fps(tweak["target_fps"])
+    pyray.set_config_flags(pyray.ConfigFlags.FLAG_WINDOW_HIGHDPI)
+    pyray.init_window(tweak["window_width"], tweak["window_height"], "Gods Online")
+    pyray.set_target_fps(tweak["target_fps"])
 
     if agent:
         game_thread = threading.Thread(
@@ -148,13 +253,13 @@ def play(gods_state: Game_State, table_state: kt.Table_State, ui_state: UI_State
         )
         game_thread.start()
 
-    while not window_should_close():
+    while not pyray.window_should_close():
         if gods_state.game_over:
             break
 
         # Handle card zoom
-        if is_key_down(KeyboardKey.KEY_SPACE):
-            mx, my = get_mouse_x(), get_mouse_y()
+        if pyray.is_key_down(pyray.KeyboardKey.KEY_SPACE):
+            mx, my = pyray.get_mouse_x(), pyray.get_mouse_y()
             result = find_card_at(mx, my, table_state)
             table_state.zoomed_card_id = result[0] if result else -1
         else:
@@ -163,12 +268,12 @@ def play(gods_state: Game_State, table_state: kt.Table_State, ui_state: UI_State
         if not agent:
             update_input(table_state)
 
-        begin_drawing()
+        pyray.begin_drawing()
         draw_background()
         draw_table(table_state)
         draw_buttons(ui_state.buttons)
         draw_highlighted_cards(ui_state.highlighted_cards, gods_state, table_state)
-        end_drawing()
+        pyray.end_drawing()
 
     # Game over screen
     if gods_state.game_over:
@@ -184,33 +289,49 @@ def play(gods_state: Game_State, table_state: kt.Table_State, ui_state: UI_State
             result_text = "It's a tie!"
         draw_game_over_screen(table_state, result_text, names, scores)
 
-    close_window()
+    pyray.close_window()
 
-if __name__ == "__main__":
-    import argparse
+@app.command()
+def p2p(
+    local: Annotated[bool, typer.Option("--local", help="Use local mode (no STUN, for testing on the same network)")] = False,
+):
+    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
-    parser = argparse.ArgumentParser(description="Gods - graphical card game")
-    parser.add_argument("--seed", type=int, default=None, help="random seed for game setup")
-    parser.add_argument("--host", type=str, default="localhost", help="server host for online play")
-    parser.add_argument("--port", type=int, default=9999, help="server port for online play")
-    parser.add_argument("--online", action="store_true", help="connect to an online game server")
-    parser.add_argument("--no-game-logic", action="store_true", default=False, help="playground")
-    args = parser.parse_args()
-
-    if args.online:
-        player_index, seed, sock = setup_online_game(args.host, args.port)
+    if local:
+        typer.echo("You're playing in local mode.")
+        your_ip = socket.gethostbyname_ex(socket.gethostname())[-1][-1]
+        your_port = typer.prompt("Enter the port to use for the game", type=int)
+        sock.bind(('0.0.0.0', your_port))
     else:
-        player_index = 0
-        seed = args.seed
-        sock = None
+        sock.bind(('0.0.0.0', 0))
+        your_ip, your_port = get_ip_info(sock)
 
+    if your_ip is None or your_port is None:
+        typer.echo("Could not discover your public IP and port using STUN. Please check your network configuration and try again.")
+        raise typer.Exit(1)
+    typer.echo("=" * 60)
+    typer.echo(f"Your public IP is: {your_ip}\nYour external port is: {your_port}\nShare this with your friend to connect directly, or use it to set up port forwarding on your router if needed.")
+    typer.echo("=" * 60)
+    
+    main(*setup_online_game(sock, local))
+
+@app.command()
+def agent():
+    main(player_index=0, seed=None, sock=None)
+
+def main(
+        player_index: int = 0, 
+        seed: int | None = None, 
+        sock: socket.socket | None = None,
+        friend_addr: tuple[str, int] | None = None,
+):
     gods_state = quick_setup(seed)
     table_state = init_table_state(gods_state, bottom_player=player_index)
     ui_state = UI_State()
 
     agent_ui = Agent_UI(table_state, ui_state, bottom_player=player_index)
-    if sock is not None:
-        agent_local = Agent_Local_Online(agent_ui, sock)
+    if sock is not None and friend_addr is not None:
+        agent_local = Agent_Local_Online(agent_ui, sock, friend_addr)
         agent_opponent = Agent_Remote(sock)
     else:
         agent_local = agent_ui
@@ -225,3 +346,6 @@ if __name__ == "__main__":
 
     if sock is not None:
         sock.close()
+
+if __name__ == "__main__":
+    app()
