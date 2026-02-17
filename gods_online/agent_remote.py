@@ -18,11 +18,12 @@ class Agent_Remote(Agent):
 
 class Agent_Local_Online(Agent):
     """Wraps a local agent and sends chosen action indices to the server."""
-    def __init__(self, local_agent: Agent, sock: socket.socket):
+    def __init__(self, local_agent: Agent, sock: socket.socket, friend_addr: tuple[str, int]):
         self.local_agent = local_agent
         self.sock = sock
+        self.friend_addr = friend_addr
 
     def choose_action(self, state: Game_State, choice: Choice, actions: list) -> int:
         index = self.local_agent.choose_action(state, choice, actions)
-        send_message(self.sock, {"type": "action", "index": index})
+        send_message(self.sock, {"type": "action", "index": index}, self.friend_addr)
         return index
