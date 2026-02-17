@@ -198,7 +198,7 @@ def main(
         seed: int | None = None, 
         sock: socket.socket | None = None,
         friend_addr: tuple[str, int] | None = None,
-        game_logic: bool = False
+        game_logic: bool = True
 ):
     gods_state = quick_setup(seed)
     table_state = init_table_state(gods_state, bottom_player=player_index)

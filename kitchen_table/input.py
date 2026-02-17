@@ -131,9 +131,9 @@ def handle_rotate_card(state: Table_State, clockwise: bool = True) -> None:
         card_id, _ = result
         card = state.cards[card_id]
         if clockwise:
-            card.rotation = (card.rotation + 90) % 360
+            card.rotation = (card.rotation + 90)
         else:
-            card.rotation = (card.rotation - 90) % 360
+            card.rotation = (card.rotation - 90)
 
 
 def update_input(state: Table_State) -> None:
