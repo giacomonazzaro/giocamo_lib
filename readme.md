@@ -7,17 +7,18 @@ To run the game simply run:
 ✗ uv run python3 -m gods_graphical.main --help
 RAYLIB STATIC 5.5.0.3 LOADED
 
- Usage: python -m gods_graphical.main [OPTIONS]
+ Usage: python -m gods_graphical.main [OPTIONS] COMMAND [ARGS]...
 
-╭─ Options ───────────────────────────────────────────────────────────────────────────────╮
-│ --host                -h      TEXT     Server host to connect to for online play        │
-│ --port                -p      INTEGER  Server port to connect to for online play        │
-│                                        [default: 9999]                                  │
-│ --install-completion                   Install completion for the current shell.        │
-│ --show-completion                      Show completion for the current shell, to copy   │
-│                                        it or customize the installation.                │
-│ --help                                 Show this message and exit.                      │
-╰─────────────────────────────────────────────────────────────────────────────────────────╯
+╭─ Options ─────────────────────────────────────────────────────────────────────────────────╮
+│ --install-completion          Install completion for the current shell.                   │
+│ --show-completion             Show completion for the current shell, to copy it or        │
+│                               customize the installation.                                 │
+│ --help                        Show this message and exit.                                 │
+╰───────────────────────────────────────────────────────────────────────────────────────────╯
+╭─ Commands ────────────────────────────────────────────────────────────────────────────────╮
+│ p2p                                                                                       │
+│ agent                                                                                     │
+╰───────────────────────────────────────────────────────────────────────────────────────────╯
 ~~~
 
 
