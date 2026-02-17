@@ -30,9 +30,10 @@ vec3 palette(float t, vec3 a, vec3 b, vec3 c)
 
 float eval_v(vec2 uv, float t) {
     // Layered sine waves
-    float v1 = sin(uv.x * 3.0 + t) * cos(uv.y * 2.0 + t * 0.7);
-    float v2 = sin(uv.y * 4.0 - t * 0.5) * cos(uv.x * 3.0 + t * 1.1);
-    float v3 = sin((uv.x + uv.y) * 2.5 + t * 0.8);
+    // t = 0.0;
+    float v1 = sin(uv.x * 3.0 + t) * cos(uv.y * 2.0 - t * 0.7);
+    float v2 = sin(uv.y * 4.0 - t * 0.5) * cos(uv.x * 3.0 - t * 1.1);
+    float v3 = sin((uv.y) * 2.5 - t * 0.8);
     float v = (v1 + v2 + v3) / 3.0;
     return v;
 }
@@ -110,16 +111,19 @@ float fbm(vec2 p)
     return value;
 }
 
-
+vec2 rotate(vec2 x, float angle) {
+    float ct = cos(angle), st = sin(angle);
+    return mat2(ct, -st, st, ct) * x;
+}
 
 void main() {
     vec2 uv = gl_FragCoord.xy / u_resolution; 
     float t = u_time * 0.5;
     // uv *= 2.0;
 
-    float blue = eval_v(uv, t);
-    float orange = eval_v(uv + 0.2, t*0.5 + 5.0);
-    float black = eval_v(uv * 7.0, t * 3.0);
+    float rt = t * 0.3;
+    float blue = eval_v(rotate(uv, rt), t*1.0);
+    float orange = eval_v(rotate(uv * 1.1, rt + 0.1), t*1.0);
 
     vec3 a = blue * vec3(0.1, 0.1, 0.8);
     vec3 b = orange * vec3(0.8, 0.3, 0.1);
@@ -132,15 +136,6 @@ void main() {
     
     vec3 col = combine(a, b);
     col = max(col, 0.1 * fbm(uv + t * 0.1));
-    float dd = vor;
-    //col = vec3();
-    //col *= vor;
-    //col = vec3(vor);
-    // Dark shifting color palette
-    // vec3 col;
-    // col.r = 0.08 + 0.04 * sin(v * 3.14);
-    // col.g = 0.09 + 0.04 * sin(v * 3.14 + 0.5);
-    // col.b = 0.13 + 0.06 * sin(v * 3.14 + 1.0);
 
     fragColor = vec4(col, 1.0);
 }

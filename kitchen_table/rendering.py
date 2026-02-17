@@ -346,25 +346,19 @@ def draw_table(table_state: Table_State) -> None:
     drag = table_state.drag_state
 
     # Draw stack placeholders for empty stacks
-    for i, stack in enumerate(table_state.stacks):
+    if drag.source_stack != -1:
+        stack = table_state.stacks[drag.source_stack]
         draw_stack_placeholder(stack)
 
-    # Draw stacks (excluding dragged card)
+    # Draw stacks,
     for stack in table_state.stacks:
         for card_id in stack.cards:
-            if card_id == drag.card_id: continue
             card = table_state.animated_cards[card_id]
             draw_card(card, face_up=stack.face_up)
 
-    # Draw loose cards (excluding dragged card)
+    # Draw loose cards
     for card_id in table_state.loose_cards:
-        if card_id == drag.card_id: continue
         card = table_state.animated_cards[card_id]
-        draw_card(card, face_up=True)
-
-    # Draw dragged card on top
-    if drag.card_id >= 0:
-        card = table_state.animated_cards[drag.card_id]
         draw_card(card, face_up=True)
 
     if table_state.draw_callback is not None:
