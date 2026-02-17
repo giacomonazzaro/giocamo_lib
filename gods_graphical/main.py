@@ -3,7 +3,7 @@ from __future__ import annotations
 import os
 import socket
 import threading
-from typing import Annotated
+from typing import Annotated, Optional
 
 import pyray
 import typer
@@ -185,9 +185,10 @@ def play(gods_state: Game_State, table_state: kt.Table_State, ui_state: UI_State
 @app.command()
 def p2p(
     local: Annotated[bool, typer.Option("--local", help="Use local mode (no STUN, for testing on the same network)")] = False,
+    join: Annotated[Optional[str], typer.Option("--join", "-j", help="Room code to join")] = None,
 ):
-    sock = peer_to_peer(local)
-    main(*setup_online_game(sock, local))
+    sock, your_ip, your_port = peer_to_peer(local)
+    main(*setup_online_game(sock, local, your_ip, your_port, room_code=join))
 
 @app.command()
 def agent(game_logic: bool = True):

@@ -1,14 +1,52 @@
+from __future__ import annotations
+
 import json
 import random
+import string
 import struct
 import time
 import socket
 import os
+import urllib.request
 import typer
 import threading
 
 STUN_SERVER = os.getenv('STUN_SERVER', 'stun.l.google.com')
 STUN_PORT = int(os.getenv('STUN_PORT', '19302'))
+NTFY_URL = "https://ntfy.sh"
+
+
+def generate_room_code(length=4):
+    chars = string.ascii_lowercase + string.digits
+    return ''.join(random.choice(chars) for _ in range(length))
+
+
+def publish_address(room_code, ip, port, suffix=""):
+    topic = f"gods-{room_code}{suffix}"
+    url = f"{NTFY_URL}/{topic}"
+    data = json.dumps({"ip": ip, "port": port}).encode()
+    req = urllib.request.Request(url, data=data)
+    urllib.request.urlopen(req, timeout=10)
+
+
+def fetch_address(room_code, suffix="", timeout=120):
+    topic = f"gods-{room_code}{suffix}"
+    url = f"{NTFY_URL}/{topic}/json?poll=1&since=all"
+    deadline = time.time() + timeout
+    while time.time() < deadline:
+        try:
+            response = urllib.request.urlopen(url, timeout=10)
+            for line in response.read().decode().strip().split('\n'):
+                if not line:
+                    continue
+                msg = json.loads(line)
+                if msg.get("event") == "message":
+                    payload = json.loads(msg["message"])
+                    return payload["ip"], payload["port"]
+        except Exception:
+            pass
+        time.sleep(2)
+    return None, None
 
 def get_ip_info(sock):
     """
@@ -71,13 +109,10 @@ def pick_seed(sock: socket.socket, seed: int, game_init: dict):
             typer.echo(f"[!] Error receiving seed: {e}")
             break
 
-def setup_online_game(sock: socket.socket, local: bool) -> tuple[int, int, socket.socket, tuple[str, int]]:
-    """Send or receive init"""
+def setup_online_game(sock: socket.socket, local: bool, your_ip: str, your_port: int, room_code: str | None = None) -> tuple[int, int, socket.socket, tuple[str, int]]:
+    """Set up connection with friend and exchange seeds."""
 
-    # Keep-Alive Loop (Background)
-    # Because manual copy-pasting takes time, the router might close the port.
-    # We send a tiny packet to the STUN server every 20s to keep the port open
-    # while you are typing.
+    # Keep-alive to prevent NAT port mapping from expiring
     stop_keepalive = False
     def keep_alive():
         while not stop_keepalive:
@@ -86,36 +121,53 @@ def setup_online_game(sock: socket.socket, local: bool) -> tuple[int, int, socke
     if not local:
         threading.Thread(target=keep_alive, daemon=True).start()
 
-    friend_ip = typer.prompt("What is your friend's public IP address")
-    friend_port = typer.prompt("What is your friend's public port", type=int)
+    if local:
+        # Local mode: manual IP/port exchange
+        friend_ip = typer.prompt("What is your friend's IP address")
+        friend_port = typer.prompt("What is your friend's port", type=int)
+    elif room_code is None:
+        # Hosting: publish our address, wait for joiner
+        room_code = generate_room_code()
+        publish_address(room_code, your_ip, your_port)
+        typer.echo(f"[*] Room code: {room_code}")
+        typer.echo("[*] Waiting for friend to join...")
+        friend_ip, friend_port = fetch_address(room_code, suffix="-join")
+        if friend_ip is None:
+            typer.echo("[!] Timed out waiting for friend to join.")
+            raise typer.Exit(1)
+        typer.echo("[*] Friend joined!")
+    else:
+        # Joining: fetch host's address, publish ours
+        typer.echo(f"[*] Joining room {room_code}...")
+        friend_ip, friend_port = fetch_address(room_code)
+        if friend_ip is None:
+            typer.echo("[!] Could not find room. Check the code and try again.")
+            raise typer.Exit(1)
+        publish_address(room_code, your_ip, your_port, suffix="-join")
+        typer.echo("[*] Connected to host!")
 
-    # Stop the keep-alive to STUN server
     stop_keepalive = True
     friend_addr = (friend_ip, friend_port)
 
     seed = random.randint(0, 2**32 - 1)
     game_init: dict[str, int] = {}
-    # Start Listener
     listener = threading.Thread(target=pick_seed, args=(sock, seed, game_init), daemon=True)
     listener.start()
 
     if not local:
-        # Hole Punching & Chat Loop
-        # Send a few punch packets to force the router to open the path
         for _ in range(5):
             typer.echo(f"[*] Sending hole punch packet to {friend_addr}...")
             sock.sendto(b"PUNCH", friend_addr)
             time.sleep(0.5)
 
-    # send seed to the other player
     sock.sendto(json.dumps({"type": "init", "seed": seed}).encode(), friend_addr)
-    typer.echo("joining")
+    typer.echo("[*] Exchanging seeds...")
     listener.join()
     print(f"You are Player {(player_index := game_init['player_index']) + 1}. Seed: {(seed := game_init['seed'])}")
     return player_index, seed, sock, friend_addr
 
 
-def peer_to_peer(local: bool = False) -> socket:
+def peer_to_peer(local: bool = False) -> tuple[socket.socket, str, int]:
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
     if local:
@@ -128,9 +180,8 @@ def peer_to_peer(local: bool = False) -> socket:
         your_ip, your_port = get_ip_info(sock)
 
     if your_ip is None or your_port is None:
-        typer.echo("Could not discover your public IP and port using STUN. Please check your network configuration and try again.")
+        typer.echo("Could not discover your public IP and port using STUN.")
         raise typer.Exit(1)
-    typer.echo("=" * 60)
-    typer.echo(f"Your public IP is: {your_ip}\nYour external port is: {your_port}\nShare this with your friend to connect directly, or use it to set up port forwarding on your router if needed.")
-    typer.echo("=" * 60)
-    return sock
+
+    typer.echo(f"[*] Your address: {your_ip}:{your_port}")
+    return sock, your_ip, your_port
