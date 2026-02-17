@@ -9,8 +9,8 @@ import threading
 import time
 from typing import Annotated
 
+import pyray
 import typer
-from pyray import *
 
 import kitchen_table.models as kt
 from gods.agents.duel import Agent_Duel
@@ -31,7 +31,6 @@ from gods_graphical.ui import (
     get_image_path,
     get_table_layout,
 )
-from gods_online import protocol
 from gods_online.agent_remote import Agent_Local_Online, Agent_Remote
 from kitchen_table.config import tweak
 from kitchen_table.game_state import update_card_positions
@@ -131,6 +130,7 @@ def get_ip_info(sock):
     """
     sock.settimeout(2)
     try:
+        print(struct)
         # STUN Binding Request (Header: 0x0001, Length: 0)
         # We don't need a full STUN library for a simple binding request
         data = struct.pack('!H', 0x0001) + struct.pack('!H', 0) + b'\x00'*16
@@ -154,6 +154,7 @@ def get_ip_info(sock):
             offset += 4 + attr_len
             
     except Exception as e:
+        raise
         print(f"[!] STUN failed: {e}")
         return None, None
     finally:
@@ -235,9 +236,9 @@ def play(gods_state: Game_State, table_state: kt.Table_State, ui_state: UI_State
         update_stacks(table_state, gods_state, bottom_player=player_index)
 
     # Window
-    set_config_flags(ConfigFlags.FLAG_WINDOW_HIGHDPI)
-    init_window(tweak["window_width"], tweak["window_height"], "Gods Online")
-    set_target_fps(tweak["target_fps"])
+    pyray.set_config_flags(pyray.ConfigFlags.FLAG_WINDOW_HIGHDPI)
+    pyray.init_window(tweak["window_width"], tweak["window_height"], "Gods Online")
+    pyray.set_target_fps(tweak["target_fps"])
 
     game_thread = threading.Thread(
         target=lambda: game_loop(gods_state, agent, display),
@@ -245,24 +246,24 @@ def play(gods_state: Game_State, table_state: kt.Table_State, ui_state: UI_State
     )
     game_thread.start()
 
-    while not window_should_close():
+    while not pyray.window_should_close():
         if gods_state.game_over:
             break
 
         # Handle card zoom
-        if is_key_down(KeyboardKey.KEY_SPACE):
-            mx, my = get_mouse_x(), get_mouse_y()
+        if pyray.is_key_down(pyray.KeyboardKey.KEY_SPACE):
+            mx, my = pyray.get_mouse_x(), pyray.get_mouse_y()
             result = find_card_at(mx, my, table_state)
             table_state.zoomed_card_id = result[0] if result else -1
         else:
             table_state.zoomed_card_id = -1
 
-        begin_drawing()
+        pyray.begin_drawing()
         draw_background()
         draw_table(table_state)
         draw_buttons(ui_state.buttons)
         draw_highlighted_cards(ui_state.highlighted_cards, gods_state, table_state)
-        end_drawing()
+        pyray.end_drawing()
 
     # Game over screen
     if gods_state.game_over:
@@ -278,7 +279,7 @@ def play(gods_state: Game_State, table_state: kt.Table_State, ui_state: UI_State
             result_text = "It's a tie!"
         draw_game_over_screen(table_state, result_text, names, scores)
 
-    close_window()
+    pyray.close_window()
 
 @app.command()
 def p2p(
