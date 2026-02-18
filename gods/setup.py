@@ -1,5 +1,5 @@
 
-from gods.models import Card, Card_Type, Card_Color, Player, Game_State, Choice
+from gods.models import Card, Card_Type, Card_Color, Player, Game_State
 from gods.cards import create_card
 import json
 import copy

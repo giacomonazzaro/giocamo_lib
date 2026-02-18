@@ -11,7 +11,8 @@ import typer
 import kitchen_table.models as kt
 from gods.agents.duel import Agent_Duel
 from gods.agents.minimax_stochastic import Agent_Minimax_Stochastic
-from gods.game import compute_player_score, game_loop
+from gods.agents.agent import game_loop
+from gods.game import compute_player_score
 from gods.models import Game_State, effective_power
 from gods.setup import quick_setup
 from gods_graphical.agent_ui import Agent_UI, update_stacks

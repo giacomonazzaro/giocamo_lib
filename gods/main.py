@@ -9,8 +9,9 @@ from gods.agents.randomized import Agent_Random
 from gods.agents.duel import Agent_Duel
 
 # from gods.cards import get_playable_cards, get_people_cards
+from gods.agents.agent import game_loop
 from gods.game import (
-    game_loop, check_people_conditions,
+    check_people_conditions,
     display_game_state, compute_player_score, detailed_str
 )
 from gods.setup import *
@@ -124,7 +125,7 @@ def main():
     check_people_conditions(game)
 
     agent = Agent_Duel(Agent_Terminal(), Agent_MCTS())
-    game_loop(game, agent)
+    game_loop(game, agent, display_game_state)
 
     # Game over - calculate scores
     print("\n" + "=" * 60)

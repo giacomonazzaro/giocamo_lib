@@ -1,7 +1,9 @@
 from __future__ import annotations
 from dataclasses import dataclass, field
-from typing import Callable, Optional
+from typing import Optional
 from enum import Enum
+
+from gods.agents.agent import Game, Choice
 
 
 class Card_Type(Enum):
@@ -68,20 +70,6 @@ class Player:
     discard: list[Card] = field(default_factory=list)
     wonders: list[Card] = field(default_factory=list)  # wonders in play
 
-def generate_no_actions(state: Game_State, choice) -> list:
-    return []
-
-def resolve_nothing(state: Game_State, choice, index: int):
-    pass
-
-@dataclass
-class Choice:
-    player_index: int = 0
-    type: str = "" # main, choose-card, choose-binary
-    generate_actions: Callable[[Game_State, Choice], list] = generate_no_actions
-    resolve: Callable[[Game_State, Choice, int], list[Choice]] = resolve_nothing
-    
-
 @dataclass
 class Card_Id:
     area: str  # "deck", "hand", "discard", "wonders", "people"
@@ -97,9 +85,9 @@ class Card_Id:
         return card_id.area == "none" and card_id.card_index == -1 and card_id.owner_index == -1
 
 @dataclass
-class Game_State:
-    players: list[Player]
-    peoples: list[Card]  # people cards in the center
+class Game_State(Game):
+    players: list[Player] = field(default_factory=list)
+    peoples: list[Card] = field(default_factory=list)  # people cards in the center
     current_player: int = 0
     current_phase: str = "main"  # "start", "main", "end"
     game_ending: bool = False  # someone declared end
@@ -109,6 +97,54 @@ class Game_State:
     extra_turns: int = 0  # for Prophecy card
     shared_deck: list[Card] = field(default_factory=list)  # for Stars card
 
+    def is_game_over(self) -> bool:
+        return self.game_over
+
+    def next_choice(self) -> Choice | None:
+        from gods.game import make_main_choice, check_people_conditions, draw_card
+        while not self.game_over:
+            if self.choices:
+                choice = self.choices.pop(0)
+                actions = choice.actions(self)
+                if not actions:
+                    continue
+                return choice
+
+            if self.current_phase == "start":
+                for w in self.active_player().wonders:
+                    self.choices.extend(w.on_turn_start(self))
+                self.current_phase = "main"
+
+            elif self.current_phase == "main":
+                self.choices.append(make_main_choice(self))
+
+            elif self.current_phase == "post-play":
+                check_people_conditions(self)
+                self.current_phase = "end"
+
+            elif self.current_phase == "post-pass-effects":
+                player = self.active_player()
+                if not player.deck:
+                    self.game_over = True
+                    self.ending_player = self.current_player
+                    continue
+                new_choices = draw_card(self, self.current_player)
+                self.choices.extend(new_choices)
+                check_people_conditions(self)
+                self.current_phase = "post-pass-draw"
+
+            elif self.current_phase == "post-pass-draw":
+                check_people_conditions(self)
+                self.current_phase = "end"
+
+            elif self.current_phase == "end":
+                for w in self.active_player().wonders:
+                    self.choices.extend(w.on_turn_end(self))
+                self.switch_turn()
+                self.current_phase = "start"
+
+        return None
+
     def active_player(self) -> Player:
         return self.players[self.current_player]
 
@@ -117,7 +153,7 @@ class Game_State:
 
     def peoples_ids(self) -> list[Card_Id]:
         return [Card_Id(area="people", card_index=i, owner_index=card.owner) for (i, card) in enumerate(self.peoples)]
-    
+
     def wonders(state: Game_State, player_index: int) -> list[Card_Id]:
         return [Card_Id(area="wonders", card_index=i, owner_index=player_index) for i in range(len(state.players[player_index].wonders))]
 
@@ -160,6 +196,20 @@ class Game_State:
         else:
             raise ValueError(f"Invalid card area: {card_id.area}")
 
+    def card_list(self, player_id: int | None, area: str) -> list[Card_Id]:
+        if player_id is None:
+            return self.card_list(player_id=0, area=area) + self.card_list(player_id=1, area=area)
+
+        if area == "hand":
+            return [Card_Id(area, i, player_id) for i in range(len(self.players[player_id].hand))]
+        if area == "wonders":
+            return [Card_Id(area, i, player_id) for i in range(len(self.players[player_id].wonders))]
+        if area == "discard":
+            return [Card_Id(area, i, player_id) for i in range(len(self.players[player_id].discard))]
+        if area == "deck":
+            return [Card_Id(area, i, player_id) for i in range(len(self.players[player_id].deck))]
+        assert False
+        return []
 
 def effective_power(game: Game_State, card: Card) -> int:
     """Calculate effective power of a card, applying all wonder power modifiers."""

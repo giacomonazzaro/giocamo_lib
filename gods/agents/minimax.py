@@ -1,6 +1,7 @@
 from __future__ import annotations
 from typing import Optional
-from gods.models import Game_State, Choice
+from gods.models import Game_State
+from gods.agents.agent import Choice
 from gods.agents.minimax_search import Search_Context, minimax_search
 import time
 
@@ -25,7 +26,7 @@ class Agent_Minimax:
             time_limit=self.time_limit,
         )
 
-        print("started:", choice.type)
+        print("started:", choice.description)
         scores = minimax_search(state, choice, actions, self.max_depth, ctx)
         best_action = max(range(len(scores)), key=lambda a: scores[a])
         elapsed = time.time() - ctx.start_time

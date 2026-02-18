@@ -1,8 +1,8 @@
 from __future__ import annotations
 import random
 from typing import Optional
-from gods.models import Card, Card_Id, Card_Type, Choice, Game_State
-from gods.agents.agent import Agent
+from gods.models import Card, Card_Id, Card_Type, Game_State
+from gods.agents.agent import Choice
 
 def draw_card(game: Game_State, player_id: int, replacement_effects=True) -> list[Choice]:
     """Draw a card from the player's deck. Returns list of choices produced by draw effects."""
@@ -174,41 +174,29 @@ def compute_player_score(game: Game_State, player_index: int) -> int:
 
 
 def make_play_choice(state: Game_State) -> Choice:
-    choice = Choice()
-    choice.player_index = state.current_player
-    choice.type = "choose-card"
-
-    def generate_actions(state: Game_State, choice: Choice) -> list:
+    player_index = state.current_player
+    def actions(state: Game_State) -> list:
         return [Card_Id(area="hand", card_index=i, owner_index=state.current_player)
                 for i, card in enumerate(state.players[state.current_player].hand)]
-    choice.generate_actions = generate_actions
-
-    def resolve(state: Game_State, choice: Choice, option_index: int) -> list[Choice]:
-        actions = choice.generate_actions(state, choice)
-        card_id = actions[option_index]
+    def resolve(state: Game_State, option_index: int) -> list[Choice]:
+        card_id = actions(state)[option_index]
         new_choices = play_card(state, card_id)
         state.current_phase = "post-play"
         return new_choices
-    choice.resolve = resolve
-    return choice
+    return Choice(player_index=player_index, description="choose-card",
+                  actions=actions, resolve=resolve)
 
 def make_main_choice(state: Game_State) -> Choice:
-    choice = Choice()
-    choice.player_index = state.current_player
-    choice.type = "main"
-
-    def generate_actions(state: Game_State, choice: Choice) -> list:
+    player_index = state.current_player
+    def actions(state: Game_State) -> list:
         player = state.active_player()
         options = []
         if player.hand:
             options.append("play")
         options.append("pass")
         return options
-    choice.generate_actions = generate_actions
-
-    def resolve(state: Game_State, choice: Choice, option_index: int) -> list[Choice]:
-        actions = choice.generate_actions(state, choice)
-        action = actions[option_index]
+    def resolve(state: Game_State, option_index: int) -> list[Choice]:
+        action = actions(state)[option_index]
         if action == "play":
             return [make_play_choice(state)]
         elif action == "pass":
@@ -219,58 +207,8 @@ def make_main_choice(state: Game_State) -> Choice:
             state.current_phase = "post-pass-effects"
             return result
         return []
-
-    choice.resolve = resolve
-    return choice
-
-
-def get_next_choice(state: Game_State, choices: list[Choice]) -> Choice | None:
-    """Advance game state until a choice is produced or the game ends."""
-    while not state.game_over:
-        if choices:
-            choice = choices.pop(0)
-            actions = choice.generate_actions(state, choice)
-            if not actions:
-                continue
-            return choice
-
-        if state.current_phase == "start":
-            for w in state.active_player().wonders:
-                choices.extend(w.on_turn_start(state))
-
-            state.current_phase = "main"
-
-        elif state.current_phase == "main":
-            choices.append(make_main_choice(state))
-
-        elif state.current_phase == "post-play":
-            check_people_conditions(state)
-            state.current_phase = "end"
-
-        elif state.current_phase == "post-pass-effects":
-            # on_pass choices already resolved, now draw
-            player = state.active_player()
-            if not player.deck:
-                state.game_over = True
-                state.ending_player = state.current_player
-                continue
-            new_choices = draw_card(state, state.current_player)
-            choices.extend(new_choices)
-            check_people_conditions(state)
-            state.current_phase = "post-pass-draw"
-
-        elif state.current_phase == "post-pass-draw":
-            # draw choices resolved
-            check_people_conditions(state)
-            state.current_phase = "end"
-
-        elif state.current_phase == "end":
-            for w in state.active_player().wonders:
-                choices.extend(w.on_turn_end(state))
-            state.switch_turn()
-            state.current_phase = "start"
-
-    return None
+    return Choice(player_index=player_index, description="main",
+                  actions=actions, resolve=resolve)
 
 
 def detailed_str(card: Card) -> str:
@@ -312,28 +250,3 @@ def display_game_state(game: Game_State, current_player_view: bool = True) -> No
             print(f"    - {detailed_str(card)}")
         print("  points:", compute_player_score(game, i))
     print("\n" + "=" * 60)
-
-def game_loop(game: Game_State, agent: Agent, display: any = display_game_state) -> None:
-    choices = []
-    while not game.game_over:
-        choice = get_next_choice(game, choices)
-        if choice is None:
-            break
-        
-        if display is not None and choice.type == "main":
-            display(game)
-        
-        actions = choice.generate_actions(game, choice)
-        if len(actions) == 1:
-            index = 0
-        else:
-            index = agent.choose_action(game, choice, actions)        
-
-        new_choices = choice.resolve(game, choice, index)
-        choices.extend(new_choices)
-
-    if display is not None:
-        display(game)
-    print("Game ended!")
-    print(f"Player 1: {compute_player_score(game, 0)}")
-    print(f"Player 2: {compute_player_score(game, 1)}")

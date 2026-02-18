@@ -1,7 +1,8 @@
 from __future__ import annotations
 from dataclasses import dataclass
-from gods.models import Game_State, Choice
-from gods.game import compute_player_score, get_next_choice
+from gods.models import Game_State
+from gods.agents.agent import Choice
+from gods.game import compute_player_score
 import copy
 import time
 
@@ -70,8 +71,9 @@ def minimax_root(
             break
         sim = copy.deepcopy(state)
         sim_choice = copy.deepcopy(choice)
-        new_choices = sim_choice.resolve(sim, sim_choice, action) or []
-        score = minimax(sim, list(new_choices), depth, alpha, beta, ctx)
+        new_choices = sim_choice.resolve(sim, action) or []
+        sim.choices = list(new_choices)
+        score = minimax(sim, depth, alpha, beta, ctx)
         scores[action] = score
         alpha = max(alpha, score)
 
@@ -80,7 +82,6 @@ def minimax_root(
 
 def minimax(
     state: Game_State,
-    pending_choices: list[Choice],
     depth: int,
     alpha: float,
     beta: float,
@@ -96,11 +97,11 @@ def minimax(
     if state.game_over:
         return evaluate(state, ctx.player_index)
 
-    choice = get_next_choice(state, pending_choices)
+    choice = state.next_choice()
     if choice is None:
         return evaluate(state, ctx.player_index)
 
-    actions = choice.generate_actions(state, choice)
+    actions = choice.actions(state)
     maximizing = choice.player_index == ctx.player_index
     next_depth = depth - 1
     if next_depth < 0:
@@ -113,11 +114,10 @@ def minimax(
         value = -float("inf")
         for action in range(len(actions)):
             sim = copy.deepcopy(state)
-            sim_pending = list(pending_choices)
             sim_choice = copy.deepcopy(choice)
-            new_choices = sim_choice.resolve(sim, sim_choice, action) or []
-            sim_pending = list(new_choices) + sim_pending
-            score = minimax(sim, sim_pending, next_depth, alpha, beta, ctx)
+            new_choices = sim_choice.resolve(sim, action) or []
+            sim.choices = list(new_choices) + list(sim.choices)
+            score = minimax(sim, next_depth, alpha, beta, ctx)
             value = max(value, score)
             alpha = max(alpha, value)
             if alpha >= beta:
@@ -127,11 +127,10 @@ def minimax(
         value = float("inf")
         for action in range(len(actions)):
             sim = copy.deepcopy(state)
-            sim_pending = list(pending_choices)
             sim_choice = copy.deepcopy(choice)
-            new_choices = sim_choice.resolve(sim, sim_choice, action) or []
-            sim_pending = list(new_choices) + sim_pending
-            score = minimax(sim, sim_pending, next_depth, alpha, beta, ctx)
+            new_choices = sim_choice.resolve(sim, action) or []
+            sim.choices = list(new_choices) + list(sim.choices)
+            score = minimax(sim, next_depth, alpha, beta, ctx)
             value = min(value, score)
             beta = min(beta, value)
             if alpha >= beta:

@@ -1,5 +1,6 @@
 from gods.agents.agent import Agent
-from gods.models import Game_State, Choice, Card_Id
+from gods.models import Game_State, Card_Id
+from gods.agents.agent import Choice
 from kitchen_table.models import Table_State
 from kitchen_table.game_state import update_card_positions
 from kitchen_table.config import tweak
@@ -117,7 +118,7 @@ class Agent_UI(Agent):
         elif len(actions) == 1:
             return 0
 
-        if choice.type == "choose-cards":
+        if choice.description == "choose-cards":
             return self._handle_choose_cards(state, actions)
 
         mx, my = get_mouse_x(), get_mouse_y()
@@ -132,21 +133,21 @@ class Agent_UI(Agent):
         start_x = (get_screen_width() - total_width) // 2
         button_y = get_screen_height() - 50
 
-        if choice.type == "main":
+        if choice.description == "main":
             self.ui_state.buttons = []
             for i, action in enumerate(actions):
                 x = start_x + i * (button_w + gap)
                 button = Button(x, button_y, button_w, button_h, text=str(action))
                 self.ui_state.buttons.append(button)
 
-        elif choice.type == "choose-binary":
+        elif choice.description == "choose-binary":
             self.ui_state.buttons = []
             labels = ["Yes", "No"]
             for i in range(2):
                 x = start_x + i * (button_w + gap)
                 button = Button(x, button_y, button_w, button_h, text=labels[i])
                 self.ui_state.buttons.append(button)
-        elif choice.type == "choose-card":
+        elif choice.description == "choose-card":
             self.ui_state.highlighted_cards = []
             self.ui_state.buttons = []
             for i, card_id in enumerate(actions):
@@ -164,17 +165,17 @@ class Agent_UI(Agent):
             time.sleep(1/60)  # Yield the GIL so the render thread can run
             mx, my = get_mouse_x(), get_mouse_y()
             click = is_mouse_button_pressed(MouseButton.MOUSE_BUTTON_LEFT)
-            if choice.type == "main":
+            if choice.description == "main":
                 for i, action in enumerate(actions):
                     if self.ui_state.buttons[i].pressed(mx, my, click):
                         selected = i
                         break
-            elif choice.type == "choose-binary":
+            elif choice.description == "choose-binary":
                 for i in range(2):
                     if self.ui_state.buttons[i].pressed(mx, my, click):
                         selected = i
                         break
-            elif choice.type == "choose-card":
+            elif choice.description == "choose-card":
                 for i, card_id in enumerate(actions):
                     if Card_Id.is_null(card_id):
                         if self.ui_state.buttons[0].pressed(mx, my, click):

@@ -1,6 +1,7 @@
 from __future__ import annotations
 from typing import Optional
-from gods.models import Game_State, Choice
+from gods.models import Game_State
+from gods.agents.agent import Choice
 from gods.agents.minimax_search import Search_Context, minimax_search
 import copy
 import time
@@ -51,7 +52,7 @@ class Agent_Minimax_Stochastic:
 
         if is_root:
             self.player_index = None
-        print(f"choice: {choice.type}: {actions}")
+        print(f"choice: {choice.description}: {actions}")
         print(f"selected: {actions[selected]}")
         return selected
 
@@ -71,7 +72,7 @@ class Agent_Minimax_Stochastic:
         time_per_sample = self.time_limit / self.num_samples
         overall_start = time.time()
 
-        print(f"started: {choice.type} ({self.num_samples} samples)")
+        print(f"started: {choice.description} ({self.num_samples} samples)")
 
         for _ in range(self.num_samples):
             sampled_state = self._sample_state(state, self.player_index)  # type: ignore[arg-type]

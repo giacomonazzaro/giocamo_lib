@@ -1,4 +1,5 @@
-from gods.models import Game_State, Choice
+from gods.models import Game_State
+from gods.agents.agent import Choice
 from gods.agents.agent import Agent
 
 class Agent_Duel(Agent):
