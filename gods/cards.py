@@ -224,6 +224,7 @@ class Flashback(Card):
         for (i, card) in enumerate(player.discard):
             if card.card_type == Card_Type.EVENT:
                 card_id = Card_Id(area="discard", card_index=i, owner_index=game.current_player)
+                if game.get_card(card_id) == self: continue
                 result.append(card_id)
         return result
 

@@ -107,32 +107,22 @@ def minimax(
     if not actions:
         return evaluate_state(state, ctx.player_index)
 
-    if maximizing:
-        value = -float("inf")
-        for action in range(len(actions)):
-            sim = copy.deepcopy(state)
-            sim_choice = copy.deepcopy(choice)
-            new_choices = sim_choice.resolve(sim, action) or []
-            sim.choices = list(new_choices) + list(sim.choices)
-            score = minimax(sim, next_depth, alpha, beta, ctx)
+    value = -float("inf") if maximizing else float("inf")
+
+    for action_index in range(len(actions)):
+        new_state = copy.deepcopy(state)
+        resolve_choice(new_state, choice, action_index)
+        score = minimax(new_state, next_depth, alpha, beta, ctx)
+        if maximizing:
             value = max(value, score)
             alpha = max(alpha, value)
-            if alpha >= beta:
-                break
-        return value
-    else:
-        value = float("inf")
-        for action in range(len(actions)):
-            sim = copy.deepcopy(state)
-            sim_choice = copy.deepcopy(choice)
-            new_choices = sim_choice.resolve(sim, action) or []
-            sim.choices = list(new_choices) + list(sim.choices)
-            score = minimax(sim, next_depth, alpha, beta, ctx)
+        else:
             value = min(value, score)
             beta = min(beta, value)
-            if alpha >= beta:
-                break
-        return value
+        if alpha >= beta:
+            break
+    return value
+    
 
 
 def evaluate_heuristic(state: Game, player_index: int) -> float:

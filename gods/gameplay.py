@@ -95,12 +95,14 @@ def play_card(state: Game_State, card_id: Card_Id) -> list[Choice]:
     if card_id.area == "hand":
         del player.hand[card_id.card_index]
 
+    choices = card.on_played(state)
     if card.card_type == Card_Type.WONDER:
         card.owner = state.current_player
         player.wonders.append(card)
     elif card.card_type == Card_Type.EVENT:
         player.discard.append(card)
-    return card.on_played(state)
+
+    return choices
 
 
 def wonders_by_priority(state: Game_State) -> list[Card]:
