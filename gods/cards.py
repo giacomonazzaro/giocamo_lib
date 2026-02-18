@@ -555,9 +555,8 @@ class Seas(Card):
 class Fire(Card):
     """Your red events get +X"""
     def power_modifier(self, game: Game_State, card: Card, power: int) -> int:
-        if card.card_type == Card_Type.EVENT and card.color == Card_Color.RED:
-            if card in game.players[self.owner].hand:
-                return power + effective_power(game, self)
+        if card.card_type == Card_Type.EVENT and card.color == Card_Color.RED and card.owner == self.owner:
+            return power + effective_power(game, self)
         return power
 
 

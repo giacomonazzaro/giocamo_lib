@@ -176,5 +176,5 @@ def evaluate_state(state: Game, player_index: int) -> float:
         else:
             score = 1000.0
 
-    score += evaluate_heuristic(state, player_index)
+    # score += evaluate_heuristic(state, player_index)
     return score
