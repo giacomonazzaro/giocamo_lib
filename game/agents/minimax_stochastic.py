@@ -47,7 +47,8 @@ class Agent_Minimax_Stochastic:
         print(f"selected: {actions[selected]}")
         return selected
 
-    def choose_action(self, state: Game, choice: Choice, actions: list) -> int:
+    def choose_action(self, state: Game, choice: Choice) -> int:
+        actions = choice.actions(state)
         """Stochastic minimax with root sampling.
 
         Runs multiple samples to handle hidden information:

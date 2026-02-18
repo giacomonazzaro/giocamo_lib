@@ -1,8 +1,7 @@
 from __future__ import annotations
 import socket
 
-from gods.models import Game_State
-from game.game import Choice
+from game.game import Game, Choice
 from game.agents.agent import Agent
 from gods_online.protocol import send_message, recv_message
 
@@ -12,7 +11,7 @@ class Agent_Remote(Agent):
     def __init__(self, sock: socket.socket):
         self.sock = sock
 
-    def choose_action(self, state: Game_State, choice: Choice, actions: list) -> int:
+    def choose_action(self, state: Game, choice: Choice) -> int:
         msg = recv_message(self.sock)
         return msg["index"]
 
@@ -24,7 +23,7 @@ class Agent_Local_Online(Agent):
         self.sock = sock
         self.friend_addr = friend_addr
 
-    def choose_action(self, state: Game_State, choice: Choice, actions: list) -> int:
-        index = self.local_agent.choose_action(state, choice, actions)
+    def choose_action(self, state: Game, choice: Choice) -> int:
+        index = self.local_agent.choose_action(state, choice)
         send_message(self.sock, {"type": "action", "index": index}, self.friend_addr)
         return index

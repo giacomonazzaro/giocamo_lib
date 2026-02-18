@@ -16,7 +16,8 @@ class Agent_Minimax(Agent):
     def evaluate_state(state: Game, player_index: int) -> float:
         return 0.0
 
-    def choose_action(self, state: Game, choice: Choice, actions: list) -> int:
+    def choose_action(self, state: Game, choice: Choice) -> int:
+        actions = choice.actions(state)
         ctx = Search_Context(
             player_index=choice.player_index,  # type: ignore[arg-type]
             start_time=time.time(),

@@ -8,7 +8,8 @@ class Agent_Terminal:
     def message(self, msg: str):
         print("Terminal Agent:", msg)
 
-    def choose_action(self, state: Game_State, choice: Choice, actions: list) -> int:
+    def choose_action(self, state: Game_State, choice: Choice) -> int:
+        actions = choice.actions(state)
         player = state.players[choice.player_index]
 
         print(f"\n{player.name}, choose an action:")

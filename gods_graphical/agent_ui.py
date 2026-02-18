@@ -112,7 +112,8 @@ class Agent_UI(Agent):
         self.ui_state.buttons = []
         return selected
 
-    def choose_action(self, state: Game_State, choice: Choice, actions: list) -> int:
+    def choose_action(self, state: Game_State, choice: Choice) -> int:
+        actions = choice.actions(state)
         if len(actions) == 0:
             return 0
         elif len(actions) == 1:

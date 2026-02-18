@@ -5,6 +5,6 @@ class Agent:
     def message(self, msg: str):
         print("Agent:", msg)
 
-    def choose_action(self, game: Game, choice: Choice, actions: list) -> int:
+    def choose_action(self, game: Game, choice: Choice) -> int:
         """Pick an action index. Does NOT call resolve."""
         return 0

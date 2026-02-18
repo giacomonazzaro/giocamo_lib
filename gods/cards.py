@@ -57,7 +57,7 @@ def make_choose_card_choice(player_index, get_targets, on_chosen) -> Choice:
 def make_choose_cards_choice(player_index, get_combinations, on_chosen) -> Choice:
     def resolve(state, option_index):
         combination = get_combinations(state)[option_index]
-        return on_chosen(state, combination)
+        return on_chosen(state, combination) or []
     return Choice(player_index=player_index, description="choose-cards",
                   actions=lambda state: get_combinations(state), resolve=resolve)
 

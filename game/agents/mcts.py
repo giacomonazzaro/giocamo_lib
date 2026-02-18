@@ -54,8 +54,9 @@ class Agent_MCTS:
         best_child_index = max(node.children, key=lambda c: self.tree[c].visits)
         return self.tree[best_child_index].action_index
 
-    def choose_action(self, state: Game_State, choice: Choice, actions: list) -> int:
+    def choose_action(self, state: Game_State, choice: Choice) -> int:
         self.player_index = choice.player_index
+        actions = choice.actions(state)
         selected = self.mcts_search(state, choice, actions)
         return selected
 

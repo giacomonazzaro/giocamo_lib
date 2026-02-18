@@ -2,9 +2,9 @@ from __future__ import annotations
 import multiprocessing as mp
 
 
-def _compute(agent, state, choice, actions, pipe):
+def _compute(agent, state, choice, pipe):
     """Run in a forked process. Sends back the chosen action index."""
-    index = agent.choose_action(state, choice, actions)
+    index = agent.choose_action(state, choice)
     pipe.send(index)
     pipe.close()
 
@@ -23,11 +23,11 @@ class Agent_Process:
     def message(self, msg: str):
         self.agent.message(msg)
 
-    def choose_action(self, state, choice, actions) -> int:
+    def choose_action(self, state, choice) -> int:
         parent_conn, child_conn = self.ctx.Pipe(duplex=False)
         process = self.ctx.Process(
             target=_compute,
-            args=(self.agent, state, choice, actions, child_conn),
+            args=(self.agent, state, choice, child_conn),
         )
         process.start()
         # Close the child's end in the parent so recv() can detect EOF.

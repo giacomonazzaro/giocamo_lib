@@ -1,6 +1,6 @@
 from __future__ import annotations
 from dataclasses import dataclass
-from game.game import Game, Choice
+from game.game import Game, Choice, resolve_choice
 from gods.gameplay import compute_player_score
 import copy
 import time
@@ -65,15 +65,13 @@ def minimax_root(
     beta = float("inf")
     scores: list[float] = [-float("inf")] * num_actions
 
-    for action in action_order:
+    for action_index in action_order:
         if ctx.time_up:
             break
-        sim = copy.deepcopy(state)
-        sim_choice = copy.deepcopy(choice)
-        new_choices = sim_choice.resolve(sim, action) or []
-        sim.choices = list(new_choices)
-        score = minimax(sim, depth, alpha, beta, ctx)
-        scores[action] = score
+        new_state = copy.deepcopy(state)
+        resolve_choice(new_state, choice, action_index)
+        score = minimax(new_state, depth, alpha, beta, ctx)
+        scores[action_index] = score
         alpha = max(alpha, score)
 
     return scores

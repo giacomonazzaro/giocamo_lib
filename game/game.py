@@ -1,9 +1,11 @@
 from __future__ import annotations
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Callable
 
 @dataclass
 class Game:
+    choices: list[Choice] = field(default_factory=list)
+
     def is_game_over(self) -> bool:
         pass
 
@@ -18,9 +20,11 @@ class Choice:
     actions: Callable[[Game], list] = lambda state: []
     resolve: Callable[[Game, int], list[Choice]] = lambda state, index: []
 
+def resolve_choice(game: Game, choice: Choice, index: int):
+    new_choices = choice.resolve(game, index) or []
+    game.choices.extend(new_choices)
 
 def game_loop(game: Game, agent: Agent, callback: any = None) -> None:
-    game.choices = []
     while not game.is_game_over():
         choice = game.next_choice()
         if choice is None:
@@ -33,10 +37,9 @@ def game_loop(game: Game, agent: Agent, callback: any = None) -> None:
         if len(actions) == 1:
             index = 0
         else:
-            index = agent.choose_action(game, choice, actions)
+            index = agent.choose_action(game, choice)
 
-        new_choices = choice.resolve(game, index) or []
-        game.choices.extend(new_choices)
-
+        resolve_choice(game, choice, index)
+    
     if callback is not None:
         callback(game)
