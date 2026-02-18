@@ -160,9 +160,9 @@ def evaluate_heuristic(state: Game, player_index: int) -> float:
 
 def evaluate_state(state: Game, player_index: int) -> float:
     """Evaluate a finished game. Returns +1000 for win, -1000 for loss."""
-    if state.is_game_over():
+    if not state.is_game_over():
         return evaluate_heuristic(state, player_index)
-    
+
     my_score = compute_player_score(state, player_index)
     opp_score = compute_player_score(state, 1 - player_index)
     diff = my_score - opp_score
