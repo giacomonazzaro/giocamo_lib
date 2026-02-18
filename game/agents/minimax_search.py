@@ -1,8 +1,8 @@
 from __future__ import annotations
 from dataclasses import dataclass
 from gods.models import Game_State
-from gods.agents.agent import Choice
-from gods.game import compute_player_score
+from game.agents.agent import Choice
+from gods.gameplay import compute_player_score
 import copy
 import time
 

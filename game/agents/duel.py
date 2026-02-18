@@ -1,6 +1,6 @@
 from gods.models import Game_State
-from gods.agents.agent import Choice
-from gods.agents.agent import Agent
+from game.agents.agent import Choice
+from game.agents.agent import Agent
 
 class Agent_Duel(Agent):
     def __init__(self, agent_0, agent_1, swap: bool):

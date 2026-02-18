@@ -19,15 +19,6 @@ class Choice:
     resolve: Callable[[Game, int], list[Choice]] = lambda state, index: []
 
 
-class Agent:
-    def message(self, msg: str):
-        print("Agent:", msg)
-
-    def choose_action(self, game: Game, choice: Choice, actions: list) -> int:
-        """Pick an action index. Does NOT call resolve."""
-        return 0
-
-
 def game_loop(game: Game, agent: Agent, callback: any = None) -> None:
     game.choices = []
     while not game.is_game_over():

@@ -2,8 +2,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 import itertools
 from gods.models import Card, Card_Id, Card_Type, Card_Color, Game_State, effective_power
-from gods.agents.agent import Choice
-from gods.game import *
+from game.agents.agent import Choice
+from gods.gameplay import *
 
 def create_card(data: dict, default_power: int = 3) -> Card:
     card_type = Card_Type(data["type"])

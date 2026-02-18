@@ -1,5 +1,5 @@
 from gods.models import Game_State
-from gods.agents.agent import Choice
+from game.agents.agent import Choice
 import random
 
 class Agent_Random:

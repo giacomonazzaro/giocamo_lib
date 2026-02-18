@@ -1,8 +1,8 @@
 from __future__ import annotations
 from typing import Optional
 from gods.models import Game_State
-from gods.agents.agent import Choice
-from gods.agents.minimax_search import Search_Context, minimax_search
+from game.agents.agent import Choice
+from game.agents.minimax_search import Search_Context, minimax_search
 import time
 
 

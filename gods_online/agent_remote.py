@@ -2,8 +2,8 @@ from __future__ import annotations
 import socket
 
 from gods.models import Game_State
-from gods.agents.agent import Choice
-from gods.agents.agent import Agent
+from game.agents.agent import Choice
+from game.agents.agent import Agent
 from gods_online.protocol import send_message, recv_message
 
 

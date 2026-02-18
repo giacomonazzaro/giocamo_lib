@@ -3,7 +3,7 @@ from dataclasses import dataclass, field
 from typing import Optional
 from enum import Enum
 
-from gods.agents.agent import Game, Choice
+from game.game import Game, Choice
 
 
 class Card_Type(Enum):
@@ -101,7 +101,7 @@ class Game_State(Game):
         return self.game_over
 
     def next_choice(self) -> Choice | None:
-        from gods.game import make_main_choice, check_people_conditions, draw_card
+        from gods.gameplay import make_main_choice, check_people_conditions, draw_card
         while not self.game_over:
             if self.choices:
                 choice = self.choices.pop(0)

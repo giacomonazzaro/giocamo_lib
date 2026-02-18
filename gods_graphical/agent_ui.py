@@ -1,6 +1,6 @@
-from gods.agents.agent import Agent
+from game.agents.agent import Agent
 from gods.models import Game_State, Card_Id
-from gods.agents.agent import Choice
+from game.agents.agent import Choice
 from kitchen_table.models import Table_State
 from kitchen_table.game_state import update_card_positions
 from kitchen_table.config import tweak

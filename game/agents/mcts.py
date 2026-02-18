@@ -1,9 +1,9 @@
 from __future__ import annotations
 from dataclasses import dataclass, field
 from gods.models import Game_State
-from gods.agents.agent import Choice, game_loop
-from gods.agents.randomized import Agent_Random
-from gods.game import compute_player_score
+from game.agents.agent import Choice, game_loop
+from game.agents.randomized import Agent_Random
+from gods.gameplay import compute_player_score
 import copy
 import math
 import random

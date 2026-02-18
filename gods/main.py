@@ -2,15 +2,15 @@ from __future__ import annotations
 import random
 import copy
 
-from gods.agents.mcts import Agent_MCTS
+from game.agents.mcts import Agent_MCTS
 from gods.models import Card, Card_Type
-from gods.agents.terminal import Agent_Terminal
-from gods.agents.randomized import Agent_Random
-from gods.agents.duel import Agent_Duel
+from game.agents.terminal import Agent_Terminal
+from game.agents.randomized import Agent_Random
+from game.agents.duel import Agent_Duel
 
 # from gods.cards import get_playable_cards, get_people_cards
-from gods.agents.agent import game_loop
-from gods.game import (
+from game.game import game_loop
+from gods.gameplay import (
     check_people_conditions,
     display_game_state, compute_player_score, detailed_str
 )
