@@ -85,7 +85,6 @@ def minimax(
     alpha: float,
     beta: float,
     ctx: Search_Context,
-    evaluate_state: Callable[[Game, int], float]
 ) -> float:
     """Recursive minimax with alpha-beta pruning."""
     ctx.nodes_searched += 1

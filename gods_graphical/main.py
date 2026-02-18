@@ -211,7 +211,7 @@ def main(
         agent_opponent = Agent_Remote(sock)
     else:
         agent_local = agent_ui
-        agent_opponent = Agent_Minimax_Stochastic(player_index=1-player_index)
+        agent_opponent = Agent_Minimax_Stochastic()
     
     if not game_logic:
         agent = None

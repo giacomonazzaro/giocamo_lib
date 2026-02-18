@@ -167,7 +167,7 @@ class Eruption(Card):
             power = effective_power(state, self)
             return all_combinations(card_ids, power, up_to=True)
         def on_chosen(state, combination):
-            for card_id in combination:
+            for card_id in sorted(combination, key=lambda c: c.card_index, reverse=True):
                 shuffle_card_into_deck(state, card_id)
         return [make_choose_cards_choice(game.current_player, get_targets, on_chosen)]
 
