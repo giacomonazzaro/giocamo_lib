@@ -9,22 +9,30 @@ from kitchen_table.config import tweak
 _background_shader = None
 _background_time_loc = -1
 _background_resolution_loc = -1
+_background_turn_loc = -1
+_background_turn_value = 0.0
 
 
 def _load_background_shader():
-    global _background_shader, _background_time_loc, _background_resolution_loc
+    global _background_shader, _background_time_loc, _background_resolution_loc, _background_turn_loc
     shader_path = os.path.join(os.path.dirname(__file__), "background.fs")
     with open(shader_path) as f:
         fs_code = f.read()
     _background_shader = load_shader_from_memory(rl.ffi.NULL, fs_code.encode())
     _background_time_loc = get_shader_location(_background_shader, "u_time")
     _background_resolution_loc = get_shader_location(_background_shader, "u_resolution")
+    _background_turn_loc = get_shader_location(_background_shader, "u_turn")
 
 
-def draw_background():
-    global _background_shader
+def draw_background(turn: float = 0.0):
+    global _background_shader, _background_turn_value
     if _background_shader is None:
         _load_background_shader()
+
+    # Smoothly interpolate toward the target turn value.
+    dt = get_frame_time()
+    speed = 3.0
+    _background_turn_value += (turn - _background_turn_value) * min(dt * speed, 1.0)
 
     t = rl.ffi.new("float *", get_time())
     rl.SetShaderValue(_background_shader, _background_time_loc, t,
@@ -33,6 +41,10 @@ def draw_background():
     res = rl.ffi.new("float[2]", [get_screen_width(), get_screen_height()])
     rl.SetShaderValue(_background_shader, _background_resolution_loc, res,
                       rl.SHADER_UNIFORM_VEC2)
+
+    turn_val = rl.ffi.new("float *", _background_turn_value)
+    rl.SetShaderValue(_background_shader, _background_turn_loc, turn_val,
+                      rl.SHADER_UNIFORM_FLOAT)
 
     begin_shader_mode(_background_shader)
     draw_rectangle(0, 0, get_screen_width(), get_screen_height(), WHITE)

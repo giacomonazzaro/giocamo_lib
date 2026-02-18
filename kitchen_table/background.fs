@@ -5,6 +5,7 @@ in vec2 fragTexCoord;
 
 uniform float u_time;
 uniform vec2 u_resolution;
+uniform float u_turn; // 0.0 = your turn, 1.0 = opponent's turn.
 
 out vec4 fragColor;
 
@@ -116,17 +117,58 @@ vec2 rotate(vec2 x, float angle) {
     return mat2(ct, -st, st, ct) * x;
 }
 
+// Turbulence: layered sine-wave displacements with golden-ratio rotation.
+// TURB_NUM, TURB_AMP, TURB_SPEED, TURB_FREQ, TURB_EXP – see Constants.
+#define TURB_NUM   10.0
+#define TURB_AMP   0.7
+#define TURB_SPEED 0.3
+#define TURB_FREQ  2.0
+#define TURB_EXP   1.4
+
+const mat2 GOLDEN_ROT2 = mat2(
+    -0.73736887808,  0.67549029426,
+    -0.67549029426, -0.73736887808);
+
+vec2 turbulence(vec2 pos, float time)
+{
+    float freq = TURB_FREQ;
+    mat2 rot = GOLDEN_ROT2;
+    for (float i = 0.0; i < TURB_NUM; i++)
+    {
+        float phase = freq * (pos * rot).y + TURB_SPEED * time + i;
+        pos += TURB_AMP * rot[0] * sin(phase) / freq;
+        rot *= GOLDEN_ROT2;
+        freq *= TURB_EXP;
+    }
+    return pos;
+}
+
+
 void main() {
-    vec2 uv = gl_FragCoord.xy / u_resolution; 
+    vec2 uv = gl_FragCoord.xy / u_resolution.x; 
     float t = u_time * 0.5;
     // uv *= 2.0;
+    uv = turbulence(uv, u_time);
 
     float rt = t * 0.3;
-    float blue = eval_v(rotate(uv, rt), t*1.0);
-    float orange = eval_v(rotate(uv * 1.1, rt + 0.1), t*1.0);
+    float value0 = eval_v(rotate(uv, rt), t*1.0);
+    float value1 = eval_v(rotate(uv * 1.1, rt + 0.1), t*1.0);
 
-    vec3 a = blue * vec3(0.1, 0.1, 0.8);
-    vec3 b = orange * vec3(0.8, 0.3, 0.1);
+    vec3 blue = vec3(0.1, 0.1, 0.8);
+    vec3 orange = vec3(0.8, 0.3, 0.1);
+    orange = mix(orange, orange.yzx, u_turn);
+    blue = mix(blue, blue.yzx, u_turn);
+    // orange = orange.yzx;
+    // blue = blue.yzx;
+    // xyz
+    // xzy
+    // yxz nice
+    // yzx nice
+    // zxy
+    // zyx
+
+    vec3 a = value0 * blue;
+    vec3 b = value1 * orange;
     float vor = (1.0 - voronoi(uv * 10.0 + t));
     vor = remap(vor, 0.0, 1.0, 0.5, 1.0);
     // b *= vor;    
@@ -136,6 +178,9 @@ void main() {
     
     vec3 col = combine(a, b);
     col = max(col, 0.1 * fbm(uv + t * 0.1));
+
+    // Smoothly invert colors when the turn passes to the opponent.
+    // col = mix(col, 1.0 - col, u_turn);
 
     fragColor = vec4(col, 1.0);
 }

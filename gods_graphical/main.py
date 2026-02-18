@@ -162,7 +162,9 @@ def play(gods_state: Game_State, table_state: kt.Table_State, ui_state: UI_State
             update_input(table_state)
 
         pyray.begin_drawing()
-        draw_background()
+        # 1.0 when it's the opponent's turn, 0.0 when it's ours.
+        turn = 1.0 if gods_state.current_player != player_index else 0.0
+        draw_background(turn)
         draw_table(table_state)
         draw_buttons(ui_state.buttons)
         draw_highlighted_cards(ui_state.highlighted_cards, gods_state, table_state)
