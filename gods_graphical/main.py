@@ -11,6 +11,7 @@ import typer
 import kitchen_table.models as kt
 from game.agents.duel import Agent_Duel
 from game.agents.minimax_stochastic import Agent_Minimax_Stochastic
+from game.agents.process import Agent_Process
 from game.game import game_loop
 from gods.gameplay import compute_player_score
 from gods.models import Game_State, effective_power
@@ -211,7 +212,7 @@ def main(
         agent_opponent = Agent_Remote(sock)
     else:
         agent_local = agent_ui
-        agent_opponent = Agent_Minimax_Stochastic()
+        agent_opponent = Agent_Process(Agent_Minimax_Stochastic())
     
     if not game_logic:
         agent = None
