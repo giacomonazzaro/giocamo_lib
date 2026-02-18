@@ -173,40 +173,28 @@ def compute_player_score(game: Game_State, player_index: int) -> int:
     return score
 
 
-def make_play_choice(state: Game_State) -> Choice:
-    player_index = state.current_player
-    def actions(state: Game_State) -> list:
-        return [Card_Id(area="hand", card_index=i, owner_index=state.current_player)
-                for i, card in enumerate(state.players[state.current_player].hand)]
-    def resolve(state: Game_State, option_index: int) -> list[Choice]:
-        card_id = actions(state)[option_index]
-        new_choices = play_card(state, card_id)
-        state.current_phase = "post-play"
-        return new_choices
-    return Choice(player_index=player_index, description="choose-card",
-                  actions=actions, resolve=resolve)
-
 def make_main_choice(state: Game_State) -> Choice:
     player_index = state.current_player
     def actions(state: Game_State) -> list:
-        player = state.active_player()
-        options = []
-        if player.hand:
-            options.append("play")
-        options.append("pass")
-        return options
-    def resolve(state: Game_State, option_index: int) -> list[Choice]:
-        action = actions(state)[option_index]
-        if action == "play":
-            return [make_play_choice(state)]
-        elif action == "pass":
+        cards = [Card_Id(area="hand", card_index=i, owner_index=state.current_player)
+                for i, card in enumerate(state.players[state.current_player].hand)]
+        cards.append(Card_Id.null())
+        return cards
+    
+    def resolve(state: Game_State, option_index: int):
+        card_id = actions(state)[option_index]
+        if card_id != Card_Id.null():
+            new_choices = play_card(state, card_id)
+            state.current_phase = "post-play"
+            return new_choices
+        else:
             result: list[Choice] = []
             player = state.active_player()
             for w in player.wonders:
                 result.extend(w.on_pass(state))
             state.current_phase = "post-pass-effects"
             return result
-        return []
+
     return Choice(player_index=player_index, description="main",
                   actions=actions, resolve=resolve)
 

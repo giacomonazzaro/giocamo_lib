@@ -45,7 +45,7 @@ class Agent_UI(Agent):
     def message(self, msg: str):
         pass
 
-    def _handle_choose_cards(self, state: Game_State, actions: list) -> int:
+    def _handle_choose_cards(self, state: Game_State, actions: list, done_label="Done") -> int:
         """Sequential card-picking UI for combinatorial choices.
         Actions are list[tuple[Card_Id, ...]], each tuple is one valid combination.
         User picks cards one at a time; remaining valid combinations are narrowed down."""
@@ -74,7 +74,7 @@ class Agent_UI(Agent):
             self.ui_state.highlighted_cards = list(selectable)
             self.ui_state.buttons = []
             if has_done:
-                self.ui_state.buttons.append(Button(button_x, button_y, button_w, button_h, text="Done"))
+                self.ui_state.buttons.append(Button(button_x, button_y, button_w, button_h, text=done_label))
 
             clicked_card = None
             done_clicked = False
@@ -134,11 +134,16 @@ class Agent_UI(Agent):
         button_y = get_screen_height() - 50
 
         if choice.description == "main":
+            # Same as "choose-card" but with "Pass" button for the null entry.
+            self.ui_state.highlighted_cards = []
             self.ui_state.buttons = []
-            for i, action in enumerate(actions):
-                x = start_x + i * (button_w + gap)
-                button = Button(x, button_y, button_w, button_h, text=str(action))
-                self.ui_state.buttons.append(button)
+            for i, card_id in enumerate(actions):
+                if Card_Id.is_null(card_id):
+                    x = start_x
+                    button = Button(x, button_y, button_w, button_h, text="Pass")
+                    self.ui_state.buttons.append(button)
+                else:
+                    self.ui_state.highlighted_cards.append(card_id)
 
         elif choice.description == "choose-binary":
             self.ui_state.buttons = []
@@ -166,10 +171,19 @@ class Agent_UI(Agent):
             mx, my = get_mouse_x(), get_mouse_y()
             click = is_mouse_button_pressed(MouseButton.MOUSE_BUTTON_LEFT)
             if choice.description == "main":
-                for i, action in enumerate(actions):
-                    if self.ui_state.buttons[i].pressed(mx, my, click):
-                        selected = i
-                        break
+                for i, card_id in enumerate(actions):
+                    if Card_Id.is_null(card_id):
+                        if self.ui_state.buttons[0].pressed(mx, my, click):
+                            selected = i
+                            break
+                    else:
+                        card = state.get_card(card_id)
+                        kt_card = self.table_state.cards[card.id]
+                        w = tweak["card_width"]
+                        h = tweak["card_height"]
+                        if click and point_in_rect(mx, my, kt_card.x, kt_card.y, w, h):
+                            selected = i
+                            break
             elif choice.description == "choose-binary":
                 for i in range(2):
                     if self.ui_state.buttons[i].pressed(mx, my, click):
