@@ -2,7 +2,7 @@ from __future__ import annotations
 import random
 from typing import Optional
 from gods.models import Card, Card_Id, Card_Type, Game_State
-from game.agents.agent import Choice
+from game.game import Choice
 
 def draw_card(game: Game_State, player_id: int, replacement_effects=True) -> list[Choice]:
     """Draw a card from the player's deck. Returns list of choices produced by draw effects."""

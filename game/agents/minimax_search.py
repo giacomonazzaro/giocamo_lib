@@ -1,7 +1,6 @@
 from __future__ import annotations
 from dataclasses import dataclass
-from gods.models import Game_State
-from game.agents.agent import Choice
+from game.game import Game, Choice
 from gods.gameplay import compute_player_score
 import copy
 import time
@@ -24,7 +23,7 @@ def check_time(ctx: Search_Context) -> None:
 
 
 def minimax_search(
-    state: Game_State,
+    state: Game,
     choice: Choice,
     actions: list,
     max_depth: int,
@@ -53,7 +52,7 @@ def minimax_search(
 
 
 def minimax_root(
-    state: Game_State,
+    state: Game,
     choice: Choice,
     actions: list,
     depth: int,
@@ -81,11 +80,12 @@ def minimax_root(
 
 
 def minimax(
-    state: Game_State,
+    state: Game,
     depth: int,
     alpha: float,
     beta: float,
     ctx: Search_Context,
+    evaluate_state: Callable[[Game, int], float]
 ) -> float:
     """Recursive minimax with alpha-beta pruning."""
     ctx.nodes_searched += 1
@@ -94,21 +94,21 @@ def minimax(
     if ctx.time_up:
         return 0.0
 
-    if state.game_over:
-        return evaluate(state, ctx.player_index)
+    if state.is_game_over():
+        return evaluate_state(state, ctx.player_index)
 
     choice = state.next_choice()
     if choice is None:
-        return evaluate(state, ctx.player_index)
+        return evaluate_state(state, ctx.player_index)
 
     actions = choice.actions(state)
     maximizing = choice.player_index == ctx.player_index
     next_depth = depth - 1
     if next_depth < 0:
-        return evaluate_heuristic(state, ctx.player_index)
+        return evaluate_state(state, ctx.player_index)
 
     if not actions:
-        return evaluate_heuristic(state, ctx.player_index)
+        return evaluate_state(state, ctx.player_index)
 
     if maximizing:
         value = -float("inf")
@@ -138,7 +138,7 @@ def minimax(
         return value
 
 
-def evaluate_heuristic(state: Game_State, player_index: int) -> float:
+def evaluate_heuristic(state: Game, player_index: int) -> float:
     """Estimate how good a non-finished position is."""
     my_score = compute_player_score(state, player_index)
     opp_score = compute_player_score(state, 1 - player_index)
@@ -159,8 +159,11 @@ def evaluate_heuristic(state: Game_State, player_index: int) -> float:
 
     return score
 
-def evaluate(state: Game_State, player_index: int) -> float:
+def evaluate_state(state: Game, player_index: int) -> float:
     """Evaluate a finished game. Returns +1000 for win, -1000 for loss."""
+    if state.is_game_over():
+        return evaluate_heuristic(state, player_index)
+    
     my_score = compute_player_score(state, player_index)
     opp_score = compute_player_score(state, 1 - player_index)
     diff = my_score - opp_score

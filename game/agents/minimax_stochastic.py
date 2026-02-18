@@ -1,7 +1,5 @@
 from __future__ import annotations
-from typing import Optional
-from gods.models import Game_State
-from game.agents.agent import Choice
+from game.game import Game, Choice
 from game.agents.minimax_search import Search_Context, minimax_search
 import copy
 import time
@@ -13,12 +11,12 @@ class Agent_Minimax_Stochastic:
         self.max_depth = max_depth
         self.time_limit = time_limit
         self.num_samples = num_samples
-        self.player_index: Optional[int] = None
 
     def message(self, msg: str):
         pass
 
-    def _sample_state(self, state: Game_State, player_index: int) -> Game_State:
+    # TODO(giacomo): This should be provided by the caller.
+    def _sample_state(self, state: Game, player_index: int) -> Game:
         """Create a sampled state by shuffling hidden information.
 
         The agent cannot see:
@@ -43,20 +41,13 @@ class Agent_Minimax_Stochastic:
 
         return sampled
 
-    def choose_action(self, state: Game_State, choice: Choice, actions: list) -> int:
-        is_root = self.player_index is None
-        if is_root:
-            self.player_index = choice.player_index
-
         selected = self._search(state, choice, actions)
 
-        if is_root:
-            self.player_index = None
         print(f"choice: {choice.description}: {actions}")
         print(f"selected: {actions[selected]}")
         return selected
 
-    def _search(self, state: Game_State, choice: Choice, actions: list) -> int:
+    def choose_action(self, state: Game, choice: Choice, actions: list) -> int:
         """Stochastic minimax with root sampling.
 
         Runs multiple samples to handle hidden information:
@@ -73,12 +64,13 @@ class Agent_Minimax_Stochastic:
         overall_start = time.time()
 
         print(f"started: {choice.description} ({self.num_samples} samples)")
+        player_index = choice.player_index
 
         for _ in range(self.num_samples):
-            sampled_state = self._sample_state(state, self.player_index)  # type: ignore[arg-type]
+            sampled_state = self._sample_state(state, player_index)  # type: ignore[arg-type]
 
             ctx = Search_Context(
-                player_index=self.player_index,  # type: ignore[arg-type]
+                player_index=player_index,  # type: ignore[arg-type]
                 start_time=time.time(),
                 time_limit=time_per_sample,
             )

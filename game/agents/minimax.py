@@ -1,27 +1,24 @@
 from __future__ import annotations
-from typing import Optional
-from gods.models import Game_State
-from game.agents.agent import Choice
+from game.game import Game, Choice
+from game.agents.agent import Agent
 from game.agents.minimax_search import Search_Context, minimax_search
 import time
 
 
-class Agent_Minimax:
+class Agent_Minimax(Agent):
     def __init__(self, max_depth: int = 5, time_limit: float = 10.0):
         self.max_depth = max_depth
         self.time_limit = time_limit
-        self.player_index: Optional[int] = None
 
     def message(self, msg: str):
         pass
+    
+    def evaluate_state(state: Game, player_index: int) -> float:
+        return 0.0
 
-    def choose_action(self, state: Game_State, choice: Choice, actions: list) -> int:
-        is_root = self.player_index is None
-        if is_root:
-            self.player_index = choice.player_index
-
+    def choose_action(self, state: Game, choice: Choice, actions: list) -> int:
         ctx = Search_Context(
-            player_index=self.player_index,  # type: ignore[arg-type]
+            player_index=choice.player_index,  # type: ignore[arg-type]
             start_time=time.time(),
             time_limit=self.time_limit,
         )
@@ -36,6 +33,4 @@ class Agent_Minimax:
             f"time={elapsed:.2f}s"
         )
 
-        if is_root:
-            self.player_index = None
         return best_action
