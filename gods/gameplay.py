@@ -3,7 +3,7 @@ import random
 from typing import Optional
 from gods.models import Card, Card_Id, Card_Type, Game_State
 from game.game import Choice
-from game.agents.minimax import Agent_Minimax
+from game.agents.minimax_stochastic import Agent_Minimax_Stochastic
 
 def draw_card(game: Game_State, player_id: int, replacement_effects=True) -> list[Choice]:
     """Draw a card from the player's deck. Returns list of choices produced by draw effects."""
@@ -243,7 +243,7 @@ def display_game_state(game: Game_State, current_player_view: bool = True) -> No
     print("\n" + "=" * 60)
 
 
-class Agent_Minimax_Gods(Agent_Minimax):
+class Agent_Minimax_Stochastic_Gods(Agent_Minimax_Stochastic):
     """Minimax agent with gods-specific evaluation."""
 
     def evaluate_state(self, state: Game_State, player_index: int) -> float:

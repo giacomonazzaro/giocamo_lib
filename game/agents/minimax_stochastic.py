@@ -17,6 +17,7 @@ class Agent_Minimax_Stochastic(Agent):
         pass
 
     def evaluate_state(self, state: Game, player_index: int) -> float:
+        assert False
         return 0.0
 
 
