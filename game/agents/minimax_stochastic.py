@@ -1,12 +1,13 @@
 from __future__ import annotations
 from game.game import Game, Choice
+from game.agents.agent import Agent
 from game.agents.minimax_search import Search_Context, minimax_search
 import copy
 import time
 import random
 
 
-class Agent_Minimax_Stochastic:
+class Agent_Minimax_Stochastic(Agent):
     def __init__(self, max_depth: int = 7, time_limit: float = 10.0, num_samples: int = 20):
         self.max_depth = max_depth
         self.time_limit = time_limit
@@ -14,6 +15,10 @@ class Agent_Minimax_Stochastic:
 
     def message(self, msg: str):
         pass
+
+    def evaluate_state(self, state: Game, player_index: int) -> float:
+        return 0.0
+
 
     # TODO(giacomo): This should be provided by the caller.
     def _sample_state(self, state: Game, player_index: int) -> Game:
@@ -63,6 +68,7 @@ class Agent_Minimax_Stochastic:
         votes: list[int] = [0] * num_actions
         time_per_sample = self.time_limit / self.num_samples
         overall_start = time.time()
+        evaluate_state = lambda state, player_index: self.evaluate_state(state, player_index)
 
         print(f"started: {choice.description} ({self.num_samples} samples)")
         player_index = choice.player_index
@@ -75,7 +81,7 @@ class Agent_Minimax_Stochastic:
                 start_time=time.time(),
                 time_limit=time_per_sample,
             )
-            scores = minimax_search(sampled_state, choice, actions, self.max_depth, ctx)
+            scores = minimax_search(sampled_state, evaluate_state, choice, actions, self.max_depth, ctx)
             best_action = max(range(num_actions), key=lambda a: scores[a])
             votes[best_action] += 1
 

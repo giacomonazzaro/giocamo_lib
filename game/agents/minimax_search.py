@@ -1,7 +1,7 @@
 from __future__ import annotations
 from dataclasses import dataclass
+from typing import Callable
 from game.game import Game, Choice, resolve_choice
-from gods.gameplay import compute_player_score
 import copy
 import time
 
@@ -24,6 +24,7 @@ def check_time(ctx: Search_Context) -> None:
 
 def minimax_search(
     state: Game,
+    evaluate: Callable[[Game, int], float],
     choice: Choice,
     actions: list,
     max_depth: int,
@@ -41,7 +42,7 @@ def minimax_search(
         if ctx.time_up:
             break
         ctx.nodes_searched = 0
-        depth_scores = minimax_root(state, choice, actions, depth, action_order, ctx)
+        depth_scores = minimax_root(state, evaluate, choice, actions, depth, action_order, ctx)
         if not ctx.time_up:
             scores = depth_scores
             action_order.sort(key=lambda a: depth_scores[a], reverse=True)
@@ -53,6 +54,7 @@ def minimax_search(
 
 def minimax_root(
     state: Game,
+    evaluate: Callable[[Game, int], float],
     choice: Choice,
     actions: list,
     depth: int,
@@ -70,7 +72,7 @@ def minimax_root(
             break
         new_state = copy.deepcopy(state)
         resolve_choice(new_state, choice, action_index)
-        score = minimax(new_state, depth, alpha, beta, ctx)
+        score = minimax(new_state, evaluate, depth, alpha, beta, ctx)
         scores[action_index] = score
         alpha = max(alpha, score)
 
@@ -79,6 +81,7 @@ def minimax_root(
 
 def minimax(
     state: Game,
+    evaluate: Callable[[Game, int], float],
     depth: int,
     alpha: float,
     beta: float,
@@ -92,27 +95,27 @@ def minimax(
         return 0.0
 
     if state.is_game_over():
-        return evaluate_state(state, ctx.player_index)
+        return evaluate(state, ctx.player_index)
 
     choice = state.next_choice()
     if choice is None:
-        return evaluate_state(state, ctx.player_index)
+        return evaluate(state, ctx.player_index)
 
     actions = choice.actions(state)
     maximizing = choice.player_index == ctx.player_index
     next_depth = depth - 1
     if next_depth < 0:
-        return evaluate_state(state, ctx.player_index)
+        return evaluate(state, ctx.player_index)
 
     if not actions:
-        return evaluate_state(state, ctx.player_index)
+        return evaluate(state, ctx.player_index)
 
     value = -float("inf") if maximizing else float("inf")
 
     for action_index in range(len(actions)):
         new_state = copy.deepcopy(state)
         resolve_choice(new_state, choice, action_index)
-        score = minimax(new_state, next_depth, alpha, beta, ctx)
+        score = minimax(new_state, evaluate, next_depth, alpha, beta, ctx)
         if maximizing:
             value = max(value, score)
             alpha = max(alpha, value)
@@ -122,47 +125,3 @@ def minimax(
         if alpha >= beta:
             break
     return value
-    
-
-
-def evaluate_heuristic(state: Game, player_index: int) -> float:
-    """Estimate how good a non-finished position is."""
-    my_score = compute_player_score(state, player_index)
-    opp_score = compute_player_score(state, 1 - player_index)
-
-    score = float(my_score - opp_score)
-
-    my_hand = len(state.players[player_index].hand)
-    opp_hand = len(state.players[1 - player_index].hand)
-    score += 0.1 * (my_hand - opp_hand)
-
-    my_wonders = len(state.players[player_index].wonders)
-    opp_wonders = len(state.players[1 - player_index].wonders)
-    score += 0.2 * (my_wonders - opp_wonders)
-
-    my_deck = len(state.players[player_index].deck)
-    opp_deck = len(state.players[1 - player_index].deck)
-    score += 0.05 * (my_deck - opp_deck)
-
-    return score
-
-def evaluate_state(state: Game, player_index: int) -> float:
-    """Evaluate a finished game. Returns +1000 for win, -1000 for loss."""
-    if not state.is_game_over():
-        return evaluate_heuristic(state, player_index)
-
-    my_score = compute_player_score(state, player_index)
-    opp_score = compute_player_score(state, 1 - player_index)
-    diff = my_score - opp_score
-    if diff > 0:
-        score = 1000.0
-    elif diff < 0:
-        score = -1000.0
-    else:
-        if state.ending_player == player_index:
-            score = -1000.0
-        else:
-            score = 1000.0
-
-    # score += evaluate_heuristic(state, player_index)
-    return score

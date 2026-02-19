@@ -3,6 +3,7 @@ import random
 from typing import Optional
 from gods.models import Card, Card_Id, Card_Type, Game_State
 from game.game import Choice
+from game.agents.minimax import Agent_Minimax
 
 def draw_card(game: Game_State, player_id: int, replacement_effects=True) -> list[Choice]:
     """Draw a card from the player's deck. Returns list of choices produced by draw effects."""
@@ -240,3 +241,46 @@ def display_game_state(game: Game_State, current_player_view: bool = True) -> No
             print(f"    - {detailed_str(card)}")
         print("  points:", compute_player_score(game, i))
     print("\n" + "=" * 60)
+
+
+class Agent_Minimax_Gods(Agent_Minimax):
+    """Minimax agent with gods-specific evaluation."""
+
+    def evaluate_state(self, state: Game_State, player_index: int) -> float:
+        if not state.is_game_over():
+            return self.evaluate_heuristic(state, player_index)
+
+        my_score = compute_player_score(state, player_index)
+        opp_score = compute_player_score(state, 1 - player_index)
+        diff = my_score - opp_score
+        if diff > 0:
+            return 1000.0
+        elif diff < 0:
+            return -1000.0
+        else:
+            # Tie-breaking: the player who declared end of game loses.
+            if state.ending_player == player_index:
+                return -1000.0
+            else:
+                return 1000.0
+
+    def evaluate_heuristic(self, state: Game_State, player_index: int) -> float:
+        """Estimate how good a non-finished position is."""
+        my_score = compute_player_score(state, player_index)
+        opp_score = compute_player_score(state, 1 - player_index)
+
+        score = float(my_score - opp_score)
+
+        my_hand = len(state.players[player_index].hand)
+        opp_hand = len(state.players[1 - player_index].hand)
+        score += 0.1 * (my_hand - opp_hand)
+
+        my_wonders = len(state.players[player_index].wonders)
+        opp_wonders = len(state.players[1 - player_index].wonders)
+        score += 0.2 * (my_wonders - opp_wonders)
+
+        my_deck = len(state.players[player_index].deck)
+        opp_deck = len(state.players[1 - player_index].deck)
+        score += 0.05 * (my_deck - opp_deck)
+
+        return score

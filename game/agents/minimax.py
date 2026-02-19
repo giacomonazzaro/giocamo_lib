@@ -13,7 +13,7 @@ class Agent_Minimax(Agent):
     def message(self, msg: str):
         pass
     
-    def evaluate_state(state: Game, player_index: int) -> float:
+    def evaluate_state(self, state: Game, player_index: int) -> float:
         return 0.0
 
     def choose_action(self, state: Game, choice: Choice) -> int:
@@ -25,7 +25,7 @@ class Agent_Minimax(Agent):
         )
 
         print("started:", choice.description)
-        scores = minimax_search(state, choice, actions, self.max_depth, ctx)
+        scores = minimax_search(state, self.evaluate_state, choice, actions, self.max_depth, ctx)
         best_action = max(range(len(scores)), key=lambda a: scores[a])
         elapsed = time.time() - ctx.start_time
         print(
