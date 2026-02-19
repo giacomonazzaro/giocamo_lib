@@ -8,7 +8,7 @@ import random
 
 
 class Agent_Minimax_Stochastic(Agent):
-    def __init__(self, max_depth: int = 7, time_limit: float = 10.0, num_samples: int = 20):
+    def __init__(self, max_depth: int = 6, time_limit: float = 10.0, num_samples: int = 20):
         self.max_depth = max_depth
         self.time_limit = time_limit
         self.num_samples = num_samples
