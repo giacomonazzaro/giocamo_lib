@@ -43,9 +43,11 @@ class Agent_UI(Agent):
         self.ui_state = ui_state
         self.bottom_player = bottom_player
         # Persistent state for multi-step card picking in choose-cards.
-        self._choose_cards_remaining = None
-        self._choose_cards_picked = None
+        # self._choose_cards_remaining = None
+        # self._choose_cards_picked = None
         self.is_ui_ready = False
+        self.card_combinations = []
+        self.card_multiselection = set()
 
     def message(self, msg: str):
         pass
@@ -160,10 +162,22 @@ class Agent_UI(Agent):
                     button = Button(x, button_y, button_w, button_h, text="Done")
                     self.ui_state.buttons[i] = button
                 else:
-                    card = state.get_card(card_id)
-                    kt_card = self.table_state.animated_cards[card.id]
                     self.ui_state.highlighted_cards[i] = state.get_card(card_id).id
-        
+        elif choice.description == "choose-cards":
+            self.card_combinations = []
+            for combination in actions:
+                self.card_combinations.append(set(combination))
+                for card_id in combination:
+                    if Card_Id.is_null(card_id):
+                        x = start_x
+                        button = Button(x, button_y, button_w, button_h, text="Done")
+                        self.ui_state.buttons[0] = button
+                    else:
+                        self.ui_state.highlighted_cards[card_id] = state.get_card(card_id).id
+
+            print(self.card_multiselection)
+            print(self.card_combinations)
+
         self.is_ui_ready = True
 
     def choose_action(self, state: Game_State, choice: Choice) -> int:
@@ -172,22 +186,39 @@ class Agent_UI(Agent):
         if not self.is_ui_ready:
             self.build_ui(state, choice, actions)
 
-        # if choice.description == "choose-cards":
-        #     return self._handle_choose_cards(state, actions)
+        print(choice.description)
 
         selected = -1
         if not is_mouse_button_pressed(MouseButton.MOUSE_BUTTON_LEFT):
             return -1
+        
 
-        for i, button in self.ui_state.buttons.items():
-            if button.pressed():
+        if choice.description == "choose-cards":
+            for gods_card_id, kt_card_id in self.ui_state.highlighted_cards.items():
+                card = self.table_state.cards[kt_card_id]
+                if card_pressed(card):
+                    self.card_multiselection.add(gods_card_id)
+                    del self.table_state.cards[kt_card_id]
+
+            if self.ui_state.buttons[0].pressed():
+                i = self.card_combinations.find(self.card_multiselection)
+                print("hhhhhhhhhhh")
                 selected = i
+                self.card_multiselection = set()
+                self.card_combinations = []
+        else:
+            for i, button in self.ui_state.buttons.items():
+                if button.pressed():
+                    print("aaaaaaaaa")
+                    selected = i
             
-        for i, card_id in self.ui_state.highlighted_cards.items():
-            card = self.table_state.cards[card_id]
-            if card_pressed(card):
-                selected = i
+            for i, card_id in self.ui_state.highlighted_cards.items():
+                card = self.table_state.cards[card_id]
+                if card_pressed(card):
+                    print("bbbbbbbbb")
+                    selected = i
 
+        print("Selected", selected)
         if selected != -1:
             self.is_ui_ready = False
             self.ui_state.buttons = {}

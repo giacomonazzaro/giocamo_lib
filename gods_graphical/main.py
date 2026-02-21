@@ -142,8 +142,9 @@ def play(gods_state: Game_State, table_state: kt.Table_State, ui_state: UI_State
         if not agent:
             update_input(table_state)
 
-        current_choice = game_frame(gods_state, agent, current_choice)
-        update_stacks(table_state, gods_state, bottom_player=player_index)
+        if agent:
+            current_choice = game_frame(gods_state, agent, current_choice)
+            update_stacks(table_state, gods_state, bottom_player=player_index)
 
         pyray.begin_drawing()
         # 1.0 when it's the opponent's turn, 0.0 when it's ours.
@@ -178,8 +179,8 @@ def p2p(
     main(*setup_online_game(sock, local))
 
 @app.command()
-def agent(game_logic: bool = True):
-    main(player_index=0, seed=None, sock=None, game_logic=game_logic)
+def agent(game_logic: bool = True, seed=None):
+    main(player_index=0, seed=seed, sock=None, game_logic=game_logic)
 
 def main(
         player_index: int = 0, 

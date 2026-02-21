@@ -20,10 +20,11 @@ def remove_card_from_stack(card_id: int, stack: Stack, state: Table_State) -> in
     return None
 
 
-def update_card_positions(stack: Stack, state: Table_State) -> None:
+def update_card_positions(stack: Stack, state: Table_State, sort=True) -> None:
     """Update x,y positions of all cards in a stack based on spread values."""
     n = len(stack.cards)
-    stack.cards.sort(key = lambda card_id: state.cards[card_id].x)
+    if sort:
+        stack.cards.sort(key = lambda card_id: state.cards[card_id].x)
     spread_x = stack.spread_x
     spread_y = stack.spread_y
     card_width = tweak["card_width"]
@@ -69,10 +70,10 @@ def remove_loose_card(card_id: int, state: Table_State) -> int | None:
     return None
 
 
-def shuffle_stack(stack: Stack, state: Table_State) -> None:
-    """Shuffle the cards in a stack."""
-    random.shuffle(stack.cards)
-    update_card_positions(stack, state)
+# def shuffle_stack(stack: Stack, state: Table_State) -> None:
+#     """Shuffle the cards in a stack."""
+#     random.shuffle(stack.cards)
+#     update_card_positions(stack, state)
 
 
 def create_sample_cards(state: Table_State) -> list[int]:

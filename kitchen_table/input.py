@@ -141,6 +141,21 @@ def handle_rotate_card(state: Table_State, clockwise: bool = True) -> None:
         else:
             card.rotation = (card.rotation - 90)
 
+def shuffle_stack(state: Table_State, stack_id: int):
+    if stack_id == -1:
+        return
+
+    import random
+    stack = state.stacks[stack_id]
+    random.shuffle(stack.cards)
+
+    for card_id in stack.cards:
+        card = state.animated_cards[card_id]
+        card.x += (random.random() * 2 - 1) * 20
+        card.y += (random.random() * 2 - 1) * 20
+        card.rotation += (random.random() * 2 - 1) * 20
+    
+    gs.update_card_positions(stack, state, sort=False)
 
 def update_input(state: Table_State) -> None:
     """Main input processing - call each frame."""
@@ -161,9 +176,10 @@ def update_input(state: Table_State) -> None:
             handle_rotate_card(state, clockwise=True)
 
     # Handle card zoom
+    mx = get_mouse_x()
+    my = get_mouse_y()
+    
     if is_key_down(KeyboardKey.KEY_SPACE):
-        mx = get_mouse_x()
-        my = get_mouse_y()
         result = find_card_at(mx, my, state)
         if result:
             state.zoomed_card_id = result[0]
@@ -171,3 +187,7 @@ def update_input(state: Table_State) -> None:
             state.zoomed_card_id = -1
     else:
         state.zoomed_card_id = -1
+
+    if is_key_pressed(KeyboardKey.KEY_S):
+        stack_id = find_stack_at(mx, my, state)
+        shuffle_stack(state, stack_id)
