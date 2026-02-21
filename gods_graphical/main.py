@@ -8,10 +8,11 @@ from typing import Annotated
 import pyray
 import typer
 
+from game.agents.randomized import Agent_Random
 import kitchen_table.models as kt
 from game.agents.duel import Agent_Duel
 from game.agents.process import Agent_Process
-from game.game import game_loop
+from game.game import game_loop, resolve_choice
 from gods.gameplay import compute_player_score, Agent_Minimax_Stochastic_Gods
 from gods.models import Game_State, effective_power
 from gods.setup import quick_setup
@@ -138,18 +139,19 @@ def play(gods_state: Game_State, table_state: kt.Table_State, ui_state: UI_State
     pyray.init_window(tweak["window_width"], tweak["window_height"], "Gods Online")
     pyray.set_target_fps(tweak["target_fps"])
 
-    if agent:
-        game_thread = threading.Thread(
-            target=lambda: game_loop(gods_state, agent, display),
-            daemon=True,
-        )
-        game_thread.start()
+    # if agent:
+    #     game_thread = threading.Thread(
+    #         target=lambda: game_loop(gods_state, agent, display),
+    #         daemon=True,
+    #     )
+    #     game_thread.start()
 
+    current_choice = None
     while not pyray.window_should_close():
         if gods_state.game_over:
             break
 
-        # Handle card zoom
+        # Handle card zoom TODO(giacomo, claude): move to kitchen_table
         if pyray.is_key_down(pyray.KeyboardKey.KEY_SPACE):
             mx, my = pyray.get_mouse_x(), pyray.get_mouse_y()
             result = find_card_at(mx, my, table_state)
@@ -159,6 +161,16 @@ def play(gods_state: Game_State, table_state: kt.Table_State, ui_state: UI_State
 
         if not agent:
             update_input(table_state)
+
+        # Only fetch a new choice when the previous one has been resolved.
+        if current_choice is None:
+            current_choice = gods_state.next_choice()
+        if current_choice is not None:
+            action_index = agent.choose_action(gods_state, current_choice)
+            if action_index != -1:
+                resolve_choice(gods_state, current_choice, action_index)
+                update_stacks(table_state, gods_state, bottom_player=player_index)
+                current_choice = None
 
         pyray.begin_drawing()
         # 1.0 when it's the opponent's turn, 0.0 when it's ours.
@@ -213,7 +225,8 @@ def main(
         agent_opponent = Agent_Remote(sock)
     else:
         agent_local = agent_ui
-        agent_opponent = Agent_Process(Agent_Minimax_Stochastic_Gods())
+        agent_opponent = Agent_Random()
+        # agent_opponent = Agent_Process(Agent_Minimax_Stochastic_Gods())
     
     if not game_logic:
         agent = None

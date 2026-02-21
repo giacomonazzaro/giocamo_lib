@@ -41,6 +41,9 @@ class Agent_UI(Agent):
         self.table_state = table_state
         self.ui_state = ui_state
         self.bottom_player = bottom_player
+        # Persistent state for multi-step card picking in choose-cards.
+        self._choose_cards_remaining = None
+        self._choose_cards_picked = None
 
     def message(self, msg: str):
         pass
@@ -48,69 +51,76 @@ class Agent_UI(Agent):
     def _handle_choose_cards(self, state: Game_State, actions: list, done_label="Done") -> int:
         """Sequential card-picking UI for combinatorial choices.
         Actions are list[tuple[Card_Id, ...]], each tuple is one valid combination.
-        User picks cards one at a time; remaining valid combinations are narrowed down."""
+        User picks cards one at a time; remaining valid combinations are narrowed down.
+        Returns -1 until the user has fully selected a combination."""
+        # Initialize persistent state on first call.
+        if self._choose_cards_remaining is None:
+            self._choose_cards_remaining = list(range(len(actions)))
+            self._choose_cards_picked = []
+
+        remaining = self._choose_cards_remaining
+        picked_cards = self._choose_cards_picked
+
+        # Narrowed down to one combination — done.
+        if len(remaining) == 1:
+            selected = remaining[0]
+            self._choose_cards_remaining = None
+            self._choose_cards_picked = None
+            self.ui_state.highlighted_cards = []
+            self.ui_state.buttons = []
+            return selected
+
+        # Find selectable card_ids across remaining combinations, excluding already picked.
+        selectable = []
+        for idx in remaining:
+            for card_id in actions[idx]:
+                if card_id not in picked_cards and card_id not in selectable:
+                    selectable.append(card_id)
+
+        # Check if a combination matching exactly the picked cards exists.
+        has_done = any(
+            len(actions[idx]) == len(picked_cards) and all(c in picked_cards for c in actions[idx])
+            for idx in remaining
+        )
+
+        # Set up UI.
         button_w = 140
         button_h = 45
         button_x = (get_screen_width() - button_w) // 2
         button_y = get_screen_height() - 50
 
-        remaining = list(range(len(actions)))
-        picked_cards = []
+        self.ui_state.highlighted_cards = list(selectable)
+        self.ui_state.buttons = []
+        if has_done:
+            self.ui_state.buttons.append(Button(button_x, button_y, button_w, button_h, text=done_label))
 
-        while len(remaining) != 1:
-            # Find selectable card_ids across remaining combinations, excluding already picked
-            selectable = []
+        # Poll for input.
+        mx, my = get_mouse_x(), get_mouse_y()
+        click = is_mouse_button_pressed(MouseButton.MOUSE_BUTTON_LEFT)
+
+        # Check "Done" button.
+        if has_done and self.ui_state.buttons[0].pressed(mx, my, click):
             for idx in remaining:
-                for card_id in actions[idx]:
-                    if card_id not in picked_cards and card_id not in selectable:
-                        selectable.append(card_id)
+                if len(actions[idx]) == len(picked_cards) and all(c in picked_cards for c in actions[idx]):
+                    selected = idx
+                    self._choose_cards_remaining = None
+                    self._choose_cards_picked = None
+                    self.ui_state.highlighted_cards = []
+                    self.ui_state.buttons = []
+                    return selected
 
-            # Check if a combination matching exactly the picked cards exists
-            has_done = any(
-                len(actions[idx]) == len(picked_cards) and all(c in picked_cards for c in actions[idx])
-                for idx in remaining
-            )
-
-            self.ui_state.highlighted_cards = list(selectable)
-            self.ui_state.buttons = []
-            if has_done:
-                self.ui_state.buttons.append(Button(button_x, button_y, button_w, button_h, text=done_label))
-
-            clicked_card = None
-            done_clicked = False
-            while clicked_card is None and not done_clicked:
-                time.sleep(1/60)
-                mx, my = get_mouse_x(), get_mouse_y()
-                click = is_mouse_button_pressed(MouseButton.MOUSE_BUTTON_LEFT)
-
-                if has_done and self.ui_state.buttons[0].pressed(mx, my, click):
-                    done_clicked = True
-                    break
-
-                for card_id in selectable:
-                    card = state.get_card(card_id)
-                    kt_card = self.table_state.cards[card.id]
-                    w = tweak["card_width"]
-                    h = tweak["card_height"]
-                    if click and point_in_rect(mx, my, kt_card.x, kt_card.y, w, h):
-                        clicked_card = card_id
-                        break
-
-            if done_clicked:
-                for idx in remaining:
-                    if len(actions[idx]) == len(picked_cards) and all(c in picked_cards for c in actions[idx]):
-                        remaining = [idx]
-                        break
+        # Check card clicks.
+        for card_id in selectable:
+            card = state.get_card(card_id)
+            kt_card = self.table_state.cards[card.id]
+            w = tweak["card_width"]
+            h = tweak["card_height"]
+            if click and point_in_rect(mx, my, kt_card.x, kt_card.y, w, h):
+                picked_cards.append(card_id)
+                self._choose_cards_remaining = [idx for idx in remaining if card_id in actions[idx]]
                 break
 
-            picked_cards.append(clicked_card)
-            remaining = [idx for idx in remaining if clicked_card in actions[idx]]
-
-        selected = remaining[0]
-        update_stacks(self.table_state, state, self.bottom_player)
-        self.ui_state.highlighted_cards = []
-        self.ui_state.buttons = []
-        return selected
+        return -1
 
     def choose_action(self, state: Game_State, choice: Choice) -> int:
         actions = choice.actions(state)
@@ -121,9 +131,6 @@ class Agent_UI(Agent):
 
         if choice.description == "choose-cards":
             return self._handle_choose_cards(state, actions)
-
-        mx, my = get_mouse_x(), get_mouse_y()
-        click = is_mouse_button_pressed(MouseButton.MOUSE_BUTTON_LEFT)
 
         # Display options based on action type
         count = len(actions)
@@ -167,45 +174,45 @@ class Agent_UI(Agent):
                     self.ui_state.highlighted_cards.append(card_id)
 
         selected = -1
-        while selected == -1:
-            time.sleep(1/60)  # Yield the GIL so the render thread can run
-            mx, my = get_mouse_x(), get_mouse_y()
-            click = is_mouse_button_pressed(MouseButton.MOUSE_BUTTON_LEFT)
-            if choice.description == "main":
-                for i, card_id in enumerate(actions):
-                    if Card_Id.is_null(card_id):
-                        if self.ui_state.buttons[0].pressed(mx, my, click):
-                            selected = i
-                            break
-                    else:
-                        card = state.get_card(card_id)
-                        kt_card = self.table_state.cards[card.id]
-                        w = tweak["card_width"]
-                        h = tweak["card_height"]
-                        if click and point_in_rect(mx, my, kt_card.x, kt_card.y, w, h):
-                            selected = i
-                            break
-            elif choice.description == "choose-binary":
-                for i in range(2):
-                    if self.ui_state.buttons[i].pressed(mx, my, click):
+        # while selected == -1:
+        # time.sleep(1/60)  # Yield the GIL so the render thread can run
+        mx, my = get_mouse_x(), get_mouse_y()
+        click = is_mouse_button_pressed(MouseButton.MOUSE_BUTTON_LEFT)
+        if choice.description == "main":
+            for i, card_id in enumerate(actions):
+                if Card_Id.is_null(card_id):
+                    if self.ui_state.buttons[0].pressed(mx, my, click):
                         selected = i
                         break
-            elif choice.description == "choose-card":
-                for i, card_id in enumerate(actions):
-                    if Card_Id.is_null(card_id):
-                        if self.ui_state.buttons[0].pressed(mx, my, click):
-                            selected = i
-                            break
-                    else:
-                        card = state.get_card(card_id)
-                        kt_card = self.table_state.cards[card.id]
-                        w = tweak["card_width"]
-                        h = tweak["card_height"]
-                        if click and point_in_rect(mx, my, kt_card.x, kt_card.y, w, h):
-                            selected = i
-                            break
+                else:
+                    card = state.get_card(card_id)
+                    kt_card = self.table_state.cards[card.id]
+                    w = tweak["card_width"]
+                    h = tweak["card_height"]
+                    if click and point_in_rect(mx, my, kt_card.x, kt_card.y, w, h):
+                        selected = i
+                        break
+        elif choice.description == "choose-binary":
+            for i in range(2):
+                if self.ui_state.buttons[i].pressed(mx, my, click):
+                    selected = i
+                    break
+        elif choice.description == "choose-card":
+            for i, card_id in enumerate(actions):
+                if Card_Id.is_null(card_id):
+                    if self.ui_state.buttons[0].pressed(mx, my, click):
+                        selected = i
+                        break
+                else:
+                    card = state.get_card(card_id)
+                    kt_card = self.table_state.cards[card.id]
+                    w = tweak["card_width"]
+                    h = tweak["card_height"]
+                    if click and point_in_rect(mx, my, kt_card.x, kt_card.y, w, h):
+                        selected = i
+                        break
 
-        update_stacks(self.table_state, state, self.bottom_player)
-        self.ui_state.highlighted_cards = []
-        self.ui_state.buttons = []
+        if selected != -1:
+            self.ui_state.highlighted_cards = []
+            self.ui_state.buttons = []
         return selected
