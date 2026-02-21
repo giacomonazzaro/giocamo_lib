@@ -88,20 +88,6 @@ def point_in_rect(mx: float, my: float, x: float, y: float, w: float, h: float) 
     return x <= mx <= x + w and y <= my <= y + h
 
 
-@dataclass
-class Button:
-    x: int
-    y: int
-    width: int
-    height: int
-    text: str = ""
-
-    def pressed(self, mx, my, click) -> bool:
-        if not click:
-            return False
-        return point_in_rect(mx, my, self.x, self.y, self.width, self.height)
-
-
 
 # --- Card rendering ---
 
@@ -120,37 +106,6 @@ def draw_card_power_badge(power: str, destroyed: bool):
     if destroyed:
         draw_rectangle_rounded(
             Rectangle(0, 0, w, h), r / min(w, h), 8, (0, 0, 0, 100)
-        )
-
-
-# --- Button and highlight rendering ---
-
-def draw_buttons(buttons: list):
-    mx, my = get_mouse_x(), get_mouse_y()
-    for button in buttons:
-        hovered = (button.x <= mx <= button.x + button.width
-                   and button.y <= my <= button.y + button.height)
-        color_key = "button_hover_color" if hovered else "button_color"
-        color = color_from_tuple(tweak[color_key])
-        draw_rectangle_rounded(
-            Rectangle(button.x, button.y, button.width, button.height), 0.3, 8, color
-        )
-        text_width = measure_text(button.text, 20)
-        text_x = button.x + (button.width - text_width) // 2
-        text_y = button.y + (button.height - 20) // 2
-        draw_text(button.text, text_x, text_y, 20, color_from_tuple(tweak["button_text_color"]))
-
-
-def draw_card_highlights(kt_card_ids: list[int], table_state: kt.Table_State):
-    if table_state is None or not table_state.animated_cards:
-        return
-    w = tweak["card_width"]
-    h = tweak["card_height"]
-    highlight_color = color_from_tuple(tweak["highlight_color"])
-    for card_id in kt_card_ids:
-        kt_card = table_state.animated_cards[card_id]
-        draw_rectangle_rounded_lines_ex(
-            Rectangle(kt_card.x, kt_card.y, w, h), 0.25, 8, 4, highlight_color
         )
 
 

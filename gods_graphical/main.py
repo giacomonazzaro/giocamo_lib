@@ -18,7 +18,6 @@ from gods.models import Game_State, effective_power
 from gods.setup import quick_setup
 from gods_graphical.agent_ui import Agent_UI, update_stacks
 from gods_graphical.ui import (
-    draw_card_highlights,
     draw_card_power_badge,
     draw_final_round_indicator,
     draw_game_over_screen,
@@ -114,17 +113,6 @@ def draw_hud(gods_state: Game_State, table_state: kt.Table_State, bottom_player:
     if gods_state.game_ending and not gods_state.game_over:
         draw_final_round_indicator()
 
-
-def draw_highlighted_cards(highlighted_cards: list, gods_state: Game_State, table_state: kt.Table_State):
-    kt_ids = []
-    for card_id in highlighted_cards:
-        try:
-            card = gods_state.get_card(card_id)
-            kt_ids.append(card.id)
-        except Exception:
-            continue
-    draw_card_highlights(kt_ids, table_state)
-
 from kitchen_table.ui import UI_State
 
 def play(gods_state: Game_State, table_state: kt.Table_State, ui_state: UI_State, agent: Agent | None, player_index: int):
@@ -137,13 +125,6 @@ def play(gods_state: Game_State, table_state: kt.Table_State, ui_state: UI_State
     pyray.set_config_flags(pyray.ConfigFlags.FLAG_WINDOW_HIGHDPI)
     pyray.init_window(tweak["window_width"], tweak["window_height"], "Gods Online")
     pyray.set_target_fps(tweak["target_fps"])
-
-    # if agent:
-    #     game_thread = threading.Thread(
-    #         target=lambda: game_loop(gods_state, agent, display),
-    #         daemon=True,
-    #     )
-    #     game_thread.start()
 
     current_choice = None
     while not pyray.window_should_close():
