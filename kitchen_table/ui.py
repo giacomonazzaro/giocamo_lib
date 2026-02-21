@@ -11,7 +11,7 @@ def point_in_rect(px: float, py: float, x: float, y: float, w: float, h: float) 
     return x <= px <= x + w and y <= py <= y + h
 
 
-@dataclass
+@dataclass(slots=True)
 class Button:
     x: int
     y: int
@@ -26,7 +26,7 @@ class Button:
         mx, my = get_mouse_x(), get_mouse_y()
         return point_in_rect(mx, my, self.x, self.y, self.width, self.height)
 
-@dataclass
+@dataclass(slots=True)
 class UI_State:
     buttons: dict[str, Button] = field(default_factory=dict)
     highlighted_cards: dict[str, int] = field(default_factory=dict)

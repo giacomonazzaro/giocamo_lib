@@ -2,7 +2,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 
 
-@dataclass
+@dataclass(slots=True)
 class Card:
     id: int
     title: str
@@ -13,7 +13,7 @@ class Card:
     rotation: int = 0  # Rotation angle in degrees (0, 90, 180, 270)
     draw_callback: callable | None = None  # Optional custom draw function
 
-@dataclass
+@dataclass(slots=True)
 class Stack:
     x: float
     y: float
@@ -25,7 +25,7 @@ class Stack:
     name: str = ""
 
 
-@dataclass
+@dataclass(slots=True)
 class Drag_State:
     card_id: int = -1  # -1 means no card being dragged
     source_stack: int = -1  # -1 means was a loose card
@@ -33,7 +33,7 @@ class Drag_State:
     offset_y: float = 0.0
 
 
-@dataclass
+@dataclass(slots=True)
 class Table_State:
     cards: list[Card] = field(default_factory=list)
     stacks: list[Stack] = field(default_factory=list)

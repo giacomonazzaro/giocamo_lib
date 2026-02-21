@@ -2,7 +2,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Callable
 
-@dataclass
+@dataclass(slots=True)
 class Game:
     choices: list[Choice] = field(default_factory=list)
 
@@ -13,7 +13,7 @@ class Game:
         pass
 
 
-@dataclass
+@dataclass(slots=True)
 class Choice:
     player_index: int = 0
     description: str = ""

@@ -81,7 +81,7 @@ def card_selection(state: Game_State, player_id: int, area: str, f=return_true, 
 
 # Card classes with specialized effects
 
-@dataclass
+@dataclass(slots=True)
 class Light(Card):
     """When you end the game, you may play a card with power <= X"""
     def get_card_selection(self, state: Game_State) -> list[Card_Id]:
@@ -95,7 +95,7 @@ class Light(Card):
             return card_selection(state, self.owner, "hand", select, include_null=True) 
         return [make_choose_card_choice(self.owner, cards, action)]
 
-@dataclass
+@dataclass(slots=True)
 class Moon(Card):
     def draw_back_up(self, game: Game_State) -> list[Choice]:
         player = game.players[self.owner]
@@ -118,7 +118,7 @@ class Moon(Card):
     def on_discard(self, game: Game_State, card_discarded: Card) -> list[Choice]:
         return self.draw_back_up(game)
 
-@dataclass
+@dataclass(slots=True)
 class War(Card):
     def get_card_selection(self, game: Game_State) -> list[Card_Id]:
         result = []
@@ -135,7 +135,7 @@ class War(Card):
         action = lambda state, card_id: destroy_people(state, card_id)
         return [make_choose_card_choice(game.current_player, self.get_card_selection, action)]
 
-@dataclass
+@dataclass(slots=True)
 class Rivers(Card):
     def get_card_selection(self, state: Game_State) -> list[Card_Id]:
         targets = []
@@ -149,7 +149,7 @@ class Rivers(Card):
         action = lambda state, card_id: restore_people(state, card_id)
         return [make_choose_card_choice(game.current_player, self.get_card_selection, action)]
 
-@dataclass
+@dataclass(slots=True)
 class Earthquake(Card):
     def on_played(self, game: Game_State) -> list[Choice]:
         power = effective_power(game, self)
@@ -159,7 +159,7 @@ class Earthquake(Card):
                 destroy_people(game, people_id)
         return []
 
-@dataclass
+@dataclass(slots=True)
 class Eruption(Card):
     def on_played(self, game: Game_State) -> list[Choice]:
         def get_targets(state):
@@ -172,7 +172,7 @@ class Eruption(Card):
         return [make_choose_cards_choice(game.current_player, get_targets, on_chosen)]
 
 
-@dataclass
+@dataclass(slots=True)
 class Meteorite(Card):
     def get_card_selection(self, game: Game_State) -> list[Card_Id]:
         result = []
@@ -191,7 +191,7 @@ class Meteorite(Card):
         return []
 
 
-@dataclass
+@dataclass(slots=True)
 class Miracle(Card):
     def get_card_selection(self, game: Game_State) -> list[Card_Id]:
         result = []
@@ -216,7 +216,7 @@ class Miracle(Card):
                        actions=actions, resolve=resolve)]
 
 
-@dataclass
+@dataclass(slots=True)
 class Flashback(Card):
     def get_card_selection(self, game: Game_State) -> list[Card_Id]:
         result = []
@@ -241,7 +241,7 @@ class Flashback(Card):
         return [make_choose_cards_choice(game.current_player, get_combos, on_chosen)]
 
 
-@dataclass
+@dataclass(slots=True)
 class Prophecy(Card):
     """ Play up to X extra cards """
     def get_card_selection(self, game: Game_State) -> list[Card_Id]:
@@ -273,7 +273,7 @@ class Prophecy(Card):
                        actions=actions, resolve=make_resolve(n))]
 
 
-@dataclass
+@dataclass(slots=True)
 class Time_Warp(Card):
     def get_card_selection(self, game: Game_State) -> list[Card_Id]:
         targets = []
@@ -296,7 +296,7 @@ class Time_Warp(Card):
         return [make_choose_cards_choice(game.current_player, get_combos, on_chosen)]
 
 
-@dataclass
+@dataclass(slots=True)
 class Aurora(Card):
     def on_played(self, game: Game_State) -> list[Choice]:
         power = effective_power(game, self)
@@ -306,7 +306,7 @@ class Aurora(Card):
         return result
 
 
-@dataclass
+@dataclass(slots=True)
 class Darkness(Card):
     def get_card_selection(self, game: Game_State) -> list[Card_Id]:
         result = []
@@ -327,7 +327,7 @@ class Darkness(Card):
         return [make_choose_cards_choice(1 - self.owner, get_combos, on_chosen)]
 
 
-@dataclass
+@dataclass(slots=True)
 class Spring(Card):
     def get_card_selection(self, game: Game_State) -> list[Card_Id]:
         result = []
@@ -344,7 +344,7 @@ class Spring(Card):
         return [make_choose_card_choice(game.current_player, self.get_card_selection, add_counters)]
 
 
-@dataclass
+@dataclass(slots=True)
 class Regrowth(Card):
     """Restore a people with power <= X"""
     def get_card_selection(self, game: Game_State) -> list[Card_Id]:
@@ -362,7 +362,7 @@ class Regrowth(Card):
         return [make_choose_card_choice(game.current_player, self.get_card_selection, restore)]
 
 
-@dataclass
+@dataclass(slots=True)
 class Flood(Card):
     """Put X -1 counters on all people"""
     def on_played(self, game: Game_State) -> list[Choice]:
@@ -372,7 +372,7 @@ class Flood(Card):
         return []
 
 
-@dataclass
+@dataclass(slots=True)
 class Forgive(Card):
     """Add X +1 counters on a people"""
     def get_card_selection(self, game: Game_State) -> list[Card_Id]:
@@ -389,7 +389,7 @@ class Forgive(Card):
         return [make_choose_card_choice(game.current_player, self.get_card_selection, add_counters)]
 
 
-@dataclass
+@dataclass(slots=True)
 class Unmaking(Card):
     """Destroy a wonder with power <= X"""
     def get_card_selection(self, game: Game_State) -> list[Card_Id]:
@@ -407,7 +407,7 @@ class Unmaking(Card):
         return [make_choose_card_choice(game.current_player, self.get_card_selection, action)]
 
 
-@dataclass
+@dataclass(slots=True)
 class Revolt(Card):
     def get_card_selection(self, game: Game_State) -> list[Card_Id]:
         result = []
@@ -423,7 +423,7 @@ class Revolt(Card):
         return [make_choose_card_choice(game.current_player, self.get_card_selection, action)]
 
 
-@dataclass
+@dataclass(slots=True)
 class Blessing(Card):
     def get_card_selection(self, game: Game_State) -> list[Card_Id]:
         targets = []
@@ -442,7 +442,7 @@ class Blessing(Card):
 
 # Passive wonders - these use hooks rather than on_played
 
-@dataclass
+@dataclass(slots=True)
 class Wisdom(Card):
     """When you pass, you may play a card with power <= X"""
     def get_card_selection(self, game: Game_State) -> list[Card_Id]:
@@ -463,7 +463,7 @@ class Wisdom(Card):
         return [make_choose_card_choice(self.owner, self.get_card_selection, action)]
 
 
-@dataclass
+@dataclass(slots=True)
 class Knowledge(Card):
     """Opponent events get -X, down to a minimum of 1 power"""
     def power_modifier(self, game: Game_State, card: Card, power: int) -> int:
@@ -476,7 +476,7 @@ class Knowledge(Card):
         return power
 
 
-@dataclass
+@dataclass(slots=True)
 class Sky(Card):
     """Your other blue wonders get +X"""
     def power_modifier(self, game: Game_State, card: Card, power: int) -> int:
@@ -486,7 +486,7 @@ class Sky(Card):
         return power
 
 
-@dataclass
+@dataclass(slots=True)
 class Deserts(Card):
     """You can score destroyed peoples with power X or less"""
     def on_scoring_people(self, game: Game_State, people: Card, points: int) -> int:
@@ -496,7 +496,7 @@ class Deserts(Card):
         return points
 
 
-@dataclass
+@dataclass(slots=True)
 class Forests(Card):
     """When you pass, you may restore a people with power <= X"""
     def get_card_selection(self, game: Game_State) -> list[Card_Id]:
@@ -517,7 +517,7 @@ class Forests(Card):
         return [make_choose_card_choice(self.owner, self.get_card_selection, restore)]
 
 
-@dataclass
+@dataclass(slots=True)
 class Mountains(Card):
     """Your peoples with power X or less are indestructible"""
     def is_indestructible(self, game: Game_State, people: Card) -> bool:
@@ -527,14 +527,14 @@ class Mountains(Card):
         return False
 
 
-@dataclass
+@dataclass(slots=True)
 class Animals(Card):
     """This is worth X points at the end of the game"""
     def on_scoring(self, game: Game_State) -> int:
         return effective_power(game, self)
 
 
-@dataclass
+@dataclass(slots=True)
 class Love(Card):
     """Your peoples are worth X points extra"""
     def on_scoring_people(self, game: Game_State, people: Card, points: int) -> int:
@@ -542,7 +542,7 @@ class Love(Card):
             return points + effective_power(game, self)
         return points
 
-@dataclass
+@dataclass(slots=True)
 class Seas(Card):
     """Your alive peoples with power X or less are worth +1 points"""
     def on_scoring_people(self, game: Game_State, people: Card, points: int) -> int:
@@ -552,7 +552,7 @@ class Seas(Card):
         return points
 
 
-@dataclass
+@dataclass(slots=True)
 class Fire(Card):
     """Your red events get +X"""
     def power_modifier(self, game: Game_State, card: Card, power: int) -> int:
@@ -561,7 +561,7 @@ class Fire(Card):
         return power
 
 
-@dataclass
+@dataclass(slots=True)
 class Sun(Card):
     """Your green wonders get +X"""
     def power_modifier(self, game: Game_State, card: Card, power: int) -> int:
@@ -571,7 +571,7 @@ class Sun(Card):
         return power
 
 
-@dataclass
+@dataclass(slots=True)
 class Stars(Card):
     """When you draw cards, you may draw from the shared deck."""
     def on_draw_replacement(self, game: Game_State) -> list[Choice]:
@@ -601,14 +601,14 @@ class Stars(Card):
 
 # People card classes - each implements their own condition for ownership
 
-@dataclass
+@dataclass(slots=True)
 class Egyptians(Card):
     """You have the most total power among green wonders"""
     def eval_points(self, game: Game_State, player_index: int) -> int:
         metric = lambda g, i: sum(effective_power(g, w) for w in g.players[i].wonders if w.color == Card_Color.GREEN)
         return eval_most(game, self, player_index, metric)
 
-@dataclass
+@dataclass(slots=True)
 class Greeks(Card):
     """You have twice or more cards in hand than the opponent"""
     def eval_points(self, game: Game_State, player_index: int) -> int:
@@ -618,33 +618,33 @@ class Greeks(Card):
             return effective_power(game, self)
         return 0
 
-@dataclass
+@dataclass(slots=True)
 class Vikings(Card):
     """You have the most cards in your deck"""
     def eval_points(self, game: Game_State, player_index: int) -> int:
         return eval_most(game, self, player_index, lambda g, i: len(g.players[i].deck))
 
-@dataclass
+@dataclass(slots=True)
 class Minoans(Card):
     """You have the most wonders"""
     def eval_points(self, game: Game_State, player_index: int) -> int:
         return eval_most(game, self, player_index, lambda g, i: len(g.players[i].wonders))
 
-@dataclass
+@dataclass(slots=True)
 class Babylonians(Card):
     """You have the most total power among wonders"""
     def eval_points(self, game: Game_State, player_index: int) -> int:
         metric = lambda g, i: sum(effective_power(g, w) for w in g.players[i].wonders)
         return eval_most(game, self, player_index, metric)
 
-@dataclass
+@dataclass(slots=True)
 class Romans(Card):
     """You have the most total power among red wonders"""
     def eval_points(self, game: Game_State, player_index: int) -> int:
         metric = lambda g, i: sum(effective_power(g, w) for w in g.players[i].wonders if w.color == Card_Color.RED)
         return eval_most(game, self, player_index, metric)
 
-@dataclass
+@dataclass(slots=True)
 class Judeans(Card):
     """You have the most total power among blue wonders"""
     def eval_points(self, game: Game_State, player_index: int) -> int:

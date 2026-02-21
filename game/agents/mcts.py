@@ -10,7 +10,7 @@ import random
 import time
 
 
-@dataclass
+@dataclass(slots=True)
 class MCTS_Node:
     parent: int = -1  # index into tree, -1 means no parent (root)
     action_index: int = -1  # action that led to this node

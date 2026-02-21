@@ -19,7 +19,7 @@ class Card_Color(Enum):
     YELLOW = "yellow"
 
 
-@dataclass
+@dataclass(slots=True)
 class Card:
     name: str
     card_type: Card_Type
@@ -30,6 +30,7 @@ class Card:
     counters: int = 0  # +1 counters
     owner: Optional[int] = None  # player index who controls this card (for people)
     id: int = -1
+    kt_card_id: int = -1
 
     def on_draw(self, game: Game_State) -> list[Choice]: return []
     def on_draw_replacement(self, game: Game_State) -> list[Choice]: return []
@@ -62,7 +63,7 @@ class Card:
         """Whether this card breaks ties for a people. Override in subclasses."""
         return False
 
-@dataclass
+@dataclass(slots=True)
 class Player:
     name: str
     deck: list[Card] = field(default_factory=list)
@@ -70,7 +71,7 @@ class Player:
     discard: list[Card] = field(default_factory=list)
     wonders: list[Card] = field(default_factory=list)  # wonders in play
 
-@dataclass(frozen=True)
+@dataclass(slots=True)
 class Card_Id:
     area: str  # "deck", "hand", "discard", "wonders", "people"
     card_index: int
@@ -84,7 +85,7 @@ class Card_Id:
     def is_null(card_id: Card_Id) -> bool:
         return card_id.area == "none" and card_id.card_index == -1 and card_id.owner_index == -1
 
-@dataclass
+@dataclass(slots=True)
 class Game_State(Game):
     players: list[Player] = field(default_factory=list)
     peoples: list[Card] = field(default_factory=list)  # people cards in the center
