@@ -11,6 +11,12 @@ def point_in_card(px: float, py: float, card: Card) -> bool:
     h = tweak["card_height"]
     return (card.x <= px <= card.x + w and card.y <= py <= card.y + h)
 
+def card_pressed(card: Card) -> bool:
+    if not is_mouse_button_pressed(MouseButton.MOUSE_BUTTON_LEFT):
+        return False
+    mx, my = get_mouse_x(), get_mouse_y()
+    return point_in_card(mx, my, card)
+
 
 def point_in_stack_area(px: float, py: float, stack: Stack, state: Table_State) -> bool:
     """Check if point is in the stack's general area (for drop targets)."""

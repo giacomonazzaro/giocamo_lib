@@ -1,6 +1,7 @@
 from game.agents.agent import Agent
 from game.game import Choice
 from gods.models import Game_State, Card_Id
+from kitchen_table.input import card_pressed
 from kitchen_table.models import Table_State
 from kitchen_table.game_state import update_card_positions
 from kitchen_table.config import tweak
@@ -100,7 +101,7 @@ class Agent_UI(Agent):
         click = is_mouse_button_pressed(MouseButton.MOUSE_BUTTON_LEFT)
 
         # Check "Done" button.
-        if has_done and self.ui_state.buttons[0].pressed(mx, my, click):
+        if has_done and self.ui_state.buttons[0].pressed():
             for idx in remaining:
                 if len(actions[idx]) == len(picked_cards) and all(c in picked_cards for c in actions[idx]):
                     selected = idx
@@ -178,17 +179,13 @@ class Agent_UI(Agent):
         if not is_mouse_button_pressed(MouseButton.MOUSE_BUTTON_LEFT):
             return -1
 
-        mx, my = get_mouse_x(), get_mouse_y()
         for i, button in self.ui_state.buttons.items():
-            if button.pressed(mx, my, True):
+            if button.pressed():
                 selected = i
             
         for i, card_id in self.ui_state.highlighted_cards.items():
-            # card = state.get_card(card_id)
-            kt_card = self.table_state.cards[card_id]
-            w = tweak["card_width"]
-            h = tweak["card_height"]
-            if point_in_rect(mx, my, kt_card.x, kt_card.y, w, h):
+            card = self.table_state.cards[card_id]
+            if card_pressed(card):
                 selected = i
 
         if selected != -1:

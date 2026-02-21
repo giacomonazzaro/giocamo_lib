@@ -12,7 +12,7 @@ from game.agents.randomized import Agent_Random
 import kitchen_table.models as kt
 from game.agents.duel import Agent_Duel
 from game.agents.process import Agent_Process
-from game.game import game_loop, resolve_choice
+from game.game import game_frame, game_loop, resolve_choice
 from gods.gameplay import compute_player_score, Agent_Minimax_Stochastic_Gods
 from gods.models import Game_State, effective_power
 from gods.setup import quick_setup
@@ -161,17 +161,8 @@ def play(gods_state: Game_State, table_state: kt.Table_State, ui_state: UI_State
         if not agent:
             update_input(table_state)
 
-        # Only fetch a new choice when the previous one has been resolved.
-        if current_choice is None:
-            current_choice = gods_state.next_choice()
-        if current_choice is not None:
-            action_index = agent.choose_action(gods_state, current_choice)
-            if action_index != -1:
-                print(action_index, current_choice.actions(gods_state), current_choice)
-                # print("Resolve!")
-                resolve_choice(gods_state, current_choice, action_index)
-                update_stacks(table_state, gods_state, bottom_player=player_index)
-                current_choice = None
+        current_choice = game_frame(gods_state, agent, current_choice)
+        update_stacks(table_state, gods_state, bottom_player=player_index)
 
         pyray.begin_drawing()
         # 1.0 when it's the opponent's turn, 0.0 when it's ours.
@@ -180,7 +171,6 @@ def play(gods_state: Game_State, table_state: kt.Table_State, ui_state: UI_State
         draw_table(table_state)
         ui_state.draw_buttons()
         ui_state.draw_card_highlights(table_state)
-        # draw_highlighted_cards(ui_state.highlighted_cards, gods_state, table_state)
         pyray.end_drawing()
 
     # Game over screen

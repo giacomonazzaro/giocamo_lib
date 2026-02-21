@@ -26,7 +26,7 @@ tweak = {
 
     # Stack spread (how much cards offset from each other)
     "hand_spread_x": 160,
-    "pile_spread_y": 2,  # Small offset for stacked piles
+    "pile_spread_y": -3,  # Small offset for stacked piles
     "wonders_spread_x": 160,
 
     # UI colors

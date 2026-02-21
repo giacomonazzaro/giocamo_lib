@@ -19,10 +19,11 @@ class Button:
     height: int
     text: str = ""
 
-    def pressed(self, mx, my, click) -> bool:
+    def pressed(self) -> bool:
         """Check if button was clicked."""
-        if not click:
+        if not is_mouse_button_pressed(MouseButton.MOUSE_BUTTON_LEFT):
             return False
+        mx, my = get_mouse_x(), get_mouse_y()
         return point_in_rect(mx, my, self.x, self.y, self.width, self.height)
 
 @dataclass

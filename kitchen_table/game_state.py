@@ -85,22 +85,3 @@ def create_sample_cards(state: Table_State) -> list[int]:
         card_ids.append(card_id)
     return card_ids
 
-
-def create_example_table_state() -> Table_State:
-    """Initialize a new table state with some stacks."""
-    state = Table_State()
-
-    # Create a few stacks at different positions
-    stack1 = Stack(100, 300, width = 300, spread_y=tweak["pile_spread_y"], spread_x=10, face_up=False)
-    stack2 = Stack(400, 550, width = 500, spread_x=tweak["hand_spread_x"])
-    stack3 = Stack(1000, 300, width = 600, spread_y=tweak["pile_spread_y"])
-
-    state.stacks = [stack1, stack2, stack3]
-
-    # Add sample cards to first stack
-    card_ids = create_sample_cards(state)
-    random.shuffle(card_ids)
-    for card_id in card_ids:
-        add_card_to_stack(card_id, stack1, state)
-
-    return state
