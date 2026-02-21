@@ -18,8 +18,6 @@ from gods.models import Game_State, effective_power
 from gods.setup import quick_setup
 from gods_graphical.agent_ui import Agent_UI, update_stacks
 from gods_graphical.ui import (
-    UI_State,
-    draw_buttons,
     draw_card_highlights,
     draw_card_power_badge,
     draw_final_round_indicator,
@@ -127,6 +125,7 @@ def draw_highlighted_cards(highlighted_cards: list, gods_state: Game_State, tabl
             continue
     draw_card_highlights(kt_ids, table_state)
 
+from kitchen_table.ui import UI_State
 
 def play(gods_state: Game_State, table_state: kt.Table_State, ui_state: UI_State, agent: Agent | None, player_index: int):
     table_state.draw_callback = lambda table: draw_hud(gods_state, table_state, bottom_player=player_index)
@@ -168,6 +167,8 @@ def play(gods_state: Game_State, table_state: kt.Table_State, ui_state: UI_State
         if current_choice is not None:
             action_index = agent.choose_action(gods_state, current_choice)
             if action_index != -1:
+                print(action_index, current_choice.actions(gods_state), current_choice)
+                # print("Resolve!")
                 resolve_choice(gods_state, current_choice, action_index)
                 update_stacks(table_state, gods_state, bottom_player=player_index)
                 current_choice = None
@@ -177,8 +178,9 @@ def play(gods_state: Game_State, table_state: kt.Table_State, ui_state: UI_State
         turn = 1.0 if gods_state.current_player != player_index else 0.0
         draw_background(turn)
         draw_table(table_state)
-        draw_buttons(ui_state.buttons)
-        draw_highlighted_cards(ui_state.highlighted_cards, gods_state, table_state)
+        ui_state.draw_buttons()
+        ui_state.draw_card_highlights(table_state)
+        # draw_highlighted_cards(ui_state.highlighted_cards, gods_state, table_state)
         pyray.end_drawing()
 
     # Game over screen
@@ -225,7 +227,7 @@ def main(
         agent_opponent = Agent_Remote(sock)
     else:
         agent_local = agent_ui
-        agent_opponent = Agent_Random()
+        agent_opponent = agent_ui
         # agent_opponent = Agent_Process(Agent_Minimax_Stochastic_Gods())
     
     if not game_logic:

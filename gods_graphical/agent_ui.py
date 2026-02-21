@@ -7,7 +7,7 @@ from kitchen_table.config import tweak
 from pyray import *
 import time
 
-from gods_graphical.ui import point_in_rect, Button, UI_State
+from kitchen_table.ui import point_in_rect, Button, UI_State
 
 
 def update_stacks(table_state: Table_State, gods_state: Game_State, bottom_player: int = 0):
@@ -44,6 +44,7 @@ class Agent_UI(Agent):
         # Persistent state for multi-step card picking in choose-cards.
         self._choose_cards_remaining = None
         self._choose_cards_picked = None
+        self.is_ui_ready = False
 
     def message(self, msg: str):
         pass
@@ -122,16 +123,7 @@ class Agent_UI(Agent):
 
         return -1
 
-    def choose_action(self, state: Game_State, choice: Choice) -> int:
-        actions = choice.actions(state)
-        if len(actions) == 0:
-            return 0
-        elif len(actions) == 1:
-            return 0
-
-        if choice.description == "choose-cards":
-            return self._handle_choose_cards(state, actions)
-
+    def build_ui(self, state: Game_State, choice: Choice, actions: list):
         # Display options based on action type
         count = len(actions)
         button_w = 140
@@ -141,78 +133,66 @@ class Agent_UI(Agent):
         start_x = (get_screen_width() - total_width) // 2
         button_y = get_screen_height() - 50
 
+        self.ui_state.highlighted_cards = {}
+        self.ui_state.buttons = {}
+
         if choice.description == "main":
             # Same as "choose-card" but with "Pass" button for the null entry.
-            self.ui_state.highlighted_cards = []
-            self.ui_state.buttons = []
             for i, card_id in enumerate(actions):
                 if Card_Id.is_null(card_id):
                     x = start_x
                     button = Button(x, button_y, button_w, button_h, text="Pass")
-                    self.ui_state.buttons.append(button)
+                    self.ui_state.buttons[i] = button
                 else:
-                    self.ui_state.highlighted_cards.append(card_id)
+                    self.ui_state.highlighted_cards[i] = state.get_card(card_id).id
 
         elif choice.description == "choose-binary":
-            self.ui_state.buttons = []
             labels = ["Yes", "No"]
             for i in range(2):
                 x = start_x + i * (button_w + gap)
                 button = Button(x, button_y, button_w, button_h, text=labels[i])
-                self.ui_state.buttons.append(button)
+                self.ui_state.buttons[i] = button
         elif choice.description == "choose-card":
-            self.ui_state.highlighted_cards = []
-            self.ui_state.buttons = []
             for i, card_id in enumerate(actions):
                 if Card_Id.is_null(card_id):
                     x = start_x
                     button = Button(x, button_y, button_w, button_h, text="Done")
-                    self.ui_state.buttons.append(button)
+                    self.ui_state.buttons[i] = button
                 else:
                     card = state.get_card(card_id)
                     kt_card = self.table_state.animated_cards[card.id]
-                    self.ui_state.highlighted_cards.append(card_id)
+                    self.ui_state.highlighted_cards[i] = state.get_card(card_id).id
+        
+        self.is_ui_ready = True
+
+    def choose_action(self, state: Game_State, choice: Choice) -> int:
+        actions = choice.actions(state)
+
+        if not self.is_ui_ready:
+            self.build_ui(state, choice, actions)
+
+        # if choice.description == "choose-cards":
+        #     return self._handle_choose_cards(state, actions)
 
         selected = -1
-        # while selected == -1:
-        # time.sleep(1/60)  # Yield the GIL so the render thread can run
+        if not is_mouse_button_pressed(MouseButton.MOUSE_BUTTON_LEFT):
+            return -1
+
         mx, my = get_mouse_x(), get_mouse_y()
-        click = is_mouse_button_pressed(MouseButton.MOUSE_BUTTON_LEFT)
-        if choice.description == "main":
-            for i, card_id in enumerate(actions):
-                if Card_Id.is_null(card_id):
-                    if self.ui_state.buttons[0].pressed(mx, my, click):
-                        selected = i
-                        break
-                else:
-                    card = state.get_card(card_id)
-                    kt_card = self.table_state.cards[card.id]
-                    w = tweak["card_width"]
-                    h = tweak["card_height"]
-                    if click and point_in_rect(mx, my, kt_card.x, kt_card.y, w, h):
-                        selected = i
-                        break
-        elif choice.description == "choose-binary":
-            for i in range(2):
-                if self.ui_state.buttons[i].pressed(mx, my, click):
-                    selected = i
-                    break
-        elif choice.description == "choose-card":
-            for i, card_id in enumerate(actions):
-                if Card_Id.is_null(card_id):
-                    if self.ui_state.buttons[0].pressed(mx, my, click):
-                        selected = i
-                        break
-                else:
-                    card = state.get_card(card_id)
-                    kt_card = self.table_state.cards[card.id]
-                    w = tweak["card_width"]
-                    h = tweak["card_height"]
-                    if click and point_in_rect(mx, my, kt_card.x, kt_card.y, w, h):
-                        selected = i
-                        break
+        for i, button in self.ui_state.buttons.items():
+            if button.pressed(mx, my, True):
+                selected = i
+            
+        for i, card_id in self.ui_state.highlighted_cards.items():
+            # card = state.get_card(card_id)
+            kt_card = self.table_state.cards[card_id]
+            w = tweak["card_width"]
+            h = tweak["card_height"]
+            if point_in_rect(mx, my, kt_card.x, kt_card.y, w, h):
+                selected = i
 
         if selected != -1:
-            self.ui_state.highlighted_cards = []
-            self.ui_state.buttons = []
+            self.is_ui_ready = False
+            self.ui_state.buttons = {}
+            self.ui_state.highlighted_cards = {}
         return selected

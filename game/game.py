@@ -30,15 +30,7 @@ def game_loop(game: Game, agent: Agent, callback: any = None) -> None:
         if choice is None:
             break
 
-        if callback is not None:
-            callback(game)
-
-        actions = choice.actions(game)
-        if len(actions) == 1:
-            index = 0
-        else:
-            index = agent.choose_action(game, choice)
-
+        index = agent.choose_action(game, choice)
         resolve_choice(game, choice, index)
     
     if callback is not None:

@@ -63,7 +63,7 @@ def get_table_layout(bottom_player: int = 0):
         (f"{bp}_discard", discard_x,     bottom_deck_y,    w,             0,              spread_pile, True),
         (f"{bp}_wonders", right_start,   bottom_wonders_y, right_width,   spread_wonders, 0,           True),
         (f"{tp}_deck",    deck_x,        top_deck_y,       w,             0,              spread_pile, False),
-        (f"{tp}_hand",    right_start,   top_hand_y,       right_width,   spread_hand,    0,           False),
+        (f"{tp}_hand",    right_start,   top_hand_y,       right_width,   spread_hand,    0,           not False),
         (f"{tp}_discard", discard_x,     top_deck_y,       w,             0,              spread_pile, True),
         (f"{tp}_wonders", right_start,   top_wonders_y,    right_width,   spread_wonders, 0,           True),
         ("peoples",       peoples_x,     peoples_y,        peoples_width, spread_wonders, 0,           True),
@@ -101,11 +101,6 @@ class Button:
             return False
         return point_in_rect(mx, my, self.x, self.y, self.width, self.height)
 
-
-@dataclass
-class UI_State:
-    buttons: list[Button] = field(default_factory=list)
-    highlighted_cards: list = field(default_factory=list)
 
 
 # --- Card rendering ---
