@@ -70,7 +70,7 @@ class Player:
     discard: list[int] = field(default_factory=list)  # indices into Game_State.all_cards
     wonders: list[int] = field(default_factory=list)  # wonders in play, indices into Game_State.all_cards
 
-@dataclass(slots=True)
+@dataclass(slots=True, frozen=True)
 class Card_Id:
     area: str  # "deck", "hand", "discard", "wonders", "people"
     card_index: int

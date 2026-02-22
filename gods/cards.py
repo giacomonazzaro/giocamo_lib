@@ -122,9 +122,10 @@ class Moon(Card):
 class War(Card):
     def get_card_selection(self, game: Game_State) -> list[Card_Id]:
         result = []
-        for people in game.peoples:
+        for (i, pid) in enumerate(game.peoples):
+            people = game.all_cards[pid]
             if not people.destroyed and effective_power(game, people) <= effective_power(game, self):
-                card_id = Card_Id(area="people", card_index=game.peoples.index(people), owner_index=people.owner)
+                card_id = Card_Id(area="people", card_index=i, owner_index=people.owner)
                 result.append(card_id)
         result.append(Card_Id.null())
         return result
@@ -139,7 +140,8 @@ class War(Card):
 class Rivers(Card):
     def get_card_selection(self, state: Game_State) -> list[Card_Id]:
         targets = []
-        for (i, people) in enumerate(state.peoples):
+        for (i, pid) in enumerate(state.peoples):
+            people = state.all_cards[pid]
             if people.destroyed:
                 targets.append(Card_Id(area="people", card_index=i, owner_index=people.owner))
         targets.append(Card_Id.null())
@@ -177,7 +179,8 @@ class Meteorite(Card):
     def get_card_selection(self, game: Game_State) -> list[Card_Id]:
         result = []
         power = effective_power(game, self)
-        for (i, people) in enumerate(game.peoples):
+        for (i, pid) in enumerate(game.peoples):
+            people = game.all_cards[pid]
             if people.owner == (1 - game.current_player) and not people.destroyed:
                 if effective_power(game, people) <= power:
                     card_id = Card_Id(area="people", card_index=i, owner_index=people.owner)
@@ -333,7 +336,8 @@ class Darkness(Card):
 class Spring(Card):
     def get_card_selection(self, game: Game_State) -> list[Card_Id]:
         result = []
-        for (i, people) in enumerate(game.peoples):
+        for (i, pid) in enumerate(game.peoples):
+            people = game.all_cards[pid]
             if not people.destroyed:
                 card_id = Card_Id(area="people", card_index=i, owner_index=people.owner)
                 result.append(card_id)
@@ -352,7 +356,8 @@ class Regrowth(Card):
     def get_card_selection(self, game: Game_State) -> list[Card_Id]:
         result = []
         power = effective_power(game, self)
-        for (i, people) in enumerate(game.peoples):
+        for (i, pid) in enumerate(game.peoples):
+            people = game.all_cards[pid]
             if people.destroyed and effective_power(game, people) <= power:
                 card_id = Card_Id(area="people", card_index=i, owner_index=people.owner)
                 result.append(card_id)
@@ -379,7 +384,8 @@ class Forgive(Card):
     """Add X +1 counters on a people"""
     def get_card_selection(self, game: Game_State) -> list[Card_Id]:
         result = []
-        for (i, people) in enumerate(game.peoples):
+        for (i, pid) in enumerate(game.peoples):
+            people = game.all_cards[pid]
             card_id = Card_Id(area="people", card_index=i, owner_index=people.owner)
             result.append(card_id)
         return result
@@ -414,7 +420,8 @@ class Revolt(Card):
     def get_card_selection(self, game: Game_State) -> list[Card_Id]:
         result = []
         power = effective_power(game, self)
-        for (i, people) in enumerate(game.peoples):
+        for (i, pid) in enumerate(game.peoples):
+            people = game.all_cards[pid]
             if not people.destroyed and effective_power(game, people) <= power:
                 card_id = Card_Id(area="people", card_index=i, owner_index=people.owner)
                 result.append(card_id)
@@ -505,7 +512,8 @@ class Forests(Card):
     def get_card_selection(self, game: Game_State) -> list[Card_Id]:
         result = []
         power = effective_power(game, self)
-        for (i, people) in enumerate(game.peoples):
+        for (i, pid) in enumerate(game.peoples):
+            people = game.all_cards[pid]
             if people.destroyed and effective_power(game, people) <= power:
                 card_id = Card_Id(area="people", card_index=i, owner_index=people.owner)
                 result.append(card_id)

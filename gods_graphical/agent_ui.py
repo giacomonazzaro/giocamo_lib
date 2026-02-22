@@ -170,10 +170,10 @@ class Agent_UI(Agent):
             self.card_combinations = []
             for combination in actions:
                 self.card_combinations.append(set(combination))
-                if Card_Id.is_null(card_id):
-                    x = start_x
-                    button = Button(x, button_y, button_w, button_h, text="Done")
-                    self.ui_state.buttons[0] = button
+                # if Card_Id.is_null(card_id):
+                #     x = start_x
+                #     button = Button(x, button_y, button_w, button_h, text="Done")
+                #     self.ui_state.buttons[0] = button
                 for card_id in combination:
                     self.ui_state.highlighted_cards[card_id] = state.get_card(card_id).id
 
