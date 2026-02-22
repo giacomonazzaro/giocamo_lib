@@ -191,8 +191,8 @@ def main(
         agent_opponent = Agent_Remote(sock)
     else:
         agent_local = agent_ui
-        agent_opponent = agent_ui
-        # agent_opponent = Agent_Process(Agent_Minimax_Stochastic_Gods())
+        # agent_opponent = agent_ui
+        agent_opponent = Agent_Process(Agent_Minimax_Stochastic_Gods())
     
     if not game_logic:
         agent = None

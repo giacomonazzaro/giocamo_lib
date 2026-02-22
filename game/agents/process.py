@@ -15,30 +15,37 @@ class Agent_Process:
     This avoids GIL contention with the main rendering thread.
     Uses fork so that the game state (including lambdas in Choice)
     is inherited without pickling.
+    Returns -1 each frame until the result is ready, keeping the render loop responsive.
     """
     def __init__(self, agent):
         self.agent = agent
         self.ctx = mp.get_context("fork")
+        self._process = None
+        self._pipe = None
 
     def message(self, msg: str):
         self.agent.message(msg)
 
     def choose_action(self, state, choice) -> int:
-        parent_conn, child_conn = self.ctx.Pipe(duplex=False)
-        process = self.ctx.Process(
-            target=_compute,
-            args=(self.agent, state, choice, child_conn),
-        )
-        process.start()
-        # Close the child's end in the parent so recv() can detect EOF.
-        child_conn.close()
+        # Spawn the worker process on the first call for this choice.
+        if self._process is None:
+            parent_conn, child_conn = self.ctx.Pipe(duplex=False)
+            self._pipe = parent_conn
+            self._process = self.ctx.Process(
+                target=_compute,
+                args=(self.agent, state, choice, child_conn),
+            )
+            self._process.start()
+            # Close the child's end in the parent so recv() can detect EOF.
+            child_conn.close()
 
-        # Poll with short timeout, yielding the GIL between checks.
-        while not parent_conn.poll(timeout=0.05):
-            if not process.is_alive():
-                break
+        # Non-blocking check: return -1 if the result isn't ready yet.
+        if not self._pipe.poll(timeout=0):
+            return -1
 
-        result = parent_conn.recv()
-        parent_conn.close()
-        process.join()
+        result = self._pipe.recv()
+        self._pipe.close()
+        self._process.join()
+        self._process = None
+        self._pipe = None
         return result
