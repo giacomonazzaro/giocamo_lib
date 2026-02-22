@@ -141,6 +141,8 @@ class Agent_UI(Agent):
 
         self.ui_state.highlighted_cards = {}
         self.ui_state.buttons = {}
+        self.card_combinations = []
+        self.card_multiselection = set()
 
         if choice.description == "main":
             # Same as "choose-card" but with "Pass" button for the null entry.
@@ -170,15 +172,17 @@ class Agent_UI(Agent):
             self.card_combinations = []
             for combination in actions:
                 self.card_combinations.append(set(combination))
-                # if Card_Id.is_null(card_id):
-                #     x = start_x
-                #     button = Button(x, button_y, button_w, button_h, text="Done")
-                #     self.ui_state.buttons[0] = button
+                if len(combination) == 0:
+                    x = start_x
+                    button = Button(x, button_y, button_w, button_h, text="Done")
+                    self.ui_state.buttons[0] = button
                 for card_id in combination:
                     self.ui_state.highlighted_cards[card_id] = state.get_card(card_id).id
 
-            print(self.card_multiselection)
-            print(self.card_combinations)
+            # print(self.card_multiselection)
+            for c in self.card_combinations:
+                print(len(c), c)
+            print(len(self.card_combinations))
 
         self.is_ui_ready = True
 
@@ -206,7 +210,6 @@ class Agent_UI(Agent):
         dropped_card = self.table_state.poll_dropped_card()
         if dropped_card:
             original_stack, target_stack, dropped_card_id = dropped_card
-            print("dopped", dropped_card)
 
             if choice.description == "main" and original_stack == hand_stack and target_stack == play_stack:
                 hand_index = [state.all_cards[x].id for x in state.active_player().hand].index(dropped_card_id)
@@ -220,19 +223,24 @@ class Agent_UI(Agent):
             return -1
         
 
-        # if choice.description == "choose-cards":
-        #     for gods_card_id, kt_card_id in self.ui_state.highlighted_cards.items():
-        #         card = self.table_state.cards[kt_card_id]
-        #         if card_pressed(card):
-        #             self.card_multiselection.add(gods_card_id)
-        #             del self.table_state.cards[kt_card_id]
+        if choice.description == "choose-cards":
+            for gods_card_id, card_index in self.ui_state.highlighted_cards.items():
+                card = self.table_state.cards[card_index]
+                if card_pressed(card):
+                    self.card_multiselection.add(gods_card_id)
+                    del self.ui_state.highlighted_cards[gods_card_id]
+                    break
+            
+            if self.card_multiselection in self.card_combinations:
+                m = max([len(c) for c in self.card_combinations])
+                if m == len(self.card_multiselection):
+                    selected = self.card_combinations.index(self.card_multiselection)
+                    self.clear_ui()
 
-        #     if self.ui_state.buttons[0].pressed():
-        #         i = self.card_combinations.find(self.card_multiselection)
-        #         selected = i
-        #         self.card_multiselection = set()
-        #         self.card_combinations = []
-        # else:
+                if len(self.ui_state.buttons) and self.ui_state.buttons[0].pressed():
+                    i = self.card_combinations.index(self.card_multiselection)
+                    selected = i
+                    self.clear_ui()
 
         for i, button in self.ui_state.buttons.items():
             if button.pressed():
