@@ -47,7 +47,7 @@ class Table_State:
     draw_callback: callable | None = None
     zoomed_card_id: int = -1
 
-    is_drop_card_allowed: Callable[[Table_State, int, int], bool] = lambda a, b, c: True
+    is_drop_card_allowed: Callable[[int, int, int], bool] = lambda a, b, c: True
     dropped_card: tuple[int, int, int] | None = None
 
     def poll_dropped_card(self) -> tuple[int, int, int] | None:

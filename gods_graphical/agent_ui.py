@@ -1,6 +1,6 @@
 from game.agents.agent import Agent
 from game.game import Choice
-from gods.models import Game_State, Card_Id
+from gods.models import Card_Type, Game_State, Card_Id
 from kitchen_table.input import card_pressed
 from kitchen_table.models import Table_State
 from kitchen_table.game_state import update_card_positions
@@ -179,28 +179,44 @@ class Agent_UI(Agent):
 
         self.is_ui_ready = True
 
+    def clear_ui(self):
+        self.is_ui_ready = False
+        self.ui_state.buttons = {}
+        self.ui_state.highlighted_cards = {}
+        self.table_state.is_drop_card_allowed = lambda sa,sb,c: False
+
     def choose_action(self, state: Game_State, choice: Choice) -> int:
         actions = choice.actions(state)
 
+        play_stack = 3 if choice.player_index == self.bottom_player else 7
+        hand_stack = 1 if choice.player_index == self.bottom_player else 5
         if not self.is_ui_ready:
             self.build_ui(state, choice, actions)
+            def is_drop_card_allowed(source_stack: int, target_stack: int, card_id: int) -> bool:
+                if source_stack == target_stack:
+                    return True
+                return source_stack == hand_stack and target_stack == play_stack
+                
+            self.table_state.is_drop_card_allowed = is_drop_card_allowed
 
 
         dropped_card = self.table_state.poll_dropped_card()
         if dropped_card:
-            original_stack, target_stack, xxx = dropped_card
-            print(dropped_card)
+            original_stack, target_stack, dropped_card_id = dropped_card
+            print("dopped", dropped_card)
 
-            if choice.description == "main":
-                if original_stack == 1 and target_stack == 3:
-                    print([x.kt_card_id for x in state.active_player().hand])
-                    hand_index = [x.kt_card_id for x in state.active_player().hand].index(xxx)
-                    self.is_ui_ready = False
-                    self.ui_state.buttons = {}
-                    self.ui_state.highlighted_cards = {}                    
-                    return hand_index
+            if choice.description == "main" and original_stack == hand_stack and target_stack == play_stack:
+                # print([x.kt_card_id for x in state.active_player().hand])
+                hand_index = [x.kt_card_id for x in state.active_player().hand].index(dropped_card_id)
+                card = state.players[choice.player_index].hand[hand_index]
+                # print(card)
+                # if card.card_type == Card_Type.EVENT:
+                #     self.table_state.stacks[play_stack].cards.remove(card.kt_card_id)
+                #     self.table_state.stacks[8].cards.append(card.kt_card_id)
+                #     update_card_positions(self.table_state.stacks[8], self.table_state)
+                self.clear_ui()
+                return hand_index
 
-        return -1
 
         # return -1
         selected = -1
@@ -208,29 +224,28 @@ class Agent_UI(Agent):
             return -1
         
 
-        if choice.description == "choose-cards":
-            for gods_card_id, kt_card_id in self.ui_state.highlighted_cards.items():
-                card = self.table_state.cards[kt_card_id]
-                if card_pressed(card):
-                    self.card_multiselection.add(gods_card_id)
-                    del self.table_state.cards[kt_card_id]
+        # if choice.description == "choose-cards":
+        #     for gods_card_id, kt_card_id in self.ui_state.highlighted_cards.items():
+        #         card = self.table_state.cards[kt_card_id]
+        #         if card_pressed(card):
+        #             self.card_multiselection.add(gods_card_id)
+        #             del self.table_state.cards[kt_card_id]
 
-            if self.ui_state.buttons[0].pressed():
-                i = self.card_combinations.find(self.card_multiselection)
-                print("hhhhhhhhhhh")
-                selected = i
-                self.card_multiselection = set()
-                self.card_combinations = []
-        else:
+        #     if self.ui_state.buttons[0].pressed():
+        #         i = self.card_combinations.find(self.card_multiselection)
+        #         selected = i
+        #         self.card_multiselection = set()
+        #         self.card_combinations = []
+        # else:
+
+        if choice.description != "main":
             for i, button in self.ui_state.buttons.items():
                 if button.pressed():
-                    print("aaaaaaaaa")
                     selected = i
             
             for i, card_id in self.ui_state.highlighted_cards.items():
                 card = self.table_state.cards[card_id]
                 if card_pressed(card):
-                    print("bbbbbbbbb")
                     selected = i
 
         print("Selected", selected)
