@@ -358,8 +358,8 @@ def draw_table(table_state: Table_State) -> None:
     drag = table_state.drag_state
 
     # Draw stack placeholders for empty stacks
-    if drag.source_stack != -1:
-        stack = table_state.stacks[drag.source_stack]
+    if drag.current_stack != -1:
+        stack = table_state.stacks[drag.current_stack]
         draw_stack_placeholder(stack)
 
     # Draw stacks,

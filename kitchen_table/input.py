@@ -1,6 +1,6 @@
 from __future__ import annotations
 from pyray import *
-from kitchen_table.models import Card, Stack, Table_State
+from kitchen_table.models import Card, Drag_State, Stack, Table_State
 from kitchen_table.config import tweak
 import kitchen_table.game_state as gs
 
@@ -77,9 +77,11 @@ def handle_mouse_press(state: Table_State) -> None:
         card_id, stack_idx = result
         card = state.cards[card_id]
         drag.card_id = card_id
-        drag.source_stack = stack_idx
+        drag.current_stack = stack_idx
+        drag.original_stack = stack_idx
         drag.offset_x = mx - card.x
         drag.offset_y = my - card.y
+
         # # Remove from source
         # if stack_idx >= 0:
         #     gs.remove_card_from_stack(card_id, state.stacks[stack_idx], state)
@@ -93,14 +95,16 @@ def handle_mouse_release(state: Table_State) -> None:
     if drag.card_id < 0:
         return
 
-    # Clear drag state
-    stack_id = drag.source_stack
-    drag.card_id = -1
-    drag.source_stack = -1
-    drag.offset_x = 0
-    drag.offset_y = 0
-    gs.update_card_positions(state.stacks[stack_id], state)
+    # if not state.is_drop_card_allowed(drag.original_stack, drag.current_stack, drag.card_id):
+        # state.stacks[drag.current_stack].cards.remove(drag.card_id)
+        # state.stacks[drag.original_stack].cards.append(drag.card_id)
 
+    original_stack = drag.original_stack
+    current_stack = drag.current_stack
+    state.drag_state = Drag_State()
+    gs.update_card_positions(state.stacks[original_stack], state, sort=True)
+    gs.update_card_positions(state.stacks[current_stack], state, sort=True)
+    print(state.drag_state)
 
 
 def handle_mouse_move(state: Table_State) -> None:
@@ -110,21 +114,35 @@ def handle_mouse_move(state: Table_State) -> None:
     if drag.card_id < 0:
         return
     
+    # print(drag)
+    
     mx = get_mouse_x()
     my = get_mouse_y()
     card = state.cards[drag.card_id]
     card.x = mx - drag.offset_x
     card.y = my - drag.offset_y
 
-    target_stack_idx = find_stack_at(mx, my, state)
-    if target_stack_idx >= 0 and drag.source_stack != target_stack_idx:
-        state.stacks[drag.source_stack].cards.remove(drag.card_id)
-        gs.update_card_positions(state.stacks[drag.source_stack], state)
-        state.stacks[target_stack_idx].cards.append(drag.card_id)
-        drag.source_stack = target_stack_idx
+    hovered_stack = find_stack_at(mx, my, state)
+    if hovered_stack < 0:
+        return
+    
+    if drag.last_hovered_stack != hovered_stack:
+        print("AAAA")
+        # Remove card the first time it leaves the original stack.
+        # if drag.current_stack != drag.original_stack:
+            # print("Remove")
+            # state.stacks[drag.original_stack].cards.remove(drag.card_id)
 
-    if target_stack_idx >= 0:
-        gs.update_card_positions(state.stacks[target_stack_idx], state)
+        # if state.is_drop_card_allowed(state, drag.original_stack, hovered_stack):
+        if drag.original_stack != hovered_stack:
+            state.stacks[drag.current_stack].cards.remove(drag.card_id)
+            state.stacks[hovered_stack].cards.append(drag.card_id)
+            gs.update_card_positions(state.stacks[hovered_stack], state)
+            drag.current_stack = hovered_stack
+
+    gs.update_card_positions(state.stacks[hovered_stack], state)
+    drag.last_hovered_stack = hovered_stack
+
 
 
 def handle_rotate_card(state: Table_State, clockwise: bool = True) -> None:

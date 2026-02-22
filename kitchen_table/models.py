@@ -1,5 +1,6 @@
 from __future__ import annotations
 from dataclasses import dataclass, field
+from typing import Callable
 
 
 @dataclass(slots=True)
@@ -28,7 +29,9 @@ class Stack:
 @dataclass(slots=True)
 class Drag_State:
     card_id: int = -1  # -1 means no card being dragged
-    source_stack: int = -1  # -1 means was a loose card
+    current_stack: int = -1
+    last_hovered_stack: int = -1
+    original_stack: int = -1
     offset_x: float = 0.0
     offset_y: float = 0.0
 
@@ -43,3 +46,6 @@ class Table_State:
     animated_cards: list[Card] = None
     draw_callback: callable | None = None
     zoomed_card_id: int = -1
+
+    is_drop_card_allowed: Callable[[Table_State, int, int], bool] = lambda a, b, c: False
+    drop_card: Callable[[Table_State, int, int], None] = lambda a,b,c: None
