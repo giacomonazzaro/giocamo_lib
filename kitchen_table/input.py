@@ -95,9 +95,9 @@ def handle_mouse_release(state: Table_State) -> None:
     if drag.card_id < 0:
         return
 
-    # if not state.is_drop_card_allowed(drag.original_stack, drag.current_stack, drag.card_id):
-        # state.stacks[drag.current_stack].cards.remove(drag.card_id)
-        # state.stacks[drag.original_stack].cards.append(drag.card_id)
+    if not state.is_drop_card_allowed(drag.original_stack, drag.current_stack, drag.card_id):
+        if drag.current_stack == -1:
+            state.stacks[drag.original_stack].cards.append(drag.card_id)
 
     original_stack = drag.original_stack
     current_stack = drag.current_stack
@@ -127,18 +127,16 @@ def handle_mouse_move(state: Table_State) -> None:
         return
     
     if drag.last_hovered_stack != hovered_stack:
-        print("AAAA")
-        # Remove card the first time it leaves the original stack.
-        # if drag.current_stack != drag.original_stack:
-            # print("Remove")
-            # state.stacks[drag.original_stack].cards.remove(drag.card_id)
-
-        # if state.is_drop_card_allowed(state, drag.original_stack, hovered_stack):
-        if drag.original_stack != hovered_stack:
+        if drag.current_stack >= 0:
             state.stacks[drag.current_stack].cards.remove(drag.card_id)
+            gs.update_card_positions(state.stacks[drag.current_stack], state)
+
+        if state.is_drop_card_allowed(state, drag.original_stack, hovered_stack):
             state.stacks[hovered_stack].cards.append(drag.card_id)
             gs.update_card_positions(state.stacks[hovered_stack], state)
             drag.current_stack = hovered_stack
+        else:
+            drag.current_stack = -1
 
     gs.update_card_positions(state.stacks[hovered_stack], state)
     drag.last_hovered_stack = hovered_stack
@@ -167,11 +165,11 @@ def shuffle_stack(state: Table_State, stack_id: int):
     stack = state.stacks[stack_id]
     random.shuffle(stack.cards)
 
-    for card_id in stack.cards:
-        card = state.animated_cards[card_id]
-        card.x += (random.random() * 2 - 1) * 20
-        card.y += (random.random() * 2 - 1) * 20
-        card.rotation += (random.random() * 2 - 1) * 20
+    # for card_id in stack.cards:
+    #     card = state.animated_cards[card_id]
+    #     card.x += (random.random() * 2 - 1) * 20
+    #     card.y += (random.random() * 2 - 1) * 20
+    #     card.rotation += (random.random() * 2 - 1) * 10
     
     gs.update_card_positions(stack, state, sort=False)
 

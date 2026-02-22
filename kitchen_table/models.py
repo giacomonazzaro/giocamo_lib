@@ -47,5 +47,5 @@ class Table_State:
     draw_callback: callable | None = None
     zoomed_card_id: int = -1
 
-    is_drop_card_allowed: Callable[[Table_State, int, int], bool] = lambda a, b, c: False
+    is_drop_card_allowed: Callable[[Table_State, int, int], bool] = lambda a, b, c: True
     drop_card: Callable[[Table_State, int, int], None] = lambda a,b,c: None
