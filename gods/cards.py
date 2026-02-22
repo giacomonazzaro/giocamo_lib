@@ -196,7 +196,8 @@ class Miracle(Card):
     def get_card_selection(self, game: Game_State) -> list[Card_Id]:
         result = []
         player = game.players[game.current_player]
-        for (i, card) in enumerate(player.hand):
+        for (i, cid) in enumerate(player.hand):
+            card = game.all_cards[cid]
             if card.card_type == Card_Type.EVENT:
                 card_id = Card_Id(area="hand", card_index=i, owner_index=game.current_player)
                 result.append(card_id)
@@ -221,10 +222,11 @@ class Flashback(Card):
     def get_card_selection(self, game: Game_State) -> list[Card_Id]:
         result = []
         player = game.players[game.current_player]
-        for (i, card) in enumerate(player.discard):
+        for (i, cid) in enumerate(player.discard):
+            card = game.all_cards[cid]
             if card.card_type == Card_Type.EVENT:
                 card_id = Card_Id(area="discard", card_index=i, owner_index=game.current_player)
-                if game.get_card(card_id) == self: continue
+                if card == self: continue
                 result.append(card_id)
         return result
 
@@ -236,8 +238,8 @@ class Flashback(Card):
             player = state.players[state.current_player]
             cards = [state.get_card(card_id) for card_id in combination]
             for card in cards:
-                player.discard.remove(card)
-                player.hand.append(card)
+                player.discard.remove(card.id)
+                player.hand.append(card.id)
         return [make_choose_cards_choice(game.current_player, get_combos, on_chosen)]
 
 
@@ -278,7 +280,7 @@ class Time_Warp(Card):
     def get_card_selection(self, game: Game_State) -> list[Card_Id]:
         targets = []
         for (player_id, p) in enumerate(game.players):
-            for (i, w) in enumerate(p.wonders):
+            for i in range(len(p.wonders)):
                 card_id = Card_Id(area="wonders", card_index=i, owner_index=player_id)
                 targets.append(card_id)
         return targets
@@ -290,9 +292,9 @@ class Time_Warp(Card):
         def on_chosen(state, combination):
             cards = [state.get_card(card_id) for card_id in combination]
             for card in cards:
-                state.players[card.owner].wonders.remove(card)
+                state.players[card.owner].wonders.remove(card.id)
                 card.counters = 0
-                state.players[card.owner].hand.append(card)
+                state.players[card.owner].hand.append(card.id)
         return [make_choose_cards_choice(game.current_player, get_combos, on_chosen)]
 
 
@@ -312,7 +314,7 @@ class Darkness(Card):
         result = []
         opponent_idx = 1 - self.owner
         opponent = game.players[opponent_idx]
-        for (i, card) in enumerate(opponent.hand):
+        for i in range(len(opponent.hand)):
             card_id = Card_Id(area="hand", card_index=i, owner_index=opponent_idx)
             result.append(card_id)
         return result
@@ -368,7 +370,7 @@ class Flood(Card):
     def on_played(self, game: Game_State) -> list[Choice]:
         power = effective_power(game, self)
         for people in game.peoples:
-            people.counters -= power
+            game.all_cards[people].counters -= power
         return []
 
 
@@ -396,8 +398,8 @@ class Unmaking(Card):
         targets = []
         power = effective_power(game, self)
         for (player_id, p) in enumerate(game.players):
-            for (i, w) in enumerate(p.wonders):
-                if effective_power(game, w) <= power:
+            for (i, wid) in enumerate(p.wonders):
+                if effective_power(game, game.all_cards[wid]) <= power:
                     card_id = Card_Id(area="wonders", card_index=i, owner_index=player_id)
                     targets.append(card_id)
         return targets
@@ -449,7 +451,8 @@ class Wisdom(Card):
         result = []
         player = game.players[self.owner]
         power = effective_power(game, self)
-        for (i, card) in enumerate(player.hand):
+        for (i, cid) in enumerate(player.hand):
+            card = game.all_cards[cid]
             if card.power <= power and card.card_type != Card_Type.PEOPLE:
                 card_id = Card_Id(area="hand", card_index=i, owner_index=self.owner)
                 result.append(card_id)
@@ -468,9 +471,9 @@ class Knowledge(Card):
     """Opponent events get -X, down to a minimum of 1 power"""
     def power_modifier(self, game: Game_State, card: Card, power: int) -> int:
         if card.card_type == Card_Type.EVENT:
-            # Check if card belongs to opponent
+            # Check if card belongs to opponent.
             opponent_idx = 1 - self.owner
-            if card in game.players[opponent_idx].hand:
+            if card.id in game.players[opponent_idx].hand:
                 reduction = effective_power(game, self)
                 return max(1, power - reduction)
         return power
@@ -481,7 +484,7 @@ class Sky(Card):
     """Your other blue wonders get +X"""
     def power_modifier(self, game: Game_State, card: Card, power: int) -> int:
         if card.color == Card_Color.BLUE and card != self:
-            if card in game.players[self.owner].wonders:
+            if card.id in game.players[self.owner].wonders:
                 return power + effective_power(game, self)
         return power
 
@@ -566,7 +569,7 @@ class Sun(Card):
     """Your green wonders get +X"""
     def power_modifier(self, game: Game_State, card: Card, power: int) -> int:
         if card.color == Card_Color.GREEN and card != self:
-            if card in game.players[self.owner].wonders:
+            if card.id in game.players[self.owner].wonders:
                 return power + effective_power(game, self)
         return power
 
@@ -588,10 +591,11 @@ class Stars(Card):
             if option_index == 0:
                 power = effective_power(state, stars_card)
                 player = state.players[player_id]
-                card = state.shared_deck.pop()
+                cid = state.shared_deck.pop()
+                card = state.all_cards[cid]
                 card.power = power
                 card.owner = stars_card.owner
-                player.hand.append(card)
+                player.hand.append(cid)
                 return []
             else:
                 return draw_card(state, player_id, replacement_effects=False)
@@ -605,7 +609,7 @@ class Stars(Card):
 class Egyptians(Card):
     """You have the most total power among green wonders"""
     def eval_points(self, game: Game_State, player_index: int) -> int:
-        metric = lambda g, i: sum(effective_power(g, w) for w in g.players[i].wonders if w.color == Card_Color.GREEN)
+        metric = lambda g, i: sum(effective_power(g, g.all_cards[wid]) for wid in g.players[i].wonders if g.all_cards[wid].color == Card_Color.GREEN)
         return eval_most(game, self, player_index, metric)
 
 @dataclass(slots=True)
@@ -634,21 +638,21 @@ class Minoans(Card):
 class Babylonians(Card):
     """You have the most total power among wonders"""
     def eval_points(self, game: Game_State, player_index: int) -> int:
-        metric = lambda g, i: sum(effective_power(g, w) for w in g.players[i].wonders)
+        metric = lambda g, i: sum(effective_power(g, g.all_cards[wid]) for wid in g.players[i].wonders)
         return eval_most(game, self, player_index, metric)
 
 @dataclass(slots=True)
 class Romans(Card):
     """You have the most total power among red wonders"""
     def eval_points(self, game: Game_State, player_index: int) -> int:
-        metric = lambda g, i: sum(effective_power(g, w) for w in g.players[i].wonders if w.color == Card_Color.RED)
+        metric = lambda g, i: sum(effective_power(g, g.all_cards[wid]) for wid in g.players[i].wonders if g.all_cards[wid].color == Card_Color.RED)
         return eval_most(game, self, player_index, metric)
 
 @dataclass(slots=True)
 class Judeans(Card):
     """You have the most total power among blue wonders"""
     def eval_points(self, game: Game_State, player_index: int) -> int:
-        metric = lambda g, i: sum(effective_power(g, w) for w in g.players[i].wonders if w.color == Card_Color.BLUE)
+        metric = lambda g, i: sum(effective_power(g, g.all_cards[wid]) for wid in g.players[i].wonders if g.all_cards[wid].color == Card_Color.BLUE)
         return eval_most(game, self, player_index, metric)
 
 

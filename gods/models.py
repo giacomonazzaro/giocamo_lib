@@ -29,8 +29,7 @@ class Card:
     destroyed: bool = False
     counters: int = 0  # +1 counters
     owner: Optional[int] = None  # player index who controls this card (for people)
-    id: int = -1
-    kt_card_id: int = -1
+    id: int = -1  # index into Game_State.all_cards; also serves as the kitchen_table card id since both lists are aligned
 
     def on_draw(self, game: Game_State) -> list[Choice]: return []
     def on_draw_replacement(self, game: Game_State) -> list[Choice]: return []
@@ -66,10 +65,10 @@ class Card:
 @dataclass(slots=True)
 class Player:
     name: str
-    deck: list[Card] = field(default_factory=list)
-    hand: list[Card] = field(default_factory=list)
-    discard: list[Card] = field(default_factory=list)
-    wonders: list[Card] = field(default_factory=list)  # wonders in play
+    deck: list[int] = field(default_factory=list)     # indices into Game_State.all_cards
+    hand: list[int] = field(default_factory=list)     # indices into Game_State.all_cards
+    discard: list[int] = field(default_factory=list)  # indices into Game_State.all_cards
+    wonders: list[int] = field(default_factory=list)  # wonders in play, indices into Game_State.all_cards
 
 @dataclass(slots=True)
 class Card_Id:
@@ -87,16 +86,18 @@ class Card_Id:
 
 @dataclass(slots=True)
 class Game_State(Game):
+    all_cards: list[Card] = field(default_factory=list)  # master registry of all cards in the game
     players: list[Player] = field(default_factory=list)
-    peoples: list[Card] = field(default_factory=list)  # people cards in the center
+    peoples: list[int] = field(default_factory=list)     # people cards in the center, indices into all_cards
     current_player: int = 0
     current_phase: str = "main"  # "start", "main", "end"
+    shared_deck: list[int] = field(default_factory=list)  # for Stars card, indices into all_cards
+    game_over: bool = False
+    
     game_ending: bool = False  # someone declared end
     ending_player: Optional[int] = None  # who triggered the end
     final_turn: bool = False  # is this the final turn?
-    game_over: bool = False
     extra_turns: int = 0  # for Prophecy card
-    shared_deck: list[Card] = field(default_factory=list)  # for Stars card
 
     def is_game_over(self) -> bool:
         return self.game_over
@@ -112,8 +113,8 @@ class Game_State(Game):
                 return choice
 
             if self.current_phase == "start":
-                for w in self.active_player().wonders:
-                    self.choices.extend(w.on_turn_start(self))
+                for wid in self.active_player().wonders:
+                    self.choices.extend(self.all_cards[wid].on_turn_start(self))
                 self.current_phase = "main"
 
             elif self.current_phase == "main":
@@ -139,8 +140,8 @@ class Game_State(Game):
                 self.current_phase = "end"
 
             elif self.current_phase == "end":
-                for w in self.active_player().wonders:
-                    self.choices.extend(w.on_turn_end(self))
+                for wid in self.active_player().wonders:
+                    self.choices.extend(self.all_cards[wid].on_turn_end(self))
                 self.switch_turn()
                 self.current_phase = "start"
 
@@ -153,7 +154,7 @@ class Game_State(Game):
         return self.players[1 - self.current_player]
 
     def peoples_ids(self) -> list[Card_Id]:
-        return [Card_Id(area="people", card_index=i, owner_index=card.owner) for (i, card) in enumerate(self.peoples)]
+        return [Card_Id(area="people", card_index=i, owner_index=self.all_cards[card_id].owner) for (i, card_id) in enumerate(self.peoples)]
 
     def wonders(state: Game_State, player_index: int) -> list[Card_Id]:
         return [Card_Id(area="wonders", card_index=i, owner_index=player_index) for i in range(len(state.players[player_index].wonders))]
@@ -182,18 +183,20 @@ class Game_State(Game):
         assert not Card_Id.is_null(card_id)
 
         if card_id.area == "people":
-            assert self.peoples[card_id.card_index].owner == card_id.owner_index
-            return self.peoples[card_id.card_index]
+            card = self.all_cards[self.peoples[card_id.card_index]]
+            assert card.owner == card_id.owner_index
+            return card
         assert card_id.owner_index is not None
 
+        player = self.players[card_id.owner_index]
         if card_id.area == "deck":
-            return self.players[card_id.owner_index].deck[card_id.card_index]
+            return self.all_cards[player.deck[card_id.card_index]]
         elif card_id.area == "hand":
-            return self.players[card_id.owner_index].hand[card_id.card_index]
+            return self.all_cards[player.hand[card_id.card_index]]
         elif card_id.area == "discard":
-            return self.players[card_id.owner_index].discard[card_id.card_index]
+            return self.all_cards[player.discard[card_id.card_index]]
         elif card_id.area == "wonders":
-            return self.players[card_id.owner_index].wonders[card_id.card_index]
+            return self.all_cards[player.wonders[card_id.card_index]]
         else:
             raise ValueError(f"Invalid card area: {card_id.area}")
 
@@ -215,10 +218,10 @@ class Game_State(Game):
 def effective_power(game: Game_State, card: Card) -> int:
     """Calculate effective power of a card, applying all wonder power modifiers."""
     power = card.power + card.counters
-    # Apply power modifiers from all wonders in play
+    # Apply power modifiers from all wonders in play.
     for player in game.players:
-        for wonder in player.wonders:
-            power = wonder.power_modifier(game, card, power)
+        for wid in player.wonders:
+            power = game.all_cards[wid].power_modifier(game, card, power)
     if power < 0:
         power = 0
     return power

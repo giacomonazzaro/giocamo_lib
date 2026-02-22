@@ -12,19 +12,19 @@ def draw_card(game: Game_State, player_id: int, replacement_effects=True) -> lis
         return []
 
     if replacement_effects:
-        for w in player.wonders:
-            choices = w.on_draw_replacement(game)
+        for wid in player.wonders:
+            choices = game.all_cards[wid].on_draw_replacement(game)
             if choices:
                 return choices
 
     if len(player.deck) == 0:
         return []
 
-    card = player.deck.pop()
-    player.hand.append(card)
+    card_id = player.deck.pop()
+    player.hand.append(card_id)
 
-    for w in player.wonders:
-        choices = w.on_draw(game)
+    for wid in player.wonders:
+        choices = game.all_cards[wid].on_draw(game)
         if choices:
             return choices
 
@@ -41,8 +41,8 @@ def discard_cards(game: Game_State, card_ids: list[Card_Id]) -> list[Choice]:
     cards = [game.get_card(card_id) for card_id in card_ids]
     for i, card in enumerate(cards):
         player = game.players[card_ids[i].owner_index]
-        player.hand.remove(card)
-        player.discard.append(card)
+        player.hand.remove(card.id)
+        player.discard.append(card.id)
 
     choices = []
     player_id = card_ids[0].owner_index
@@ -56,7 +56,8 @@ def discard_cards(game: Game_State, card_ids: list[Card_Id]) -> list[Choice]:
 
 def check_people_conditions(game: Game_State) -> None:
     """Check and update ownership of people cards based on their conditions."""
-    for people in game.peoples:
+    for people_id in game.peoples:
+        people = game.all_cards[people_id]
         old_owner = people.owner
         new_owner = evaluate_people_condition(game, people)
 
@@ -79,11 +80,11 @@ def evaluate_people_condition(game: Game_State, people: Card) -> Optional[int]:
     elif scores[1] > scores[0]:
         return 1
     else:
-        # Tie or no one qualifies - check for wonders that break ties
+        # Tie or no one qualifies - check for wonders that break ties.
         if scores[0] == scores[1]:
             for i, player in enumerate(game.players):
-                for w in player.wonders:
-                    if w.wins_tie(game, people):
+                for wid in player.wonders:
+                    if game.all_cards[wid].wins_tie(game, people):
                         return i
             return people.owner
         return None
@@ -99,18 +100,16 @@ def play_card(state: Game_State, card_id: Card_Id) -> list[Choice]:
     choices = card.on_played(state)
     if card.card_type == Card_Type.WONDER:
         card.owner = state.current_player
-        player.wonders.append(card)
+        player.wonders.append(card.id)
     elif card.card_type == Card_Type.EVENT:
-        player.discard.append(card)
+        player.discard.append(card.id)
 
     return choices
 
 
 def wonders_by_priority(state: Game_State) -> list[Card]:
-    active_player = state.active_player()
-    opponent = state.opponent()
-    all_wonders = active_player.wonders + opponent.wonders
-    return all_wonders
+    all_wonder_ids = state.active_player().wonders + state.opponent().wonders
+    return [state.all_cards[wid] for wid in all_wonder_ids]
 
 def destroy_people(game: Game_State, card_id: Card_Id) -> None:
     people = game.get_card(card_id)
@@ -125,8 +124,8 @@ def destroy_wonder(game: Game_State, card_id: Card_Id) -> None:
     owner_idx = card_id.owner_index
     if owner_idx is not None:
         player = game.players[owner_idx]
-        player.wonders.remove(card)
-        player.discard.append(card)
+        player.wonders.remove(card.id)
+        player.discard.append(card.id)
 
     card.on_destroyed(game)
     for w in wonders_by_priority(game):
@@ -144,9 +143,9 @@ def shuffle_card_into_deck(game: Game_State, card_id: Card_Id) -> None:
     owner_idx = card_id.owner_index
     if owner_idx is not None:
         player = game.players[owner_idx]
-        player.wonders.remove(card)
+        player.wonders.remove(card.id)
         card.counters = 0
-        player.deck.append(card)
+        player.deck.append(card.id)
         random.shuffle(player.deck)
 
 def declare_end_game(game: Game_State) -> None:
@@ -160,18 +159,19 @@ def compute_player_score(game: Game_State, player_index: int) -> int:
     score = 0
     player = game.players[player_index]
 
-    # Points from peoples where this player meets the condition
-    for people in game.peoples:
+    # Points from peoples where this player meets the condition.
+    for people_id in game.peoples:
+        people = game.all_cards[people_id]
         points = people.eval_points(game, player_index)
         if people.destroyed:
             points = 0
-        for wonder in player.wonders:
-            points = wonder.on_scoring_people(game, people, points)
+        for wid in player.wonders:
+            points = game.all_cards[wid].on_scoring_people(game, people, points)
         score += points
 
-    # Points from wonders (Animals, Love)
-    for wonder in player.wonders:
-        score += wonder.on_scoring(game)
+    # Points from wonders (Animals, Love).
+    for wid in player.wonders:
+        score += game.all_cards[wid].on_scoring(game)
 
     return score
 
@@ -180,10 +180,10 @@ def make_main_choice(state: Game_State) -> Choice:
     player_index = state.current_player
     def actions(state: Game_State) -> list:
         cards = [Card_Id(area="hand", card_index=i, owner_index=state.current_player)
-                for i, card in enumerate(state.players[state.current_player].hand)]
+                for i in range(len(state.players[state.current_player].hand))]
         cards.append(Card_Id.null())
         return cards
-    
+
     def resolve(state: Game_State, option_index: int):
         card_id = actions(state)[option_index]
         if card_id != Card_Id.null():
@@ -193,8 +193,8 @@ def make_main_choice(state: Game_State) -> Choice:
         else:
             result: list[Choice] = []
             player = state.active_player()
-            for w in player.wonders:
-                result.extend(w.on_pass(state))
+            for wid in player.wonders:
+                result.extend(state.all_cards[wid].on_pass(state))
             state.current_phase = "post-pass-effects"
             return result
 
@@ -212,16 +212,17 @@ def display_game_state(game: Game_State, current_player_view: bool = True) -> No
     print("GAME STATE")
     print("=" * 60)
 
-    # People cards
+    # People cards.
     print("\n--- PEOPLE CARDS (Center) ---")
-    for people in game.peoples:
+    for people_id in game.peoples:
+        people = game.all_cards[people_id]
         owner_str = f" - Controlled by {game.players[people.owner].name}" if people.owner is not None else " - Unclaimed"
         status_str = " [DESTROYED]" if people.destroyed else ""
         effect_text = people.effect
         print(f"  {people}{status_str}{owner_str}")
         print(f"    Effect: {effect_text}")
 
-    # Both players' info
+    # Both players' info.
     for i, player in enumerate(game.players):
         is_current = (i == game.current_player)
         marker = " <<< CURRENT TURN" if is_current else ""
@@ -230,15 +231,15 @@ def display_game_state(game: Game_State, current_player_view: bool = True) -> No
 
         if player.wonders:
             print(f"  Wonders in play:")
-            for w in player.wonders:
-                print(f"    - {detailed_str(w)}")
+            for wid in player.wonders:
+                print(f"    - {detailed_str(game.all_cards[wid])}")
         else:
             print(f"  Wonders in play: None")
 
-        # Show hand for current player (or both in hot-seat mode)
+        # Show hand for current player (or both in hot-seat mode).
         print(f"  Hand ({len(player.hand)} cards):")
-        for card in player.hand:
-            print(f"    - {detailed_str(card)}")
+        for card_id in player.hand:
+            print(f"    - {detailed_str(game.all_cards[card_id])}")
         print("  points:", compute_player_score(game, i))
     print("\n" + "=" * 60)
 

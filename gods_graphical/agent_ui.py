@@ -12,8 +12,9 @@ from kitchen_table.ui import point_in_rect, Button, UI_State
 
 
 def update_stacks(table_state: Table_State, gods_state: Game_State, bottom_player: int = 0):
-    def update_stack(stack_id: int, card_list):
-        table_state.stacks[stack_id].cards = [card.id for card in card_list]
+    def update_stack(stack_id: int, card_indices: list[int]):
+        # table_state.cards is aligned with game.all_cards, so card.id == kt card id.
+        table_state.stacks[stack_id].cards = list(card_indices)
         update_card_positions(table_state.stacks[stack_id], table_state)
 
     bp = bottom_player
@@ -124,6 +125,8 @@ class Agent_UI(Agent):
                 self._choose_cards_remaining = [idx for idx in remaining if card_id in actions[idx]]
                 break
 
+
+
         return -1
 
     def build_ui(self, state: Game_State, choice: Choice, actions: list):
@@ -206,13 +209,11 @@ class Agent_UI(Agent):
             print("dopped", dropped_card)
 
             if choice.description == "main" and original_stack == hand_stack and target_stack == play_stack:
-                # print([x.kt_card_id for x in state.active_player().hand])
-                hand_index = [x.kt_card_id for x in state.active_player().hand].index(dropped_card_id)
-                card = state.players[choice.player_index].hand[hand_index]
+                hand_index = [state.all_cards[x].id for x in state.active_player().hand].index(dropped_card_id)
                 # print(card)
                 # if card.card_type == Card_Type.EVENT:
-                #     self.table_state.stacks[play_stack].cards.remove(card.kt_card_id)
-                #     self.table_state.stacks[8].cards.append(card.kt_card_id)
+                #     self.table_state.stacks[play_stack].cards.remove(card.id)
+                #     self.table_state.stacks[8].cards.append(card.id)
                 #     update_card_positions(self.table_state.stacks[8], self.table_state)
                 self.clear_ui()
                 return hand_index

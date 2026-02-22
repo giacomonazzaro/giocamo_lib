@@ -37,42 +37,36 @@ app = typer.Typer()
 
 
 def init_table_state(gods_state: Game_State, bottom_player: int = 0) -> kt.Table_State:
-    cards = []
-    gods_cards = []
-
     def draw_power(card: kt.Card):
-        gods_card = gods_cards[card.id]
+        # card.id == the all_cards index since both lists are aligned.
+        gods_card = gods_state.all_cards[card.id]
         power = str(effective_power(gods_state, gods_card))
         draw_card_power_badge(power, gods_card.destroyed)
 
-    def register_cards(card_list):
-        card_ids = []
-        for i, card in enumerate(card_list):
-            card_id = len(cards)
-            kt_card = kt.Card(
-                id=card_id,
-                title=card.name,
-                description=card.effect,
-                image_path=get_image_path(card.name),
-                draw_callback=draw_power,
-            )
-            card.id = card_id
-            card_list[i].kt_card_id = card_id
-            cards.append(kt_card)
-            gods_cards.append(card)
-            card_ids.append(card_id)
-        return card_ids
+    # Build table_state.cards in the same order as game.all_cards so that
+    # table_state.cards[i] corresponds to game.all_cards[i], making card.id
+    # serve as the shared integer key with no separate kt_card_id needed.
+    cards = [
+        kt.Card(
+            id=card.id,
+            title=card.name,
+            description=card.effect,
+            image_path=get_image_path(card.name),
+            draw_callback=draw_power,
+        )
+        for card in gods_state.all_cards
+    ]
 
-    # Register all cards and build zone mapping
+    # Stacks use the gods int IDs directly — no translation needed.
     zone_cards = {}
     for i in range(2):
         p = gods_state.players[i]
-        zone_cards[f"p{i}_deck"] = register_cards(p.deck)
-        zone_cards[f"p{i}_hand"] = register_cards(p.hand)
-        zone_cards[f"p{i}_discard"] = register_cards(p.discard)
-        zone_cards[f"p{i}_wonders"] = register_cards(p.wonders)
-    zone_cards["peoples"] = register_cards(gods_state.peoples)
-    zone_cards["shared_deck"] = register_cards(gods_state.shared_deck)
+        zone_cards[f"p{i}_deck"] = list(p.deck)
+        zone_cards[f"p{i}_hand"] = list(p.hand)
+        zone_cards[f"p{i}_discard"] = list(p.discard)
+        zone_cards[f"p{i}_wonders"] = list(p.wonders)
+    zone_cards["peoples"] = list(gods_state.peoples)
+    zone_cards["shared_deck"] = list(gods_state.shared_deck)
 
     # Create stacks from shared layout
     stacks = []
@@ -102,10 +96,12 @@ def draw_hud(gods_state: Game_State, table_state: kt.Table_State, bottom_player:
         hud_y = (bottom_wonders_y - 40) if i == bottom_player else top_wonders_y
         draw_player_hud(player.name, score, len(player.deck), is_current, hud_y)
 
-    # People ownership
+    # People ownership. Since table_state.cards is aligned with all_cards,
+    # the gods card id == the kt card id, so we use pid directly.
     people_info = [
-        (p.id, p.owner) for p in gods_state.peoples
-        if p.owner is not None and not p.destroyed
+        (pid, gods_state.all_cards[pid].owner)
+        for pid in gods_state.peoples
+        if gods_state.all_cards[pid].owner is not None and not gods_state.all_cards[pid].destroyed
     ]
     draw_people_ownership_bars(people_info, table_state)
 
