@@ -156,19 +156,6 @@ def draw_people_ownership_bars(people_info: list[tuple[int, int]], table_state: 
         )
 
 
-def draw_final_round_indicator():
-    text = "FINAL ROUND"
-    text_w = measure_text(text, 24)
-    W = get_screen_width()
-    H = get_screen_height()
-    h = tweak["card_height"]
-    peoples_y = H // 2 - h // 2
-    draw_text(
-        text, (W - text_w) // 2, peoples_y - 30, 24,
-        Color(255, 180, 0, 200),
-    )
-
-
 # --- Game over screen ---
 
 def draw_game_over_screen(table_state: kt.Table_State, result_text: str,

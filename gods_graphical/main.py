@@ -19,7 +19,6 @@ from gods.setup import quick_setup
 from gods_graphical.agent_ui import Agent_UI, update_stacks
 from gods_graphical.ui import (
     draw_card_power_badge,
-    draw_final_round_indicator,
     draw_game_over_screen,
     draw_people_ownership_bars,
     draw_player_hud,
@@ -105,9 +104,6 @@ def draw_hud(gods_state: Game_State, table_state: kt.Table_State, bottom_player:
     ]
     draw_people_ownership_bars(people_info, table_state)
 
-    # Final round indicator
-    if gods_state.game_ending and not gods_state.game_over:
-        draw_final_round_indicator()
 
 from kitchen_table.ui import UI_State
 

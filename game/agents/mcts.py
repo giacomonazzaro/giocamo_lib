@@ -133,11 +133,7 @@ class Agent_MCTS:
         opp_score = compute_player_score(state, 1 - self.player_index)
         diff = my_score - opp_score
         if diff == 0:
-            # tiebreaker: ending player loses
-            if state.ending_player == self.player_index:
-                return -1.0
-            else:
-                return 1.0
+            return 0.0
         elif diff > 0:
             return 1.0
         else:

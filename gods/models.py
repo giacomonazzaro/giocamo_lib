@@ -93,11 +93,6 @@ class Game_State(Game):
     current_phase: str = "main"  # "start", "main", "end"
     shared_deck: list[int] = field(default_factory=list)  # for Stars card, indices into all_cards
     game_over: bool = False
-    
-    game_ending: bool = False  # someone declared end
-    ending_player: Optional[int] = None  # who triggered the end
-    final_turn: bool = False  # is this the final turn?
-    extra_turns: int = 0  # for Prophecy card
 
     def is_game_over(self) -> bool:
         return self.game_over
@@ -128,7 +123,6 @@ class Game_State(Game):
                 player = self.active_player()
                 if not player.deck:
                     self.game_over = True
-                    self.ending_player = self.current_player
                     continue
                 new_choices = draw_card(self, self.current_player)
                 self.choices.extend(new_choices)
@@ -166,18 +160,7 @@ class Game_State(Game):
         return [Card_Id(area="hand", card_index=i, owner_index=player_index) for i in range(len(state.players[player_index].hand))]
 
     def switch_turn(self) -> None:
-        if self.extra_turns > 0:
-            self.extra_turns -= 1
-            return
-
-        if self.final_turn:
-            self.game_over = True
-            return
-
         self.current_player = 1 - self.current_player
-
-        if self.game_ending and self.current_player != self.ending_player:
-            self.final_turn = True
 
     def get_card(self, card_id: Card_Id) -> Card:
         assert not Card_Id.is_null(card_id)

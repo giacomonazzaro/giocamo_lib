@@ -148,12 +148,6 @@ def shuffle_card_into_deck(game: Game_State, card_id: Card_Id) -> None:
         player.deck.append(card.id)
         random.shuffle(player.deck)
 
-def declare_end_game(game: Game_State) -> None:
-    """Active player declares end of game."""
-    game.game_ending = True
-    game.ending_player = game.current_player
-
-
 def compute_player_score(game: Game_State, player_index: int) -> int:
     """Compute the total score for a player."""
     score = 0
@@ -255,15 +249,14 @@ class Agent_Minimax_Stochastic_Gods(Agent_Minimax_Stochastic):
         opp_score = compute_player_score(state, 1 - player_index)
         diff = my_score - opp_score
         if diff > 0:
-            return 1000.0
+            return +1000.0
         elif diff < 0:
             return -1000.0
         else:
-            # Tie-breaking: the player who declared end of game loses.
-            if state.ending_player == player_index:
+            if player_index == state.current_player:
                 return -1000.0
             else:
-                return 1000.0
+                return +1000.0
 
     def evaluate_heuristic(self, state: Game_State, player_index: int) -> float:
         """Estimate how good a non-finished position is."""
