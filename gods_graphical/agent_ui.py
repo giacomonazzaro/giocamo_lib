@@ -210,11 +210,6 @@ class Agent_UI(Agent):
 
             if choice.description == "main" and original_stack == hand_stack and target_stack == play_stack:
                 hand_index = [state.all_cards[x].id for x in state.active_player().hand].index(dropped_card_id)
-                # print(card)
-                # if card.card_type == Card_Type.EVENT:
-                #     self.table_state.stacks[play_stack].cards.remove(card.id)
-                #     self.table_state.stacks[8].cards.append(card.id)
-                #     update_card_positions(self.table_state.stacks[8], self.table_state)
                 self.clear_ui()
                 return hand_index
 
@@ -239,11 +234,11 @@ class Agent_UI(Agent):
         #         self.card_combinations = []
         # else:
 
+        for i, button in self.ui_state.buttons.items():
+            if button.pressed():
+                selected = i
+        
         if choice.description != "main":
-            for i, button in self.ui_state.buttons.items():
-                if button.pressed():
-                    selected = i
-            
             for i, card_id in self.ui_state.highlighted_cards.items():
                 card = self.table_state.cards[card_id]
                 if card_pressed(card):

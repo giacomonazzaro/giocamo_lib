@@ -43,9 +43,12 @@ def game_frame(game: Game, agent: Agent, choice: Choice | None) -> Choice | None
         choice = game.next_choice()
 
     if choice is not None:
-        action_index = agent.choose_action(game, choice)
-        if action_index != -1:
-            resolve_choice(game, choice, action_index)
-            choice = None
+        if len(choice.actions(game)) == 0:
+            return None
+        else:
+            action_index = agent.choose_action(game, choice)
+            if action_index != -1:
+                resolve_choice(game, choice, action_index)
+                choice = None
 
     return choice
