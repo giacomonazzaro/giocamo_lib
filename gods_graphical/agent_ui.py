@@ -167,13 +167,12 @@ class Agent_UI(Agent):
             self.card_combinations = []
             for combination in actions:
                 self.card_combinations.append(set(combination))
+                if Card_Id.is_null(card_id):
+                    x = start_x
+                    button = Button(x, button_y, button_w, button_h, text="Done")
+                    self.ui_state.buttons[0] = button
                 for card_id in combination:
-                    if Card_Id.is_null(card_id):
-                        x = start_x
-                        button = Button(x, button_y, button_w, button_h, text="Done")
-                        self.ui_state.buttons[0] = button
-                    else:
-                        self.ui_state.highlighted_cards[card_id] = state.get_card(card_id).id
+                    self.ui_state.highlighted_cards[card_id] = state.get_card(card_id).id
 
             print(self.card_multiselection)
             print(self.card_combinations)
@@ -186,8 +185,24 @@ class Agent_UI(Agent):
         if not self.is_ui_ready:
             self.build_ui(state, choice, actions)
 
-        print(choice.description)
 
+        dropped_card = self.table_state.poll_dropped_card()
+        if dropped_card:
+            original_stack, target_stack, xxx = dropped_card
+            print(dropped_card)
+
+            if choice.description == "main":
+                if original_stack == 1 and target_stack == 3:
+                    print([x.kt_card_id for x in state.active_player().hand])
+                    hand_index = [x.kt_card_id for x in state.active_player().hand].index(xxx)
+                    self.is_ui_ready = False
+                    self.ui_state.buttons = {}
+                    self.ui_state.highlighted_cards = {}                    
+                    return hand_index
+
+        return -1
+
+        # return -1
         selected = -1
         if not is_mouse_button_pressed(MouseButton.MOUSE_BUTTON_LEFT):
             return -1

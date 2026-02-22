@@ -99,12 +99,14 @@ def handle_mouse_release(state: Table_State) -> None:
         if drag.current_stack == -1:
             state.stacks[drag.original_stack].cards.append(drag.card_id)
 
+    state.dropped_card = (drag.original_stack, drag.current_stack, drag.card_id)
+    
     original_stack = drag.original_stack
     current_stack = drag.current_stack
     state.drag_state = Drag_State()
     gs.update_card_positions(state.stacks[original_stack], state, sort=True)
     gs.update_card_positions(state.stacks[current_stack], state, sort=True)
-    print(state.drag_state)
+
 
 
 def handle_mouse_move(state: Table_State) -> None:

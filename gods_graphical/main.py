@@ -139,8 +139,8 @@ def play(gods_state: Game_State, table_state: kt.Table_State, ui_state: UI_State
         else:
             table_state.zoomed_card_id = -1
 
-        if not agent:
-            update_input(table_state)
+        # if not agent:
+        update_input(table_state)
 
         if agent:
             current_choice = game_frame(gods_state, agent, current_choice)
