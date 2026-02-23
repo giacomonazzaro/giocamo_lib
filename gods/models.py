@@ -91,7 +91,7 @@ class Game_State(Game):
     peoples: list[int] = field(default_factory=list)     # people cards in the center, indices into all_cards
     current_player: int = 0
     current_phase: str = "main"  # "start", "main", "end"
-    shared_deck: list[int] = field(default_factory=list)  # for Stars card, indices into all_cards
+    shared_deck: list[int] = field(default_factory=list)
     game_over: bool = False
 
     def is_game_over(self) -> bool:
@@ -148,55 +148,41 @@ class Game_State(Game):
         return self.players[1 - self.current_player]
 
     def peoples_ids(self) -> list[Card_Id]:
-        return [Card_Id(area="people", card_index=i, owner_index=self.all_cards[card_id].owner) for (i, card_id) in enumerate(self.peoples)]
+        # card_index is the stable Card.id (index into all_cards), sorted for canonical ordering.
+        return sorted([Card_Id(area="people", card_index=pid, owner_index=self.all_cards[pid].owner)
+                       for pid in self.peoples], key=lambda c: c.card_index)
 
     def wonders(state: Game_State, player_index: int) -> list[Card_Id]:
-        return [Card_Id(area="wonders", card_index=i, owner_index=player_index) for i in range(len(state.players[player_index].wonders))]
+        return sorted([Card_Id(area="wonders", card_index=wid, owner_index=player_index)
+                       for wid in state.players[player_index].wonders], key=lambda c: c.card_index)
 
     def discard(state: Game_State, player_index: int) -> list[Card_Id]:
-        return [Card_Id(area="discard", card_index=i, owner_index=player_index) for i in range(len(state.players[player_index].discard))]
+        return sorted([Card_Id(area="discard", card_index=did, owner_index=player_index)
+                       for did in state.players[player_index].discard], key=lambda c: c.card_index)
 
     def hand(state: Game_State, player_index: int) -> list[Card_Id]:
-        return [Card_Id(area="hand", card_index=i, owner_index=player_index) for i in range(len(state.players[player_index].hand))]
+        return sorted([Card_Id(area="hand", card_index=hid, owner_index=player_index)
+                       for hid in state.players[player_index].hand], key=lambda c: c.card_index)
 
     def switch_turn(self) -> None:
         self.current_player = 1 - self.current_player
 
     def get_card(self, card_id: Card_Id) -> Card:
+        # card_index is the stable Card.id, so lookup is a direct index into all_cards.
         assert not Card_Id.is_null(card_id)
-
-        if card_id.area == "people":
-            card = self.all_cards[self.peoples[card_id.card_index]]
-            assert card.owner == card_id.owner_index
-            return card
-        assert card_id.owner_index is not None
-
-        player = self.players[card_id.owner_index]
-        if card_id.area == "deck":
-            return self.all_cards[player.deck[card_id.card_index]]
-        elif card_id.area == "hand":
-            return self.all_cards[player.hand[card_id.card_index]]
-        elif card_id.area == "discard":
-            return self.all_cards[player.discard[card_id.card_index]]
-        elif card_id.area == "wonders":
-            return self.all_cards[player.wonders[card_id.card_index]]
-        else:
-            raise ValueError(f"Invalid card area: {card_id.area}")
+        return self.all_cards[card_id.card_index]
 
     def card_list(self, player_id: int | None, area: str) -> list[Card_Id]:
         if player_id is None:
-            return self.card_list(player_id=0, area=area) + self.card_list(player_id=1, area=area)
+            # Merge both players' lists and sort globally for canonical ordering.
+            combined = self.card_list(player_id=0, area=area) + self.card_list(player_id=1, area=area)
+            return sorted(combined, key=lambda c: c.card_index)
 
-        if area == "hand":
-            return [Card_Id(area, i, player_id) for i in range(len(self.players[player_id].hand))]
-        if area == "wonders":
-            return [Card_Id(area, i, player_id) for i in range(len(self.players[player_id].wonders))]
-        if area == "discard":
-            return [Card_Id(area, i, player_id) for i in range(len(self.players[player_id].discard))]
-        if area == "deck":
-            return [Card_Id(area, i, player_id) for i in range(len(self.players[player_id].deck))]
-        assert False
-        return []
+        player = self.players[player_id]
+        area_list = {"hand": player.hand, "wonders": player.wonders,
+                     "discard": player.discard, "deck": player.deck}[area]
+        # card_index is the stable Card.id, sorted for canonical ordering.
+        return sorted([Card_Id(area, cid, player_id) for cid in area_list], key=lambda c: c.card_index)
 
 def effective_power(game: Game_State, card: Card) -> int:
     """Calculate effective power of a card, applying all wonder power modifiers."""

@@ -95,7 +95,8 @@ def play_card(state: Game_State, card_id: Card_Id) -> list[Choice]:
     player = state.players[card_id.owner_index]
     card = state.get_card(card_id)
     if card_id.area == "hand":
-        del player.hand[card_id.card_index]
+        # card_index is the stable Card.id, so remove by value rather than position.
+        player.hand.remove(card_id.card_index)
 
     choices = card.on_played(state)
     if card.card_type == Card_Type.WONDER:
@@ -173,8 +174,9 @@ def compute_player_score(game: Game_State, player_index: int) -> int:
 def make_main_choice(state: Game_State) -> Choice:
     player_index = state.current_player
     def actions(state: Game_State) -> list:
-        cards = [Card_Id(area="hand", card_index=i, owner_index=state.current_player)
-                for i in range(len(state.players[state.current_player].hand))]
+        # Sorted by stable card_index so the list is canonical regardless of display order.
+        cards = sorted([Card_Id(area="hand", card_index=cid, owner_index=state.current_player)
+                        for cid in state.players[state.current_player].hand], key=lambda c: c.card_index)
         cards.append(Card_Id.null())
         return cards
 

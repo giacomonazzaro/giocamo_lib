@@ -377,7 +377,8 @@ def draw_table(table_state: Table_State) -> None:
 
     if table_state.drag_state.card_id >= 0:
         card = table_state.animated_cards[table_state.drag_state.card_id]
-        draw_card(card)
+        face_up = table_state.stacks[table_state.drag_state.original_stack].face_up
+        draw_card(card, face_up=face_up)
 
     if table_state.draw_callback is not None:
         table_state.draw_callback(table_state)

@@ -212,9 +212,10 @@ class Agent_UI(Agent):
             original_stack, target_stack, dropped_card_id = dropped_card
 
             if choice.description == "main" and original_stack == hand_stack and target_stack == play_stack:
-                hand_index = [state.all_cards[x].id for x in state.active_player().hand].index(dropped_card_id)
+                # actions is sorted by stable card_index (= Card.id), so find by matching card_index.
+                action_index = next(i for i, cid in enumerate(actions) if not Card_Id.is_null(cid) and cid.card_index == dropped_card_id)
                 self.clear_ui()
-                return hand_index
+                return action_index
 
 
         # return -1

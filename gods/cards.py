@@ -68,14 +68,34 @@ def eval_most(game: Game_State, card: Card, player_index: int, metric) -> int:
     return 0
 
 def return_true(card: Card): return True
+
 def card_selection(state: Game_State, player_id: int, area: str, f=return_true, include_null=False) -> list[Card_Id]:
     result = []
     card_list = state.card_list(player_id, area)
     for card_id in card_list:
         if f(state.get_card(card_id)):
-            result.append(card_id)    
+            result.append(card_id)
+    # Sorted by stable card_index so the list is canonical regardless of display order.
+    result.sort(key=lambda c: c.card_index)
     if include_null:
         result.append(Card_Id.null())
+    return result
+
+def people_selection(game: Game_State, f=return_true, include_null: bool = False) -> list[Card_Id]:
+    """Select people cards matching filter f, sorted by stable card_index."""
+    result = [Card_Id(area="people", card_index=pid, owner_index=game.all_cards[pid].owner)
+              for pid in game.peoples if f(game.all_cards[pid])]
+    result.sort(key=lambda c: c.card_index)
+    if include_null:
+        result.append(Card_Id.null())
+    return result
+
+def wonders_selection(game: Game_State, f=return_true) -> list[Card_Id]:
+    """Select wonders from both players matching filter f, sorted by stable card_index."""
+    result = [Card_Id(area="wonders", card_index=wid, owner_index=player_id)
+              for player_id, p in enumerate(game.players)
+              for wid in p.wonders if f(game.all_cards[wid])]
+    result.sort(key=lambda c: c.card_index)
     return result
 
 
@@ -121,14 +141,8 @@ class Moon(Card):
 @dataclass(slots=True)
 class War(Card):
     def get_card_selection(self, game: Game_State) -> list[Card_Id]:
-        result = []
-        for (i, pid) in enumerate(game.peoples):
-            people = game.all_cards[pid]
-            if not people.destroyed and effective_power(game, people) <= effective_power(game, self):
-                card_id = Card_Id(area="people", card_index=i, owner_index=people.owner)
-                result.append(card_id)
-        result.append(Card_Id.null())
-        return result
+        power = effective_power(game, self)
+        return people_selection(game, lambda p: not p.destroyed and effective_power(game, p) <= power, include_null=True)
 
     def on_pass(self, game: Game_State) -> list[Choice]:
         if game.current_player != self.owner:
@@ -138,14 +152,8 @@ class War(Card):
 
 @dataclass(slots=True)
 class Rivers(Card):
-    def get_card_selection(self, state: Game_State) -> list[Card_Id]:
-        targets = []
-        for (i, pid) in enumerate(state.peoples):
-            people = state.all_cards[pid]
-            if people.destroyed:
-                targets.append(Card_Id(area="people", card_index=i, owner_index=people.owner))
-        targets.append(Card_Id.null())
-        return targets
+    def get_card_selection(self, game: Game_State) -> list[Card_Id]:
+        return people_selection(game, lambda p: p.destroyed, include_null=True)
 
     def on_pass(self, game: Game_State) -> list[Choice]:
         action = lambda state, card_id: restore_people(state, card_id)
@@ -155,10 +163,8 @@ class Rivers(Card):
 class Earthquake(Card):
     def on_played(self, game: Game_State) -> list[Choice]:
         power = effective_power(game, self)
-        for people_id in game.peoples_ids():
-            people = game.get_card(people_id)
-            if effective_power(game, people) <= power:
-                destroy_people(game, people_id)
+        for people_id in people_selection(game, lambda p: effective_power(game, p) <= power):
+            destroy_people(game, people_id)
         return []
 
 @dataclass(slots=True)
@@ -169,52 +175,31 @@ class Eruption(Card):
             power = effective_power(state, self)
             return all_combinations(card_ids, power, up_to=True)
         def on_chosen(state, combination):
-            for card_id in sorted(combination, key=lambda c: c.card_index, reverse=True):
+            for card_id in combination:
                 shuffle_card_into_deck(state, card_id)
         return [make_choose_cards_choice(game.current_player, get_targets, on_chosen)]
 
 
 @dataclass(slots=True)
 class Meteorite(Card):
-    def get_card_selection(self, game: Game_State) -> list[Card_Id]:
-        result = []
-        power = effective_power(game, self)
-        for (i, pid) in enumerate(game.peoples):
-            people = game.all_cards[pid]
-            if people.owner == (1 - game.current_player) and not people.destroyed:
-                if effective_power(game, people) <= power:
-                    card_id = Card_Id(area="people", card_index=i, owner_index=people.owner)
-                    result.append(card_id)
-        return result
-
     def on_played(self, game: Game_State) -> list[Choice]:
-        targets = self.get_card_selection(game)
-        for target in targets:
+        power = effective_power(game, self)
+        opponent = 1 - game.current_player
+        for target in people_selection(game, lambda p: p.owner == opponent and not p.destroyed and effective_power(game, p) <= power):
             destroy_people(game, target)
         return []
 
 
 @dataclass(slots=True)
 class Miracle(Card):
-    def get_card_selection(self, game: Game_State) -> list[Card_Id]:
-        result = []
-        player = game.players[game.current_player]
-        for (i, cid) in enumerate(player.hand):
-            card = game.all_cards[cid]
-            if card.card_type == Card_Type.EVENT:
-                card_id = Card_Id(area="hand", card_index=i, owner_index=game.current_player)
-                result.append(card_id)
-        return result
-
     def on_played(self, game: Game_State) -> list[Choice]:
         miracle_card = self
         def actions(state: Game_State) -> list:
-            return self.get_card_selection(state)
+            return card_selection(state, state.current_player, "hand", lambda c: c.card_type == Card_Type.EVENT)
         def resolve(state: Game_State, option_index: int) -> list[Choice]:
             card_id = actions(state)[option_index]
             card = state.get_card(card_id)
-            bonus = effective_power(state, miracle_card)
-            card.counters += bonus
+            card.counters += effective_power(state, miracle_card)
             return play_card(state, card_id)
         return [Choice(player_index=game.current_player, description="choose-card",
                        actions=actions, resolve=resolve)]
@@ -222,21 +207,13 @@ class Miracle(Card):
 
 @dataclass(slots=True)
 class Flashback(Card):
-    def get_card_selection(self, game: Game_State) -> list[Card_Id]:
-        result = []
-        player = game.players[game.current_player]
-        for (i, cid) in enumerate(player.discard):
-            card = game.all_cards[cid]
-            if card.card_type == Card_Type.EVENT:
-                card_id = Card_Id(area="discard", card_index=i, owner_index=game.current_player)
-                if card == self: continue
-                result.append(card_id)
-        return result
-
     def on_played(self, game: Game_State) -> list[Choice]:
         flashback = self
+        def get_cards(state):
+            return card_selection(state, state.current_player, "discard",
+                                  lambda c: c.card_type == Card_Type.EVENT and c != flashback)
         def get_combos(state):
-            return all_combinations(flashback.get_card_selection(state), effective_power(state, flashback), up_to=True)
+            return all_combinations(get_cards(state), effective_power(state, flashback), up_to=True)
         def on_chosen(state, combination):
             player = state.players[state.current_player]
             cards = [state.get_card(card_id) for card_id in combination]
@@ -250,10 +227,7 @@ class Flashback(Card):
 class Prophecy(Card):
     """ Play up to X extra cards """
     def get_card_selection(self, game: Game_State) -> list[Card_Id]:
-        hand_size = len(game.players[self.owner].hand)
-        result = [Card_Id(area="hand", card_index=i, owner_index=self.owner) for i in range(hand_size)]
-        result.append(Card_Id.null())
-        return result
+        return card_selection(game, self.owner, "hand", include_null=True)
 
     def on_played(self, game: Game_State) -> list[Choice]:
         return self._make_nth_choice(game, 0)
@@ -281,12 +255,7 @@ class Prophecy(Card):
 @dataclass(slots=True)
 class Time_Warp(Card):
     def get_card_selection(self, game: Game_State) -> list[Card_Id]:
-        targets = []
-        for (player_id, p) in enumerate(game.players):
-            for i in range(len(p.wonders)):
-                card_id = Card_Id(area="wonders", card_index=i, owner_index=player_id)
-                targets.append(card_id)
-        return targets
+        return wonders_selection(game)
 
     def on_played(self, game: Game_State) -> list[Choice]:
         time_warp = self
@@ -314,13 +283,7 @@ class Aurora(Card):
 @dataclass(slots=True)
 class Darkness(Card):
     def get_card_selection(self, game: Game_State) -> list[Card_Id]:
-        result = []
-        opponent_idx = 1 - self.owner
-        opponent = game.players[opponent_idx]
-        for i in range(len(opponent.hand)):
-            card_id = Card_Id(area="hand", card_index=i, owner_index=opponent_idx)
-            result.append(card_id)
-        return result
+        return card_selection(game, 1 - self.owner, "hand")
 
     def on_played(self, game: Game_State) -> list[Choice]:
         darkness = self
@@ -335,13 +298,7 @@ class Darkness(Card):
 @dataclass(slots=True)
 class Spring(Card):
     def get_card_selection(self, game: Game_State) -> list[Card_Id]:
-        result = []
-        for (i, pid) in enumerate(game.peoples):
-            people = game.all_cards[pid]
-            if not people.destroyed:
-                card_id = Card_Id(area="people", card_index=i, owner_index=people.owner)
-                result.append(card_id)
-        return result
+        return people_selection(game, lambda p: not p.destroyed)
 
     def on_played(self, game: Game_State) -> list[Choice]:
         spring_card = self
@@ -354,14 +311,8 @@ class Spring(Card):
 class Regrowth(Card):
     """Restore a people with power <= X"""
     def get_card_selection(self, game: Game_State) -> list[Card_Id]:
-        result = []
         power = effective_power(game, self)
-        for (i, pid) in enumerate(game.peoples):
-            people = game.all_cards[pid]
-            if people.destroyed and effective_power(game, people) <= power:
-                card_id = Card_Id(area="people", card_index=i, owner_index=people.owner)
-                result.append(card_id)
-        return result
+        return people_selection(game, lambda p: p.destroyed and effective_power(game, p) <= power)
 
     def on_played(self, game: Game_State) -> list[Choice]:
         def restore(state, card_id):
@@ -383,12 +334,7 @@ class Flood(Card):
 class Forgive(Card):
     """Add X +1 counters on a people"""
     def get_card_selection(self, game: Game_State) -> list[Card_Id]:
-        result = []
-        for (i, pid) in enumerate(game.peoples):
-            people = game.all_cards[pid]
-            card_id = Card_Id(area="people", card_index=i, owner_index=people.owner)
-            result.append(card_id)
-        return result
+        return people_selection(game)
 
     def on_played(self, game: Game_State) -> list[Choice]:
         forgive_card = self
@@ -401,14 +347,8 @@ class Forgive(Card):
 class Unmaking(Card):
     """Destroy a wonder with power <= X"""
     def get_card_selection(self, game: Game_State) -> list[Card_Id]:
-        targets = []
         power = effective_power(game, self)
-        for (player_id, p) in enumerate(game.players):
-            for (i, wid) in enumerate(p.wonders):
-                if effective_power(game, game.all_cards[wid]) <= power:
-                    card_id = Card_Id(area="wonders", card_index=i, owner_index=player_id)
-                    targets.append(card_id)
-        return targets
+        return wonders_selection(game, f=lambda w: effective_power(game, w) <= power)
 
     def on_played(self, game: Game_State) -> list[Choice]:
         action = lambda state, card_id: destroy_wonder(state, card_id)
@@ -418,14 +358,8 @@ class Unmaking(Card):
 @dataclass(slots=True)
 class Revolt(Card):
     def get_card_selection(self, game: Game_State) -> list[Card_Id]:
-        result = []
         power = effective_power(game, self)
-        for (i, pid) in enumerate(game.peoples):
-            people = game.all_cards[pid]
-            if not people.destroyed and effective_power(game, people) <= power:
-                card_id = Card_Id(area="people", card_index=i, owner_index=people.owner)
-                result.append(card_id)
-        return result
+        return people_selection(game, lambda p: not p.destroyed and effective_power(game, p) <= power)
 
     def on_played(self, game: Game_State) -> list[Choice]:
         action = lambda state, card_id: destroy_people(state, card_id)
@@ -435,12 +369,7 @@ class Revolt(Card):
 @dataclass(slots=True)
 class Blessing(Card):
     def get_card_selection(self, game: Game_State) -> list[Card_Id]:
-        targets = []
-        for (player_id, p) in enumerate(game.players):
-            for (i, w) in enumerate(p.wonders):
-                card_id = Card_Id(area="wonders", card_index=i, owner_index=player_id)
-                targets.append(card_id)
-        return targets
+        return wonders_selection(game)
 
     def on_played(self, game: Game_State) -> list[Choice]:
         blessing_card = self
@@ -455,16 +384,10 @@ class Blessing(Card):
 class Wisdom(Card):
     """When you pass, you may play a card with power <= X"""
     def get_card_selection(self, game: Game_State) -> list[Card_Id]:
-        result = []
-        player = game.players[self.owner]
         power = effective_power(game, self)
-        for (i, cid) in enumerate(player.hand):
-            card = game.all_cards[cid]
-            if card.power <= power and card.card_type != Card_Type.PEOPLE:
-                card_id = Card_Id(area="hand", card_index=i, owner_index=self.owner)
-                result.append(card_id)
-        result.append(Card_Id.null())
-        return result
+        return card_selection(game, self.owner, "hand",
+                              lambda c: c.power <= power and c.card_type != Card_Type.PEOPLE,
+                              include_null=True)
 
     def on_pass(self, game: Game_State) -> list[Choice]:
         if game.current_player != self.owner:
@@ -510,15 +433,8 @@ class Deserts(Card):
 class Forests(Card):
     """When you pass, you may restore a people with power <= X"""
     def get_card_selection(self, game: Game_State) -> list[Card_Id]:
-        result = []
         power = effective_power(game, self)
-        for (i, pid) in enumerate(game.peoples):
-            people = game.all_cards[pid]
-            if people.destroyed and effective_power(game, people) <= power:
-                card_id = Card_Id(area="people", card_index=i, owner_index=people.owner)
-                result.append(card_id)
-        result.append(Card_Id.null())
-        return result
+        return people_selection(game, lambda p: p.destroyed and effective_power(game, p) <= power, include_null=True)
 
     def on_pass(self, game: Game_State) -> list[Choice]:
         if game.current_player != self.owner:
