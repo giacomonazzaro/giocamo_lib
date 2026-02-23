@@ -40,8 +40,8 @@ def get_table_layout(bottom_player: int = 0) -> dict[str, Zone_Layout]:
     spread_pile = -3
 
     # Vertical: bottom player from the bottom edge
-    hand_width = w * 5.5
-    hand_x = W // 2 - hand_width // 2
+    hand_width = w * 5.5 * W / 1600
+    hand_x = W // 2 - hand_width // 2 + 170
     bottom_hand_y = H - h - margin
     bottom_deck_y = bottom_hand_y
     bottom_wonders_y = bottom_hand_y - h - margin
@@ -55,11 +55,11 @@ def get_table_layout(bottom_player: int = 0) -> dict[str, Zone_Layout]:
     # Horizontal: piles on the left, peoples then wonders on the right.
     discard_x = margin
     deck_x = margin + w + margin
-    right_start = deck_x # + w + margin * 2
+    right_start = margin # + w + margin * 2
     # Peoples area sits to the left of wonders; wide enough for up to 2 cards at full spread.
     peoples_width = 2 * w + spread_wonders
-    wonders_start = right_start + peoples_width + margin
-    wonders_width = W - wonders_start - margin
+    wonders_start = hand_x
+    wonders_width = hand_width
 
     shared_deck_x = -w
     shared_deck_y = H // 2 - h // 2

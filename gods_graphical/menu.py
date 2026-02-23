@@ -43,12 +43,12 @@ def _draw_button(text: str, y: int, width: int = 320, height: int = 58) -> bool:
     x = _centered_x(width)
     mx, my = pyray.get_mouse_x(), pyray.get_mouse_y()
     hovered = x <= mx <= x + width and y <= my <= y + height
-    bg = color_from_tuple((15,15,15,255))
+    # bg = color_from_tuple((15,15,15,255))
+    bg = color_from_tuple((20,20,20,100))
     if hovered:
-        bg = color_from_tuple((40,40,40,255))
-    fg = color_from_tuple(tweak["button_text_color"])
-    pyray.draw_rectangle_rounded(pyray.Rectangle(x, y, width, height), 0.3, 8, bg)
+        pyray.draw_rectangle_rounded(pyray.Rectangle(x, y, width, height), 0.3, 8, bg)
     size = 30
+    fg = color_from_tuple(tweak["button_text_color"])
     tw = text_width(text, size)
     render_text(text, x + (width - tw) // 2, y + (height - size) // 2, size, fg)
     return hovered and pyray.is_mouse_button_pressed(pyray.MouseButton.MOUSE_BUTTON_LEFT)

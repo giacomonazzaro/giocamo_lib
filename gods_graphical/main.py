@@ -156,12 +156,12 @@ def play(gods_state: Game_State, table_state: kt.Table_State, ui_state: UI_State
     pyray.close_window()
 
 @app.command()
-def start():
+def start(game_logic: bool = True):
     """Launch the game with the graphical menu (default entry point)."""
     from gods_graphical.menu import run_menu
     mode, params = run_menu()
     if mode == "vs_ai":
-        main(vs_ai=True)
+        main(vs_ai=True, game_logic=game_logic)
     else:  # "online"
         main(**params)
 
