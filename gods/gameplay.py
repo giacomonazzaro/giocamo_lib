@@ -114,6 +114,10 @@ def wonders_by_priority(state: Game_State) -> list[Card]:
 
 def destroy_people(game: Game_State, card_id: Card_Id) -> None:
     people = game.get_card(card_id)
+    for w in wonders_by_priority(game):
+        if w.is_indestructible(game, people):
+            return
+        
     people.destroyed = True
     people.on_destroyed(game)
     for card in wonders_by_priority(game):

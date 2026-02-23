@@ -82,7 +82,7 @@ def init_table_state(gods_state: Game_State, bottom_player: int = 0) -> kt.Table
     return table_state
 
 
-def draw_hud(gods_state: Game_State, bottom_player: int = 0):
+def draw_hud(gods_state: Game_State, table_state: kt.Table_State, ui_state: UI_State, bottom_player: int = 0):
     H = tweak["window_height"]
     h = tweak["card_height"]
     margin = 20
@@ -97,15 +97,13 @@ def draw_hud(gods_state: Game_State, bottom_player: int = 0):
         hud_y = (bottom_wonders_y - 40) if i == bottom_player else top_wonders_y
         draw_player_hud(player.name, score, len(player.deck), is_current, hud_y)
 
-
+    ui_state.draw_buttons()
+    ui_state.draw_card_highlights(table_state)
 
 from kitchen_table.ui import UI_State
 
 def play(gods_state: Game_State, table_state: kt.Table_State, ui_state: UI_State, agent: Agent | None, player_index: int):
-    table_state.draw_callback = lambda table: draw_hud(gods_state, bottom_player=player_index)
-
-    def display(state):
-        update_stacks(table_state, gods_state, bottom_player=player_index)
+    table_state.draw_callback = lambda table: draw_hud(gods_state, table_state, ui_state, bottom_player=player_index)
 
     # Window: re-use an existing window (e.g. opened by the menu) if one is ready.
     if not pyray.is_window_ready():
@@ -138,8 +136,6 @@ def play(gods_state: Game_State, table_state: kt.Table_State, ui_state: UI_State
         turn = 1.0 if gods_state.current_player != player_index else 0.0
         draw_background(turn)
         draw_table(table_state)
-        ui_state.draw_buttons()
-        ui_state.draw_card_highlights(table_state)
         pyray.end_drawing()
 
     # Game over screen

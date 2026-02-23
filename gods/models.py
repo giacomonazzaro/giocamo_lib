@@ -45,6 +45,8 @@ class Card:
     def power_modifier(self, game: Game_State, card: Card, power: int) -> int:
         """Modify another card's power. Override in subclasses."""
         return power
+    
+    def is_indestructible(self, game: Game_State, card: Card) -> bool: return False
 
     def eval_points(self, game: Game_State, player_index: int) -> int:
         """Evaluate points for a people card. Override in people subclasses."""

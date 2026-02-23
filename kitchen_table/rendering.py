@@ -350,7 +350,7 @@ def animate(cards, state, dt: float = 0.1) -> None:
         cards[selected_card_id].x = state.cards[selected_card_id].x
         cards[selected_card_id].y = state.cards[selected_card_id].y
 
-def draw_zoomed_card(card: Card) -> None:
+def draw_zoomed_card(card: Card, face_up: bool) -> None:
     """Draw a card fullscreen as a zoom preview."""
     screen_w = get_screen_width()
     screen_h = get_screen_height()
@@ -371,7 +371,7 @@ def draw_zoomed_card(card: Card) -> None:
     rl_push_matrix()
     rl_translatef(cx, cy, 0)
     rl_scalef(scale, scale, 1)
-    draw_card_content(card, face_up=True)
+    draw_card_content(card, face_up=face_up)
     rl_pop_matrix()
 
 
@@ -413,4 +413,8 @@ def draw_table(table_state: Table_State) -> None:
 
     # Draw zoomed card on top of everything
     if table_state.zoomed_card_id >= 0:
-        draw_zoomed_card(table_state.cards[table_state.zoomed_card_id])
+        face_up = True
+        for stack in table_state.stacks:
+            if table_state.zoomed_card_id in stack.cards:
+                face_up = stack.face_up
+        draw_zoomed_card(table_state.cards[table_state.zoomed_card_id], face_up=face_up)

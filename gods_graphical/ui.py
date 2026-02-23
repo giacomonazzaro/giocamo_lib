@@ -43,7 +43,7 @@ def get_table_layout(bottom_player: int = 0):
     # Horizontal: piles on the left, peoples then wonders on the right.
     discard_x = margin
     deck_x = margin + w + margin
-    right_start = deck_x + w + margin * 2
+    right_start = deck_x # + w + margin * 2
     # Peoples area sits to the left of wonders; wide enough for up to 2 cards at full spread.
     peoples_width = 2 * w + spread_wonders
     wonders_start = right_start + peoples_width + margin
