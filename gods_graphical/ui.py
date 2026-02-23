@@ -35,11 +35,13 @@ def get_table_layout(bottom_player: int = 0) -> dict[str, Zone_Layout]:
     h = tweak["card_height"]
     margin = 20
 
-    spread_hand = tweak["hand_spread_x"]
-    spread_wonders = tweak["wonders_spread_x"]
-    spread_pile = tweak["pile_spread_y"]
+    spread_hand = 160
+    spread_wonders = 160
+    spread_pile = -3
 
     # Vertical: bottom player from the bottom edge
+    hand_width = w * 5.5
+    hand_x = W // 2 - hand_width // 2
     bottom_hand_y = H - h - margin
     bottom_deck_y = bottom_hand_y
     bottom_wonders_y = bottom_hand_y - h - margin
@@ -68,12 +70,12 @@ def get_table_layout(bottom_player: int = 0) -> dict[str, Zone_Layout]:
     Z = Zone_Layout
     return {
         f"{bp}_deck":    Z(deck_x,        bottom_deck_y,    w,                        0,              spread_pile, False),
-        f"{bp}_hand":    Z(right_start,   bottom_hand_y,    W - right_start - margin, spread_hand,    0,           True),
+        f"{bp}_hand":    Z(hand_x,   bottom_hand_y,         hand_width, spread_hand,    0,           True),
         f"{bp}_discard": Z(discard_x,     bottom_deck_y,    w,                        0,              spread_pile, True),
         f"{bp}_peoples": Z(right_start,   bottom_wonders_y, peoples_width,            spread_wonders, 0,           True),
         f"{bp}_wonders": Z(wonders_start, bottom_wonders_y, wonders_width,            spread_wonders, 0,           True),
         f"{tp}_deck":    Z(deck_x,        top_deck_y,       w,                        0,              spread_pile, False),
-        f"{tp}_hand":    Z(right_start,   top_hand_y,       W - right_start - margin, spread_hand,    0,           False),
+        f"{tp}_hand":    Z(hand_x,   top_hand_y,            hand_width, spread_hand,    0,           False),
         f"{tp}_discard": Z(discard_x,     top_deck_y,       w,                        0,              spread_pile, True),
         f"{tp}_peoples": Z(right_start,   top_wonders_y,    peoples_width,            spread_wonders, 0,           True),
         f"{tp}_wonders": Z(wonders_start, top_wonders_y,    wonders_width,            spread_wonders, 0,           True),
@@ -128,7 +130,7 @@ def draw_player_hud(name: str, score: int, deck_count: int, is_current: bool, hu
     if is_current:
         indicator_color = color_from_tuple(tweak["current_player_color"])
         draw_rectangle_rounded(
-            Rectangle(10, hud_y - 5, 6, 50), 0.5, 4, indicator_color
+            Rectangle(tweak["window_width"] - 10, hud_y + 28, 6, 50), 0.5, 4, (255, 255, 255, 255)
         )
 
     # Player name
