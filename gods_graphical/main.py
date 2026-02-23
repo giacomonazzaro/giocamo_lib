@@ -1,25 +1,9 @@
 from __future__ import annotations
 
 import os
-import subprocess
-import sys
 import socket
 import threading
 from typing import Annotated, Optional
-
-
-def _bootstrap():
-    # Auto-install dependencies from pyproject.toml on first run.
-    try:
-        import pyray  # noqa: F401
-        import typer  # noqa: F401
-    except ImportError:
-        project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-        print("Installing required packages (first run only)...")
-        subprocess.check_call([sys.executable, "-m", "pip", "install", project_root])
-        print("Done. Starting game...")
-
-_bootstrap()
 
 
 import pyray
