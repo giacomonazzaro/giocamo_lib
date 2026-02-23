@@ -212,7 +212,7 @@ class Flashback(Card):
         def get_cards(state):
             return card_selection(state, state.current_player, "discard",
                                   lambda c: c.card_type == Card_Type.EVENT and c != flashback)
-        def get_combos(state):
+        def get_cominations(state):
             return all_combinations(get_cards(state), effective_power(state, flashback), up_to=True)
         def on_chosen(state, combination):
             player = state.players[state.current_player]
@@ -220,7 +220,7 @@ class Flashback(Card):
             for card in cards:
                 player.discard.remove(card.id)
                 player.hand.append(card.id)
-        return [make_choose_cards_choice(game.current_player, get_combos, on_chosen)]
+        return [make_choose_cards_choice(game.current_player, get_cominations, on_chosen)]
 
 
 @dataclass(slots=True)
@@ -259,7 +259,7 @@ class Time_Warp(Card):
 
     def on_played(self, game: Game_State) -> list[Choice]:
         time_warp = self
-        def get_combos(state):
+        def get_cominations(state):
             return all_combinations(time_warp.get_card_selection(state), effective_power(state, time_warp), up_to=True)
         def on_chosen(state, combination):
             cards = [state.get_card(card_id) for card_id in combination]
@@ -267,7 +267,7 @@ class Time_Warp(Card):
                 state.players[card.owner].wonders.remove(card.id)
                 card.counters = 0
                 state.players[card.owner].hand.append(card.id)
-        return [make_choose_cards_choice(game.current_player, get_combos, on_chosen)]
+        return [make_choose_cards_choice(game.current_player, get_cominations, on_chosen)]
 
 
 @dataclass(slots=True)
@@ -287,12 +287,12 @@ class Darkness(Card):
 
     def on_played(self, game: Game_State) -> list[Choice]:
         darkness = self
-        def get_combos(state):
+        def get_cominations(state):
             return all_combinations(darkness.get_card_selection(state), effective_power(state, darkness), up_to=False)
         def on_chosen(state, combination):
             discard_cards(state, list(combination))
             
-        return [make_choose_cards_choice(1 - self.owner, get_combos, on_chosen)]
+        return [make_choose_cards_choice(1 - self.owner, get_cominations, on_chosen)]
 
 
 @dataclass(slots=True)

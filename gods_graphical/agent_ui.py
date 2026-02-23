@@ -143,12 +143,14 @@ class Agent_UI(Agent):
         self.card_combinations = []
         self.card_multiselection = set()
 
+        # Fixed centered position for standalone buttons (Pass, Done).
+        button_x = (get_screen_width() - button_w) // 2
+
         if choice.description == "main":
             # Same as "choose-card" but with "Pass" button for the null entry.
             for i, card_id in enumerate(actions):
                 if Card_Id.is_null(card_id):
-                    x = start_x
-                    button = Button(x, button_y, button_w, button_h, text="Pass")
+                    button = Button(button_x, button_y, button_w, button_h, text="Pass")
                     self.ui_state.buttons[i] = button
                 else:
                     self.ui_state.highlighted_cards[i] = state.get_card(card_id).id
@@ -162,8 +164,7 @@ class Agent_UI(Agent):
         elif choice.description == "choose-card":
             for i, card_id in enumerate(actions):
                 if Card_Id.is_null(card_id):
-                    x = start_x
-                    button = Button(x, button_y, button_w, button_h, text="Done")
+                    button = Button(button_x, button_y, button_w, button_h, text="Done")
                     self.ui_state.buttons[i] = button
                 else:
                     self.ui_state.highlighted_cards[i] = state.get_card(card_id).id

@@ -71,9 +71,9 @@ def init_table_state(gods_state: Game_State, bottom_player: int = 0) -> kt.Table
 
     # Create stacks from shared layout
     stacks = []
-    for zone_name, sx, sy, sw, spx, spy, face_up in get_table_layout(bottom_player=bottom_player):
+    for zone_name, z in get_table_layout(bottom_player=bottom_player).items():
         card_ids = zone_cards.get(zone_name, [])
-        stack = kt.Stack(x=sx, y=sy, cards=card_ids, width=sw, spread_x=spx, spread_y=spy, face_up=face_up, name=zone_name)
+        stack = kt.Stack(x=z.x, y=z.y, cards=card_ids, width=z.width, spread_x=z.spread_x, spread_y=z.spread_y, face_up=z.face_up, name=zone_name)
         stacks.append(stack)
 
     table_state = kt.Table_State(cards=cards, stacks=stacks)
@@ -94,7 +94,8 @@ def draw_hud(gods_state: Game_State, table_state: kt.Table_State, ui_state: UI_S
         player = gods_state.players[i]
         score = compute_player_score(gods_state, i)
         is_current = i == gods_state.current_player
-        hud_y = (bottom_wonders_y - 40) if i == bottom_player else top_wonders_y
+        hud_y = bottom_wonders_y + h // 2
+        if i != bottom_player: hud_y = top_wonders_y + h // 2
         draw_player_hud(player.name, score, len(player.deck), is_current, hud_y)
 
     ui_state.draw_buttons()

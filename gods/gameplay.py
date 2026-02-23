@@ -90,6 +90,10 @@ def evaluate_people_condition(game: Game_State, people: Card) -> Optional[int]:
         return None
 
 
+def wonders_by_priority(state: Game_State) -> list[Card]:
+    all_wonder_ids = state.active_player().wonders + state.opponent().wonders
+    return [state.all_cards[wid] for wid in all_wonder_ids]
+
 def play_card(state: Game_State, card_id: Card_Id) -> list[Choice]:
     """Play a card from a player's hand. Returns list of choices from the card's on_played."""
     player = state.players[card_id.owner_index]
@@ -105,12 +109,10 @@ def play_card(state: Game_State, card_id: Card_Id) -> list[Choice]:
     elif card.card_type == Card_Type.EVENT:
         player.discard.append(card.id)
 
+    for w in wonders_by_priority(state):
+        w.on_play(state, card)
+
     return choices
-
-
-def wonders_by_priority(state: Game_State) -> list[Card]:
-    all_wonder_ids = state.active_player().wonders + state.opponent().wonders
-    return [state.all_cards[wid] for wid in all_wonder_ids]
 
 def destroy_people(game: Game_State, card_id: Card_Id) -> None:
     people = game.get_card(card_id)

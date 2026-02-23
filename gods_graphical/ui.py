@@ -11,10 +11,20 @@ import kitchen_table.models as kt
 IMAGES_DIR = os.path.join(os.path.dirname(__file__), "..", "gods", "cards", "card-images")
 
 
-def get_table_layout(bottom_player: int = 0):
+@dataclass
+class Zone_Layout:
+    x: int
+    y: int
+    width: int
+    spread_x: int
+    spread_y: int
+    face_up: bool
+
+
+def get_table_layout(bottom_player: int = 0) -> dict[str, Zone_Layout]:
     """Return stack layout definitions for the card table.
 
-    Returns list of (zone_name, x, y, width, spread_x, spread_y, face_up) tuples.
+    Returns a dict mapping zone name to Zone_Layout.
     Zone names: p{i}_deck, p{i}_hand, p{i}_discard, p{i}_wonders, peoples.
     bottom_player determines which player's cards appear at the bottom.
     Positions are computed adaptively from window dimensions.
@@ -55,19 +65,20 @@ def get_table_layout(bottom_player: int = 0):
     bp = f"p{bottom_player}"
     tp = f"p{1 - bottom_player}"
 
-    return [
-        (f"{bp}_deck",    deck_x,        bottom_deck_y,    w,             0,              spread_pile, False),
-        (f"{bp}_hand",    right_start,   bottom_hand_y,    W - right_start - margin, spread_hand, 0, True),
-        (f"{bp}_discard", discard_x,     bottom_deck_y,    w,             0,              spread_pile, True),
-        (f"{bp}_peoples", right_start,   bottom_wonders_y, peoples_width, spread_wonders, 0,           True),
-        (f"{bp}_wonders", wonders_start, bottom_wonders_y, wonders_width, spread_wonders, 0,           True),
-        (f"{tp}_deck",    deck_x,        top_deck_y,       w,             0,              spread_pile, False),
-        (f"{tp}_hand",    right_start,   top_hand_y,       W - right_start - margin, spread_hand, 0, False),
-        (f"{tp}_discard", discard_x,     top_deck_y,       w,             0,              spread_pile, True),
-        (f"{tp}_peoples", right_start,   top_wonders_y,    peoples_width, spread_wonders, 0,           True),
-        (f"{tp}_wonders", wonders_start, top_wonders_y,    wonders_width, spread_wonders, 0,           True),
-        ("shared_deck",   shared_deck_x, shared_deck_y,    w,             0,              0,           True),
-    ]
+    Z = Zone_Layout
+    return {
+        f"{bp}_deck":    Z(deck_x,        bottom_deck_y,    w,                        0,              spread_pile, False),
+        f"{bp}_hand":    Z(right_start,   bottom_hand_y,    W - right_start - margin, spread_hand,    0,           True),
+        f"{bp}_discard": Z(discard_x,     bottom_deck_y,    w,                        0,              spread_pile, True),
+        f"{bp}_peoples": Z(right_start,   bottom_wonders_y, peoples_width,            spread_wonders, 0,           True),
+        f"{bp}_wonders": Z(wonders_start, bottom_wonders_y, wonders_width,            spread_wonders, 0,           True),
+        f"{tp}_deck":    Z(deck_x,        top_deck_y,       w,                        0,              spread_pile, False),
+        f"{tp}_hand":    Z(right_start,   top_hand_y,       W - right_start - margin, spread_hand,    0,           False),
+        f"{tp}_discard": Z(discard_x,     top_deck_y,       w,                        0,              spread_pile, True),
+        f"{tp}_peoples": Z(right_start,   top_wonders_y,    peoples_width,            spread_wonders, 0,           True),
+        f"{tp}_wonders": Z(wonders_start, top_wonders_y,    wonders_width,            spread_wonders, 0,           True),
+        "shared_deck":   Z(shared_deck_x, shared_deck_y,    w,                        0,              0,           True),
+    }
 
 
 def get_image_path(card_name: str) -> str | None:
@@ -121,11 +132,11 @@ def draw_player_hud(name: str, score: int, deck_count: int, is_current: bool, hu
         )
 
     # Player name
-    name_color = color_from_tuple(tweak["current_player_color"]) if is_current else Color(255, 255, 255, 255)
-    render_text(name, 25, hud_y, 24, name_color)
+    # name_color = color_from_tuple(tweak["current_player_color"]) if is_current else Color(255, 255, 255, 255)
+    # render_text(name, 25, hud_y, 24, name_color)
 
     # Score
-    render_text(f"Score: {score}", 25, hud_y + 28, 20, Color(200, 200, 200, 255))
+    render_text(f"Points: {score}", tweak["window_width"] - 200, hud_y + 28, 40, Color(200, 200, 200, 255))
 
     # Deck count near deck stack
     deck_x = margin + w + margin
@@ -160,7 +171,7 @@ def draw_game_over_screen(table_state: kt.Table_State, result_text: str,
         result_w = text_width(result_text, 40)
         render_text(result_text, (w_width - result_w) // 2, 430, 40, Color(255, 215, 0, 255))
 
-        score_text = f"{player_names[0]}: {scores[0]}  |  {player_names[1]}: {scores[1]}"
+        score_text = f"{scores[0]}     |     {scores[1]}"
         score_w = text_width(score_text, 30)
         render_text(score_text, (w_width - score_w) // 2, 490, 30, Color(200, 200, 200, 255))
 
