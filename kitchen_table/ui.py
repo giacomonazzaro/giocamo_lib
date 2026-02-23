@@ -2,7 +2,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from pyray import *
 from kitchen_table.config import tweak
-from kitchen_table.rendering import color_from_tuple
+from kitchen_table.rendering import color_from_tuple, render_text, text_width
 from kitchen_table.models import Table_State
 
 
@@ -50,10 +50,10 @@ class UI_State:
             draw_rectangle_rounded(
                 Rectangle(button.x, button.y, button.width, button.height), 0.3, 8, color
             )
-            text_width = measure_text(button.text, 20)
-            text_x = button.x + (button.width - text_width) // 2
+            tw = text_width(button.text, 20)
+            text_x = button.x + (button.width - tw) // 2
             text_y = button.y + (button.height - 20) // 2
-            draw_text(button.text, text_x, text_y, 20, color_from_tuple(tweak["button_text_color"]))
+            render_text(button.text, text_x, text_y, 20, color_from_tuple(tweak["button_text_color"]))
 
     def draw_card_highlights(self, table_state: Table_State):
         """Draw highlight borders around cards in the highlighted_cards list."""

@@ -7,7 +7,7 @@ import pyray
 
 from gods_online.setup import Connection_State, join_room, start_hosting
 from kitchen_table.config import tweak
-from kitchen_table.rendering import color_from_tuple, draw_background
+from kitchen_table.rendering import color_from_tuple, draw_background, render_text, text_width
 
 
 class Screen(Enum):
@@ -34,8 +34,8 @@ def _centered_x(width: int) -> int:
 
 def _draw_centered_text(text: str, y: int, font_size: int,
                         color: tuple = (255, 255, 255, 255)) -> None:
-    w = pyray.measure_text(text, font_size)
-    pyray.draw_text(text, _centered_x(w), y, font_size, pyray.Color(*color))
+    w = text_width(text, font_size)
+    render_text(text, _centered_x(w), y, font_size, pyray.Color(*color))
 
 
 def _draw_button(text: str, y: int, width: int = 320, height: int = 58) -> bool:
@@ -47,8 +47,8 @@ def _draw_button(text: str, y: int, width: int = 320, height: int = 58) -> bool:
     bg = color_from_tuple(tweak[color_key])
     fg = color_from_tuple(tweak["button_text_color"])
     pyray.draw_rectangle_rounded(pyray.Rectangle(x, y, width, height), 0.3, 8, bg)
-    tw = pyray.measure_text(text, 22)
-    pyray.draw_text(text, x + (width - tw) // 2, y + (height - 22) // 2, 22, fg)
+    tw = text_width(text, 22)
+    render_text(text, x + (width - tw) // 2, y + (height - 22) // 2, 22, fg)
     return hovered and pyray.is_mouse_button_pressed(pyray.MouseButton.MOUSE_BUTTON_LEFT)
 
 
@@ -56,8 +56,8 @@ def _draw_text_input(label: str, text: str, y: int,
                      width: int = 380, height: int = 52) -> None:
     """Draw a centered, labeled text input box with a blinking cursor."""
     x = _centered_x(width)
-    label_w = pyray.measure_text(label, 18)
-    pyray.draw_text(label, _centered_x(label_w), y - 30, 18, pyray.Color(200, 200, 200, 255))
+    label_w = text_width(label, 18)
+    render_text(label, _centered_x(label_w), y - 30, 18, pyray.Color(200, 200, 200, 255))
     pyray.draw_rectangle_rounded(
         pyray.Rectangle(x, y, width, height), 0.2, 8, pyray.Color(30, 30, 50, 220)
     )
@@ -66,8 +66,8 @@ def _draw_text_input(label: str, text: str, y: int,
     )
     # Cursor blinks at 1 Hz.
     cursor = "_" if int(pyray.get_time() * 2) % 2 == 0 else " "
-    pyray.draw_text(text + cursor, x + 12, y + (height - 24) // 2, 24,
-                    pyray.Color(255, 255, 255, 255))
+    render_text(text + cursor, x + 12, y + (height - 24) // 2, 24,
+                pyray.Color(255, 255, 255, 255))
 
 
 def _update_text_input(text: str, max_length: int = 16) -> str:

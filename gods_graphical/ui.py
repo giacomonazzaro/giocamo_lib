@@ -5,7 +5,7 @@ from dataclasses import dataclass, field
 from pyray import *
 
 from kitchen_table.config import tweak
-from kitchen_table.rendering import draw_table, draw_background, color_from_tuple
+from kitchen_table.rendering import draw_table, draw_background, color_from_tuple, render_text, text_width
 import kitchen_table.models as kt
 
 IMAGES_DIR = os.path.join(os.path.dirname(__file__), "..", "gods", "cards", "card-images")
@@ -99,7 +99,7 @@ def draw_card_power_badge(power: str, destroyed: bool):
     draw_circle(
         int(0.88 * w), int(0.12 * w), int(0.12 * w), Color(255, 255, 255, 255)
     )
-    draw_text(
+    render_text(
         power, int(0.83 * w), int(0.03 * w), int(0.2 * w), Color(0, 0, 0, 255)
     )
 
@@ -124,14 +124,14 @@ def draw_player_hud(name: str, score: int, deck_count: int, is_current: bool, hu
 
     # Player name
     name_color = color_from_tuple(tweak["current_player_color"]) if is_current else Color(255, 255, 255, 255)
-    draw_text(name, 25, hud_y, 24, name_color)
+    render_text(name, 25, hud_y, 24, name_color)
 
     # Score
-    draw_text(f"Score: {score}", 25, hud_y + 28, 20, Color(200, 200, 200, 255))
+    render_text(f"Score: {score}", 25, hud_y + 28, 20, Color(200, 200, 200, 255))
 
     # Deck count near deck stack
     deck_x = margin + w + margin
-    draw_text(
+    render_text(
         str(deck_count),
         deck_x + w // 2 - 10,
         hud_y + 18 if hud_y < 400 else hud_y - 30,
@@ -171,14 +171,14 @@ def draw_game_over_screen(table_state: kt.Table_State, result_text: str,
         # Semi-transparent overlay
         draw_rectangle(0, 0, w_width, w_height, color_from_tuple(tweak["modal_overlay"]))
 
-        title_w = measure_text("GAME OVER", 60)
-        draw_text("GAME OVER", (w_width - title_w) // 2, 350, 60, Color(255, 255, 255, 255))
+        title_w = text_width("GAME OVER", 60)
+        render_text("GAME OVER", (w_width - title_w) // 2, 350, 60, Color(255, 255, 255, 255))
 
-        result_w = measure_text(result_text, 40)
-        draw_text(result_text, (w_width - result_w) // 2, 430, 40, Color(255, 215, 0, 255))
+        result_w = text_width(result_text, 40)
+        render_text(result_text, (w_width - result_w) // 2, 430, 40, Color(255, 215, 0, 255))
 
         score_text = f"{player_names[0]}: {scores[0]}  |  {player_names[1]}: {scores[1]}"
-        score_w = measure_text(score_text, 30)
-        draw_text(score_text, (w_width - score_w) // 2, 490, 30, Color(200, 200, 200, 255))
+        score_w = text_width(score_text, 30)
+        render_text(score_text, (w_width - score_w) // 2, 490, 30, Color(200, 200, 200, 255))
 
         end_drawing()

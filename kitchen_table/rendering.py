@@ -51,6 +51,34 @@ def draw_background(turn: float = 0.0):
     end_shader_mode()
 
 
+# Font: loaded lazily on first use after init_window.
+_font: Font | None = None
+
+
+def get_font() -> Font:
+    """Return the configured font, loading it on first call."""
+    global _font
+    if _font is None:
+        font_path = tweak.get("font_path", "")
+        if font_path and os.path.exists(font_path):
+            _font = load_font_ex(font_path.encode(), tweak["font_load_size"], None, 0)
+        else:
+            _font = get_font_default()
+        # Bilinear filtering prevents jagged edges when scaling to any size.
+        set_texture_filter(_font.texture, TextureFilter.TEXTURE_FILTER_BILINEAR)
+    return _font
+
+
+def render_text(text: str, x: int, y: int, size: int, color: Color) -> None:
+    """Draw text using the configured font."""
+    draw_text_ex(get_font(), text, Vector2(x, y), float(size), tweak["font_spacing"], color)
+
+
+def text_width(text: str, size: int) -> int:
+    """Measure text width using the configured font."""
+    return int(measure_text_ex(get_font(), text, float(size), tweak["font_spacing"]).x)
+
+
 # Texture cache to avoid reloading images
 _texture_cache: dict[str, Texture2D] = {}
 
@@ -188,17 +216,17 @@ def draw_card_content(card: Card, face_up: bool) -> None:
     # Title with background for readability when image is present
     title_size = tweak["title_font_size"]
     title_text = card.title
-    title_width = measure_text(title_text, title_size)
+    title_w = text_width(title_text, title_size)
     if texture:
         # Draw semi-transparent background behind title
         draw_rectangle(
             int(x + padding - 2),
             int(y + padding - 2),
-            title_width + 4,
+            title_w + 4,
             title_size + 4,
             Color(0, 0, 0, 180)
         )
-    draw_text(
+    render_text(
         title_text,
         int(x + padding),
         int(y + padding),
@@ -218,8 +246,8 @@ def draw_card_content(card: Card, face_up: bool) -> None:
         current_line = ""
         for word in words:
             test_line = current_line + " " + word if current_line else word
-            text_width = measure_text(test_line, desc_size)
-            if text_width <= max_width:
+            line_w = text_width(test_line, desc_size)
+            if line_w <= max_width:
                 current_line = test_line
             else:
                 if current_line:
@@ -240,7 +268,7 @@ def draw_card_content(card: Card, face_up: bool) -> None:
             )
 
         for i, line in enumerate(lines):
-            draw_text(
+            render_text(
                 line,
                 int(x + padding),
                 int(desc_y + i * (desc_size + 2)),
@@ -297,10 +325,10 @@ def draw_stack_placeholder(stack: Stack) -> None:
 
     # Label
     label = stack.name
-    text_width = measure_text(label, 14)
-    draw_text(
+    label_w = text_width(label, 14)
+    render_text(
         label,
-        int(stack.x + (w - text_width) / 2),
+        int(stack.x + (w - label_w) / 2),
         int(stack.y + h / 2 - 7),
         14,
         Color(100, 100, 100, 150)
