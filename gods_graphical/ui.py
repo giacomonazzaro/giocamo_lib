@@ -40,40 +40,34 @@ def get_table_layout(bottom_player: int = 0):
     top_deck_y = top_hand_y
     top_wonders_y = H - bottom_wonders_y - h - opponent_shift
 
-    # Peoples centered vertically
-    peoples_y = H // 2 - h // 2
-
-    # Horizontal: piles on the left, spread cards fill the rest
+    # Horizontal: piles on the left, peoples then wonders on the right.
     discard_x = margin
     deck_x = margin + w + margin
     right_start = deck_x + w + margin * 2
-    right_width = W - right_start - margin
-    peoples_x = margin
-    peoples_width = 3 * (w + 10)
+    # Peoples area sits to the left of wonders; wide enough for up to 2 cards at full spread.
+    peoples_width = 2 * w + spread_wonders
+    wonders_start = right_start + peoples_width + margin
+    wonders_width = W - wonders_start - margin
 
     shared_deck_x = -w
-    shared_deck_y = peoples_y
+    shared_deck_y = H // 2 - h // 2
 
     bp = f"p{bottom_player}"
     tp = f"p{1 - bottom_player}"
 
     return [
         (f"{bp}_deck",    deck_x,        bottom_deck_y,    w,             0,              spread_pile, False),
-        (f"{bp}_hand",    right_start,   bottom_hand_y,    right_width,   spread_hand,    0,           True),
+        (f"{bp}_hand",    right_start,   bottom_hand_y,    W - right_start - margin, spread_hand, 0, True),
         (f"{bp}_discard", discard_x,     bottom_deck_y,    w,             0,              spread_pile, True),
-        (f"{bp}_wonders", right_start,   bottom_wonders_y, right_width,   spread_wonders, 0,           True),
+        (f"{bp}_peoples", right_start,   bottom_wonders_y, peoples_width, spread_wonders, 0,           True),
+        (f"{bp}_wonders", wonders_start, bottom_wonders_y, wonders_width, spread_wonders, 0,           True),
         (f"{tp}_deck",    deck_x,        top_deck_y,       w,             0,              spread_pile, False),
-        (f"{tp}_hand",    right_start,   top_hand_y,       right_width,   spread_hand,    0,           False),
+        (f"{tp}_hand",    right_start,   top_hand_y,       W - right_start - margin, spread_hand, 0, False),
         (f"{tp}_discard", discard_x,     top_deck_y,       w,             0,              spread_pile, True),
-        (f"{tp}_wonders", right_start,   top_wonders_y,    right_width,   spread_wonders, 0,           True),
-        ("peoples",       peoples_x,     peoples_y,        peoples_width, spread_wonders, 0,           True),
+        (f"{tp}_peoples", right_start,   top_wonders_y,    peoples_width, spread_wonders, 0,           True),
+        (f"{tp}_wonders", wonders_start, top_wonders_y,    wonders_width, spread_wonders, 0,           True),
         ("shared_deck",   shared_deck_x, shared_deck_y,    w,             0,              0,           True),
     ]
-
-OWNER_COLORS = [
-    (100, 200, 100, 200),  # Player 0 - green
-    (200, 100, 100, 200),  # Player 1 - red
-]
 
 
 def get_image_path(card_name: str) -> str | None:
@@ -96,12 +90,16 @@ def draw_card_power_badge(power: str, destroyed: bool):
     h = tweak["card_height"]
     r = tweak["card_corner_radius"]
 
-    draw_circle(
-        int(0.88 * w), int(0.12 * w), int(0.12 * w), Color(255, 255, 255, 255)
-    )
-    render_text(
-        power, int(0.83 * w), int(0.03 * w), int(0.2 * w), Color(0, 0, 0, 255)
-    )
+    # Badge circle in the top-right corner of the card.
+    badge_cx = int(0.88 * w)
+    badge_cy = int(0.12 * w)
+    badge_r  = int(0.12 * w)
+    draw_circle(badge_cx, badge_cy, badge_r, Color(255, 255, 255, 255))
+
+    # Center the power number on the badge circle.
+    size = int(0.2 * w)
+    tw = text_width(power, size)
+    render_text(power, badge_cx - tw // 2, badge_cy - size // 2, size, Color(0, 0, 0, 255))
 
     if destroyed:
         draw_rectangle_rounded(
@@ -139,21 +137,6 @@ def draw_player_hud(name: str, score: int, deck_count: int, is_current: bool, hu
         Color(180, 180, 180, 255),
     )
 
-
-def draw_people_ownership_bars(people_info: list[tuple[int, int]], table_state: kt.Table_State):
-    """Draw colored ownership bars on people cards.
-    people_info: list of (kt_card_id, owner_index) for owned, non-destroyed people.
-    """
-    if not table_state.animated_cards:
-        return
-    w = tweak["card_width"]
-    h = tweak["card_height"]
-    for kt_card_id, owner_index in people_info:
-        kt_card = table_state.animated_cards[kt_card_id]
-        draw_rectangle_rounded(
-            Rectangle(kt_card.x + 4, kt_card.y + h - 12, w - 8, 8),
-            0.5, 4, OWNER_COLORS[owner_index],
-        )
 
 
 # --- Game over screen ---

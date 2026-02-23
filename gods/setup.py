@@ -76,12 +76,14 @@ def quick_setup(seed: int | None) -> Game_State:
         deck1.append(all_playable.pop())
         deck2.append(all_playable.pop())
 
-    # Random 3 people cards
+    # 4 people cards, distributed 2 per player from the start.
     all_people = get_people_cards()
     random.shuffle(all_people)
-    peoples = []
-    for i in range(3):
-        peoples.append(all_people.pop())
+    peoples = all_people[:4]
+    peoples[0].owner = 0
+    peoples[1].owner = 0
+    peoples[2].owner = 1
+    peoples[3].owner = 1
 
     return create_game(deck1, deck2, peoples, all_playable)
 

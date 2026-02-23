@@ -1,7 +1,7 @@
 from __future__ import annotations
 import random
 from typing import Optional
-from gods.models import Card, Card_Id, Card_Type, Game_State
+from gods.models import Card, Card_Id, Card_Type, Game_State, effective_power
 from game.game import Choice
 from game.agents.minimax_stochastic import Agent_Minimax_Stochastic
 
@@ -149,17 +149,64 @@ def shuffle_card_into_deck(game: Game_State, card_id: Card_Id) -> None:
         player.deck.append(card.id)
         random.shuffle(player.deck)
 
+def make_claim_choice(state: Game_State) -> Optional[Choice]:
+    """
+    At the end of the active player's turn, offer a chance to claim one people
+    card from the opponent. Claiming is only allowed when the active player's
+    eval_points strictly exceeds the opponent's (ties do not allow claiming).
+    Returns None if there is nothing claimable.
+    """
+    player_index = state.current_player
+    opponent_index = 1 - player_index
+
+    claimable = [
+        Card_Id(area="people", card_index=pid, owner_index=opponent_index)
+        for pid in state.peoples
+        if state.all_cards[pid].owner == opponent_index
+        and not state.all_cards[pid].destroyed
+        and state.all_cards[pid].eval_points(state, player_index)
+            > state.all_cards[pid].eval_points(state, opponent_index)
+    ]
+
+    if not claimable:
+        return None
+
+    # Include a null option so the player can skip claiming.
+    actions_list = claimable + [Card_Id.null()]
+
+    def actions(state: Game_State) -> list:
+        return [
+            Card_Id(area="people", card_index=cid.card_index, owner_index=opponent_index)
+            for cid in claimable
+            if state.all_cards[cid.card_index].owner == opponent_index
+            and not state.all_cards[cid.card_index].destroyed
+            and state.all_cards[cid.card_index].eval_points(state, player_index)
+                > state.all_cards[cid.card_index].eval_points(state, opponent_index)
+        ] + [Card_Id.null()]
+
+    def resolve(state: Game_State, option_index: int):
+        card_id = actions(state)[option_index]
+        if not Card_Id.is_null(card_id):
+            # Transfer ownership from opponent to the active player.
+            people = state.get_card(card_id)
+            people.owner = player_index
+        return []
+
+    return Choice(player_index=player_index, description="choose-card",
+                  actions=actions, resolve=resolve)
+
+
 def compute_player_score(game: Game_State, player_index: int) -> int:
     """Compute the total score for a player."""
     score = 0
     player = game.players[player_index]
 
-    # Points from peoples where this player meets the condition.
+    # Points equal to the power of each people card this player owns.
     for people_id in game.peoples:
         people = game.all_cards[people_id]
-        points = people.eval_points(game, player_index)
-        if people.destroyed:
-            points = 0
+        if people.owner != player_index or people.destroyed:
+            continue
+        points = effective_power(game, people)
         for wid in player.wonders:
             points = game.all_cards[wid].on_scoring_people(game, people, points)
         score += points
@@ -208,15 +255,15 @@ def display_game_state(game: Game_State, current_player_view: bool = True) -> No
     print("GAME STATE")
     print("=" * 60)
 
-    # People cards.
-    print("\n--- PEOPLE CARDS (Center) ---")
-    for people_id in game.peoples:
-        people = game.all_cards[people_id]
-        owner_str = f" - Controlled by {game.players[people.owner].name}" if people.owner is not None else " - Unclaimed"
-        status_str = " [DESTROYED]" if people.destroyed else ""
-        effect_text = people.effect
-        print(f"  {people}{status_str}{owner_str}")
-        print(f"    Effect: {effect_text}")
+    # People cards, grouped by owning player.
+    for i, player in enumerate(game.players):
+        owned = [pid for pid in game.peoples if game.all_cards[pid].owner == i]
+        print(f"\n--- PEOPLE ({player.name}) ---")
+        for people_id in owned:
+            people = game.all_cards[people_id]
+            status_str = " [DESTROYED]" if people.destroyed else ""
+            print(f"  {people}{status_str}")
+            print(f"    Effect: {people.effect}")
 
     # Both players' info.
     for i, player in enumerate(game.players):

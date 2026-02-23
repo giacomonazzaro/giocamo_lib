@@ -21,7 +21,6 @@ from gods_graphical.agent_ui import Agent_UI, update_stacks
 from gods_graphical.ui import (
     draw_card_power_badge,
     draw_game_over_screen,
-    draw_people_ownership_bars,
     draw_player_hud,
     get_image_path,
     get_table_layout,
@@ -65,7 +64,9 @@ def init_table_state(gods_state: Game_State, bottom_player: int = 0) -> kt.Table
         zone_cards[f"p{i}_hand"] = list(p.hand)
         zone_cards[f"p{i}_discard"] = list(p.discard)
         zone_cards[f"p{i}_wonders"] = list(p.wonders)
-    zone_cards["peoples"] = list(gods_state.peoples)
+        zone_cards[f"p{i}_peoples"] = [
+            pid for pid in gods_state.peoples if gods_state.all_cards[pid].owner == i
+        ]
     zone_cards["shared_deck"] = list(gods_state.shared_deck)
 
     # Create stacks from shared layout
@@ -81,7 +82,7 @@ def init_table_state(gods_state: Game_State, bottom_player: int = 0) -> kt.Table
     return table_state
 
 
-def draw_hud(gods_state: Game_State, table_state: kt.Table_State, bottom_player: int = 0):
+def draw_hud(gods_state: Game_State, bottom_player: int = 0):
     H = tweak["window_height"]
     h = tweak["card_height"]
     margin = 20
@@ -96,20 +97,12 @@ def draw_hud(gods_state: Game_State, table_state: kt.Table_State, bottom_player:
         hud_y = (bottom_wonders_y - 40) if i == bottom_player else top_wonders_y
         draw_player_hud(player.name, score, len(player.deck), is_current, hud_y)
 
-    # People ownership. Since table_state.cards is aligned with all_cards,
-    # the gods card id == the kt card id, so we use pid directly.
-    people_info = [
-        (pid, gods_state.all_cards[pid].owner)
-        for pid in gods_state.peoples
-        if gods_state.all_cards[pid].owner is not None and not gods_state.all_cards[pid].destroyed
-    ]
-    draw_people_ownership_bars(people_info, table_state)
 
 
 from kitchen_table.ui import UI_State
 
 def play(gods_state: Game_State, table_state: kt.Table_State, ui_state: UI_State, agent: Agent | None, player_index: int):
-    table_state.draw_callback = lambda table: draw_hud(gods_state, table_state, bottom_player=player_index)
+    table_state.draw_callback = lambda table: draw_hud(gods_state, bottom_player=player_index)
 
     def display(state):
         update_stacks(table_state, gods_state, bottom_player=player_index)

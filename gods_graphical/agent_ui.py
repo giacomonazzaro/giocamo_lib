@@ -20,20 +20,19 @@ def update_stacks(table_state: Table_State, gods_state: Game_State, bottom_playe
     bp = bottom_player
     tp = 1 - bottom_player
 
-    # Bottom player areas (stacks 0-3)
+    # Bottom player areas (stacks 0-4): deck, hand, discard, peoples, wonders.
     update_stack(0, gods_state.players[bp].deck)
     update_stack(1, gods_state.players[bp].hand)
     update_stack(2, gods_state.players[bp].discard)
-    update_stack(3, gods_state.players[bp].wonders)
+    update_stack(3, [pid for pid in gods_state.peoples if gods_state.all_cards[pid].owner == bp])
+    update_stack(4, gods_state.players[bp].wonders)
 
-    # Top player areas (stacks 4-7)
-    update_stack(4, gods_state.players[tp].deck)
-    update_stack(5, gods_state.players[tp].hand)
-    update_stack(6, gods_state.players[tp].discard)
-    update_stack(7, gods_state.players[tp].wonders)
-
-    # People cards (center)
-    update_stack(8, gods_state.peoples)
+    # Top player areas (stacks 5-9): deck, hand, discard, peoples, wonders.
+    update_stack(5, gods_state.players[tp].deck)
+    update_stack(6, gods_state.players[tp].hand)
+    update_stack(7, gods_state.players[tp].discard)
+    update_stack(8, [pid for pid in gods_state.peoples if gods_state.all_cards[pid].owner == tp])
+    update_stack(9, gods_state.players[tp].wonders)
 
 
 
@@ -195,8 +194,8 @@ class Agent_UI(Agent):
     def choose_action(self, state: Game_State, choice: Choice) -> int:
         actions = choice.actions(state)
 
-        play_stack = 3 if choice.player_index == self.bottom_player else 7
-        hand_stack = 1 if choice.player_index == self.bottom_player else 5
+        play_stack = 4 if choice.player_index == self.bottom_player else 9
+        hand_stack = 1 if choice.player_index == self.bottom_player else 6
         if not self.is_ui_ready:
             self.build_ui(state, choice, actions)
             def is_drop_card_allowed(source_stack: int, target_stack: int, card_id: int) -> bool:

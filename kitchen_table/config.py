@@ -24,7 +24,7 @@ tweak = {
     "description_font_size": 10,
     "power_font_size": 24,
     # Path to a .ttf/.otf font file; empty string falls back to Raylib's default font.
-    "font_path": "/Users/giacomonazzaro/Documents/vault/games/gods/gods-app/fonts/" + ["Cinzel/Cinzel-VariableFont_wght.ttf", "Eagle_Lake/EagleLake-Regular.ttf"][1],
+    "font_path": "/Users/giacomonazzaro/Documents/vault/games/gods/gods-app/fonts/" + ["Cinzel/Cinzel-VariableFont_wght.ttf", "Eagle_Lake/EagleLake-Regular.ttf"][0],
     # Letter spacing passed to draw_text_ex.
     "font_spacing": 1.0,
     # Point size to load the font at; must be >= the largest rendered size or text looks pixelated.

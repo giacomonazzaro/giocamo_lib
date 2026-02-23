@@ -98,7 +98,7 @@ class Game_State(Game):
         return self.game_over
 
     def next_choice(self) -> Choice | None:
-        from gods.gameplay import make_main_choice, check_people_conditions, draw_card
+        from gods.gameplay import make_main_choice, draw_card
         while not self.game_over:
             if self.choices:
                 choice = self.choices.pop(0)
@@ -116,8 +116,7 @@ class Game_State(Game):
                 self.choices.append(make_main_choice(self))
 
             elif self.current_phase == "post-play":
-                check_people_conditions(self)
-                self.current_phase = "end"
+                self.current_phase = "claim"
 
             elif self.current_phase == "post-pass-effects":
                 player = self.active_player()
@@ -126,11 +125,16 @@ class Game_State(Game):
                     continue
                 new_choices = draw_card(self, self.current_player)
                 self.choices.extend(new_choices)
-                check_people_conditions(self)
                 self.current_phase = "post-pass-draw"
 
             elif self.current_phase == "post-pass-draw":
-                check_people_conditions(self)
+                self.current_phase = "claim"
+
+            elif self.current_phase == "claim":
+                from gods.gameplay import make_claim_choice
+                claim = make_claim_choice(self)
+                if claim is not None:
+                    self.choices.append(claim)
                 self.current_phase = "end"
 
             elif self.current_phase == "end":
