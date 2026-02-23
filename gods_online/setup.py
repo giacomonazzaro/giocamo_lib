@@ -10,6 +10,7 @@ import os
 import urllib.request
 import typer
 import threading
+from dataclasses import dataclass
 
 STUN_SERVER = os.getenv('STUN_SERVER', 'stun.l.google.com')
 STUN_PORT = int(os.getenv('STUN_PORT', '19302'))
@@ -48,6 +49,7 @@ def fetch_address(room_code, suffix="", timeout=120):
         time.sleep(2)
     return None, None
 
+
 def get_ip_info(sock):
     """
     Sends a raw STUN Binding Request to Google to find out our Public IP/Port.
@@ -59,12 +61,12 @@ def get_ip_info(sock):
         # STUN Binding Request (Header: 0x0001, Length: 0)
         # We don't need a full STUN library for a simple binding request
         data = struct.pack('!H', 0x0001) + struct.pack('!H', 0) + b'\x00'*16
-        
+
         print(f"[*] Querying STUN server ({STUN_SERVER})...")
         sock.sendto(data, (STUN_SERVER, STUN_PORT))
-        
+
         response, _ = sock.recvfrom(2048)
-        
+
         # Parse STUN Response (This is a simplified parser for IPv4)
         # Skip header (20 bytes) -> look for MAPPED-ADDRESS attribute (0x0001)
         offset = 20
@@ -77,7 +79,7 @@ def get_ip_info(sock):
                 ip = ".".join(map(str, ip_octets))
                 return ip, port
             offset += 4 + attr_len
-            
+
     except Exception as e:
         raise
         print(f"[!] STUN failed: {e}")
@@ -109,46 +111,12 @@ def pick_seed(sock: socket.socket, seed: int, game_init: dict):
             typer.echo(f"[!] Error receiving seed: {e}")
             break
 
-def setup_online_game(sock: socket.socket, local: bool, your_ip: str, your_port: int, room_code: str | None = None) -> tuple[int, int, socket.socket, tuple[str, int]]:
-    """Set up connection with friend and exchange seeds."""
 
-    # Keep-alive to prevent NAT port mapping from expiring
-    stop_keepalive = False
-    def keep_alive():
-        while not stop_keepalive:
-            sock.sendto(b'', (STUN_SERVER, STUN_PORT))
-            time.sleep(10)
-    if not local:
-        threading.Thread(target=keep_alive, daemon=True).start()
+def _exchange_seeds(sock: socket.socket, local: bool, friend_addr: tuple[str, int]) -> tuple[int, int]:
+    """Hole-punch to friend and exchange seeds to agree on player order and game seed.
 
-    if local:
-        # Local mode: manual IP/port exchange
-        friend_ip = typer.prompt("What is your friend's IP address")
-        friend_port = typer.prompt("What is your friend's port", type=int)
-    elif room_code is None:
-        # Hosting: publish our address, wait for joiner
-        room_code = generate_room_code()
-        publish_address(room_code, your_ip, your_port)
-        typer.echo(f"[*] Room code: {room_code}")
-        typer.echo("[*] Waiting for friend to join...")
-        friend_ip, friend_port = fetch_address(room_code, suffix="-join")
-        if friend_ip is None:
-            typer.echo("[!] Timed out waiting for friend to join.")
-            raise typer.Exit(1)
-        typer.echo("[*] Friend joined!")
-    else:
-        # Joining: fetch host's address, publish ours
-        typer.echo(f"[*] Joining room {room_code}...")
-        friend_ip, friend_port = fetch_address(room_code)
-        if friend_ip is None:
-            typer.echo("[!] Could not find room. Check the code and try again.")
-            raise typer.Exit(1)
-        publish_address(room_code, your_ip, your_port, suffix="-join")
-        typer.echo("[*] Connected to host!")
-
-    stop_keepalive = True
-    friend_addr = (friend_ip, friend_port)
-
+    Returns (player_index, seed).
+    """
     seed = random.randint(0, 2**32 - 1)
     game_init: dict[str, int] = {}
     listener = threading.Thread(target=pick_seed, args=(sock, seed, game_init), daemon=True)
@@ -163,7 +131,53 @@ def setup_online_game(sock: socket.socket, local: bool, your_ip: str, your_port:
     sock.sendto(json.dumps({"type": "init", "seed": seed}).encode(), friend_addr)
     typer.echo("[*] Exchanging seeds...")
     listener.join()
-    print(f"You are Player {(player_index := game_init['player_index']) + 1}. Seed: {(seed := game_init['seed'])}")
+    player_index = game_init['player_index']
+    seed = game_init['seed']
+    print(f"You are Player {player_index + 1}. Seed: {seed}")
+    return player_index, seed
+
+
+def setup_online_game(sock: socket.socket, local: bool, your_ip: str, your_port: int, room_code: str | None = None) -> tuple[int, int, socket.socket, tuple[str, int]]:
+    """Set up connection with friend and exchange seeds."""
+
+    # Keep-alive to prevent NAT port mapping from expiring.
+    stop_keepalive = False
+    def keep_alive():
+        while not stop_keepalive:
+            sock.sendto(b'', (STUN_SERVER, STUN_PORT))
+            time.sleep(10)
+    if not local:
+        threading.Thread(target=keep_alive, daemon=True).start()
+
+    if local:
+        # Local mode: manual IP/port exchange.
+        friend_ip = typer.prompt("What is your friend's IP address")
+        friend_port = typer.prompt("What is your friend's port", type=int)
+    elif room_code is None:
+        # Hosting: publish our address, wait for joiner.
+        room_code = generate_room_code()
+        publish_address(room_code, your_ip, your_port)
+        typer.echo(f"[*] Room code: {room_code}")
+        typer.echo("[*] Waiting for friend to join...")
+        friend_ip, friend_port = fetch_address(room_code, suffix="-join")
+        if friend_ip is None:
+            typer.echo("[!] Timed out waiting for friend to join.")
+            raise typer.Exit(1)
+        typer.echo("[*] Friend joined!")
+    else:
+        # Joining: fetch host's address, publish ours.
+        typer.echo(f"[*] Joining room {room_code}...")
+        friend_ip, friend_port = fetch_address(room_code)
+        if friend_ip is None:
+            typer.echo("[!] Could not find room. Check the code and try again.")
+            raise typer.Exit(1)
+        publish_address(room_code, your_ip, your_port, suffix="-join")
+        typer.echo("[*] Connected to host!")
+
+    stop_keepalive = True
+    friend_addr = (friend_ip, friend_port)
+
+    player_index, seed = _exchange_seeds(sock, local, friend_addr)
     return player_index, seed, sock, friend_addr
 
 
@@ -185,3 +199,73 @@ def peer_to_peer(local: bool = False) -> tuple[socket.socket, str, int]:
 
     typer.echo(f"[*] Your address: {your_ip}:{your_port}")
     return sock, your_ip, your_port
+
+
+# --- Async wrappers for the graphical menu ---
+
+@dataclass
+class Connection_State:
+    """Tracks the async state of a P2P connection setup, polled by the UI render loop each frame."""
+    room_code: str = ""
+    ready: bool = False
+    player_index: int = 0
+    seed: int = 0
+    sock: socket.socket | None = None
+    friend_addr: tuple[str, int] | None = None
+    error: str = ""
+
+
+def start_hosting(local: bool = False) -> Connection_State:
+    """Host a game. Sets state.room_code as soon as it's published (fast),
+    then waits for the joiner in the background. The UI can display the
+    room code immediately while the connection is pending.
+    """
+    state = Connection_State()
+
+    def setup() -> None:
+        try:
+            sock, your_ip, your_port = peer_to_peer(local)
+            state.sock = sock
+
+            # Publish before blocking so the UI has the code to display.
+            state.room_code = generate_room_code()
+            publish_address(state.room_code, your_ip, your_port)
+
+            friend_ip, friend_port = fetch_address(state.room_code, suffix="-join")
+            if friend_ip is None:
+                state.error = "Timed out waiting for a joiner."
+                return
+
+            player_index, seed = _exchange_seeds(sock, local, (friend_ip, friend_port))
+            state.player_index = player_index
+            state.seed = seed
+            state.friend_addr = (friend_ip, friend_port)
+            state.ready = True
+        except Exception as exc:
+            state.error = str(exc)
+
+    threading.Thread(target=setup, daemon=True).start()
+    return state
+
+
+def join_room(room_code: str, local: bool = False) -> Connection_State:
+    """Join a game by room code. Delegates entirely to setup_online_game."""
+    state = Connection_State()
+    state.room_code = room_code.strip()
+
+    def setup() -> None:
+        try:
+            sock, your_ip, your_port = peer_to_peer(local)
+            player_index, seed, sock, friend_addr = setup_online_game(
+                sock, local, your_ip, your_port, room_code=state.room_code
+            )
+            state.sock = sock
+            state.player_index = player_index
+            state.seed = seed
+            state.friend_addr = friend_addr
+            state.ready = True
+        except Exception as exc:
+            state.error = str(exc)
+
+    threading.Thread(target=setup, daemon=True).start()
+    return state

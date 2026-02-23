@@ -5,7 +5,7 @@ from enum import Enum, auto
 
 import pyray
 
-from gods_online.room_code import Connection_State, join_room, start_hosting
+from gods_online.setup import Connection_State, join_room, start_hosting
 from kitchen_table.config import tweak
 from kitchen_table.rendering import color_from_tuple, draw_background
 
