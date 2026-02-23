@@ -113,10 +113,11 @@ def play(gods_state: Game_State, table_state: kt.Table_State, ui_state: UI_State
     def display(state):
         update_stacks(table_state, gods_state, bottom_player=player_index)
 
-    # Window
-    pyray.set_config_flags(pyray.ConfigFlags.FLAG_WINDOW_HIGHDPI)
-    pyray.init_window(tweak["window_width"], tweak["window_height"], "Gods Online")
-    pyray.set_target_fps(tweak["target_fps"])
+    # Window: re-use an existing window (e.g. opened by the menu) if one is ready.
+    if not pyray.is_window_ready():
+        pyray.set_config_flags(pyray.ConfigFlags.FLAG_WINDOW_HIGHDPI)
+        pyray.init_window(tweak["window_width"], tweak["window_height"], "Gods Online")
+        pyray.set_target_fps(tweak["target_fps"])
 
     current_choice = None
     while not pyray.window_should_close():
@@ -164,6 +165,17 @@ def play(gods_state: Game_State, table_state: kt.Table_State, ui_state: UI_State
     pyray.close_window()
 
 @app.command()
+def start():
+    """Launch the game with the graphical menu (default entry point)."""
+    from gods_graphical.menu import run_menu
+    mode, params = run_menu()
+    if mode == "vs_ai":
+        main(vs_ai=True)
+    else:  # "online"
+        main(**params)
+
+
+@app.command()
 def p2p(
     local: Annotated[bool, typer.Option("--local", help="Use local mode (no STUN, for testing on the same network)")] = False,
 ):
@@ -175,11 +187,12 @@ def agent(game_logic: bool = True, seed=None):
     main(player_index=0, seed=seed, sock=None, game_logic=game_logic)
 
 def main(
-        player_index: int = 0, 
-        seed: int | None = None, 
+        player_index: int = 0,
+        seed: int | None = None,
         sock: socket.socket | None = None,
         friend_addr: tuple[str, int] | None = None,
-        game_logic: bool = True
+        game_logic: bool = True,
+        vs_ai: bool = False,
 ):
     gods_state = quick_setup(seed)
     table_state = init_table_state(gods_state, bottom_player=player_index)
@@ -189,11 +202,13 @@ def main(
     if sock is not None and friend_addr is not None:
         agent_local = Agent_Local_Online(agent_ui, sock, friend_addr)
         agent_opponent = Agent_Remote(sock)
+    elif vs_ai:
+        agent_local = agent_ui
+        agent_opponent = Agent_Process(Agent_Minimax_Stochastic_Gods())
     else:
         agent_local = agent_ui
         agent_opponent = agent_ui
-        # agent_opponent = Agent_Process(Agent_Minimax_Stochastic_Gods())
-    
+
     if not game_logic:
         agent = None
     else:
@@ -205,4 +220,8 @@ def main(
         sock.close()
 
 if __name__ == "__main__":
+    import sys
+    # Default to the graphical menu when no subcommand is given.
+    if len(sys.argv) == 1:
+        sys.argv.append("start")
     app()
