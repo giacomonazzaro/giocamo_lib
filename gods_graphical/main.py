@@ -29,18 +29,28 @@ from gods_online.agent_remote import Agent_Local_Online, Agent_Remote
 from kitchen_table.config import tweak
 from kitchen_table.game_state import update_card_positions
 from kitchen_table.input import find_card_at, update_input
-from kitchen_table.rendering import draw_background, draw_table
+from kitchen_table.rendering import color_from_tuple, draw_background, draw_table
 from gods_online.setup import peer_to_peer, setup_online_game
 
 app = typer.Typer()
 
 
-def init_table_state(gods_state: Game_State, bottom_player: int = 0) -> kt.Table_State:
+def init_table_state(gods_state: Game_State, ui_state: UI_State, bottom_player: int = 0) -> kt.Table_State:
     def draw_power(card: kt.Card):
         # card.id == the all_cards index since both lists are aligned.
         gods_card = gods_state.all_cards[card.id]
         power = str(effective_power(gods_state, gods_card))
         draw_card_power_badge(power, gods_card.destroyed)
+
+        highlight_color = color_from_tuple(tweak["highlight_color"])
+        w = tweak["card_width"]
+        h = tweak["card_height"]
+
+        if card.id in ui_state.highlighted_cards.values():
+            kt_card = table_state.animated_cards[card.id]
+            pyray.draw_rectangle_rounded_lines_ex(
+                pyray.Rectangle(0, 0, w, h), 0.25, 8, 4, highlight_color
+            )
 
     # Build table_state.cards in the same order as game.all_cards so that
     # table_state.cards[i] corresponds to game.all_cards[i], making card.id
@@ -187,8 +197,8 @@ def main(
         vs_ai: bool = False,
 ):
     gods_state = quick_setup(seed)
-    table_state = init_table_state(gods_state, bottom_player=player_index)
     ui_state = UI_State()
+    table_state = init_table_state(gods_state, ui_state, bottom_player=player_index)
 
     agent_ui = Agent_UI(table_state, ui_state, bottom_player=player_index)
     if sock is not None and friend_addr is not None:

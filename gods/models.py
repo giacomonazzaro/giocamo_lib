@@ -28,7 +28,7 @@ class Card:
     effect: str
     destroyed: bool = False
     counters: int = 0  # +1 counters
-    owner: Optional[int] = None  # player index who controls this card (for people)
+    owner: int = -1  # player index who owns this card
     id: int = -1  # index into Game_State.all_cards; also serves as the kitchen_table card id since both lists are aligned
 
     def on_draw(self, game: Game_State) -> list[Choice]: return []
@@ -48,6 +48,10 @@ class Card:
     
     def is_indestructible(self, game: Game_State, card: Card) -> bool: return False
 
+    def can_be_claimed(self, game: Game_State, player_index: int) -> int:
+        """Evaluate points for a people card. Override in people subclasses."""
+        return 0
+    
     def eval_points(self, game: Game_State, player_index: int) -> int:
         """Evaluate points for a people card. Override in people subclasses."""
         return 0

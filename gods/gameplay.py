@@ -169,9 +169,7 @@ def make_claim_choice(state: Game_State) -> Optional[Choice]:
         Card_Id(area="people", card_index=pid, owner_index=opponent_index)
         for pid in state.peoples
         if state.all_cards[pid].owner == opponent_index
-        and not state.all_cards[pid].destroyed
-        and state.all_cards[pid].eval_points(state, player_index)
-            > state.all_cards[pid].eval_points(state, opponent_index)
+        and state.all_cards[pid].can_be_claimed(state, player_index)
     ]
 
     if not claimable:

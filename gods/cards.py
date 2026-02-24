@@ -207,20 +207,22 @@ class Miracle(Card):
 
 @dataclass(slots=True)
 class Flashback(Card):
+    def get_card_selection(self, game: Game_State) -> list[Card_Id]:
+        flashback = self
+        return card_selection(game, self.owner, "discard",
+                              lambda c: c.card_type == Card_Type.EVENT and c != flashback)
+
     def on_played(self, game: Game_State) -> list[Choice]:
         flashback = self
-        def get_cards(state):
-            return card_selection(state, state.current_player, "discard",
-                                  lambda c: c.card_type == Card_Type.EVENT and c != flashback)
         def get_cominations(state):
-            return all_combinations(get_cards(state), effective_power(state, flashback), up_to=True)
+            return all_combinations(flashback.get_card_selection(state), effective_power(state, flashback), up_to=False)
         def on_chosen(state, combination):
-            player = state.players[state.current_player]
+            player = state.players[flashback.owner]
             cards = [state.get_card(card_id) for card_id in combination]
             for card in cards:
                 player.discard.remove(card.id)
                 player.hand.append(card.id)
-        return [make_choose_cards_choice(game.current_player, get_cominations, on_chosen)]
+        return [make_choose_cards_choice(flashback.owner, get_cominations, on_chosen)]
 
 
 @dataclass(slots=True)
@@ -400,12 +402,9 @@ class Wisdom(Card):
 class Knowledge(Card):
     """Opponent events get -X, down to a minimum of 1 power"""
     def power_modifier(self, game: Game_State, card: Card, power: int) -> int:
-        if card.card_type == Card_Type.EVENT:
-            # Check if card belongs to opponent.
-            opponent_idx = 1 - self.owner
-            if card.id in game.players[opponent_idx].hand:
-                reduction = effective_power(game, self)
-                return max(1, power - reduction)
+        if card.card_type == Card_Type.EVENT and card.owner == 1 - self.owner:
+            reduction = effective_power(game, self)
+            return max(1, power - reduction)
         return power
 
 
