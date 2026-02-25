@@ -61,11 +61,11 @@ def make_choose_cards_choice(player_index, get_combinations, on_chosen) -> Choic
     return Choice(player_index=player_index, description="choose-cards",
                   actions=lambda state: get_combinations(state), resolve=resolve)
 
-def eval_most(game: Game_State, card: Card, player_index: int, metric) -> int:
+def beats_opponent(game: Game_State, card: Card, player_index: int, metric) -> int:
     scores = [metric(game, i) for i in range(len(game.players))]
     if scores[player_index] > scores[1 - player_index]:
-        return effective_power(game, card)
-    return 0
+        return True
+    return False
 
 def return_true(card: Card): return True
 
@@ -424,7 +424,7 @@ class Deserts(Card):
     def on_scoring_people(self, game: Game_State, people: Card, points: int) -> int:
         if people.destroyed and people.owner == self.owner:
             if effective_power(game, people) <= effective_power(game, self):
-                return people.eval_points(game, self.owner)
+                return people.can_be_claimed(game, self.owner)
         return points
 
 
@@ -491,7 +491,7 @@ class Fire(Card):
 class Sun(Card):
     """Your green wonders get +X"""
     def power_modifier(self, game: Game_State, card: Card, power: int) -> int:
-        if card.color == Card_Color.GREEN and card != self:
+        if card.color == Card_Color.GREEN and card.card_type == Card_Type.WONDER and card != self:
             if card.id in game.players[self.owner].wonders:
                 return power + effective_power(game, self)
         return power
@@ -531,52 +531,52 @@ class Stars(Card):
 @dataclass(slots=True)
 class Egyptians(Card):
     """You have the most total power among green wonders"""
-    def eval_points(self, game: Game_State, player_index: int) -> int:
+    def can_be_claimed(self, game: Game_State, player_index: int) -> int:
         metric = lambda g, i: sum(effective_power(g, g.all_cards[wid]) for wid in g.players[i].wonders if g.all_cards[wid].color == Card_Color.GREEN)
-        return eval_most(game, self, player_index, metric)
+        return beats_opponent(game, self, player_index, metric)
 
 @dataclass(slots=True)
 class Greeks(Card):
     """You have twice or more cards in hand than the opponent"""
-    def eval_points(self, game: Game_State, player_index: int) -> int:
+    def can_be_claimed(self, game: Game_State, player_index: int) -> int:
         player = game.players[player_index]
         opponent = game.players[1 - player_index]
         if len(player.hand) >= 2 * len(opponent.hand) and len(opponent.hand) > 0:
-            return effective_power(game, self)
-        return 0
+            return True
+        return False
 
 @dataclass(slots=True)
 class Vikings(Card):
     """You have the most cards in your deck"""
-    def eval_points(self, game: Game_State, player_index: int) -> int:
-        return eval_most(game, self, player_index, lambda g, i: len(g.players[i].deck))
+    def can_be_claimed(self, game: Game_State, player_index: int) -> int:
+        return beats_opponent(game, self, player_index, lambda g, i: len(g.players[i].deck))
 
 @dataclass(slots=True)
 class Minoans(Card):
     """You have the most wonders"""
-    def eval_points(self, game: Game_State, player_index: int) -> int:
-        return eval_most(game, self, player_index, lambda g, i: len(g.players[i].wonders))
+    def can_be_claimed(self, game: Game_State, player_index: int) -> int:
+        return beats_opponent(game, self, player_index, lambda g, i: len(g.players[i].wonders))
 
 @dataclass(slots=True)
 class Babylonians(Card):
     """You have the most total power among wonders"""
-    def eval_points(self, game: Game_State, player_index: int) -> int:
+    def can_be_claimed(self, game: Game_State, player_index: int) -> int:
         metric = lambda g, i: sum(effective_power(g, g.all_cards[wid]) for wid in g.players[i].wonders)
-        return eval_most(game, self, player_index, metric)
+        return beats_opponent(game, self, player_index, metric)
 
 @dataclass(slots=True)
 class Romans(Card):
     """You have the most total power among red wonders"""
-    def eval_points(self, game: Game_State, player_index: int) -> int:
+    def can_be_claimed(self, game: Game_State, player_index: int) -> int:
         metric = lambda g, i: sum(effective_power(g, g.all_cards[wid]) for wid in g.players[i].wonders if g.all_cards[wid].color == Card_Color.RED)
-        return eval_most(game, self, player_index, metric)
+        return beats_opponent(game, self, player_index, metric)
 
 @dataclass(slots=True)
 class Judeans(Card):
     """You have the most total power among blue wonders"""
-    def eval_points(self, game: Game_State, player_index: int) -> int:
+    def can_be_claimed(self, game: Game_State, player_index: int) -> int:
         metric = lambda g, i: sum(effective_power(g, g.all_cards[wid]) for wid in g.players[i].wonders if g.all_cards[wid].color == Card_Color.BLUE)
-        return eval_most(game, self, player_index, metric)
+        return beats_opponent(game, self, player_index, metric)
 
 
 # Registry mapping card names to their specialized classes

@@ -54,42 +54,6 @@ def discard_cards(game: Game_State, card_ids: list[Card_Id]) -> list[Choice]:
     return choices
 
 
-def check_people_conditions(game: Game_State) -> None:
-    """Check and update ownership of people cards based on their conditions."""
-    for people_id in game.peoples:
-        people = game.all_cards[people_id]
-        old_owner = people.owner
-        new_owner = evaluate_people_condition(game, people)
-
-        if new_owner != old_owner:
-            people.owner = new_owner
-
-
-def evaluate_people_condition(game: Game_State, people: Card) -> Optional[int]:
-    """
-    Evaluate who should control a people card.
-    Returns player index (0 or 1) or None if tied/no one qualifies.
-    """
-    scores = [
-        people.eval_points(game, 0),
-        people.eval_points(game, 1)
-    ]
-
-    if scores[0] > scores[1]:
-        return 0
-    elif scores[1] > scores[0]:
-        return 1
-    else:
-        # Tie or no one qualifies - check for wonders that break ties.
-        if scores[0] == scores[1]:
-            for i, player in enumerate(game.players):
-                for wid in player.wonders:
-                    if game.all_cards[wid].wins_tie(game, people):
-                        return i
-            return people.owner
-        return None
-
-
 def wonders_by_priority(state: Game_State) -> list[Card]:
     all_wonder_ids = state.active_player().wonders + state.opponent().wonders
     return [state.all_cards[wid] for wid in all_wonder_ids]
@@ -165,30 +129,17 @@ def make_claim_choice(state: Game_State) -> Optional[Choice]:
     player_index = state.current_player
     opponent_index = 1 - player_index
 
-    claimable = [
-        Card_Id(area="people", card_index=pid, owner_index=opponent_index)
-        for pid in state.peoples
-        if state.all_cards[pid].owner == opponent_index
-        and not state.all_cards[pid].destroyed
-        and state.all_cards[pid].eval_points(state, player_index)
-            > state.all_cards[pid].eval_points(state, opponent_index)
-    ]
-
-    if not claimable:
-        return None
-
-    # Include a null option so the player can skip claiming.
-    actions_list = claimable + [Card_Id.null()]
 
     def actions(state: Game_State) -> list:
         return [
-            Card_Id(area="people", card_index=cid.card_index, owner_index=opponent_index)
-            for cid in claimable
-            if state.all_cards[cid.card_index].owner == opponent_index
-            and not state.all_cards[cid.card_index].destroyed
-            and state.all_cards[cid.card_index].eval_points(state, player_index)
-                > state.all_cards[cid.card_index].eval_points(state, opponent_index)
+            Card_Id(area="people", card_index=pid, owner_index=opponent_index)
+            for pid in state.peoples
+            if state.all_cards[pid].owner == opponent_index
+            and state.all_cards[pid].can_be_claimed(state, player_index)
         ] + [Card_Id.null()]
+    
+    if(len(actions(state)) == 1):
+        return None
 
     def resolve(state: Game_State, option_index: int):
         card_id = actions(state)[option_index]
