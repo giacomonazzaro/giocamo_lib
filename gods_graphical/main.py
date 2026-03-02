@@ -110,7 +110,6 @@ def draw_hud(gods_state: Game_State, table_state: kt.Table_State, ui_state: UI_S
         draw_player_hud(player.name, score, len(player.deck), is_current, hud_y)
 
     ui_state.draw_buttons()
-    ui_state.draw_card_highlights(table_state)
     draw_choice_description(ui_state.current_choice_text)
 
 from kitchen_table.ui import UI_State

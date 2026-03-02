@@ -88,18 +88,3 @@ class UI_State:
             text_x = button.x + (button.width - tw) // 2
             text_y = button.y + (button.height - 20) // 2
             render_text(button.text, text_x, text_y, 20, color_from_tuple(tweak["button_text_color"]))
-
-    def draw_card_highlights(self, table_state: Table_State):
-        return
-    
-        """Draw highlight borders around cards in the highlighted_cards list."""
-        if table_state is None or not table_state.animated_cards:
-            return
-        w = tweak["card_width"]
-        h = tweak["card_height"]
-        highlight_color = color_from_tuple(tweak["highlight_color"])
-        for i, card_id in self.highlighted_cards.items():
-            kt_card = table_state.animated_cards[card_id]
-            draw_rectangle_rounded_lines_ex(
-                Rectangle(kt_card.x, kt_card.y, w, h), 0.25, 8, 4, highlight_color
-            )
