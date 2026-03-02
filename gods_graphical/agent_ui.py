@@ -46,7 +46,31 @@ class Agent_UI(Agent):
         pass
 
     def choose_action(self, state: Game_State, choice: Choice) -> int:
-        self.ui_state.current_choice_text = choice.text_description
+        """
+        Handle user input to select an action during gameplay.
+        
+        Processes player input through drag-and-drop card mechanics and button clicks
+        to determine which action to execute from the available options.
+        
+        Args:
+            state (Game_State): The current game state containing card and player information.
+            choice (Choice): The choice object defining available actions and their type.
+        
+        Returns:
+            int: The index of the selected action within the options list, or -1 if no action
+                 was selected in this frame.
+        
+        Behavior:
+            - For single-option choices (non-main), automatically returns 0.
+            - Handles drag-and-drop from hand to play area for card selection.
+            - For Choose_Option: Displays buttons for each option label.
+            - For Choose_Card: Displays selectable cards and a Pass/Done button.
+            - For Choose_Cards: Allows multi-selection of cards with auto-confirmation
+              when a maximal valid combination is reached, or shows Done button for
+              non-maximal selections.
+            - Highlights available cards in the UI based on current selection state.
+            - Clears highlights when transitioning to non-Agent_UI players.
+        """
         action_type = choice.actions(state)
         options = action_options(action_type)
         if len(options) == 1 and choice.description != "main":
@@ -74,11 +98,11 @@ class Agent_UI(Agent):
                 return action_index
 
         # Button layout.
-        count = len(options)
+        count = len(options) - sum(1 for cid in options if isinstance(cid, Card_Id) and not Card_Id.is_null(cid))
         gap = 20
-        total_width = count * 140 + (count - 1) * gap
-        start_x = (get_screen_width() - total_width) // 2
-        button_y = get_screen_height() - 50
+        total_width = count * 140 + (count) * gap
+        start_x = (get_screen_width() - total_width)
+        button_y = get_screen_height() // 2 + 20
         rect = Rectangle(start_x, button_y, 140, 40)
 
         mouse_clicked = is_mouse_button_pressed(MouseButton.MOUSE_BUTTON_LEFT)
@@ -91,9 +115,11 @@ class Agent_UI(Agent):
 
         elif isinstance(action_type, Choose_Card):
             done_label = "Pass" if choice.description == "main" else "Done"
+            button_index = 0
             for i, card_id in enumerate(options):
                 if Card_Id.is_null(card_id):
-                    rect.x = start_x + i * (rect.width + gap)
+                    rect.x = start_x + button_index * (rect.width + gap)
+                    button_index += 1
                     if immediate_button(rect, done_label):
                         self.ui_state.highlighted_cards = {}
                         return i

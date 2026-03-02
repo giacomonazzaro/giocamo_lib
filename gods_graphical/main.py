@@ -150,6 +150,7 @@ def play(gods_state: Game_State, table_state: kt.Table_State, ui_state: UI_State
         if agent:
             current_choice = game_frame(gods_state, agent, current_choice)
             update_stacks(table_state, gods_state, bottom_player=player_index)
+            ui_state.current_choice_text = current_choice.text_description if current_choice else ""
         pyray.end_drawing()
 
     # Game over screen

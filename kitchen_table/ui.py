@@ -29,21 +29,28 @@ class Button:
 
 def immediate_button(rectangle: Rectangle, label: str, color: Color=None, text_color: Color=None) -> bool:
     """Create a rectangle and return whether it was clicked."""
-    if color is None:
-        color = color_from_tuple(tweak["button_color"])
-    if text_color is None:
-        text_color = color_from_tuple(tweak["button_text_color"])
+    # Fix size to fit label if needed.
     tw = text_width(label, 20)
     r = rectangle
     r.width = max(r.width, tw + 20)
+    
+    
+    mx, my = get_mouse_x(), get_mouse_y()
+    hovered = point_in_rect(mx, my, r.x, r.y, r.width, r.height)
+    if color is None:
+        color = color_from_tuple(tweak["button_color"])
+    if hovered:
+        color = color_from_tuple(tweak["button_hover_color"])
+
+    if text_color is None:
+        text_color = color_from_tuple(tweak["button_text_color"])
     draw_rectangle_rounded(r, 0.3, 8, color)
     text_x = int(r.x) + (r.width - tw) // 2
     text_y = int(r.y) + (r.height - 20) // 2
     render_text(label, text_x, text_y, 20, text_color)
     if not is_mouse_button_pressed(MouseButton.MOUSE_BUTTON_LEFT):
         return False
-    mx, my = get_mouse_x(), get_mouse_y()
-    return point_in_rect(mx, my, r.x, r.y, r.width, r.height)
+    return hovered
 
 def immediate_buttons(size: tuple[int, int], buttons: list[tuple[tuple[int, int], str]], color: Color=None, text_color: Color=None) -> int | None:
     for i, (pos, label) in enumerate(buttons):
