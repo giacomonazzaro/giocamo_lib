@@ -1,4 +1,5 @@
 from __future__ import annotations
+import copy
 from dataclasses import dataclass, field
 from pyray import *
 from kitchen_table.config import tweak
@@ -32,15 +33,17 @@ def immediate_button(rectangle: Rectangle, label: str, color: Color=None, text_c
         color = color_from_tuple(tweak["button_color"])
     if text_color is None:
         text_color = color_from_tuple(tweak["button_text_color"])
-    draw_rectangle_rounded(rectangle, 0.3, 8, color)
     tw = text_width(label, 20)
-    text_x = int(rectangle.x) + (rectangle.width - tw) // 2
-    text_y = int(rectangle.y) + (rectangle.height - 20) // 2
+    r = rectangle
+    r.width = max(r.width, tw + 20)
+    draw_rectangle_rounded(r, 0.3, 8, color)
+    text_x = int(r.x) + (r.width - tw) // 2
+    text_y = int(r.y) + (r.height - 20) // 2
     render_text(label, text_x, text_y, 20, text_color)
     if not is_mouse_button_pressed(MouseButton.MOUSE_BUTTON_LEFT):
         return False
     mx, my = get_mouse_x(), get_mouse_y()
-    return point_in_rect(mx, my, rectangle.x, rectangle.y, rectangle.width, rectangle.height)
+    return point_in_rect(mx, my, r.x, r.y, r.width, r.height)
 
 def immediate_buttons(size: tuple[int, int], buttons: list[tuple[tuple[int, int], str]], color: Color=None, text_color: Color=None) -> int | None:
     for i, (pos, label) in enumerate(buttons):
