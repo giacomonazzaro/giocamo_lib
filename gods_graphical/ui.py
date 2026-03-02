@@ -120,6 +120,21 @@ def draw_card_power_badge(power: str, destroyed: bool):
         )
 
 
+# --- Choice description rendering ---
+
+def draw_choice_description(text: str):
+    """Draw the current choice description on the right side of the screen."""
+    if not text:
+        return
+    W = tweak["window_width"]
+    H = tweak["window_height"]
+    font_size = 22
+    tw = text_width(text, font_size)
+    x = W - tw - 20
+    y = H // 2 - font_size // 2
+    render_text(text, x, y, font_size, Color(200, 200, 200, 200))
+
+
 # --- HUD rendering ---
 
 def draw_player_hud(name: str, score: int, deck_count: int, is_current: bool, hud_y: int):

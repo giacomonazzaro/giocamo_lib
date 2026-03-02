@@ -2,3 +2,11 @@
 
 **cpython**
 gods_cpp/
+
+gods/.mypy_cache/
+.mypy_cache/
+.vscode/
+fonts/
+.python-version
+gods/.pytest_cache/
+gods/cards/card-images/

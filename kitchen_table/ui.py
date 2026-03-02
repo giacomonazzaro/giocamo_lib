@@ -56,6 +56,7 @@ def immediate_buttons(size: tuple[int, int], buttons: list[tuple[tuple[int, int]
 class UI_State:
     buttons: dict[str, Button] = field(default_factory=dict)
     highlighted_cards: dict[str, int] = field(default_factory=dict)
+    current_choice_text: str = ""
 
     def clicked(self, mouse_x: float, mouse_y: float) -> str | None:
         """Return the name of the clicked button, or None."""

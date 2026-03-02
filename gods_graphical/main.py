@@ -20,6 +20,7 @@ from gods.setup import quick_setup
 from gods_graphical.agent_ui import Agent_UI, update_stacks
 from gods_graphical.ui import (
     draw_card_power_badge,
+    draw_choice_description,
     draw_game_over_screen,
     draw_player_hud,
     get_image_path,
@@ -110,6 +111,7 @@ def draw_hud(gods_state: Game_State, table_state: kt.Table_State, ui_state: UI_S
 
     ui_state.draw_buttons()
     ui_state.draw_card_highlights(table_state)
+    draw_choice_description(ui_state.current_choice_text)
 
 from kitchen_table.ui import UI_State
 

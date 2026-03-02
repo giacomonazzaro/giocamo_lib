@@ -149,7 +149,7 @@ def make_claim_choice(state: Game_State) -> Optional[Choice]:
             people.owner = player_index
         return []
 
-    return Choice(player_index=player_index, description="choose-card",
+    return Choice(player_index=player_index, description="choose-card", text_description="Claim a people card from your opponent",
                   actions=lambda state: Choose_Card(targets=actions(state)), resolve=resolve)
 
 
@@ -198,7 +198,7 @@ def make_main_choice(state: Game_State) -> Choice:
             state.current_phase = "post-pass-effects"
             return result
 
-    return Choice(player_index=player_index, description="main",
+    return Choice(player_index=player_index, description="main", text_description="Play a card or pass",
                   actions=lambda state: Choose_Card(targets=actions(state)), resolve=resolve)
 
 

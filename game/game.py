@@ -43,6 +43,7 @@ class Choose_Options:
 class Choice:
     player_index: int
     description: str
+    text_description: str
     actions: Callable[[Game], Choose_Card | Choose_Cards | Choose_Option | Choose_Options]
     resolve: Callable[[Game, int], list[Choice]]
 

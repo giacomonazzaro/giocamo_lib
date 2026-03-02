@@ -46,20 +46,20 @@ def all_combinations(card_ids: list[Card_Id], num_cards: int, up_to: bool) -> li
         return list(itertools.combinations(card_ids, num_cards))
 
 
-def make_choose_card_choice(player_index: int, get_targets: Callable[[Game_State], list[Card_Id]], on_chosen: Callable[[Game_State, Card_Id], list[Choice]]) -> Choice:
+def make_choose_card_choice(player_index: int, get_targets: Callable[[Game_State], list[Card_Id]], on_chosen: Callable[[Game_State, Card_Id], list[Choice]], text_description: str = "") -> Choice:
     def resolve(state, option_index):
         card_id = get_targets(state)[option_index]
         if Card_Id.is_null(card_id):
             return []
         return on_chosen(state, card_id)
-    return Choice(player_index=player_index, description="choose-card",
+    return Choice(player_index=player_index, description="choose-card", text_description=text_description,
                   actions=lambda state: Choose_Card(targets=get_targets(state)), resolve=resolve)
 
-def make_choose_cards_choice(player_index: int, get_targets: Callable[[Game_State], list[Card_Id]], get_count: Callable[[Game_State], int], up_to: bool, on_chosen: Callable[[Game_State, tuple[Card_Id, ...]], list[Choice]]) -> Choice:
+def make_choose_cards_choice(player_index: int, get_targets: Callable[[Game_State], list[Card_Id]], get_count: Callable[[Game_State], int], up_to: bool, on_chosen: Callable[[Game_State, tuple[Card_Id, ...]], list[Choice]], text_description: str = "") -> Choice:
     def resolve(state, option_index):
         combination = all_combinations(get_targets(state), get_count(state), up_to)[option_index]
         return on_chosen(state, combination)
-    return Choice(player_index=player_index, description="choose-cards",
+    return Choice(player_index=player_index, description="choose-cards", text_description=text_description,
                   actions=lambda state: Choose_Cards(targets=get_targets(state), count=get_count(state), up_to=up_to), resolve=resolve)
 
 def beats_opponent(game: Game_State, card: Card, player_index: int, metric) -> int:
@@ -114,7 +114,7 @@ class Light(Card):
             return effective_power(game, card) <= effective_power(game, self)
         def cards(state: Game_State) -> list[Card_Id]:
             return card_selection(state, self.owner, "hand", select, include_null=True) 
-        return [make_choose_card_choice(self.owner, cards, action)]
+        return [make_choose_card_choice(self.owner, cards, action, "Play a card from your hand")]
 
 @dataclass(slots=True)
 class Moon(Card):
@@ -151,7 +151,7 @@ class War(Card):
         def action(state, card_id):
             destroy_people(state, card_id)
             return []
-        return [make_choose_card_choice(game.current_player, self.get_card_selection, action)]
+        return [make_choose_card_choice(game.current_player, self.get_card_selection, action, "Destroy a people")]
 
 @dataclass(slots=True)
 class Rivers(Card):
@@ -162,7 +162,7 @@ class Rivers(Card):
         def action(state, card_id):
             restore_people(state, card_id)
             return []
-        return [make_choose_card_choice(game.current_player, self.get_card_selection, action)]
+        return [make_choose_card_choice(game.current_player, self.get_card_selection, action, "Restore a destroyed people")]
 
 @dataclass(slots=True)
 class Earthquake(Card):
@@ -182,7 +182,7 @@ class Eruption(Card):
             for card_id in combination:
                 shuffle_card_into_deck(state, card_id)
             return []
-        return [make_choose_cards_choice(game.current_player, get_targets, lambda state: effective_power(state, eruption), True, on_chosen)]
+        return [make_choose_cards_choice(game.current_player, get_targets, lambda state: effective_power(state, eruption), True, on_chosen, "Shuffle blue wonders back into decks")]
 
 
 @dataclass(slots=True)
@@ -206,7 +206,7 @@ class Miracle(Card):
             card = state.get_card(card_id)
             card.counters += effective_power(state, miracle_card)
             return play_card(state, card_id)
-        return [Choice(player_index=game.current_player, description="choose-card",
+        return [Choice(player_index=game.current_player, description="choose-card", text_description="Play a card with extra power",
                        actions=lambda state: Choose_Card(targets=get_targets(state)), resolve=resolve)]
 
 
@@ -229,7 +229,7 @@ class Flashback(Card):
                 player.discard.remove(card.id)
                 player.hand.append(card.id)
             return []
-        return [make_choose_cards_choice(flashback.owner, get_targets, lambda state: effective_power(state, flashback), False, on_chosen)]
+        return [make_choose_cards_choice(flashback.owner, get_targets, lambda state: effective_power(state, flashback), False, on_chosen, "Return event cards from discard to hand")]
 
 
 @dataclass(slots=True)
@@ -257,7 +257,7 @@ class Prophecy(Card):
                     result.extend(prophecy._make_nth_choice(state, iteration + 1))
                 return result
             return resolve
-        return [Choice(player_index=self.owner, description="choose-card",
+        return [Choice(player_index=self.owner, description="choose-card", text_description="Play an extra card",
                        actions=lambda state: Choose_Card(targets=get_targets(state)), resolve=make_resolve(n))]
 
 
@@ -275,7 +275,7 @@ class Time_Warp(Card):
                 card.counters = 0
                 state.players[card.owner].hand.append(card.id)
             return []
-        return [make_choose_cards_choice(game.current_player, wonders_selection, lambda state: effective_power(state, time_warp), True, on_chosen)]
+        return [make_choose_cards_choice(game.current_player, wonders_selection, lambda state: effective_power(state, time_warp), True, on_chosen, "Return wonders to hand")]
 
 
 @dataclass(slots=True)
@@ -299,7 +299,7 @@ class Darkness(Card):
             return card_selection(state, 1 - darkness.owner, "hand")
         def on_chosen(state, combination):
             return discard_cards(state, list(combination))
-        return [make_choose_cards_choice(1 - self.owner, get_targets, lambda state: effective_power(state, darkness), False, on_chosen)]
+        return [make_choose_cards_choice(1 - self.owner, get_targets, lambda state: effective_power(state, darkness), False, on_chosen, "Discard cards from opponent's hand")]
 
 
 @dataclass(slots=True)
@@ -312,7 +312,7 @@ class Spring(Card):
         def add_counters(state, card_id):
             state.get_card(card_id).counters += effective_power(state, spring_card)
             return []
-        return [make_choose_card_choice(game.current_player, self.get_card_selection, add_counters)]
+        return [make_choose_card_choice(game.current_player, self.get_card_selection, add_counters, "Add counters to a people")]
 
 
 @dataclass(slots=True)
@@ -326,7 +326,7 @@ class Regrowth(Card):
         def restore(state, card_id):
             state.get_card(card_id).destroyed = False
             return []
-        return [make_choose_card_choice(game.current_player, self.get_card_selection, restore)]
+        return [make_choose_card_choice(game.current_player, self.get_card_selection, restore, "Restore a destroyed people")]
 
 
 @dataclass(slots=True)
@@ -350,7 +350,7 @@ class Forgive(Card):
         def add_counters(state, card_id):
             state.get_card(card_id).counters += effective_power(state, forgive_card)
             return []
-        return [make_choose_card_choice(game.current_player, self.get_card_selection, add_counters)]
+        return [make_choose_card_choice(game.current_player, self.get_card_selection, add_counters, "Add counters to a people")]
 
 
 @dataclass(slots=True)
@@ -364,7 +364,7 @@ class Unmaking(Card):
         def action(state, card_id):
             destroy_wonder(state, card_id)
             return []
-        return [make_choose_card_choice(game.current_player, self.get_card_selection, action)]
+        return [make_choose_card_choice(game.current_player, self.get_card_selection, action, "Destroy a wonder")]
 
 
 @dataclass(slots=True)
@@ -377,7 +377,7 @@ class Revolt(Card):
         def action(state, card_id):
             destroy_people(state, card_id)
             return []
-        return [make_choose_card_choice(game.current_player, self.get_card_selection, action)]
+        return [make_choose_card_choice(game.current_player, self.get_card_selection, action, "Destroy a people")]
 
 
 @dataclass(slots=True)
@@ -390,7 +390,7 @@ class Blessing(Card):
         def add_counters(state, card_id):
             state.get_card(card_id).counters += effective_power(state, blessing_card)
             return []
-        return [make_choose_card_choice(game.current_player, self.get_card_selection, add_counters)]
+        return [make_choose_card_choice(game.current_player, self.get_card_selection, add_counters, "Add counters to a wonder")]
 
 
 # Passive wonders - these use hooks rather than on_played
@@ -408,7 +408,7 @@ class Wisdom(Card):
         if game.current_player != self.owner:
             return []
         action = lambda state, card_id: play_card(state, card_id)
-        return [make_choose_card_choice(self.owner, self.get_card_selection, action)]
+        return [make_choose_card_choice(self.owner, self.get_card_selection, action, "Play a card from your hand")]
 
 
 @dataclass(slots=True)
@@ -454,7 +454,7 @@ class Forests(Card):
         def restore(state, card_id):
             state.get_card(card_id).destroyed = False
             return []
-        return [make_choose_card_choice(self.owner, self.get_card_selection, restore)]
+        return [make_choose_card_choice(self.owner, self.get_card_selection, restore, "Restore a destroyed people")]
 
 
 @dataclass(slots=True)
@@ -534,7 +534,7 @@ class Stars(Card):
                 return []
             else:
                 return draw_card(state, player_id, replacement_effects=False)
-        return [Choice(player_index=self.owner, description="choose-binary",
+        return [Choice(player_index=self.owner, description="choose-binary", text_description="Choose how to draw a card",
                        actions=lambda _: Choose_Option(targets=["Draw from shared deck", "Draw normally"]), resolve=resolve)]
 
 

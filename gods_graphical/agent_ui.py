@@ -46,6 +46,7 @@ class Agent_UI(Agent):
         pass
 
     def choose_action(self, state: Game_State, choice: Choice) -> int:
+        self.ui_state.current_choice_text = choice.text_description
         action_type = choice.actions(state)
         options = action_options(action_type)
         if len(options) == 1 and choice.description != "main":
