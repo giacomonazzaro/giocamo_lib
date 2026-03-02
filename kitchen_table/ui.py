@@ -26,6 +26,27 @@ class Button:
         mx, my = get_mouse_x(), get_mouse_y()
         return point_in_rect(mx, my, self.x, self.y, self.width, self.height)
 
+def immediate_button(rectangle: Rectangle, label: str, color: Color=None, text_color: Color=None) -> bool:
+    """Create a rectangle and return whether it was clicked."""
+    if color is None:
+        color = color_from_tuple(tweak["button_color"])
+    if text_color is None:
+        text_color = color_from_tuple(tweak["button_text_color"])
+    draw_rectangle_rounded(rectangle, 0.3, 8, color)
+    tw = text_width(label, 20)
+    text_x = int(rectangle.x) + (rectangle.width - tw) // 2
+    text_y = int(rectangle.y) + (rectangle.height - 20) // 2
+    render_text(label, text_x, text_y, 20, text_color)
+    mx, my = get_mouse_x(), get_mouse_y()
+    return point_in_rect(mx, my, rectangle.x, rectangle.y, rectangle.width, rectangle.height)
+
+def immediate_buttons(size: tuple[int, int], buttons: list[tuple[tuple[int, int], str]], color: Color=None, text_color: Color=None) -> int | None:
+    for i, (pos, label) in enumerate(buttons):
+        rect = Rectangle(pos[0], pos[1], size[0], size[1])
+        if immediate_button(rect, label, color, text_color):
+            return i
+    return None
+
 @dataclass(slots=True)
 class UI_State:
     buttons: dict[str, Button] = field(default_factory=dict)
