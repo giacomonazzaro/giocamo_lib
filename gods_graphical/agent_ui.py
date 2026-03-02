@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from game.agents.agent import Agent
 from game.game import Choice, Choose_Card, Choose_Cards, Choose_Option, action_options
 from gods.models import Card_Type, Game_State, Card_Id
@@ -6,9 +8,8 @@ from kitchen_table.models import Table_State
 from kitchen_table.game_state import update_card_positions
 from kitchen_table.config import tweak
 from pyray import *
-import time
 
-from kitchen_table.ui import point_in_rect, Button, UI_State
+from kitchen_table.ui import immediate_button, point_in_rect, Button, UI_State
 
 
 def update_stacks(table_state: Table_State, gods_state: Game_State, bottom_player: int = 0):
@@ -39,66 +40,10 @@ class Agent_UI(Agent):
         self.table_state = table_state
         self.ui_state = ui_state
         self.bottom_player = bottom_player
-        # Persistent state for multi-step card picking in choose-cards.
-        # self._choose_cards_remaining = None
-        # self._choose_cards_picked = None
-        self.is_ui_ready = False
-        self.card_combinations = []
         self.card_multiselection = set()
 
     def message(self, msg: str):
         pass
-
-
-    def build_ui(self, state: Game_State, choice: Choice, action_type):
-        action_type_obj = action_type
-        options = action_options(action_type_obj)
-        count = len(options)
-        button_w = 140
-        button_h = 45
-        gap = 20
-        total_width = count * button_w + (count - 1) * gap
-        start_x = (get_screen_width() - total_width) // 2
-        button_y = get_screen_height() - 50
-
-        self.ui_state.highlighted_cards = {}
-        self.ui_state.buttons = {}
-        self.card_combinations = []
-        self.card_multiselection = set()
-
-        # Fixed centered position for standalone buttons (Pass, Done).
-        button_x = (get_screen_width() - button_w) // 2
-
-        if isinstance(action_type_obj, Choose_Option):
-            for i, label in enumerate(options):
-                x = start_x + i * (button_w + gap)
-                button = Button(x, button_y, button_w, button_h, text=label)
-                self.ui_state.buttons[i] = button
-        elif isinstance(action_type_obj, Choose_Card):
-            done_label = "Pass" if choice.description == "main" else "Done"
-            for i, card_id in enumerate(options):
-                if Card_Id.is_null(card_id):
-                    button = Button(button_x, button_y, button_w, button_h, text=done_label)
-                    self.ui_state.buttons[i] = button
-                else:
-                    self.ui_state.highlighted_cards[i] = state.get_card(card_id).id
-        elif isinstance(action_type_obj, Choose_Cards):
-            self.card_combinations = []
-            for combination in options:
-                self.card_combinations.append(set(combination))
-                if len(combination) == 0:
-                    button = Button(button_x, button_y, button_w, button_h, text="Done")
-                    self.ui_state.buttons[0] = button
-                for card_id in combination:
-                    self.ui_state.highlighted_cards[card_id] = state.get_card(card_id).id
-
-        self.is_ui_ready = True
-
-    def clear_ui(self):
-        self.is_ui_ready = False
-        self.ui_state.buttons = {}
-        self.ui_state.highlighted_cards = {}
-        self.table_state.is_drop_card_allowed = lambda sa,sb,c: False
 
     def choose_action(self, state: Game_State, choice: Choice) -> int:
         action_type = choice.actions(state)
@@ -106,65 +51,82 @@ class Agent_UI(Agent):
 
         play_stack = 4 if choice.player_index == self.bottom_player else 9
         hand_stack = 1 if choice.player_index == self.bottom_player else 6
-        if not self.is_ui_ready:
-            self.build_ui(state, choice, action_type)
-            def is_drop_card_allowed(source_stack: int, target_stack: int, card_id: int) -> bool:
-                if source_stack == target_stack:
-                    return True
-                return source_stack == hand_stack and target_stack == play_stack
-                
-            self.table_state.is_drop_card_allowed = is_drop_card_allowed
 
+        # Set drag-and-drop permission (safe to call every frame).
+        def is_drop_card_allowed(source_stack: int, target_stack: int, _card_id: int) -> bool:
+            if source_stack == target_stack:
+                return True
+            return source_stack == hand_stack and target_stack == play_stack
+        self.table_state.is_drop_card_allowed = is_drop_card_allowed
 
+        # Clear highlights - repopulated below for this frame.
+        self.ui_state.highlighted_cards = {}
+
+        # Handle dropped card (drag-and-drop to play from hand).
         dropped_card = self.table_state.poll_dropped_card()
         if dropped_card:
             original_stack, target_stack, dropped_card_id = dropped_card
-
             if choice.description == "main" and original_stack == hand_stack and target_stack == play_stack:
-                # options is sorted by stable card_index (= Card.id), so find by matching card_index.
                 action_index = next(i for i, cid in enumerate(options) if not Card_Id.is_null(cid) and cid.card_index == dropped_card_id)
-                self.clear_ui()
                 return action_index
 
+        # Button layout.
+        count = len(options)
+        gap = 20
+        total_width = count * 140 + (count - 1) * gap
+        start_x = (get_screen_width() - total_width) // 2
+        button_y = get_screen_height() - 50
+        rect = Rectangle(start_x, button_y, 140, 40)
 
-        # return -1
-        selected = -1
-        if not is_mouse_button_pressed(MouseButton.MOUSE_BUTTON_LEFT):
-            return -1
-        
+        mouse_clicked = is_mouse_button_pressed(MouseButton.MOUSE_BUTTON_LEFT)
 
-        if isinstance(action_type, Choose_Cards):
-            for gods_card_id, card_index in self.ui_state.highlighted_cards.items():
-                card = self.table_state.cards[card_index]
-                if card_pressed(card):
-                    self.card_multiselection.add(gods_card_id)
-                    del self.ui_state.highlighted_cards[gods_card_id]
-                    break
-            
-            if self.card_multiselection in self.card_combinations:
-                m = max([len(c) for c in self.card_combinations])
+        if isinstance(action_type, Choose_Option):
+            for i, label in enumerate(options):
+                rect.x = start_x + i * (rect.width + gap)
+                if immediate_button(rect, label):
+                    return i
+
+        elif isinstance(action_type, Choose_Card):
+            done_label = "Pass" if choice.description == "main" else "Done"
+            for i, card_id in enumerate(options):
+                if Card_Id.is_null(card_id):
+                    rect.x = start_x + i * (rect.width + gap)
+                    if immediate_button(rect, done_label):
+                        return i
+                else:
+                    kt_card_id = state.get_card(card_id).id
+                    self.ui_state.highlighted_cards[i] = kt_card_id
+                    if mouse_clicked and choice.description != "main":
+                        card = self.table_state.cards[kt_card_id]
+                        if card_pressed(card):
+                            return i
+
+        elif isinstance(action_type, Choose_Cards):
+            card_combinations = [set(combination) for combination in options]
+            # Collect all unique card ids across all combinations.
+            all_card_ids = {card_id for combination in options for card_id in combination}
+            for card_id in all_card_ids:
+                kt_card_id = state.get_card(card_id).id
+                if card_id not in self.card_multiselection:
+                    self.ui_state.highlighted_cards[card_id] = kt_card_id
+                    if mouse_clicked:
+                        card = self.table_state.cards[kt_card_id]
+                        if card_pressed(card):
+                            self.card_multiselection.add(card_id)
+                            mouse_clicked = False  # Consume the click.
+
+            if self.card_multiselection in card_combinations:
+                m = max(len(c) for c in card_combinations)
                 if m == len(self.card_multiselection):
-                    selected = self.card_combinations.index(self.card_multiselection)
-                    self.clear_ui()
+                    # Multiselection is maximal - auto-confirm.
+                    i = card_combinations.index(self.card_multiselection)
+                    self.card_multiselection = set()
+                    return i
+                # Show "Done" button to confirm a non-maximal valid selection.
+                rect.x = (get_screen_width() - rect.width) // 2
+                if immediate_button(rect, "Done"):
+                    i = card_combinations.index(self.card_multiselection)
+                    self.card_multiselection = set()
+                    return i
 
-                if len(self.ui_state.buttons) and self.ui_state.buttons[0].pressed():
-                    i = self.card_combinations.index(self.card_multiselection)
-                    selected = i
-                    self.clear_ui()
-
-        for i, button in self.ui_state.buttons.items():
-            if button.pressed():
-                selected = i
-        
-        if choice.description != "main":
-            for i, card_id in self.ui_state.highlighted_cards.items():
-                card = self.table_state.cards[card_id]
-                if card_pressed(card):
-                    selected = i
-
-        print("Selected", selected)
-        if selected != -1:
-            self.is_ui_ready = False
-            self.ui_state.buttons = {}
-            self.ui_state.highlighted_cards = {}
-        return selected
+        return -1
