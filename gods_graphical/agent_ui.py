@@ -48,6 +48,8 @@ class Agent_UI(Agent):
     def choose_action(self, state: Game_State, choice: Choice) -> int:
         action_type = choice.actions(state)
         options = action_options(action_type)
+        if len(options) == 1 and choice.description != "main":
+            return 0
 
         play_stack = 4 if choice.player_index == self.bottom_player else 9
         hand_stack = 1 if choice.player_index == self.bottom_player else 6
@@ -99,6 +101,8 @@ class Agent_UI(Agent):
                     if mouse_clicked and choice.description != "main":
                         card = self.table_state.cards[kt_card_id]
                         if card_pressed(card):
+                            # Clear state if next player is not Agent_UI, to avoid stale highlights.
+                            self.ui_state.highlighted_cards = {}
                             return i
 
         elif isinstance(action_type, Choose_Cards):
@@ -121,6 +125,8 @@ class Agent_UI(Agent):
                     # Multiselection is maximal - auto-confirm.
                     i = card_combinations.index(self.card_multiselection)
                     self.card_multiselection = set()
+                    # Clear state if next player is not Agent_UI, to avoid stale highlights.
+                    self.ui_state.highlighted_cards = {}
                     return i
                 # Show "Done" button to confirm a non-maximal valid selection.
                 rect.x = (get_screen_width() - rect.width) // 2
