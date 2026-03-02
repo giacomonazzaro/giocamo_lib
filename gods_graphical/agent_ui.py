@@ -95,6 +95,7 @@ class Agent_UI(Agent):
                 if Card_Id.is_null(card_id):
                     rect.x = start_x + i * (rect.width + gap)
                     if immediate_button(rect, done_label):
+                        self.ui_state.highlighted_cards = {}
                         return i
                 else:
                     kt_card_id = state.get_card(card_id).id
@@ -134,6 +135,7 @@ class Agent_UI(Agent):
                 if immediate_button(rect, "Done"):
                     i = card_combinations.index(self.card_multiselection)
                     self.card_multiselection = set()
+                    self.ui_state.highlighted_cards = {}
                     return i
 
         return -1
