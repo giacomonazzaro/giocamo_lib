@@ -73,6 +73,8 @@ def play_card(state: Game_State, card_id: Card_Id) -> list[Choice]:
     elif card.card_type == Card_Type.EVENT:
         player.discard.append(card.id)
 
+    card.counters = 0
+    
     for w in wonders_by_priority(state):
         w.on_play(state, card)
 
