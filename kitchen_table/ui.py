@@ -37,6 +37,8 @@ def immediate_button(rectangle: Rectangle, label: str, color: Color=None, text_c
     text_x = int(rectangle.x) + (rectangle.width - tw) // 2
     text_y = int(rectangle.y) + (rectangle.height - 20) // 2
     render_text(label, text_x, text_y, 20, text_color)
+    if not is_mouse_button_pressed(MouseButton.MOUSE_BUTTON_LEFT):
+        return False
     mx, my = get_mouse_x(), get_mouse_y()
     return point_in_rect(mx, my, rectangle.x, rectangle.y, rectangle.width, rectangle.height)
 

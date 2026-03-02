@@ -138,15 +138,16 @@ def play(gods_state: Game_State, table_state: kt.Table_State, ui_state: UI_State
         # if not agent:
         update_input(table_state)
 
-        if agent:
-            current_choice = game_frame(gods_state, agent, current_choice)
-            update_stacks(table_state, gods_state, bottom_player=player_index)
-
         pyray.begin_drawing()
+
         # 1.0 when it's the opponent's turn, 0.0 when it's ours.
         turn = 1.0 if gods_state.current_player != player_index else 0.0
         draw_background(turn)
         draw_table(table_state)
+        
+        if agent:
+            current_choice = game_frame(gods_state, agent, current_choice)
+            update_stacks(table_state, gods_state, bottom_player=player_index)
         pyray.end_drawing()
 
     # Game over screen
