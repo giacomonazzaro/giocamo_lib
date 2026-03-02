@@ -1,5 +1,5 @@
 from __future__ import annotations
-from game.game import Game, Choice
+from game.game import Game, Choice, action_options
 from game.agents.agent import Agent
 from game.agents.minimax_search import minimax_search
 import time
@@ -17,7 +17,7 @@ class Agent_Minimax(Agent):
         return 0.0
 
     def choose_action(self, state: Game, choice: Choice) -> int:
-        actions = choice.actions(state)
+        actions = action_options(choice.actions(state))
 
         print("started:", choice.description)
         start_time = time.time()

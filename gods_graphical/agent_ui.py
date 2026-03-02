@@ -1,5 +1,5 @@
 from game.agents.agent import Agent
-from game.game import Choice
+from game.game import Choice, Choose_Card, Choose_Cards, Choose_Option, action_options
 from gods.models import Card_Type, Game_State, Card_Id
 from kitchen_table.input import card_pressed
 from kitchen_table.models import Table_State
@@ -128,9 +128,10 @@ class Agent_UI(Agent):
 
         return -1
 
-    def build_ui(self, state: Game_State, choice: Choice, actions: list):
-        # Display options based on action type
-        count = len(actions)
+    def build_ui(self, state: Game_State, choice: Choice, action_type):
+        action_type_obj = action_type
+        options = action_options(action_type_obj)
+        count = len(options)
         button_w = 140
         button_h = 45
         gap = 20
@@ -146,43 +147,28 @@ class Agent_UI(Agent):
         # Fixed centered position for standalone buttons (Pass, Done).
         button_x = (get_screen_width() - button_w) // 2
 
-        if choice.description == "main":
-            # Same as "choose-card" but with "Pass" button for the null entry.
-            for i, card_id in enumerate(actions):
-                if Card_Id.is_null(card_id):
-                    button = Button(button_x, button_y, button_w, button_h, text="Pass")
-                    self.ui_state.buttons[i] = button
-                else:
-                    self.ui_state.highlighted_cards[i] = state.get_card(card_id).id
-
-        elif choice.description == "choose-binary":
-            labels = ["Yes", "No"]
-            for i in range(2):
+        if isinstance(action_type_obj, Choose_Option):
+            for i, label in enumerate(options):
                 x = start_x + i * (button_w + gap)
-                button = Button(x, button_y, button_w, button_h, text=labels[i])
+                button = Button(x, button_y, button_w, button_h, text=label)
                 self.ui_state.buttons[i] = button
-        elif choice.description == "choose-card":
-            for i, card_id in enumerate(actions):
+        elif isinstance(action_type_obj, Choose_Card):
+            done_label = "Pass" if choice.description == "main" else "Done"
+            for i, card_id in enumerate(options):
                 if Card_Id.is_null(card_id):
-                    button = Button(button_x, button_y, button_w, button_h, text="Done")
+                    button = Button(button_x, button_y, button_w, button_h, text=done_label)
                     self.ui_state.buttons[i] = button
                 else:
                     self.ui_state.highlighted_cards[i] = state.get_card(card_id).id
-        elif choice.description == "choose-cards":
+        elif isinstance(action_type_obj, Choose_Cards):
             self.card_combinations = []
-            for combination in actions:
+            for combination in options:
                 self.card_combinations.append(set(combination))
                 if len(combination) == 0:
-                    x = start_x
-                    button = Button(x, button_y, button_w, button_h, text="Done")
+                    button = Button(button_x, button_y, button_w, button_h, text="Done")
                     self.ui_state.buttons[0] = button
                 for card_id in combination:
                     self.ui_state.highlighted_cards[card_id] = state.get_card(card_id).id
-
-            # print(self.card_multiselection)
-            for c in self.card_combinations:
-                print(len(c), c)
-            print(len(self.card_combinations))
 
         self.is_ui_ready = True
 
@@ -193,12 +179,13 @@ class Agent_UI(Agent):
         self.table_state.is_drop_card_allowed = lambda sa,sb,c: False
 
     def choose_action(self, state: Game_State, choice: Choice) -> int:
-        actions = choice.actions(state)
+        action_type = choice.actions(state)
+        options = action_options(action_type)
 
         play_stack = 4 if choice.player_index == self.bottom_player else 9
         hand_stack = 1 if choice.player_index == self.bottom_player else 6
         if not self.is_ui_ready:
-            self.build_ui(state, choice, actions)
+            self.build_ui(state, choice, action_type)
             def is_drop_card_allowed(source_stack: int, target_stack: int, card_id: int) -> bool:
                 if source_stack == target_stack:
                     return True
@@ -212,8 +199,8 @@ class Agent_UI(Agent):
             original_stack, target_stack, dropped_card_id = dropped_card
 
             if choice.description == "main" and original_stack == hand_stack and target_stack == play_stack:
-                # actions is sorted by stable card_index (= Card.id), so find by matching card_index.
-                action_index = next(i for i, cid in enumerate(actions) if not Card_Id.is_null(cid) and cid.card_index == dropped_card_id)
+                # options is sorted by stable card_index (= Card.id), so find by matching card_index.
+                action_index = next(i for i, cid in enumerate(options) if not Card_Id.is_null(cid) and cid.card_index == dropped_card_id)
                 self.clear_ui()
                 return action_index
 
@@ -224,7 +211,7 @@ class Agent_UI(Agent):
             return -1
         
 
-        if choice.description == "choose-cards":
+        if isinstance(action_type, Choose_Cards):
             for gods_card_id, card_index in self.ui_state.highlighted_cards.items():
                 card = self.table_state.cards[card_index]
                 if card_pressed(card):

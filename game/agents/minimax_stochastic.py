@@ -1,5 +1,5 @@
 from __future__ import annotations
-from game.game import Game, Choice
+from game.game import Game, Choice, action_options
 from game.agents.agent import Agent
 from game.agents.minimax_search import minimax_search
 import copy
@@ -54,7 +54,7 @@ class Agent_Minimax_Stochastic(Agent):
         return selected
 
     def choose_action(self, state: Game, choice: Choice) -> int:
-        actions = choice.actions(state)
+        actions = action_options(choice.actions(state))
         """Stochastic minimax with root sampling.
 
         Runs multiple samples to handle hidden information:

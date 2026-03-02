@@ -6,6 +6,6 @@ To run the game simply run:
 ~~~bash
 sh run.sh
 ~~~
-This will create a virual environment, install the required libraries there, and run the program.
+This will create a virual environment, install the required libraries locally, and run the program.
 
 ![screenshot](./screenshot.png)

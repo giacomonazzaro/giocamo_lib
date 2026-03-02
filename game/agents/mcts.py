@@ -1,7 +1,7 @@
 from __future__ import annotations
 from dataclasses import dataclass, field
 from gods.models import Game_State
-from game.game import Choice, game_loop
+from game.game import Choice, game_loop, action_options
 from game.agents.randomized import Agent_Random
 from gods.gameplay import compute_player_score
 import copy
@@ -56,7 +56,7 @@ class Agent_MCTS:
 
     def choose_action(self, state: Game_State, choice: Choice) -> int:
         self.player_index = choice.player_index
-        actions = choice.actions(state)
+        actions = action_options(choice.actions(state))
         selected = self.mcts_search(state, choice, actions)
         return selected
 
@@ -100,8 +100,7 @@ class Agent_MCTS:
                 # initialize child's untried actions for the next choice
                 sim_choice = sim_state.next_choice()
                 if sim_choice is not None:
-                    sim_actions = sim_choice.actions(sim_state)
-                    node.untried_actions = list(range(len(sim_actions)))
+                    node.untried_actions = list(range(len(action_options(sim_choice.actions(sim_state)))))
 
             # simulation: play randomly until game ends
             result = self.simulate(sim_state)

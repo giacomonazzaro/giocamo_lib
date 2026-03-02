@@ -2,7 +2,7 @@ from __future__ import annotations
 import random
 from typing import Optional
 from gods.models import Card, Card_Id, Card_Type, Game_State, effective_power
-from game.game import Choice
+from game.game import Choice, Choose_Card
 from game.agents.minimax_stochastic import Agent_Minimax_Stochastic
 
 def draw_card(game: Game_State, player_id: int, replacement_effects=True) -> list[Choice]:
@@ -150,7 +150,7 @@ def make_claim_choice(state: Game_State) -> Optional[Choice]:
         return []
 
     return Choice(player_index=player_index, description="choose-card",
-                  actions=actions, resolve=resolve)
+                  actions=lambda state: Choose_Card(targets=actions(state)), resolve=resolve)
 
 
 def compute_player_score(game: Game_State, player_index: int) -> int:
@@ -199,7 +199,7 @@ def make_main_choice(state: Game_State) -> Choice:
             return result
 
     return Choice(player_index=player_index, description="main",
-                  actions=actions, resolve=resolve)
+                  actions=lambda state: Choose_Card(targets=actions(state)), resolve=resolve)
 
 
 def detailed_str(card: Card) -> str:

@@ -1,6 +1,6 @@
 from __future__ import annotations
 from typing import Callable
-from game.game import Game, Choice, resolve_choice
+from game.game import Game, Choice, resolve_choice, action_options
 import copy
 import time
 
@@ -79,7 +79,7 @@ def minimax(
     if choice is None:
         return evaluate(state, player_index)
 
-    actions = choice.actions(state)
+    actions = action_options(choice.actions(state))
     maximizing = choice.player_index == player_index
     next_depth = depth - 1
     if next_depth < 0:
