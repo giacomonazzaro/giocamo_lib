@@ -6,6 +6,7 @@ from pyray import *
 
 from kitchen_table.config import tweak
 from kitchen_table.rendering import draw_table, draw_background, color_from_tuple, render_text, text_width
+from kitchen_table.ui import place_inside, place_next
 import kitchen_table.models as kt
 
 IMAGES_DIR = os.path.join(os.path.dirname(__file__), "..", "gods", "cards", "card-images")
@@ -39,30 +40,33 @@ def get_table_layout(bottom_player: int = 0) -> dict[str, Zone_Layout]:
     spread_wonders = 160
     spread_pile = -3
 
-    # Vertical: bottom player from the bottom edge
+    window = Rectangle(0, 0, W, H)
     hand_width = w * 5.5 * W / 1600
-    hand_x = W // 2 - hand_width // 2 + 170
-    bottom_hand_y = H - h - margin
-    bottom_deck_y = bottom_hand_y
-    bottom_wonders_y = bottom_hand_y - h - margin
 
-    # Vertical: top player mirrored and pushed partially offscreen
+    # Vertical: bottom player anchored to the bottom of the window.
+    _, bottom_hand_y    = place_inside(window, w, h, y="bottom", padding=margin)
+    _, bottom_wonders_y = place_inside(window, w, h, y="bottom", padding=2 * margin + h)
+    bottom_deck_y = bottom_hand_y
+
+    # Vertical: top player mirrored and pushed partially offscreen.
     opponent_shift = int(h * 0.65)
     top_hand_y = margin - opponent_shift
     top_deck_y = top_hand_y
     top_wonders_y = H - bottom_wonders_y - h - opponent_shift
 
-    # Horizontal: piles on the left, peoples then wonders on the right.
-    discard_x = margin
-    deck_x = margin + w + margin
-    right_start = margin # + w + margin * 2
+    # Horizontal: discard flush left, deck placed next to it.
+    discard_x, _ = place_inside(window, w, h, x="left", padding=margin)
+    deck_x        = place_next(Rectangle(discard_x, 0, w, h), w, h, x="right")[0] + margin
+    hand_x        = W // 2 - hand_width // 2 + 170
+
     # Peoples area sits to the left of wonders; wide enough for up to 2 cards at full spread.
     peoples_width = 2 * w + spread_wonders
     wonders_start = hand_x
     wonders_width = hand_width
 
+    # Shared deck is off-screen to the left, vertically centered.
+    _, shared_deck_y = place_inside(window, w, h, y="center")
     shared_deck_x = -w
-    shared_deck_y = H // 2 - h // 2
 
     bp = f"p{bottom_player}"
     tp = f"p{1 - bottom_player}"
@@ -72,12 +76,12 @@ def get_table_layout(bottom_player: int = 0) -> dict[str, Zone_Layout]:
         f"{bp}_deck":    Z(deck_x,        bottom_deck_y,    w,                        0,              spread_pile, False),
         f"{bp}_hand":    Z(hand_x,   bottom_hand_y,         hand_width, spread_hand,    0,           True),
         f"{bp}_discard": Z(discard_x,     bottom_deck_y,    w,                        0,              spread_pile, True),
-        f"{bp}_peoples": Z(right_start,   bottom_wonders_y, peoples_width,            spread_wonders, 0,           True),
+        f"{bp}_peoples": Z(discard_x,     bottom_wonders_y, peoples_width,            spread_wonders, 0,           True),
         f"{bp}_wonders": Z(wonders_start, bottom_wonders_y, wonders_width,            spread_wonders, 0,           True),
         f"{tp}_deck":    Z(deck_x,        top_deck_y,       w,                        0,              spread_pile, False),
         f"{tp}_hand":    Z(hand_x,   top_hand_y,            hand_width, spread_hand,    0,           False),
         f"{tp}_discard": Z(discard_x,     top_deck_y,       w,                        0,              spread_pile, True),
-        f"{tp}_peoples": Z(right_start,   top_wonders_y,    peoples_width,            spread_wonders, 0,           True),
+        f"{tp}_peoples": Z(discard_x,     top_wonders_y,    peoples_width,            spread_wonders, 0,           True),
         f"{tp}_wonders": Z(wonders_start, top_wonders_y,    wonders_width,            spread_wonders, 0,           True),
         "shared_deck":   Z(shared_deck_x, shared_deck_y,    w,                        0,              0,           True),
     }
