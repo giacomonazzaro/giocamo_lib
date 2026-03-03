@@ -97,13 +97,20 @@ class Agent_UI(Agent):
                 action_index = next(i for i, cid in enumerate(options) if not Card_Id.is_null(cid) and cid.card_index == dropped_card_id)
                 return action_index
 
-        # Button layout.
+        # Button layout: anchor just above the bottom player's name/score block.
         count = len(options) - sum(1 for cid in options if isinstance(cid, Card_Id) and not Card_Id.is_null(cid))
         gap = 20
-        total_width = count * 140 + (count) * gap
+        button_height = 40
+        button_width = 140
+        total_width = count * button_width + (count) * gap
         start_x = (get_screen_width() - total_width)
-        button_y = get_screen_height() // 2 + 20
-        rect = Rectangle(start_x, button_y, 140, 40)
+        H = get_screen_height()
+        h = tweak["card_height"]
+        margin = 20
+        # hud_y_bottom = H - 2 * h - 2 * margin + h // 2
+        button_x, button_y = self.ui_state.left_middle(total_width + margin, button_height)
+        # button_y = hud_y_bottom - 40 - 10  # 40px button height + 10px gap above the name label.
+        rect = Rectangle(button_x, button_y, button_width, button_height)
 
         mouse_clicked = is_mouse_button_pressed(MouseButton.MOUSE_BUTTON_LEFT)
 

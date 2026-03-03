@@ -11,7 +11,7 @@ import kitchen_table.models as kt
 IMAGES_DIR = os.path.join(os.path.dirname(__file__), "..", "gods", "cards", "card-images")
 
 
-@dataclass
+@dataclass(slots=True)
 class Zone_Layout:
     x: int
     y: int
@@ -122,17 +122,17 @@ def draw_card_power_badge(power: str, destroyed: bool):
 
 # --- Choice description rendering ---
 
-def draw_choice_description(text: str):
-    """Draw the current choice description on the right side of the screen."""
-    if not text:
-        return
-    W = tweak["window_width"]
-    H = tweak["window_height"]
-    font_size = 22
-    tw = text_width(text, font_size)
-    x = W - tw - 20
-    y = H // 2 - font_size // 2
-    render_text(text, x, y, font_size, Color(200, 200, 200, 200))
+# def draw_choice_description(text: str):
+#     """Draw the current choice description on the right side of the screen."""
+#     if not text:
+#         return
+#     W = tweak["window_width"]
+#     H = tweak["window_height"]
+#     font_size = 22
+#     tw = text_width(text, font_size)
+#     x = W - tw - 20
+#     y = H // 2 - font_size // 2
+#     render_text(text, x, y, font_size, Color(200, 200, 200, 200))
 
 
 # --- HUD rendering ---
@@ -141,21 +141,19 @@ def draw_player_hud(name: str, score: int, deck_count: int, is_current: bool, hu
     w = tweak["card_width"]
     margin = 20
 
-    # Current player indicator bar
+    # Current player indicator bar.
     if is_current:
-        indicator_color = color_from_tuple(tweak["current_player_color"])
         draw_rectangle_rounded(
             Rectangle(tweak["window_width"] - 10, hud_y + 28, 6, 50), 0.5, 4, (255, 255, 255, 255)
         )
 
-    # Player name
-    # name_color = color_from_tuple(tweak["current_player_color"]) if is_current else Color(255, 255, 255, 255)
-    # render_text(name, 25, hud_y, 24, name_color)
+    # Player name above score.
+    render_text(name, tweak["window_width"] - 200, hud_y, 18, Color(160, 160, 160, 180))
 
-    # Score
-    render_text(f"Points: {score}", tweak["window_width"] - 200, hud_y + 28, 40, Color(200, 200, 200, 255))
+    # Score.
+    render_text(f"Points: {score}", tweak["window_width"] - 200, hud_y + 22, 40, Color(200, 200, 200, 255))
 
-    # Deck count near deck stack
+    # Deck count near deck stack.
     deck_x = margin + w + margin
     render_text(
         str(deck_count),

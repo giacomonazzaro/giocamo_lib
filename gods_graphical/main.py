@@ -13,14 +13,13 @@ from game.agents.randomized import Agent_Random
 import kitchen_table.models as kt
 from game.agents.duel import Agent_Duel
 from game.agents.process import Agent_Process
-from game.game import game_frame, game_loop, resolve_choice
+from game.game import Choice, game_frame, game_loop, resolve_choice
 from gods.gameplay import compute_player_score, Agent_Minimax_Stochastic_Gods
 from gods.models import Game_State, effective_power
 from gods.setup import quick_setup
 from gods_graphical.agent_ui import Agent_UI, update_stacks
 from gods_graphical.ui import (
     draw_card_power_badge,
-    draw_choice_description,
     draw_game_over_screen,
     draw_player_hud,
     get_image_path,
@@ -30,7 +29,7 @@ from gods_online.agent_remote import Agent_Local_Online, Agent_Remote
 from kitchen_table.config import tweak
 from kitchen_table.game_state import update_card_positions
 from kitchen_table.input import find_card_at, update_input
-from kitchen_table.rendering import color_from_tuple, draw_background, draw_table
+from kitchen_table.rendering import color_from_tuple, draw_background, draw_table, render_text, text_width
 from gods_online.setup import peer_to_peer, setup_online_game
 
 app = typer.Typer()
@@ -93,7 +92,7 @@ def init_table_state(gods_state: Game_State, ui_state: UI_State, bottom_player: 
     return table_state
 
 
-def draw_hud(gods_state: Game_State, table_state: kt.Table_State, ui_state: UI_State, bottom_player: int = 0):
+def draw_hud(gods_state: Game_State, choice: Choice, ui_state: UI_State, bottom_player: int = 0):
     H = tweak["window_height"]
     h = tweak["card_height"]
     margin = 20
@@ -107,15 +106,24 @@ def draw_hud(gods_state: Game_State, table_state: kt.Table_State, ui_state: UI_S
         is_current = i == gods_state.current_player
         hud_y = bottom_wonders_y + h // 2
         if i != bottom_player: hud_y = top_wonders_y + h // 2
-        draw_player_hud(player.name, score, len(player.deck), is_current, hud_y)
+        name = "You" if i == bottom_player else "Opponent"
+        draw_player_hud(name, score, len(player.deck), is_current, hud_y)
 
     ui_state.draw_buttons()
-    draw_choice_description(ui_state.current_choice_text)
+    text = choice.text_description if choice else ""
+    if text:
+        font_size = 22
+        gap = 20
+        tw = text_width(text, font_size)
+        x, y = ui_state.right_middle(tw + gap, font_size)
+        y -= 50 
+        render_text(text, x, y, font_size, pyray.Color(200, 200, 200, 200))
+
+    # draw_choice_description(ui_state.current_choice_text)
 
 from kitchen_table.ui import UI_State
 
 def play(gods_state: Game_State, table_state: kt.Table_State, ui_state: UI_State, agent: Agent | None, player_index: int):
-    table_state.draw_callback = lambda table: draw_hud(gods_state, table_state, ui_state, bottom_player=player_index)
 
     # Window: re-use an existing window (e.g. opened by the menu) if one is ready.
     if not pyray.is_window_ready():
@@ -124,6 +132,8 @@ def play(gods_state: Game_State, table_state: kt.Table_State, ui_state: UI_State
         pyray.set_target_fps(tweak["target_fps"])
 
     current_choice = None
+    table_state.draw_callback = lambda table: draw_hud(gods_state, current_choice, ui_state, bottom_player=player_index)
+    
     while not pyray.window_should_close():
         if gods_state.game_over:
             break
@@ -149,7 +159,7 @@ def play(gods_state: Game_State, table_state: kt.Table_State, ui_state: UI_State
         if agent:
             current_choice = game_frame(gods_state, agent, current_choice)
             update_stacks(table_state, gods_state, bottom_player=player_index)
-            ui_state.current_choice_text = current_choice.text_description if current_choice else ""
+            current_choice.text_description if current_choice else ""
         pyray.end_drawing()
 
     # Game over screen

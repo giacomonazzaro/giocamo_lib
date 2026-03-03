@@ -63,7 +63,48 @@ def immediate_buttons(size: tuple[int, int], buttons: list[tuple[tuple[int, int]
 class UI_State:
     buttons: dict[str, Button] = field(default_factory=dict)
     highlighted_cards: dict[str, int] = field(default_factory=dict)
-    current_choice_text: str = ""
+    window_size: tuple[int, int] = (tweak["window_width"], tweak["window_height"])
+
+    
+    def left_top(self, width: int, height: int) -> tuple[int, int]:
+        """Return the top-left position for placing a rectangle of given size."""
+        return (0, 0)
+
+    def left_middle(self, width: int, height: int) -> tuple[int, int]:
+        """Return the center-left position for placing a rectangle of given size."""
+        return (0, self.window_size[1] // 2 - height // 2)
+
+    def left_bottom(self, width: int, height: int) -> tuple[int, int]:
+        """Return the bottom-left position for placing a rectangle of given size."""
+        return (0, self.window_size[1] - height - 0)
+
+    def center_top(self, width: int, height: int) -> tuple[int, int]:
+        """Return the top-center position for placing a rectangle of given size."""
+        return (self.window_size[0] // 2 - width // 2, 0)
+
+    def center_middle(self, width: int, height: int) -> tuple[int, int]:
+        """Return the center position for placing a rectangle of given size."""
+        return (self.window_size[0] // 2 - width // 2, self.window_size[1] // 2 - height // 2)
+
+    def center_bottom(self, width: int, height: int) -> tuple[int, int]:
+        """Return the bottom-center position for placing a rectangle of given size."""
+        return (self.window_size[0] // 2 - width // 2, self.window_size[1] - height - 0)
+
+    def right_top(self, width: int, height: int) -> tuple[int, int]:
+        """Return the top-right position for placing a rectangle of given size."""
+        return (self.window_size[0] - width - 0, 0)
+
+    def right_middle(self, width: int, height: int) -> tuple[int, int]:
+        """Return the center-right position for placing a rectangle of given size."""
+        return (self.window_size[0] - width - 0, self.window_size[1] // 2 - height // 2)
+
+    def right_bottom(self, width: int, height: int) -> tuple[int, int]:
+        """Return the bottom-right position for placing a rectangle of given size."""
+        return (self.window_size[0] - width - 0, self.window_size[1] - height - 0)
+
+    def above(self, rect: Rectangle, width: int, height: int) -> tuple[int, int]:
+        """Return the position above a given rectangle for placing a new rectangle of given size."""
+        return (rect.x + rect.width // 2 - width // 2, rect.y - height)
 
     def clicked(self, mouse_x: float, mouse_y: float) -> str | None:
         """Return the name of the clicked button, or None."""

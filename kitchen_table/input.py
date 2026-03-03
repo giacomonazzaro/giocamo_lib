@@ -100,7 +100,6 @@ def handle_mouse_release(state: Table_State) -> None:
             state.stacks[drag.original_stack].cards.append(drag.card_id)
 
     state.dropped_card = (drag.original_stack, drag.current_stack, drag.card_id)
-    print(state.dropped_card)
 
     original_stack = drag.original_stack
     current_stack = drag.current_stack
@@ -178,6 +177,8 @@ def shuffle_stack(state: Table_State, stack_id: int):
 
 def update_input(state: Table_State) -> None:
     """Main input processing - call each frame."""
+    state.dropped_card = None
+
     # Handle mouse
     if is_mouse_button_pressed(MouseButton.MOUSE_BUTTON_LEFT):
         handle_mouse_press(state)
