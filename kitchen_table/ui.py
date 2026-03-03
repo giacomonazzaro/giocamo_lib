@@ -94,9 +94,8 @@ def immediate_button(rectangle: Rectangle, label: str, color: Color=None, text_c
     if text_color is None:
         text_color = color_from_tuple(tweak["button_text_color"])
     draw_rectangle_rounded(r, 0.3, 8, color)
-    text_x = int(r.x) + (r.width - tw) // 2
-    text_y = int(r.y) + (r.height - 20) // 2
-    render_text(label, text_x, text_y, 20, text_color)
+    tr = place_inside(r, tw, 20, x="center", y="center")
+    render_text(label, tr.x, tr.y, 20, text_color)
     if not is_mouse_button_pressed(MouseButton.MOUSE_BUTTON_LEFT):
         return False
     return hovered
@@ -136,10 +135,8 @@ class UI_State:
             hovered = point_in_rect(mx, my, button.x, button.y, button.width, button.height)
             color_key = "button_hover_color" if hovered else "button_color"
             color = color_from_tuple(tweak[color_key])
-            draw_rectangle_rounded(
-                Rectangle(button.x, button.y, button.width, button.height), 0.3, 8, color
-            )
+            br = Rectangle(button.x, button.y, button.width, button.height)
+            draw_rectangle_rounded(br, 0.3, 8, color)
             tw = text_width(button.text, 20)
-            text_x = button.x + (button.width - tw) // 2
-            text_y = button.y + (button.height - 20) // 2
-            render_text(button.text, text_x, text_y, 20, color_from_tuple(tweak["button_text_color"]))
+            tr = place_inside(br, tw, 20, x="center", y="center")
+            render_text(button.text, tr.x, tr.y, 20, color_from_tuple(tweak["button_text_color"]))

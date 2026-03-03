@@ -9,7 +9,7 @@ from kitchen_table.game_state import update_card_positions
 from kitchen_table.config import tweak
 from pyray import *
 
-from kitchen_table.ui import immediate_button, point_in_rect, Button, UI_State
+from kitchen_table.ui import immediate_button, UI_State
 
 
 def update_stacks(table_state: Table_State, gods_state: Game_State, bottom_player: int = 0):
@@ -104,7 +104,7 @@ class Agent_UI(Agent):
         button_width = 140
         all_buttons_width = count * button_width + (count) * gap
         start_x = (get_screen_width() - all_buttons_width)
-        all_buttons = self.ui_state.place(all_buttons_width, button_height, x="left", y="center", padding=gap)
+        all_buttons = self.ui_state.place(all_buttons_width, button_height, x="right", y="center", padding=gap)
         button = Rectangle(all_buttons.x, all_buttons.y, button_width, button_height)
 
         mouse_clicked = is_mouse_button_pressed(MouseButton.MOUSE_BUTTON_LEFT)
@@ -157,7 +157,7 @@ class Agent_UI(Agent):
                     self.ui_state.highlighted_cards = {}
                     return i
                 # Show "Done" button to confirm a non-maximal valid selection.
-                button.x = (get_screen_width() - button.width) // 2
+                # button.x = self.ui_state.place(button.width, button.height, x="right", y="center").x
                 if immediate_button(button, "Done"):
                     i = card_combinations.index(self.card_multiselection)
                     self.card_multiselection = set()

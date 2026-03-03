@@ -30,6 +30,7 @@ from kitchen_table.config import tweak
 from kitchen_table.game_state import update_card_positions
 from kitchen_table.input import find_card_at, update_input
 from kitchen_table.rendering import color_from_tuple, draw_background, draw_table, render_text, text_width
+from kitchen_table.ui import place_inside
 from gods_online.setup import peer_to_peer, setup_online_game
 
 app = typer.Typer()
@@ -96,7 +97,8 @@ def draw_hud(gods_state: Game_State, choice: Choice, ui_state: UI_State, bottom_
     H = tweak["window_height"]
     h = tweak["card_height"]
     margin = 20
-    bottom_wonders_y = H - h - margin - h - margin
+    window = pyray.Rectangle(0, 0, tweak["window_width"], H)
+    bottom_wonders_y = place_inside(window, 0, h, x="left", y="bottom", padding=2 * margin + h).y
     opponent_shift = int(h * 0.65)
     top_wonders_y = H - bottom_wonders_y - h - opponent_shift
 

@@ -56,23 +56,33 @@ def get_table_layout(bottom_player: int = 0) -> dict[str, Zone_Layout]:
     # Shared deck: vertically centered, off-screen to the left.
     shared_deck = place_inside(window, w, h, x="left", y="center")
     shared_deck.x = -w
+    
+    # Peoples
+    bp_peoples = Rectangle(discard.x,        bottom_wonders.y, peoples_width, h)
+
+    # Pre-build top-player rects by reusing bottom positions with mirrored y.
+    tp_deck    = Rectangle(bottom_deck.x,    top_y,         w,             h)
+    tp_hand    = Rectangle(bottom_hand.x,    top_y,         hand_width,    h)
+    tp_discard = Rectangle(discard.x,        top_y,         w,             h)
+    tp_peoples = Rectangle(bp_peoples.x,     top_wonders_y, peoples_width, h)
+    tp_wonders = Rectangle(bottom_wonders.x, top_wonders_y, hand_width,    h)
 
     bp = f"p{bottom_player}"
     tp = f"p{1 - bottom_player}"
 
     Z = Zone_Layout
     return {
-        f"{bp}_deck":    Z(bottom_deck,                                                          0,           spread_pile,    False),
-        f"{bp}_hand":    Z(bottom_hand,                                                          spread_hand, 0,              True),
-        f"{bp}_discard": Z(discard,                                                              0,           spread_pile,    True),
-        f"{bp}_peoples": Z(Rectangle(discard.x,        bottom_wonders.y, peoples_width, h),     spread_wonders, 0,           True),
-        f"{bp}_wonders": Z(bottom_wonders,                                                       spread_wonders, 0,           True),
-        f"{tp}_deck":    Z(Rectangle(bottom_deck.x,    top_y,            w,             h),     0,           spread_pile,    False),
-        f"{tp}_hand":    Z(Rectangle(bottom_hand.x,    top_y,            hand_width,    h),     spread_hand, 0,              False),
-        f"{tp}_discard": Z(Rectangle(discard.x,        top_y,            w,             h),     0,           spread_pile,    True),
-        f"{tp}_peoples": Z(Rectangle(discard.x,        top_wonders_y,    peoples_width, h),     spread_wonders, 0,           True),
-        f"{tp}_wonders": Z(Rectangle(bottom_wonders.x, top_wonders_y,    hand_width,    h),     spread_wonders, 0,           True),
-        "shared_deck":   Z(shared_deck,                                                          0,           0,              True),
+        f"{bp}_deck":    Z(bottom_deck,  0,           spread_pile, False),
+        f"{bp}_hand":    Z(bottom_hand,  spread_hand, 0,           True),
+        f"{bp}_discard": Z(discard,      0,           spread_pile, True),
+        f"{bp}_peoples": Z(bp_peoples,   spread_wonders, 0,        True),
+        f"{bp}_wonders": Z(bottom_wonders, spread_wonders, 0,      True),
+        f"{tp}_deck":    Z(tp_deck,      0,           spread_pile, False),
+        f"{tp}_hand":    Z(tp_hand,      spread_hand, 0,           False),
+        f"{tp}_discard": Z(tp_discard,   0,           spread_pile, True),
+        f"{tp}_peoples": Z(tp_peoples,   spread_wonders, 0,        True),
+        f"{tp}_wonders": Z(tp_wonders,   spread_wonders, 0,        True),
+        "shared_deck":   Z(shared_deck,  0,           0,           True),
     }
 
 
@@ -173,14 +183,10 @@ def draw_game_over_screen(table_state: kt.Table_State, result_text: str,
         # Semi-transparent overlay
         draw_rectangle(0, 0, w_width, w_height, color_from_tuple(tweak["modal_overlay"]))
 
-        title_w = text_width("GAME OVER", 60)
-        render_text("GAME OVER", (w_width - title_w) // 2, 350, 60, Color(255, 255, 255, 255))
-
-        result_w = text_width(result_text, 40)
-        render_text(result_text, (w_width - result_w) // 2, 430, 40, Color(255, 215, 0, 255))
-
+        screen = Rectangle(0, 0, w_width, w_height)
         score_text = f"{scores[0]}     |     {scores[1]}"
-        score_w = text_width(score_text, 30)
-        render_text(score_text, (w_width - score_w) // 2, 490, 30, Color(200, 200, 200, 255))
+        render_text("GAME OVER", place_inside(screen, text_width("GAME OVER", 60), 60, x="center", y="top").x, 350, 60, Color(255, 255, 255, 255))
+        render_text(result_text,  place_inside(screen, text_width(result_text,  40), 40, x="center", y="top").x, 430, 40, Color(255, 215, 0, 255))
+        render_text(score_text,   place_inside(screen, text_width(score_text,   30), 30, x="center", y="top").x, 490, 30, Color(200, 200, 200, 255))
 
         end_drawing()
