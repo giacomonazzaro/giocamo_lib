@@ -102,30 +102,27 @@ class Agent_UI(Agent):
         gap = 20
         button_height = 40
         button_width = 140
-        total_width = count * button_width + (count) * gap
-        start_x = (get_screen_width() - total_width)
-        button_x, button_y = self.ui_state.place(total_width, button_height, x="left", y="center", padding=gap)
-        # button_y = hud_y_bottom - 40 - 10  # 40px button height + 10px gap above the name label.
-        rect = Rectangle(button_x, button_y, button_width, button_height)
+        all_buttons_width = count * button_width + (count) * gap
+        start_x = (get_screen_width() - all_buttons_width)
+        all_buttons = self.ui_state.place(all_buttons_width, button_height, x="left", y="center", padding=gap)
+        button = Rectangle(all_buttons.x, all_buttons.y, button_width, button_height)
 
         mouse_clicked = is_mouse_button_pressed(MouseButton.MOUSE_BUTTON_LEFT)
 
         if isinstance(action_type, Choose_Option):
             for i, label in enumerate(options):
-                if immediate_button(rect, label):
+                if immediate_button(button, label):
                     return i
-                rect.x += (rect.width + gap)
+                button.x += (button.width + gap)
 
         elif isinstance(action_type, Choose_Card):
             done_label = "Pass" if choice.description == "main" else "Done"
-            button_index = 0
             for i, card_id in enumerate(options):
                 if Card_Id.is_null(card_id):
-                    rect.x = start_x + button_index * (rect.width + gap)
-                    button_index += 1
-                    if immediate_button(rect, done_label):
+                    if immediate_button(button, done_label):
                         self.ui_state.highlighted_cards = {}
                         return i
+                    button.x += (button.width + gap)
                 else:
                     kt_card_id = state.get_card(card_id).id
                     self.ui_state.highlighted_cards[i] = kt_card_id
@@ -160,8 +157,8 @@ class Agent_UI(Agent):
                     self.ui_state.highlighted_cards = {}
                     return i
                 # Show "Done" button to confirm a non-maximal valid selection.
-                rect.x = (get_screen_width() - rect.width) // 2
-                if immediate_button(rect, "Done"):
+                button.x = (get_screen_width() - button.width) // 2
+                if immediate_button(button, "Done"):
                     i = card_combinations.index(self.card_multiselection)
                     self.card_multiselection = set()
                     self.ui_state.highlighted_cards = {}

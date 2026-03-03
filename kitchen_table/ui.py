@@ -12,8 +12,8 @@ def point_in_rect(px: float, py: float, x: float, y: float, w: float, h: float) 
     return x <= px <= x + w and y <= py <= y + h
 
 
-def place_next(rect: Rectangle, width: int, height: int, x: str, y: str, padding: int = 0) -> tuple[int, int]:
-    """Return the top-left position to place a new rectangle of (width, height) adjacent to rect.
+def place_next(rect: Rectangle, width: int, height: int, x: str, y: str, padding: int = 0) -> Rectangle:
+    """Return a new Rectangle of (width, height) placed adjacent to rect.
     x: "left" = to the left of rect, "right" = to the right, "center" = horizontally centered with rect.
     y: "top" = above rect, "bottom" = below rect, "center" = vertically centered with rect.
     padding: gap between the two rectangles for non-center alignments.
@@ -34,11 +34,11 @@ def place_next(rect: Rectangle, width: int, height: int, x: str, y: str, padding
         assert y == "center"
         new_y = int(rect.y) + int(rect.height) // 2 - height // 2
 
-    return (new_x, new_y)
+    return Rectangle(new_x, new_y, width, height)
 
 
-def place_inside(rect: Rectangle, width: int, height: int, x: str, y: str, padding: int = 0) -> tuple[int, int]:
-    """Return the top-left position to place a new rectangle of (width, height) inside rect.
+def place_inside(rect: Rectangle, width: int, height: int, x: str, y: str, padding: int = 0) -> Rectangle:
+    """Return a new Rectangle of (width, height) placed inside rect.
     x: "left" = flush to the left edge, "right" = flush to the right edge, "center" = horizontally centered.
     y: "top" = flush to the top edge, "bottom" = flush to the bottom edge, "center" = vertically centered.
     padding: gap from the edges for non-center alignments.
@@ -59,13 +59,7 @@ def place_inside(rect: Rectangle, width: int, height: int, x: str, y: str, paddi
         assert y == "center"
         new_y = int(rect.y) + int(rect.height) // 2 - height // 2
 
-    return (new_x, new_y)
-
-
-def place_rectangle(rect: Rectangle, width: int, height: int, x: str = "left", y: str = "top") -> Rectangle:
-    """Convenience wrapper around place_next returning a Rectangle."""
-    px, py = place_next(rect, width, height, x=x, y=y)
-    return Rectangle(px, py, width, height)
+    return Rectangle(new_x, new_y, width, height)
 
 @dataclass(slots=True)
 class Button:
@@ -121,8 +115,8 @@ class UI_State:
     window_size: tuple[int, int] = (tweak["window_width"], tweak["window_height"])
 
     
-    def place(self, width: int, height: int, x: str = "left", y: str = "top", padding: int = 0) -> tuple[int, int]:
-        """Return the top-left position to place a rectangle of (width, height) inside the window."""
+    def place(self, width: int, height: int, x: str = "left", y: str = "top", padding: int = 0) -> Rectangle:
+        """Return a Rectangle of (width, height) placed inside the window."""
         window = Rectangle(0, 0, self.window_size[0], self.window_size[1])
         return place_inside(window, width, height, x=x, y=y, padding=padding)
 

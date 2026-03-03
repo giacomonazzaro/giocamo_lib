@@ -1,6 +1,7 @@
 from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Callable
+from pyray import Rectangle
 
 
 @dataclass(slots=True)
@@ -16,9 +17,7 @@ class Card:
 
 @dataclass(slots=True)
 class Stack:
-    x: float
-    y: float
-    width: float
+    rect: Rectangle
     cards: list[int] = field(default_factory=list)
     spread_x: float = 0.0  # Horizontal offset between cards
     spread_y: float = 0.0  # Vertical offset between cards

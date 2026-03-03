@@ -26,7 +26,7 @@ def point_in_stack_area(px: float, py: float, stack: Stack, state: Table_State) 
     def point_in_rect(mx: float, my: float, x: float, y: float, w: float, h: float) -> bool:
         return x <= mx <= x + w and y <= my <= y + h
 
-    return point_in_rect(px, py, stack.x, stack.y, stack.width, h)
+    return point_in_rect(px, py, stack.rect.x, stack.rect.y, stack.rect.width, h)
     # if stack.cards:
     #     # Calculate bounds including all cards in stack
     #     last_card_id = stack.cards[-1]

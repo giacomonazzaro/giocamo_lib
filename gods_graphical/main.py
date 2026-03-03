@@ -83,7 +83,7 @@ def init_table_state(gods_state: Game_State, ui_state: UI_State, bottom_player: 
     stacks = []
     for zone_name, z in get_table_layout(bottom_player=bottom_player).items():
         card_ids = zone_cards.get(zone_name, [])
-        stack = kt.Stack(x=z.x, y=z.y, cards=card_ids, width=z.width, spread_x=z.spread_x, spread_y=z.spread_y, face_up=z.face_up, name=zone_name)
+        stack = kt.Stack(rect=z.rect, cards=card_ids, spread_x=z.spread_x, spread_y=z.spread_y, face_up=z.face_up, name=zone_name)
         stacks.append(stack)
 
     table_state = kt.Table_State(cards=cards, stacks=stacks)
@@ -114,9 +114,8 @@ def draw_hud(gods_state: Game_State, choice: Choice, ui_state: UI_State, bottom_
     if text:
         font_size = 22
         tw = text_width(text, font_size)
-        x, y = ui_state.place(tw, font_size, x="right", y="center", padding=20)
-        y -= 50 
-        render_text(text, x, y, font_size, pyray.Color(200, 200, 200, 255))
+        r = ui_state.place(tw, font_size, x="right", y="center", padding=20)
+        render_text(text, r.x, r.y - 50, font_size, pyray.Color(200, 200, 200, 255))
 
     # draw_choice_description(ui_state.current_choice_text)
 

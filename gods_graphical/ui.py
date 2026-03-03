@@ -14,9 +14,7 @@ IMAGES_DIR = os.path.join(os.path.dirname(__file__), "..", "gods", "cards", "car
 
 @dataclass(slots=True)
 class Zone_Layout:
-    x: int
-    y: int
-    width: int
+    rect: Rectangle
     spread_x: int
     spread_y: int
     face_up: bool
@@ -41,51 +39,40 @@ def get_table_layout(bottom_player: int = 0) -> dict[str, Zone_Layout]:
     spread_pile = -3
 
     window = Rectangle(0, 0, W, H)
-    hand_width = w * 5.5 * W / 1600
-    wonders_width = hand_width
-
-    # Vertical: bottom player anchored to the bottom of the window.
-    bottom_hand_x, bottom_hand_y    = place_inside(window, hand_width, h, x="center", y="bottom", padding=margin)
-    bottom_hand = Rectangle(bottom_hand_x, bottom_hand_y, hand_width, h)
-    bottom_wonders_x, bottom_wonders_y = place_next(bottom_hand, wonders_width, h, x="center", y="top", padding=margin)
-    bottom_deck_y = bottom_hand_y
-
-    # Horizontal: discard flush left, deck placed next to it.
-    bottom_deck_x, bottom_deck_y = place_next(bottom_hand, w, h, x="left", y="center", padding=margin)
-    bottom_deck = Rectangle(bottom_deck_x, bottom_deck_y, w, h)
-    discard_x, discard_y = place_next(bottom_deck, w, h, x="left", y="center", padding=margin)
-
-    # Vertical: top player mirrored and pushed partially offscreen.
-    opponent_shift = int(h * 0.65)
-    top_hand_y = margin - opponent_shift
-    top_deck_y = top_hand_y
-    top_wonders_y = H - bottom_wonders_y - h - opponent_shift
-
-
-    # Peoples area sits to the left of wonders; wide enough for up to 2 cards at full spread.
+    hand_width = int(w * 5.5 * W / 1600)
     peoples_width = 2 * w + spread_wonders
-    
 
-    # Shared deck is off-screen to the left, vertically centered.
-    shared_deck_x, shared_deck_y = place_next(window, w, h, x="left", y="center")
+    # Bottom player: anchor zones to the bottom of the window, then chain leftward.
+    bottom_hand    = place_inside(window, hand_width, h, x="center", y="bottom", padding=margin)
+    bottom_wonders = place_next(bottom_hand, hand_width, h, x="center", y="top", padding=margin)
+    bottom_deck    = place_next(bottom_hand, w, h, x="left", y="center", padding=margin)
+    discard        = place_next(bottom_deck, w, h, x="left", y="center", padding=margin)
 
+    # Top player: mirror bottom y positions, pushed partially offscreen.
+    opponent_shift = int(h * 0.65)
+    top_y = margin - opponent_shift
+    top_wonders_y = H - int(bottom_wonders.y) - h - opponent_shift
+
+    # Shared deck: vertically centered, off-screen to the left.
+    shared_deck = place_inside(window, w, h, x="left", y="center")
+    shared_deck.x = -w
 
     bp = f"p{bottom_player}"
     tp = f"p{1 - bottom_player}"
 
     Z = Zone_Layout
     return {
-        f"{bp}_deck":    Z(bottom_deck_x,        bottom_deck_y,    w,                        0,              spread_pile, False),
-        f"{bp}_hand":    Z(bottom_hand_x,   bottom_hand_y,         hand_width, spread_hand,    0,           True),
-        f"{bp}_discard": Z(discard_x,     bottom_deck_y,    w,                        0,              spread_pile, True),
-        f"{bp}_peoples": Z(discard_x,     bottom_wonders_y, peoples_width,            spread_wonders, 0,           True),
-        f"{bp}_wonders": Z(bottom_wonders_x, bottom_wonders_y, wonders_width,            spread_wonders, 0,           True),
-        f"{tp}_deck":    Z(bottom_deck_x,        top_deck_y,       w,                        0,              spread_pile, False),
-        f"{tp}_hand":    Z(bottom_hand_x,   top_hand_y,            hand_width, spread_hand,    0,           False),
-        f"{tp}_discard": Z(discard_x,     top_deck_y,       w,                        0,              spread_pile, True),
-        f"{tp}_peoples": Z(discard_x,     top_wonders_y,    peoples_width,            spread_wonders, 0,           True),
-        f"{tp}_wonders": Z(bottom_wonders_x, top_wonders_y,    wonders_width,            spread_wonders, 0,           True),
-        "shared_deck":   Z(shared_deck_x, shared_deck_y,    w,                        0,              0,           True),
+        f"{bp}_deck":    Z(bottom_deck,                                                          0,           spread_pile,    False),
+        f"{bp}_hand":    Z(bottom_hand,                                                          spread_hand, 0,              True),
+        f"{bp}_discard": Z(discard,                                                              0,           spread_pile,    True),
+        f"{bp}_peoples": Z(Rectangle(discard.x,        bottom_wonders.y, peoples_width, h),     spread_wonders, 0,           True),
+        f"{bp}_wonders": Z(bottom_wonders,                                                       spread_wonders, 0,           True),
+        f"{tp}_deck":    Z(Rectangle(bottom_deck.x,    top_y,            w,             h),     0,           spread_pile,    False),
+        f"{tp}_hand":    Z(Rectangle(bottom_hand.x,    top_y,            hand_width,    h),     spread_hand, 0,              False),
+        f"{tp}_discard": Z(Rectangle(discard.x,        top_y,            w,             h),     0,           spread_pile,    True),
+        f"{tp}_peoples": Z(Rectangle(discard.x,        top_wonders_y,    peoples_width, h),     spread_wonders, 0,           True),
+        f"{tp}_wonders": Z(Rectangle(bottom_wonders.x, top_wonders_y,    hand_width,    h),     spread_wonders, 0,           True),
+        "shared_deck":   Z(shared_deck,                                                          0,           0,              True),
     }
 
 

@@ -1,4 +1,4 @@
-from pyray import *
+from pyray import Rectangle, init_window, set_target_fps, window_should_close, begin_drawing, end_drawing, close_window
 from kitchen_table.config import tweak
 from kitchen_table.game_state import add_card_to_stack, create_sample_cards, update_card_positions
 from kitchen_table.models import Table_State, Stack
@@ -12,9 +12,10 @@ def create_example_table_state() -> Table_State:
     state = Table_State()
 
     # Create a few stacks at different positions
-    stack1 = Stack(100, 300, width = 300, spread_y=tweak["pile_spread_y"], spread_x=0, face_up=False)
-    stack2 = Stack(400, 550, width = 500, spread_x=tweak["hand_spread_x"])
-    stack3 = Stack(1000, 300, width = 600, spread_y=tweak["pile_spread_y"])
+    h = tweak["card_height"]
+    stack1 = Stack(Rectangle(100, 300, 300, h), spread_y=tweak["pile_spread_y"], spread_x=0, face_up=False)
+    stack2 = Stack(Rectangle(400, 550, 500, h), spread_x=tweak["hand_spread_x"])
+    stack3 = Stack(Rectangle(1000, 300, 600, h), spread_y=tweak["pile_spread_y"])
 
     state.stacks = [stack1, stack2, stack3]
 

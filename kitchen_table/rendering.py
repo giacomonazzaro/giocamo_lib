@@ -319,7 +319,7 @@ def draw_stack_placeholder(stack: Stack) -> None:
 
     # Dashed outline placeholder
     draw_rectangle_rounded_lines_ex(
-        Rectangle(stack.x, stack.y, stack.width, h), r / min(w, h), 8, 1,
+        stack.rect, r / min(w, h), 8, 1,
         Color(100, 100, 100, 100)
     )
 
@@ -328,8 +328,8 @@ def draw_stack_placeholder(stack: Stack) -> None:
     label_w = text_width(label, 14)
     render_text(
         label,
-        int(stack.x + (w - label_w) / 2),
-        int(stack.y + h / 2 - 7),
+        int(stack.rect.x + (w - label_w) / 2),
+        int(stack.rect.y + h / 2 - 7),
         14,
         Color(100, 100, 100, 150)
     )
