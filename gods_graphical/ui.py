@@ -42,11 +42,18 @@ def get_table_layout(bottom_player: int = 0) -> dict[str, Zone_Layout]:
 
     window = Rectangle(0, 0, W, H)
     hand_width = w * 5.5 * W / 1600
+    wonders_width = hand_width
 
     # Vertical: bottom player anchored to the bottom of the window.
-    _, bottom_hand_y    = place_inside(window, w, h, y="bottom", padding=margin)
-    _, bottom_wonders_y = place_inside(window, w, h, y="bottom", padding=2 * margin + h)
+    bottom_hand_x, bottom_hand_y    = place_inside(window, hand_width, h, x="center", y="bottom", padding=margin)
+    bottom_hand = Rectangle(bottom_hand_x, bottom_hand_y, hand_width, h)
+    bottom_wonders_x, bottom_wonders_y = place_next(bottom_hand, wonders_width, h, x="center", y="top", padding=margin)
     bottom_deck_y = bottom_hand_y
+
+    # Horizontal: discard flush left, deck placed next to it.
+    bottom_deck_x, bottom_deck_y = place_next(bottom_hand, w, h, x="left", y="center", padding=margin)
+    bottom_deck = Rectangle(bottom_deck_x, bottom_deck_y, w, h)
+    discard_x, discard_y = place_next(bottom_deck, w, h, x="left", y="center", padding=margin)
 
     # Vertical: top player mirrored and pushed partially offscreen.
     opponent_shift = int(h * 0.65)
@@ -54,35 +61,30 @@ def get_table_layout(bottom_player: int = 0) -> dict[str, Zone_Layout]:
     top_deck_y = top_hand_y
     top_wonders_y = H - bottom_wonders_y - h - opponent_shift
 
-    # Horizontal: discard flush left, deck placed next to it.
-    discard_x, _ = place_inside(window, w, h, x="left", padding=margin)
-    deck_x        = place_next(Rectangle(discard_x, 0, w, h), w, h, x="right")[0] + margin
-    hand_x        = W // 2 - hand_width // 2 + 170
 
     # Peoples area sits to the left of wonders; wide enough for up to 2 cards at full spread.
     peoples_width = 2 * w + spread_wonders
-    wonders_start = hand_x
-    wonders_width = hand_width
+    
 
     # Shared deck is off-screen to the left, vertically centered.
-    _, shared_deck_y = place_inside(window, w, h, y="center")
-    shared_deck_x = -w
+    shared_deck_x, shared_deck_y = place_next(window, w, h, x="left", y="center")
+
 
     bp = f"p{bottom_player}"
     tp = f"p{1 - bottom_player}"
 
     Z = Zone_Layout
     return {
-        f"{bp}_deck":    Z(deck_x,        bottom_deck_y,    w,                        0,              spread_pile, False),
-        f"{bp}_hand":    Z(hand_x,   bottom_hand_y,         hand_width, spread_hand,    0,           True),
+        f"{bp}_deck":    Z(bottom_deck_x,        bottom_deck_y,    w,                        0,              spread_pile, False),
+        f"{bp}_hand":    Z(bottom_hand_x,   bottom_hand_y,         hand_width, spread_hand,    0,           True),
         f"{bp}_discard": Z(discard_x,     bottom_deck_y,    w,                        0,              spread_pile, True),
         f"{bp}_peoples": Z(discard_x,     bottom_wonders_y, peoples_width,            spread_wonders, 0,           True),
-        f"{bp}_wonders": Z(wonders_start, bottom_wonders_y, wonders_width,            spread_wonders, 0,           True),
-        f"{tp}_deck":    Z(deck_x,        top_deck_y,       w,                        0,              spread_pile, False),
-        f"{tp}_hand":    Z(hand_x,   top_hand_y,            hand_width, spread_hand,    0,           False),
+        f"{bp}_wonders": Z(bottom_wonders_x, bottom_wonders_y, wonders_width,            spread_wonders, 0,           True),
+        f"{tp}_deck":    Z(bottom_deck_x,        top_deck_y,       w,                        0,              spread_pile, False),
+        f"{tp}_hand":    Z(bottom_hand_x,   top_hand_y,            hand_width, spread_hand,    0,           False),
         f"{tp}_discard": Z(discard_x,     top_deck_y,       w,                        0,              spread_pile, True),
         f"{tp}_peoples": Z(discard_x,     top_wonders_y,    peoples_width,            spread_wonders, 0,           True),
-        f"{tp}_wonders": Z(wonders_start, top_wonders_y,    wonders_width,            spread_wonders, 0,           True),
+        f"{tp}_wonders": Z(bottom_wonders_x, top_wonders_y,    wonders_width,            spread_wonders, 0,           True),
         "shared_deck":   Z(shared_deck_x, shared_deck_y,    w,                        0,              0,           True),
     }
 

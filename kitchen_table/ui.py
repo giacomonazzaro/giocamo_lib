@@ -12,23 +12,24 @@ def point_in_rect(px: float, py: float, x: float, y: float, w: float, h: float) 
     return x <= px <= x + w and y <= py <= y + h
 
 
-def place_next(rect: Rectangle, width: int, height: int, x: str = "left", y: str = "top") -> tuple[int, int]:
+def place_next(rect: Rectangle, width: int, height: int, x: str, y: str, padding: int = 0) -> tuple[int, int]:
     """Return the top-left position to place a new rectangle of (width, height) adjacent to rect.
     x: "left" = to the left of rect, "right" = to the right, "center" = horizontally centered with rect.
     y: "top" = above rect, "bottom" = below rect, "center" = vertically centered with rect.
+    padding: gap between the two rectangles for non-center alignments.
     """
     if x == "left":
-        new_x = int(rect.x) - width
+        new_x = int(rect.x) - width - padding
     elif x == "right":
-        new_x = int(rect.x) + int(rect.width)
+        new_x = int(rect.x) + int(rect.width) + padding
     else:  # center
         assert x == "center"
         new_x = int(rect.x) + int(rect.width) // 2 - width // 2
 
     if y == "top":
-        new_y = int(rect.y) - height
+        new_y = int(rect.y) - height - padding
     elif y == "bottom":
-        new_y = int(rect.y) + int(rect.height)
+        new_y = int(rect.y) + int(rect.height) + padding
     else:  # center
         assert y == "center"
         new_y = int(rect.y) + int(rect.height) // 2 - height // 2
@@ -36,7 +37,7 @@ def place_next(rect: Rectangle, width: int, height: int, x: str = "left", y: str
     return (new_x, new_y)
 
 
-def place_inside(rect: Rectangle, width: int, height: int, x: str = "left", y: str = "top", padding: int = 0) -> tuple[int, int]:
+def place_inside(rect: Rectangle, width: int, height: int, x: str, y: str, padding: int = 0) -> tuple[int, int]:
     """Return the top-left position to place a new rectangle of (width, height) inside rect.
     x: "left" = flush to the left edge, "right" = flush to the right edge, "center" = horizontally centered.
     y: "top" = flush to the top edge, "bottom" = flush to the bottom edge, "center" = vertically centered.
