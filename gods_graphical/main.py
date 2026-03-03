@@ -113,11 +113,10 @@ def draw_hud(gods_state: Game_State, choice: Choice, ui_state: UI_State, bottom_
     text = choice.text_description if choice else ""
     if text:
         font_size = 22
-        gap = 20
         tw = text_width(text, font_size)
-        x, y = ui_state.right_middle(tw + gap, font_size)
+        x, y = ui_state.place(tw, font_size, x="right", y="center", padding=20)
         y -= 50 
-        render_text(text, x, y, font_size, pyray.Color(200, 200, 200, 200))
+        render_text(text, x, y, font_size, pyray.Color(200, 200, 200, 255))
 
     # draw_choice_description(ui_state.current_choice_text)
 

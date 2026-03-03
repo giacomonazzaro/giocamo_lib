@@ -104,11 +104,7 @@ class Agent_UI(Agent):
         button_width = 140
         total_width = count * button_width + (count) * gap
         start_x = (get_screen_width() - total_width)
-        H = get_screen_height()
-        h = tweak["card_height"]
-        margin = 20
-        # hud_y_bottom = H - 2 * h - 2 * margin + h // 2
-        button_x, button_y = self.ui_state.left_middle(total_width + margin, button_height)
+        button_x, button_y = self.ui_state.place(total_width, button_height, x="left", y="center", padding=gap)
         # button_y = hud_y_bottom - 40 - 10  # 40px button height + 10px gap above the name label.
         rect = Rectangle(button_x, button_y, button_width, button_height)
 
@@ -116,9 +112,9 @@ class Agent_UI(Agent):
 
         if isinstance(action_type, Choose_Option):
             for i, label in enumerate(options):
-                rect.x = start_x + i * (rect.width + gap)
                 if immediate_button(rect, label):
                     return i
+                rect.x += (rect.width + gap)
 
         elif isinstance(action_type, Choose_Card):
             done_label = "Pass" if choice.description == "main" else "Done"
