@@ -119,14 +119,23 @@ def send_message(sock: socket.socket, data: dict, addr: tuple[str, int]) -> None
 
 def recv_message(sock: socket.socket) -> dict:
     """
-    Blocks until a valid JSON message is received. 
+    Blocks until a valid JSON message is received.
     Handles duplicates and ACKs automatically.
     """
     manager = _get_manager(sock)
-    
+
     # Get the next message from the queue (blocking)
     payload, sender_addr = manager.incoming_queue.get()
-    
+
     # Optional: If you need the sender address, you might want to return it too.
     # But to match your original signature, we just return the dict.
     return payload
+
+def try_recv_message(sock: socket.socket) -> dict | None:
+    """Non-blocking receive. Returns None if no message is available."""
+    manager = _get_manager(sock)
+    try:
+        payload, _ = manager.incoming_queue.get_nowait()
+        return payload
+    except queue.Empty:
+        return None

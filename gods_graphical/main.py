@@ -26,6 +26,7 @@ from gods_graphical.ui import (
     get_table_layout,
 )
 from gods_online.agent_remote import Agent_Local_Online, Agent_Remote
+from gods_online.protocol import send_message, try_recv_message
 from kitchen_table.config import tweak
 from kitchen_table.game_state import update_card_positions
 from kitchen_table.input import find_card_at, update_input
@@ -123,7 +124,7 @@ def draw_hud(gods_state: Game_State, choice: Choice, ui_state: UI_State, bottom_
 
 from kitchen_table.ui import UI_State
 
-def play(gods_state: Game_State, table_state: kt.Table_State, ui_state: UI_State, agent: Agent | None, player_index: int):
+def play(gods_state: Game_State, table_state: kt.Table_State, ui_state: UI_State, agent: Agent | None, player_index: int, sock: socket.socket | None = None, friend_addr: tuple[str, int] | None = None):
 
     # Window: re-use an existing window (e.g. opened by the menu) if one is ready.
     if not pyray.is_window_ready():
@@ -148,6 +149,24 @@ def play(gods_state: Game_State, table_state: kt.Table_State, ui_state: UI_State
 
         # if not agent:
         update_input(table_state)
+
+        # In no-game-logic online mode, sync stacks with the remote player.
+        if agent is None and sock is not None and friend_addr is not None:
+            # Send our stacks whenever the local table changes (drop, rotate, shuffle).
+            should_send = (
+                table_state.dropped_card is not None
+                or pyray.is_key_pressed(pyray.KeyboardKey.KEY_R)
+                or pyray.is_key_pressed(pyray.KeyboardKey.KEY_S)
+            )
+            if should_send:
+                stacks_data = [s.cards for s in table_state.stacks]
+                send_message(sock, {"type": "stacks", "stacks": stacks_data}, friend_addr)
+            # Apply any incoming stack update from the remote player.
+            msg = try_recv_message(sock)
+            if msg and msg.get("type") == "stacks":
+                for i, cards in enumerate(msg["stacks"]):
+                    table_state.stacks[i].cards = list(cards)
+                    update_card_positions(table_state.stacks[i], table_state)
 
         pyray.begin_drawing()
 
@@ -186,16 +205,18 @@ def start(game_logic: bool = True):
     if mode == "vs_ai":
         main(vs_ai=True, game_logic=game_logic)
     else:  # "online"
-        main(**params)
+        main(**params, game_logic=game_logic)
 
 
 @app.command()
 def p2p(
     local: Annotated[bool, typer.Option("--local", help="Use local mode (no STUN, for testing on the same network)")] = False,
     join: Annotated[Optional[str], typer.Option("--join", "-j", help="Room code to join")] = None,
+    game_logic: bool = True,
 ):
     sock, your_ip, your_port = peer_to_peer(local)
-    main(*setup_online_game(sock, local, your_ip, your_port, room_code=join))
+    player_index, seed, sock, friend_addr = setup_online_game(sock, local, your_ip, your_port, room_code=join)
+    main(player_index=player_index, seed=seed, sock=sock, friend_addr=friend_addr, game_logic=game_logic)
 
 @app.command()
 def agent(game_logic: bool = True, seed=None):
@@ -229,7 +250,7 @@ def main(
     else:
         agent = Agent_Duel(agent_local, agent_opponent, swap=player_index != 0)
 
-    play(gods_state, table_state, ui_state, agent, player_index)
+    play(gods_state, table_state, ui_state, agent, player_index, sock=sock, friend_addr=friend_addr)
 
     if sock is not None:
         sock.close()
