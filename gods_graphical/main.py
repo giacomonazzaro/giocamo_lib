@@ -81,9 +81,20 @@ def init_table_state(gods_state: Game_State, ui_state: UI_State, bottom_player: 
         ]
     zone_cards["shared_deck"] = list(gods_state.shared_deck)
 
-    # Create stacks from shared layout
+    # Fixed global zone order — both players must agree on this ordering so that
+    # synced stack indices have the same meaning on both sides of the network.
+    zone_order = [
+        "p0_deck", "p0_hand", "p0_discard", "p0_peoples", "p0_wonders",
+        "p1_deck", "p1_hand", "p1_discard", "p1_peoples", "p1_wonders",
+        "shared_deck",
+    ]
+
+    # Layout provides visual positions (rects) keyed by zone name.
+    layout = get_table_layout(bottom_player=bottom_player)
+
     stacks = []
-    for zone_name, z in get_table_layout(bottom_player=bottom_player).items():
+    for zone_name in zone_order:
+        z = layout[zone_name]
         card_ids = zone_cards.get(zone_name, [])
         stack = kt.Stack(rect=z.rect, cards=card_ids, spread_x=z.spread_x, spread_y=z.spread_y, face_up=z.face_up, name=zone_name)
         stacks.append(stack)
