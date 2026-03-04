@@ -46,7 +46,7 @@ class ReliableUDPState:
                     if msg_id in self.pending_acks:
                         del self.pending_acks[msg_id] # Stop retrying
 
-                # CASE 2: We received a DATA message
+                # CASE 2: We received a DATA message (reliable, requires ACK)
                 elif msg_type == "DATA":
                     # 1. Always ACK immediately
                     self._send_ack(msg_id, addr)
@@ -56,6 +56,10 @@ class ReliableUDPState:
                         self.received_ids.add(msg_id)
                         # We only want the user's payload, not our protocol headers
                         self.incoming_queue.put((packet["p"], addr))
+
+                # CASE 3: We received a STATE message (unreliable, no ACK needed)
+                elif msg_type == "STATE":
+                    self.incoming_queue.put((packet["p"], addr))
             
             except OSError:
                 break # Socket closed
@@ -139,3 +143,10 @@ def try_recv_message(sock: socket.socket) -> dict | None:
         return payload
     except queue.Empty:
         return None
+
+def send_unreliable(sock: socket.socket, data: dict, addr: tuple[str, int]) -> None:
+    """Send a message with no delivery guarantee. Use for state that is sent
+    every frame — losing one packet is fine, the next frame corrects it."""
+    manager = _get_manager(sock)
+    packet = {"t": "STATE", "p": data}
+    sock.sendto(json.dumps(packet).encode("utf-8"), addr)

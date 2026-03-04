@@ -26,7 +26,7 @@ from gods_graphical.ui import (
     get_table_layout,
 )
 from gods_online.agent_remote import Agent_Local_Online, Agent_Remote
-from gods_online.protocol import send_message, try_recv_message
+from gods_online.protocol import send_unreliable, try_recv_message
 from kitchen_table.config import tweak
 from kitchen_table.game_state import update_card_positions
 from kitchen_table.input import find_card_at, update_input
@@ -155,21 +155,21 @@ def play(gods_state: Game_State, table_state: kt.Table_State, ui_state: UI_State
 
         # In no-game-logic online mode, sync stacks with the remote player.
         if agent is None and sock is not None and friend_addr is not None:
-            # poll_dropped_card() consumes the event so it only fires once per drop,
-            # not every frame while dropped_card stays set.
-            dropped = table_state.poll_dropped_card()
-            should_send = (
-                dropped is not None
-                or pyray.is_key_pressed(pyray.KeyboardKey.KEY_R) # rotation
-                or pyray.is_key_pressed(pyray.KeyboardKey.KEY_S) # shuffle
-            )
-            if should_send:
-                stacks_data = [s.cards for s in table_state.stacks]
-                send_message(sock, {"type": "stacks", "stacks": stacks_data}, friend_addr)
-            # Apply any incoming stack update from the remote player.
-            msg = try_recv_message(sock)
-            if msg and msg.get("type") == "stacks":
-                for i, cards in enumerate(msg["stacks"]):
+            # Send full state every frame — it's small and unreliable is fine.
+            # Losing one packet is harmless; the next frame corrects it.
+            send_unreliable(sock, {"type": "stacks", "stacks": [s.cards for s in table_state.stacks]}, friend_addr)
+
+            # Drain the queue and apply only the latest stacks message received
+            # this frame, discarding any stale buffered updates.
+            latest_stacks = None
+            while True:
+                msg = try_recv_message(sock)
+                if msg is None:
+                    break
+                if msg.get("type") == "stacks":
+                    latest_stacks = msg
+            if latest_stacks:
+                for i, cards in enumerate(latest_stacks["stacks"]):
                     table_state.stacks[i].cards = list(cards)
                     update_card_positions(table_state.stacks[i], table_state)
 
