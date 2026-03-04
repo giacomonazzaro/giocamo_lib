@@ -94,22 +94,27 @@ def pick_seed(sock: socket.socket, seed: int, game_init: dict):
         try:
             data, _ = sock.recvfrom(1024)
             msg = data.decode().strip()
-            # If we receive "PUNCH", just print a notification, don't clutter chat
+            # If we receive "PUNCH", just print a notification, don't clutter chat.
             if msg == "PUNCH":
                 typer.echo("[*] Received hole punch packet from friend, router should have opened the path.")
                 continue
-            elif "init" in json.loads(msg)["type"]:
+            parsed = json.loads(msg)
+            if "init" in parsed.get("type", ""):
                 typer.echo("[*] Received seed from friend, determining player order...")
-                # player with lower seed is player 0
-                if seed < (friend_seed := int(json.loads(msg)["seed"])):
+                # Player with lower seed is player 0.
+                friend_seed = int(parsed["seed"])
+                if seed < friend_seed:
                     game_init.update({"seed": seed, "player_index": 0})
-                    break
                 else:
                     game_init.update({"seed": friend_seed, "player_index": 1})
-                    break
-        except Exception as e:
+                break
+            # Non-init messages (e.g. game packets arriving early via UDP reordering) are ignored.
+        except OSError as e:
             typer.echo(f"[!] Error receiving seed: {e}")
             break
+        except Exception:
+            # Non-fatal (malformed packet, binary STUN response, etc.) — keep waiting.
+            continue
 
 
 def _exchange_seeds(sock: socket.socket, local: bool, friend_addr: tuple[str, int]) -> tuple[int, int]:
