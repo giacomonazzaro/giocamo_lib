@@ -15,12 +15,12 @@ def add_card_to_stack(card_id: int, stack: Stack, state: Table_State) -> None:
 def remove_card_from_stack(card_id: int, stack: Stack, state: Table_State) -> int | None:
     if card_id in stack.cards:
         stack.cards.remove(card_id)
-        update_card_positions(stack, state)
+        update_card_positions(stack, state, sort=False)
         return card_id
     return None
 
 
-def update_card_positions(stack: Stack, state: Table_State, sort=True) -> None:
+def update_card_positions(stack: Stack, state: Table_State, sort: bool) -> None:
     """Update x,y positions of all cards in a stack based on spread values."""
     n = len(stack.cards)
     if sort:

@@ -131,16 +131,16 @@ def handle_mouse_move(state: Table_State) -> None:
     if drag.last_hovered_stack != hovered_stack:
         if drag.current_stack >= 0 and drag.card_id in state.stacks[drag.current_stack].cards:
             state.stacks[drag.current_stack].cards.remove(drag.card_id)
-            gs.update_card_positions(state.stacks[drag.current_stack], state)
+            gs.update_card_positions(state.stacks[drag.current_stack], state, sort=True)
 
         if state.is_drop_card_allowed(drag.original_stack, hovered_stack, drag.card_id):
             state.stacks[hovered_stack].cards.append(drag.card_id)
-            gs.update_card_positions(state.stacks[hovered_stack], state)
+            gs.update_card_positions(state.stacks[hovered_stack], state, sort=True)
             drag.current_stack = hovered_stack
         else:
             drag.current_stack = -1
 
-    gs.update_card_positions(state.stacks[hovered_stack], state)
+    gs.update_card_positions(state.stacks[hovered_stack], state, sort=True)
     drag.last_hovered_stack = hovered_stack
 
 

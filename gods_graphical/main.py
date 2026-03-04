@@ -93,7 +93,7 @@ def init_table_state(gods_state: Game_State, ui_state: UI_State, bottom_player: 
 
     table_state = kt.Table_State(cards=cards, stacks=stacks)
     for stack in table_state.stacks:
-        update_card_positions(stack, table_state)
+        update_card_positions(stack, table_state, sort=False)
     return table_state
 
 
@@ -171,7 +171,7 @@ def play(gods_state: Game_State, table_state: kt.Table_State, ui_state: UI_State
             if msg and msg.get("type") == "stacks":
                 for i, cards in enumerate(msg["stacks"]):
                     table_state.stacks[i].cards = list(cards)
-                    update_card_positions(table_state.stacks[i], table_state)
+                    update_card_positions(table_state.stacks[i], table_state, sort=False)
 
         pyray.begin_drawing()
 

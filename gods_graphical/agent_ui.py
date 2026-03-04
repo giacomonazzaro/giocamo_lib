@@ -43,7 +43,7 @@ def update_stacks(table_state: Table_State, gods_state: Game_State):
     def update_stack(stack_id: int, card_indices: list[int]):
         # table_state.cards is aligned with game.all_cards, so card.id == kt card id.
         table_state.stacks[stack_id].cards = list(card_indices)
-        update_card_positions(table_state.stacks[stack_id], table_state)
+        update_card_positions(table_state.stacks[stack_id], table_state, sort=False)
 
     for i in range(2):
         s = stack_indices(i)

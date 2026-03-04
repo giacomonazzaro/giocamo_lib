@@ -49,8 +49,8 @@ def main():
         # Draw card by pressing button.
         if ui_state.buttons[0].pressed():
             state.stacks[1].cards.append(state.stacks[0].cards.pop())
-            update_card_positions(state.stacks[0], state)
-            update_card_positions(state.stacks[1], state)
+            update_card_positions(state.stacks[0], state, sort=True)
+            update_card_positions(state.stacks[1], state, sort=True)
 
         # Render.
         begin_drawing()
