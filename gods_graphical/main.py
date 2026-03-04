@@ -155,11 +155,13 @@ def play(gods_state: Game_State, table_state: kt.Table_State, ui_state: UI_State
 
         # In no-game-logic online mode, sync stacks with the remote player.
         if agent is None and sock is not None and friend_addr is not None:
-            # Send our stacks whenever the local table changes (drop, rotate, shuffle).
+            # poll_dropped_card() consumes the event so it only fires once per drop,
+            # not every frame while dropped_card stays set.
+            dropped = table_state.poll_dropped_card()
             should_send = (
-                table_state.dropped_card is not None
-                or pyray.is_key_pressed(pyray.KeyboardKey.KEY_R)
-                or pyray.is_key_pressed(pyray.KeyboardKey.KEY_S)
+                dropped is not None
+                or pyray.is_key_pressed(pyray.KeyboardKey.KEY_R) # rotation
+                or pyray.is_key_pressed(pyray.KeyboardKey.KEY_S) # shuffle
             )
             if should_send:
                 stacks_data = [s.cards for s in table_state.stacks]
