@@ -17,7 +17,7 @@ from game.game import Choice, game_frame, game_loop, resolve_choice
 from gods.gameplay import compute_player_score, Agent_Minimax_Stochastic_Gods
 from gods.models import Game_State, effective_power
 from gods.setup import quick_setup
-from gods_graphical.agent_ui import Agent_UI, update_stacks
+from gods_graphical.agent_ui import Agent_UI, update_stacks, ZONE_ORDER
 from gods_graphical.ui import (
     draw_card_power_badge,
     draw_game_over_screen,
@@ -81,19 +81,11 @@ def init_table_state(gods_state: Game_State, ui_state: UI_State, bottom_player: 
         ]
     zone_cards["shared_deck"] = list(gods_state.shared_deck)
 
-    # Fixed global zone order — both players must agree on this ordering so that
-    # synced stack indices have the same meaning on both sides of the network.
-    zone_order = [
-        "p0_deck", "p0_hand", "p0_discard", "p0_peoples", "p0_wonders",
-        "p1_deck", "p1_hand", "p1_discard", "p1_peoples", "p1_wonders",
-        "shared_deck",
-    ]
-
     # Layout provides visual positions (rects) keyed by zone name.
     layout = get_table_layout(bottom_player=bottom_player)
 
     stacks = []
-    for zone_name in zone_order:
+    for zone_name in ZONE_ORDER:
         z = layout[zone_name]
         card_ids = zone_cards.get(zone_name, [])
         stack = kt.Stack(rect=z.rect, cards=card_ids, spread_x=z.spread_x, spread_y=z.spread_y, face_up=z.face_up, name=zone_name)
@@ -188,13 +180,13 @@ def play(gods_state: Game_State, table_state: kt.Table_State, ui_state: UI_State
         
         if agent:
             current_choice = game_frame(gods_state, agent, current_choice)
-            update_stacks(table_state, gods_state, bottom_player=player_index)
+            update_stacks(table_state, gods_state)
             current_choice.text_description if current_choice else ""
         pyray.end_drawing()
 
     # Game over screen
     if gods_state.game_over:
-        update_stacks(table_state, gods_state, bottom_player=player_index)
+        update_stacks(table_state, gods_state)
         scores = [compute_player_score(gods_state, 0), compute_player_score(gods_state, 1)]
         names = [gods_state.players[0].name, gods_state.players[1].name]
         pi = player_index

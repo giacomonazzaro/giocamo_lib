@@ -12,28 +12,46 @@ from pyray import *
 from kitchen_table.ui import immediate_button, UI_State
 
 
-def update_stacks(table_state: Table_State, gods_state: Game_State, bottom_player: int = 0):
+# Global stack ordering agreed upon by both players in a network game.
+# Stacks are numbered by game player index (not by visual position):
+#   player 0 → indices 0-4, player 1 → indices 5-9, shared deck → 10.
+# The visual layout (who is top/bottom) is separate from this ordering.
+ZONE_ORDER = [
+    "p0_deck", "p0_hand", "p0_discard", "p0_peoples", "p0_wonders",
+    "p1_deck", "p1_hand", "p1_discard", "p1_peoples", "p1_wonders",
+    "shared_deck",
+]
+
+def stack_indices(player_index: int):
+    """Return the global stack indices for a given player's zones.
+
+    Usage:
+        s = stack_indices(0)
+        s.hand   # → 1
+        s.wonders # → 4
+
+        s = stack_indices(1)
+        s.hand   # → 6
+        s.wonders # → 9
+    """
+    from types import SimpleNamespace
+    base = player_index * 5
+    return SimpleNamespace(deck=base, hand=base+1, discard=base+2, peoples=base+3, wonders=base+4)
+
+
+def update_stacks(table_state: Table_State, gods_state: Game_State):
     def update_stack(stack_id: int, card_indices: list[int]):
         # table_state.cards is aligned with game.all_cards, so card.id == kt card id.
         table_state.stacks[stack_id].cards = list(card_indices)
         update_card_positions(table_state.stacks[stack_id], table_state)
 
-    bp = bottom_player
-    tp = 1 - bottom_player
-
-    # Bottom player areas (stacks 0-4): deck, hand, discard, peoples, wonders.
-    update_stack(0, gods_state.players[bp].deck)
-    update_stack(1, gods_state.players[bp].hand)
-    update_stack(2, gods_state.players[bp].discard)
-    update_stack(3, [pid for pid in gods_state.peoples if gods_state.all_cards[pid].owner == bp])
-    update_stack(4, gods_state.players[bp].wonders)
-
-    # Top player areas (stacks 5-9): deck, hand, discard, peoples, wonders.
-    update_stack(5, gods_state.players[tp].deck)
-    update_stack(6, gods_state.players[tp].hand)
-    update_stack(7, gods_state.players[tp].discard)
-    update_stack(8, [pid for pid in gods_state.peoples if gods_state.all_cards[pid].owner == tp])
-    update_stack(9, gods_state.players[tp].wonders)
+    for i in range(2):
+        s = stack_indices(i)
+        update_stack(s.deck,    gods_state.players[i].deck)
+        update_stack(s.hand,    gods_state.players[i].hand)
+        update_stack(s.discard, gods_state.players[i].discard)
+        update_stack(s.peoples, [pid for pid in gods_state.peoples if gods_state.all_cards[pid].owner == i])
+        update_stack(s.wonders, gods_state.players[i].wonders)
 
 class Agent_UI(Agent):
     def __init__(self, table_state: Table_State, ui_state: UI_State, bottom_player: int = 0):
@@ -76,8 +94,9 @@ class Agent_UI(Agent):
         if len(options) == 1 and choice.description != "main":
             return 0
 
-        play_stack = 4 if choice.player_index == self.bottom_player else 9
-        hand_stack = 1 if choice.player_index == self.bottom_player else 6
+        # Stacks are globally ordered: player i's hand is i*5+1, wonders is i*5+4.
+        hand_stack = choice.player_index * 5 + 1
+        play_stack = choice.player_index * 5 + 4
 
         # Set drag-and-drop permission (safe to call every frame).
         def is_drop_card_allowed(source_stack: int, target_stack: int, _card_id: int) -> bool:
