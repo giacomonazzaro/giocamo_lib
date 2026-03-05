@@ -29,7 +29,7 @@ from gods_online.agent_remote import Agent_Local_Online, Agent_Remote
 from gods_online.protocol import send_message, try_recv_message
 from kitchen_table.config import tweak
 from kitchen_table.game_state import update_card_positions
-from kitchen_table.input import find_card_at, update_input
+from kitchen_table.input import find_card_at, point_in_stack_area, update_input
 from kitchen_table.rendering import color_from_tuple, draw_background, draw_table, render_text, text_width
 from kitchen_table.ui import place_inside
 from gods_online.setup import peer_to_peer, setup_online_game
@@ -152,6 +152,26 @@ def play(gods_state: Game_State, table_state: kt.Table_State, ui_state: UI_State
 
         # if not agent:
         update_input(table_state)
+        mx, my = pyray.get_mouse_x(), pyray.get_mouse_y()
+        discard_stack_you = ZONE_ORDER.index(f"p{player_index}_discard")
+        discard_stack_opponent = ZONE_ORDER.index(f"p{1 - player_index}_discard")
+        if pyray.is_mouse_button_pressed(pyray.MouseButton.MOUSE_BUTTON_LEFT):
+            for stack_id in (discard_stack_opponent, discard_stack_you):
+                stack = table_state.stacks[stack_id]
+                is_expanded = stack.spread_x > 0
+                inside = point_in_stack_area(mx, my, stack)
+                print(f"[DISCARD] stack={stack.name} is_expanded={is_expanded} inside={inside} mouse=({mx},{my}) rect=({stack.rect.x:.0f},{stack.rect.y:.0f},{stack.rect.width:.0f},{stack.rect.height:.0f})")
+                if inside and not is_expanded:
+                    # Expand when clicking on a collapsed stack.
+                    stack.rect = ui_state.place(tweak["card_width"] * 7, tweak["card_height"], x="center", y="center")
+                    stack.spread_x = 150
+                    update_card_positions(stack, table_state, sort=False)
+                elif is_expanded and not inside:
+                    # Clicking outside an expanded stack collapses it.
+                    stack.rect = get_table_layout(bottom_player=player_index)[stack.name].rect
+                    stack.spread_x = 0
+                    update_card_positions(stack, table_state, sort=False)
+        
 
         # In no-game-logic online mode, sync stacks with the remote player.
         if agent is None and sock is not None and friend_addr is not None:
