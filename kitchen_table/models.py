@@ -23,6 +23,7 @@ class Stack:
     spread_y: float = 0.0  # Vertical offset between cards
     face_up: bool = True   # Whether cards are visible
     name: str = ""
+    depth: float = 0.0 # Rendering depth (lower values are drawn first) 
 
 
 @dataclass(slots=True)

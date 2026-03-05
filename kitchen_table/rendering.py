@@ -391,7 +391,7 @@ def draw_table(table_state: Table_State) -> None:
         draw_stack_placeholder(stack)
 
     # Draw stacks,
-    for stack in table_state.stacks:
+    for stack in sorted(table_state.stacks, key=lambda s: s.depth):
         for card_id in stack.cards:
             card = table_state.animated_cards[card_id]
             if table_state.drag_state.card_id == card_id:

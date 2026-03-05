@@ -1,6 +1,5 @@
 from __future__ import annotations
 import os
-from dataclasses import dataclass, field
 
 from pyray import *
 
@@ -12,18 +11,10 @@ import kitchen_table.models as kt
 IMAGES_DIR = os.path.join(os.path.dirname(__file__), "..", "gods", "cards", "card-images")
 
 
-@dataclass(slots=True)
-class Zone_Layout:
-    rect: Rectangle
-    spread_x: int
-    spread_y: int
-    face_up: bool
-
-
-def get_table_layout(bottom_player: int = 0) -> dict[str, Zone_Layout]:
+def get_table_layout(bottom_player: int = 0) -> dict[str, kt.Stack]:
     """Return stack layout definitions for the card table.
 
-    Returns a dict mapping zone name to Zone_Layout.
+    Returns a dict mapping zone name to Stack (cards/name/depth left at defaults).
     Zone names: p{i}_deck, p{i}_hand, p{i}_discard, p{i}_wonders, peoples.
     bottom_player determines which player's cards appear at the bottom.
     Positions are computed adaptively from window dimensions.
@@ -70,19 +61,19 @@ def get_table_layout(bottom_player: int = 0) -> dict[str, Zone_Layout]:
     bp = f"p{bottom_player}"
     tp = f"p{1 - bottom_player}"
 
-    Z = Zone_Layout
+    S = kt.Stack
     return {
-        f"{bp}_deck":    Z(bottom_deck,  0,           spread_pile, False),
-        f"{bp}_hand":    Z(bottom_hand,  spread_hand, 0,           True),
-        f"{bp}_discard": Z(discard,      0,           spread_pile, True),
-        f"{bp}_peoples": Z(bp_peoples,   spread_wonders, 0,        True),
-        f"{bp}_wonders": Z(bottom_wonders, spread_wonders, 0,      True),
-        f"{tp}_deck":    Z(tp_deck,      0,           spread_pile, False),
-        f"{tp}_hand":    Z(tp_hand,      spread_hand, 0,           False),
-        f"{tp}_discard": Z(tp_discard,   0,           spread_pile, True),
-        f"{tp}_peoples": Z(tp_peoples,   spread_wonders, 0,        True),
-        f"{tp}_wonders": Z(tp_wonders,   spread_wonders, 0,        True),
-        "shared_deck":   Z(shared_deck,  0,           0,           True),
+        f"{bp}_deck":    S(bottom_deck,  spread_x=0,           spread_y=spread_pile, face_up=False),
+        f"{bp}_hand":    S(bottom_hand,  spread_x=spread_hand, spread_y=0,           face_up=True),
+        f"{bp}_discard": S(discard,      spread_x=0,           spread_y=spread_pile, face_up=True),
+        f"{bp}_peoples": S(bp_peoples,   spread_x=spread_wonders, spread_y=0,        face_up=True),
+        f"{bp}_wonders": S(bottom_wonders, spread_x=spread_wonders, spread_y=0,      face_up=True),
+        f"{tp}_deck":    S(tp_deck,      spread_x=0,           spread_y=spread_pile, face_up=False),
+        f"{tp}_hand":    S(tp_hand,      spread_x=spread_hand, spread_y=0,           face_up=False),
+        f"{tp}_discard": S(tp_discard,   spread_x=0,           spread_y=spread_pile, face_up=True),
+        f"{tp}_peoples": S(tp_peoples,   spread_x=spread_wonders, spread_y=0,        face_up=True),
+        f"{tp}_wonders": S(tp_wonders,   spread_x=spread_wonders, spread_y=0,        face_up=True),
+        "shared_deck":   S(shared_deck,  spread_x=0,           spread_y=0,           face_up=True),
     }
 
 

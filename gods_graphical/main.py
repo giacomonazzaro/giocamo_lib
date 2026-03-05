@@ -68,27 +68,22 @@ def init_table_state(gods_state: Game_State, ui_state: UI_State, bottom_player: 
         for card in gods_state.all_cards
     ]
 
-    # Stacks use the gods int IDs directly — no translation needed.
-    zone_cards = {}
-    for i in range(2):
-        p = gods_state.players[i]
-        zone_cards[f"p{i}_deck"] = list(p.deck)
-        zone_cards[f"p{i}_hand"] = list(p.hand)
-        zone_cards[f"p{i}_discard"] = list(p.discard)
-        zone_cards[f"p{i}_wonders"] = list(p.wonders)
-        zone_cards[f"p{i}_peoples"] = [
-            pid for pid in gods_state.peoples if gods_state.all_cards[pid].owner == i
-        ]
-    zone_cards["shared_deck"] = list(gods_state.shared_deck)
-
     # Layout provides visual positions (rects) keyed by zone name.
     layout = get_table_layout(bottom_player=bottom_player)
 
+    for i in range(2):
+        p = gods_state.players[i]
+        layout[f"p{i}_deck"].cards    = list(p.deck)
+        layout[f"p{i}_hand"].cards    = list(p.hand)
+        layout[f"p{i}_discard"].cards = list(p.discard)
+        layout[f"p{i}_wonders"].cards = list(p.wonders)
+        layout[f"p{i}_peoples"].cards = [pid for pid in gods_state.peoples if gods_state.all_cards[pid].owner == i]
+    layout["shared_deck"].cards = list(gods_state.shared_deck)
+
     stacks = []
     for zone_name in ZONE_ORDER:
-        z = layout[zone_name]
-        card_ids = zone_cards.get(zone_name, [])
-        stack = kt.Stack(rect=z.rect, cards=card_ids, spread_x=z.spread_x, spread_y=z.spread_y, face_up=z.face_up, name=zone_name)
+        stack = layout[zone_name]
+        stack.name = zone_name
         stacks.append(stack)
 
     table_state = kt.Table_State(cards=cards, stacks=stacks)
@@ -165,11 +160,13 @@ def play(gods_state: Game_State, table_state: kt.Table_State, ui_state: UI_State
                     # Expand when clicking on a collapsed stack.
                     stack.rect = ui_state.place(tweak["card_width"] * 7, tweak["card_height"], x="center", y="center")
                     stack.spread_x = 150
+                    stack.depth = +1.0 # bring to front
                     update_card_positions(stack, table_state, sort=False)
                 elif is_expanded and not inside:
                     # Clicking outside an expanded stack collapses it.
                     stack.rect = get_table_layout(bottom_player=player_index)[stack.name].rect
                     stack.spread_x = 0
+                    stack.depth = 0.0 # reset depth
                     update_card_positions(stack, table_state, sort=False)
         
 
