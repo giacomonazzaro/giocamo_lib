@@ -19,10 +19,6 @@ class Card_Color(Enum):
     YELLOW = "yellow"
 
 
-# Global list of card designs — set once at game initialization, never deep-copied.
-# All game state copies share this list; hook methods are looked up by card id.
-card_designs: list[Card_Design] = []
-
 
 @dataclass(slots=True)
 class Card_Design:
@@ -54,6 +50,10 @@ class Card_Design:
     def wins_tie(self, game: Game_State, people: Card) -> bool: return False
 
 
+# Global list of card designs — set once at game initialization, never deep-copied.
+# All game state copies share this list; hook methods are looked up by card id.
+card_designs: list[Card_Design] = []
+
 @dataclass(slots=True)
 class Card:
     """Runtime card state — only the mutable fields that change during a game.
@@ -61,11 +61,49 @@ class Card:
     id: int           # index into card_designs and Game_State.all_cards
     card_type: Card_Type
     color: Card_Color
-    power: int        # base power (mutable — Stars can reassign it for shared-deck cards)
+    power: int       
     counters: int = 0
     destroyed: bool = False
     owner: int = -1
 
+    # Methods that delegate to the card design's hooks, looked up by id. 
+    # So Card_Design use dynamic dispatch, while Cards 
+    def on_draw(self, game: Game_State) -> list[Choice]:
+        return card_designs[self.id].on_draw(game)
+    def on_draw_replacement(self, game: Game_State) -> list[Choice]:
+        return card_designs[self.id].on_draw_replacement(game)
+    def on_played(self, game: Game_State) -> list[Choice]:
+        return card_designs[self.id].on_played(game)
+    def on_game_end(self, game: Game_State) -> list[Choice]:
+        return card_designs[self.id].on_game_end(game)
+    def on_destroyed(self, game: Game_State) -> None:
+        card_designs[self.id].on_destroyed(game)
+    def on_play(self, game: Game_State, card_played: Card) -> None:
+        card_designs[self.id].on_play(game, card_played)
+    def on_destroy(self, game: Game_State, card_destroyed: Card) -> None:
+        card_designs[self.id].on_destroy(game, card_destroyed)
+    def on_restore(self, game: Game_State, card_restored: Card) -> None:
+        card_designs[self.id].on_restore(game, card_restored)
+    def on_discard(self, game: Game_State, card_discarded: Card) -> list[Choice]:
+        return card_designs[self.id].on_discard(game, card_discarded)
+    def on_pass(self, game: Game_State) -> list[Choice]:
+        return card_designs[self.id].on_pass(game)
+    def on_turn_end(self, game: Game_State) -> list[Choice]:
+        return card_designs[self.id].on_turn_end(game)
+    def on_turn_start(self, game: Game_State) -> list[Choice]:
+        return card_designs[self.id].on_turn_start(game)
+    def power_modifier(self, game: Game_State, card: Card, power: int) -> int:
+        return card_designs[self.id].power_modifier(game, card, power)
+    def is_indestructible(self, game: Game_State, card: Card) -> bool:
+        return card_designs[self.id].is_indestructible(game, card)
+    def can_be_claimed(self, game: Game_State, player_index: int) -> int:
+        return card_designs[self.id].can_be_claimed(game, player_index)
+    def on_scoring(self, game: Game_State) -> int:
+        return card_designs[self.id].on_scoring(game)
+    def on_scoring_people(self, game: Game_State, people: Card, points: int) -> int:
+        return card_designs[self.id].on_scoring_people(game, people, points)
+    def wins_tie(self, game: Game_State, people: Card) -> bool:
+        return card_designs[self.id].wins_tie(game, people)
 
 @dataclass(slots=True)
 class Player:
@@ -79,7 +117,7 @@ class Player:
 class Card_Id:
     area: str  # "deck", "hand", "discard", "wonders", "people"
     card_index: int
-    owner_index: Optional[int] = None  # None means neutral / no owner
+    owner_index: int
 
     @staticmethod
     def null() -> Card_Id:
@@ -190,12 +228,16 @@ class Game_State(Game):
                      "discard": player.discard, "deck": player.deck}[area]
         return sorted([Card_Id(area, cid, player_id) for cid in area_list], key=lambda c: c.card_index)
 
-def effective_power(game: Game_State, card: Card) -> int:
-    """Calculate effective power of a card, applying all wonder power modifiers."""
-    power = card.power + card.counters
-    for player in game.players:
-        for wid in player.wonders:
-            power = card_designs[wid].power_modifier(game, card, power)
-    if power < 0:
-        power = 0
-    return power
+    def effective_power(self, card_id: int) -> int:
+        """Calculate effective power of a card, applying all wonder power modifiers."""
+        card = self.all_cards[card_id]
+        power = card.power + card.counters
+        for player in self.players:
+            for wid in player.wonders:
+                power = card_designs[wid].power_modifier(self, card, power)
+        if power < 0:
+            power = 0
+        return power
+
+    def owner(self, card_id: int) -> int:
+        return self.all_cards[card_id].owner

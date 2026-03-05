@@ -1,7 +1,7 @@
 from __future__ import annotations
 import random
 from typing import Optional
-from gods.models import Card, Card_Id, Card_Type, Game_State, card_designs, effective_power
+from gods.models import Card, Card_Id, Card_Type, Game_State, card_designs
 from game.game import Choice, Choose_Card
 from game.agents.minimax_stochastic import Agent_Minimax_Stochastic
 
@@ -136,7 +136,7 @@ def make_claim_choice(state: Game_State) -> Optional[Choice]:
         return [
             Card_Id(area="people", card_index=pid, owner_index=opponent_index)
             for pid in state.peoples
-            if state.all_cards[pid].owner == opponent_index
+            if state.owner(pid) == opponent_index
             and card_designs[pid].can_be_claimed(state, player_index)
         ] + [Card_Id.null()]
 
@@ -165,7 +165,7 @@ def compute_player_score(game: Game_State, player_index: int) -> int:
         people = game.all_cards[people_id]
         if people.owner != player_index or people.destroyed:
             continue
-        points = effective_power(game, people)
+        points = game.effective_power(people.id)
         for wid in player.wonders:
             points = card_designs[wid].on_scoring_people(game, people, points)
         score += points
@@ -217,7 +217,7 @@ def display_game_state(game: Game_State, current_player_view: bool = True) -> No
 
     # People cards, grouped by owning player.
     for i, player in enumerate(game.players):
-        owned = [pid for pid in game.peoples if game.all_cards[pid].owner == i]
+        owned = [pid for pid in game.peoples if game.owner(pid) == i]
         print(f"\n--- PEOPLE ({player.name}) ---")
         for people_id in owned:
             people = game.all_cards[people_id]

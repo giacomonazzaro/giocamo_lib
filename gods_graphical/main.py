@@ -15,7 +15,7 @@ from game.agents.duel import Agent_Duel
 from game.agents.process import Agent_Process
 from game.game import Choice, game_frame, game_loop, resolve_choice
 from gods.gameplay import compute_player_score, Agent_Minimax_Stochastic_Gods
-from gods.models import Game_State, card_designs, effective_power
+from gods.models import Game_State, card_designs
 from gods.setup import quick_setup
 from gods_graphical.agent_ui import Agent_UI, update_stacks
 from gods_graphical.ui import (
@@ -46,7 +46,7 @@ def init_table_state(gods_state: Game_State, ui_state: UI_State, bottom_player: 
     def draw_power(card: kt.Card):
         # card.id == the all_cards index since both lists are aligned.
         gods_card = gods_state.all_cards[card.id]
-        power = str(effective_power(gods_state, gods_card))
+        power = str(gods_state.effective_power(card.id))
         draw_card_power_badge(power, gods_card.destroyed)
 
         highlight_color = color_from_tuple(tweak["highlight_color"])
@@ -84,7 +84,7 @@ def init_table_state(gods_state: Game_State, ui_state: UI_State, bottom_player: 
         stacks[name_to_stack[f"p{i}_hand"]].cards    = list(p.hand)
         stacks[name_to_stack[f"p{i}_discard"]].cards = list(p.discard)
         stacks[name_to_stack[f"p{i}_wonders"]].cards = list(p.wonders)
-        stacks[name_to_stack[f"p{i}_peoples"]].cards = [pid for pid in gods_state.peoples if gods_state.all_cards[pid].owner == i]
+        stacks[name_to_stack[f"p{i}_peoples"]].cards = [pid for pid in gods_state.peoples if gods_state.owner(pid) == i]
     stacks[name_to_stack["shared_deck"]].cards = list(gods_state.shared_deck)
 
 
