@@ -1,7 +1,7 @@
 from __future__ import annotations
 import random
 from typing import Optional
-from gods.models import Card, Card_Id, Card_Type, Game_State, card_designs
+from gods.models import Card, Card_Id, Card_Type, Game_State
 from game.game import Choice, Choose_Card
 from game.agents.minimax_stochastic import Agent_Minimax_Stochastic
 
@@ -13,7 +13,7 @@ def draw_card(game: Game_State, player_id: int, replacement_effects=True) -> lis
 
     if replacement_effects:
         for wid in player.wonders:
-            choices = card_designs[wid].on_draw_replacement(game)
+            choices = game.all_cards[wid].on_draw_replacement(game)
             if choices:
                 return choices
 
@@ -24,7 +24,7 @@ def draw_card(game: Game_State, player_id: int, replacement_effects=True) -> lis
     player.hand.append(card_id)
 
     for wid in player.wonders:
-        choices = card_designs[wid].on_draw(game)
+        choices = game.all_cards[wid].on_draw(game)
         if choices:
             return choices
 
@@ -49,47 +49,47 @@ def discard_cards(game: Game_State, card_ids: list[Card_Id]) -> list[Choice]:
     for wonder_id in game.wonders(player_id):
         wonder = game.get_card(wonder_id)
         for card in cards:
-            choices += card_designs[wonder.id].on_discard(game, card)
+            choices += game.all_cards[wonder.id].on_discard(game, card)
 
     return choices
 
 
-def wonders_by_priority(state: Game_State) -> list[Card]:
-    all_wonder_ids = state.active_player().wonders + state.opponent().wonders
-    return [state.all_cards[wid] for wid in all_wonder_ids]
+def wonders_by_priority(game: Game_State) -> list[Card]:
+    all_wonder_ids = game.active_player().wonders + game.opponent().wonders
+    return [game.all_cards[wid] for wid in all_wonder_ids]
 
-def play_card(state: Game_State, card_id: Card_Id) -> list[Choice]:
+def play_card(game: Game_State, card_id: Card_Id) -> list[Choice]:
     """Play a card from a player's hand. Returns list of choices from the card's on_played."""
-    player = state.players[card_id.owner_index]
-    card = state.get_card(card_id)
+    player = game.players[card_id.owner_index]
+    card = game.get_card(card_id)
     if card_id.area == "hand":
         # card_index is the stable Card.id, so remove by value rather than position.
         player.hand.remove(card_id.card_index)
 
-    choices = card_designs[card.id].on_played(state)
+    choices = game.all_cards[card.id].on_played(game)
     if card.card_type == Card_Type.WONDER:
-        card.owner = state.current_player
+        card.owner = game.current_player
         player.wonders.append(card.id)
     elif card.card_type == Card_Type.EVENT:
         player.discard.append(card.id)
 
     card.counters = 0
 
-    for w in wonders_by_priority(state):
-        card_designs[w.id].on_play(state, card)
+    for w in wonders_by_priority(game):
+        game.all_cards[w.id].on_play(game, card)
 
     return choices
 
 def destroy_people(game: Game_State, card_id: Card_Id) -> None:
     people = game.get_card(card_id)
     for w in wonders_by_priority(game):
-        if card_designs[w.id].is_indestructible(game, people):
+        if game.all_cards[w.id].is_indestructible(game, people):
             return
 
     people.destroyed = True
-    card_designs[people.id].on_destroyed(game)
+    game.all_cards[people.id].on_destroyed(game)
     for card in wonders_by_priority(game):
-        card_designs[card.id].on_destroy(game, people)
+        game.all_cards[card.id].on_destroy(game, people)
 
 def destroy_wonder(game: Game_State, card_id: Card_Id) -> None:
     card = game.get_card(card_id)
@@ -100,9 +100,9 @@ def destroy_wonder(game: Game_State, card_id: Card_Id) -> None:
         player.wonders.remove(card.id)
         player.discard.append(card.id)
 
-    card_designs[card.id].on_destroyed(game)
+    game.all_cards[card.id].on_destroyed(game)
     for w in wonders_by_priority(game):
-        card_designs[w.id].on_destroy(game, card)
+        game.all_cards[w.id].on_destroy(game, card)
 
 def restore_people(game: Game_State, card_id: Card_Id) -> None:
     people = game.get_card(card_id)
@@ -121,38 +121,38 @@ def shuffle_card_into_deck(game: Game_State, card_id: Card_Id) -> None:
         player.deck.append(card.id)
         random.shuffle(player.deck)
 
-def make_claim_choice(state: Game_State) -> Optional[Choice]:
+def make_claim_choice(game: Game_State) -> Optional[Choice]:
     """
     At the end of the active player's turn, offer a chance to claim one people
     card from the opponent. Claiming is only allowed when the active player's
     eval_points strictly exceeds the opponent's (ties do not allow claiming).
     Returns None if there is nothing claimable.
     """
-    player_index = state.current_player
+    player_index = game.current_player
     opponent_index = 1 - player_index
 
 
-    def actions(state: Game_State) -> list:
+    def actions(game: Game_State) -> list:
         return [
             Card_Id(area="people", card_index=pid, owner_index=opponent_index)
-            for pid in state.peoples
-            if state.owner(pid) == opponent_index
-            and card_designs[pid].can_be_claimed(state, player_index)
+            for pid in game.peoples
+            if game.owner(pid) == opponent_index
+            and game.all_cards[pid].can_be_claimed(game, player_index)
         ] + [Card_Id.null()]
 
-    if(len(actions(state)) == 1):
+    if(len(actions(game)) == 1):
         return None
 
-    def resolve(state: Game_State, option_index: int):
-        card_id = actions(state)[option_index]
+    def resolve(game: Game_State, option_index: int):
+        card_id = actions(game)[option_index]
         if not Card_Id.is_null(card_id):
             # Transfer ownership from opponent to the active player.
-            people = state.get_card(card_id)
+            people = game.get_card(card_id)
             people.owner = player_index
         return []
 
     return Choice(player_index=player_index, description="choose-card", text_description="Claim a people card from your opponent",
-                  actions=lambda state: Choose_Card(targets=actions(state)), resolve=resolve)
+                  actions=lambda game: Choose_Card(targets=actions(game)), resolve=resolve)
 
 
 def compute_player_score(game: Game_State, player_index: int) -> int:
@@ -167,50 +167,50 @@ def compute_player_score(game: Game_State, player_index: int) -> int:
             continue
         points = game.effective_power(people.id)
         for wid in player.wonders:
-            points = card_designs[wid].on_scoring_people(game, people, points)
+            points = game.all_cards[wid].on_scoring_people(game, people, points)
         score += points
 
     # Points from wonders (Animals, Love).
     for wid in player.wonders:
-        score += card_designs[wid].on_scoring(game)
+        score += game.all_cards[wid].on_scoring(game)
 
     return score
 
 
-def make_main_choice(state: Game_State) -> Choice:
-    player_index = state.current_player
-    def actions(state: Game_State) -> list:
+def make_main_choice(game: Game_State) -> Choice:
+    player_index = game.current_player
+    def actions(game: Game_State) -> list:
         # Sorted by stable card_index so the list is canonical regardless of display order.
-        cards = sorted([Card_Id(area="hand", card_index=cid, owner_index=state.current_player)
-                        for cid in state.players[state.current_player].hand], key=lambda c: c.card_index)
+        cards = sorted([Card_Id(area="hand", card_index=cid, owner_index=game.current_player)
+                        for cid in game.players[game.current_player].hand], key=lambda c: c.card_index)
         cards.append(Card_Id.null())
         return cards
 
-    def resolve(state: Game_State, option_index: int):
-        card_id = actions(state)[option_index]
+    def resolve(game: Game_State, option_index: int):
+        card_id = actions(game)[option_index]
         if card_id != Card_Id.null():
-            new_choices = play_card(state, card_id)
-            state.current_phase = "post-play"
+            new_choices = play_card(game, card_id)
+            game.current_phase = "post-play"
             return new_choices
         else:
             result: list[Choice] = []
-            player = state.active_player()
+            player = game.active_player()
             for wid in player.wonders:
-                result.extend(card_designs[wid].on_pass(state))
-            state.current_phase = "post-pass-effects"
+                result.extend(game.all_cards[wid].on_pass(game))
+            game.current_phase = "post-pass-effects"
             return result
 
     return Choice(player_index=player_index, description="main", text_description="Play a card or pass",
-                  actions=lambda state: Choose_Card(targets=actions(state)), resolve=resolve)
+                  actions=lambda game: Choose_Card(targets=actions(game)), resolve=resolve)
 
 
 def detailed_str(card: Card) -> str:
-    design = card_designs[card.id]
+    design = game.all_cards[card.id]
     counters_str = f" (+{card.counters})" if card.counters > 0 else (f" ({card.counters})" if card.counters < 0 else "")
     return f"{design.name} [{card.color.value} {card.card_type.value}, power {card.power}{counters_str}] - {design.effect}"
 
 def display_game_state(game: Game_State, current_player_view: bool = True) -> None:
-    """Display the current game state."""
+    """Display the current game game."""
     print("\n" + "=" * 60)
     print("GAME STATE")
     print("=" * 60)
@@ -221,7 +221,7 @@ def display_game_state(game: Game_State, current_player_view: bool = True) -> No
         print(f"\n--- PEOPLE ({player.name}) ---")
         for people_id in owned:
             people = game.all_cards[people_id]
-            design = card_designs[people_id]
+            design = game.all_cards[people_id]
             status_str = " [DESTROYED]" if people.destroyed else ""
             print(f"  {design.name}{status_str}")
             print(f"    Effect: {design.effect}")
@@ -251,40 +251,40 @@ def display_game_state(game: Game_State, current_player_view: bool = True) -> No
 class Agent_Minimax_Stochastic_Gods(Agent_Minimax_Stochastic):
     """Minimax agent with gods-specific evaluation."""
 
-    def evaluate_state(self, state: Game_State, player_index: int) -> float:
-        if not state.is_game_over():
-            return self.evaluate_heuristic(state, player_index)
+    def evaluate_state(self, game: Game_State, player_index: int) -> float:
+        if not game.is_game_over():
+            return self.evaluate_heuristic(game, player_index)
 
-        my_score = compute_player_score(state, player_index)
-        opp_score = compute_player_score(state, 1 - player_index)
+        my_score = compute_player_score(game, player_index)
+        opp_score = compute_player_score(game, 1 - player_index)
         diff = my_score - opp_score
         if diff > 0:
             return +1000.0
         elif diff < 0:
             return -1000.0
         else:
-            if player_index == state.current_player:
+            if player_index == game.current_player:
                 return -1000.0
             else:
                 return +1000.0
 
-    def evaluate_heuristic(self, state: Game_State, player_index: int) -> float:
+    def evaluate_heuristic(self, game: Game_State, player_index: int) -> float:
         """Estimate how good a non-finished position is."""
-        my_score = compute_player_score(state, player_index)
-        opp_score = compute_player_score(state, 1 - player_index)
+        my_score = compute_player_score(game, player_index)
+        opp_score = compute_player_score(game, 1 - player_index)
 
         score = float(my_score - opp_score)
 
-        my_hand = len(state.players[player_index].hand)
-        opp_hand = len(state.players[1 - player_index].hand)
+        my_hand = len(game.players[player_index].hand)
+        opp_hand = len(game.players[1 - player_index].hand)
         score += 0.1 * (my_hand - opp_hand)
 
-        my_wonders = len(state.players[player_index].wonders)
-        opp_wonders = len(state.players[1 - player_index].wonders)
+        my_wonders = len(game.players[player_index].wonders)
+        opp_wonders = len(game.players[1 - player_index].wonders)
         score += 0.2 * (my_wonders - opp_wonders)
 
-        my_deck = len(state.players[player_index].deck)
-        opp_deck = len(state.players[1 - player_index].deck)
+        my_deck = len(game.players[player_index].deck)
+        opp_deck = len(game.players[1 - player_index].deck)
         score += 0.05 * (my_deck - opp_deck)
 
         return score

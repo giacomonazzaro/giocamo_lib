@@ -129,7 +129,7 @@ class Card_Id:
 
 @dataclass(slots=True)
 class Game_State(Game):
-    # Runtime card states only — card_designs is a module-level global, not copied.
+    # Runtime state only
     all_cards: list[Card] = field(default_factory=list)
     players: list[Player] = field(default_factory=list)
     peoples: list[int] = field(default_factory=list)     # people cards in the center, indices into all_cards
@@ -153,7 +153,7 @@ class Game_State(Game):
 
             if self.current_phase == "start":
                 for wid in self.active_player().wonders:
-                    self.choices.extend(card_designs[wid].on_turn_start(self))
+                    self.choices.extend(self.all_cards[wid].on_turn_start(self))
                 self.current_phase = "main"
 
             elif self.current_phase == "main":
@@ -183,7 +183,7 @@ class Game_State(Game):
 
             elif self.current_phase == "end":
                 for wid in self.active_player().wonders:
-                    self.choices.extend(card_designs[wid].on_turn_end(self))
+                    self.choices.extend(self.all_cards[wid].on_turn_end(self))
                 self.switch_turn()
                 self.current_phase = "start"
 
@@ -234,7 +234,7 @@ class Game_State(Game):
         power = card.power + card.counters
         for player in self.players:
             for wid in player.wonders:
-                power = card_designs[wid].power_modifier(self, card, power)
+                power = self.all_cards[wid].power_modifier(self, card, power)
         if power < 0:
             power = 0
         return power

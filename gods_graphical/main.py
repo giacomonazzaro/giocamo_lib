@@ -15,7 +15,7 @@ from game.agents.duel import Agent_Duel
 from game.agents.process import Agent_Process
 from game.game import Choice, game_frame, game_loop, resolve_choice
 from gods.gameplay import compute_player_score, Agent_Minimax_Stochastic_Gods
-from gods.models import Game_State, card_designs
+from gods.models import Game_State
 from gods.setup import quick_setup
 from gods_graphical.agent_ui import Agent_UI, update_stacks
 from gods_graphical.ui import (
@@ -62,6 +62,7 @@ def init_table_state(gods_state: Game_State, ui_state: UI_State, bottom_player: 
     # Build table_state.cards in the same order as game.all_cards so that
     # table_state.cards[i] corresponds to game.all_cards[i], making card.id
     # serve as the shared integer key with no separate kt_card_id needed.
+    from gods.models import card_designs
     cards = [
         kt.Card(
             id=card.id,
