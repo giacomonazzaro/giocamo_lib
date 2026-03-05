@@ -132,12 +132,22 @@ def make_claim_choice(game: Game_State) -> Optional[Choice]:
     opponent_index = 1 - player_index
 
 
+    def can_claim(game: Game_State, pid: int) -> bool:
+        if game.all_cards[pid].can_be_claimed(game, player_index):
+            return True
+        # Wonders with wins_tie allow claiming even-scored people.
+        people = game.all_cards[pid]
+        for wid in game.players[player_index].wonders:
+            if game.all_cards[wid].wins_tie(game, people):
+                return True
+        return False
+
     def actions(game: Game_State) -> list:
         return [
             Card_Id(area="people", card_index=pid, owner_index=opponent_index)
             for pid in game.peoples
             if game.owner(pid) == opponent_index
-            and game.all_cards[pid].can_be_claimed(game, player_index)
+            and can_claim(game, pid)
         ] + [Card_Id.null()]
 
     if(len(actions(game)) == 1):

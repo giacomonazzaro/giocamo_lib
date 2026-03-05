@@ -153,12 +153,9 @@ class War(Card_Design):
 
 @dataclass(slots=True)
 class Rivers(Card_Design):
-    def on_pass(self, game: Game_State) -> list[Choice]:
-        def action(state, card_id):
-            restore_people(state, card_id)
-            return []
-        get_targets = lambda state: people_selection(state, lambda p: p.destroyed, include_null=True)
-        return [make_choose_card_choice(game.current_player, get_targets, action, "Restore a destroyed people")]
+    def wins_tie(self, game: Game_State, people: Card) -> bool:
+        # Allow the owner to claim tied people with power <= Rivers' power.
+        return game.effective_power(people.id) <= game.effective_power(self.id)
 
 @dataclass(slots=True)
 class Earthquake(Card_Design):
