@@ -28,6 +28,24 @@ def stack_indices(player_index: int):
     return SimpleNamespace(deck=base, hand=base+1, discard=base+2, peoples=base+3, wonders=base+4)
 
 
+def sync_game_state_from_table(table_state: Table_State, gods_state: Game_State):
+    """Update Gods game state to match the current visual table state.
+    Called when exiting Playground mode so game logic resumes from the user-arranged layout."""
+    for i in range(2):
+        s = stack_indices(i)
+        gods_state.players[i].deck    = list(table_state.stacks[s.deck].cards)
+        gods_state.players[i].hand    = list(table_state.stacks[s.hand].cards)
+        gods_state.players[i].discard = list(table_state.stacks[s.discard].cards)
+        gods_state.players[i].wonders = list(table_state.stacks[s.wonders].cards)
+        for wid in gods_state.players[i].wonders:
+            gods_state.all_cards[wid].owner = i
+        for pid in table_state.stacks[s.peoples].cards:
+            gods_state.all_cards[pid].owner = i
+    # Discard pending choices and restart from the main phase.
+    gods_state.choices = []
+    gods_state.current_phase = "main"
+
+
 def update_stacks(table_state: Table_State, gods_state: Game_State):
     def update_stack(stack_id: int, card_indices: list[int]):
         # table_state.cards is aligned with game.all_cards, so card.id == kt card id.

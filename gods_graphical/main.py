@@ -17,7 +17,7 @@ from game.game import Choice, game_frame, game_loop, resolve_choice
 from gods.gameplay import compute_player_score, Agent_Minimax_Stochastic_Gods
 from gods.models import Game_State
 from gods.setup import quick_setup
-from gods_graphical.agent_ui import Agent_UI, update_stacks
+from gods_graphical.agent_ui import Agent_UI, update_stacks, sync_game_state_from_table
 from gods_graphical.ui import (
     draw_card_power_badge,
     draw_game_over_screen,
@@ -31,7 +31,7 @@ from kitchen_table.config import tweak
 from kitchen_table.game_state import update_card_positions
 from kitchen_table.input import find_card_at, point_in_stack_area, update_input
 from kitchen_table.rendering import color_from_tuple, draw_background, draw_table, render_text, text_width
-from kitchen_table.ui import place_inside
+from kitchen_table.ui import immediate_button, place_inside
 from gods_online.setup import peer_to_peer, setup_online_game
 
 app = typer.Typer()
@@ -114,6 +114,13 @@ def draw_hud(gods_state: Game_State, choice: Choice, ui_state: UI_State, bottom_
         draw_player_hud(name, score, len(player.deck), is_current, hud_y)
 
     ui_state.draw_buttons()
+
+    # Playground toggle button: top-left corner.
+    label = "Playground: ON" if ui_state.playground else "Playground: OFF"
+    btn_r = ui_state.place(160, 32, x="right", y="top", padding=20)
+    if immediate_button(btn_r, label):
+        ui_state.playground = not ui_state.playground
+
     text = choice.text_description if choice else ""
     if text:
         font_size = 22
@@ -134,8 +141,9 @@ def play_gods(gods_state: Game_State, table_state: kt.Table_State, ui_state: UI_
         pyray.set_target_fps(tweak["target_fps"])
 
     current_choice = None
+    prev_playground = ui_state.playground
     table_state.draw_callback = lambda table: draw_hud(gods_state, current_choice, ui_state, bottom_player=player_index)
-    
+
     while not pyray.window_should_close():
         if gods_state.game_over:
             break
@@ -199,10 +207,20 @@ def play_gods(gods_state: Game_State, table_state: kt.Table_State, ui_state: UI_
         draw_background(turn)
         draw_table(table_state)
         
-        if agent:
-            current_choice = game_frame(gods_state, agent, current_choice)
+        # When leaving playground mode, sync visual state back into game logic.
+        if prev_playground and not ui_state.playground:
+            sync_game_state_from_table(table_state, gods_state)
+            current_choice = None
+            
+        if not prev_playground and ui_state.playground:
+            table_state.is_drop_card_allowed = lambda *_: True
+
+        prev_playground = ui_state.playground
+
+        effective_agent = None if ui_state.playground else agent
+        if effective_agent:
+            current_choice = game_frame(gods_state, effective_agent, current_choice)
             update_stacks(table_state, gods_state)
-            current_choice.text_description if current_choice else ""
         pyray.end_drawing()
 
     # Game over screen
