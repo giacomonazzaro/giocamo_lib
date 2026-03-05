@@ -11,10 +11,10 @@ import kitchen_table.models as kt
 IMAGES_DIR = os.path.join(os.path.dirname(__file__), "..", "gods", "cards", "card-images")
 
 
-def get_table_layout(bottom_player: int = 0) -> dict[str, kt.Stack]:
+def make_gods_stacks(bottom_player: int = 0) -> list[kt.Stack]:
     """Return stack layout definitions for the card table.
 
-    Returns a dict mapping zone name to Stack (cards/name/depth left at defaults).
+    Returns a list of Stack objects (cards/name/depth left at defaults).
     Zone names: p{i}_deck, p{i}_hand, p{i}_discard, p{i}_wonders, peoples.
     bottom_player determines which player's cards appear at the bottom.
     Positions are computed adaptively from window dimensions.
@@ -34,48 +34,56 @@ def get_table_layout(bottom_player: int = 0) -> dict[str, kt.Stack]:
     peoples_width = 2 * w + spread_wonders
 
     # Bottom player: anchor zones to the bottom of the window, then chain leftward.
-    bottom_hand    = place_inside(window, hand_width, h, x="center", y="bottom", padding=margin)
-    bottom_wonders = place_next(bottom_hand, hand_width, h, x="center", y="top", padding=margin)
-    bottom_deck    = place_next(bottom_hand, w, h, x="left", y="center", padding=margin)
-    discard        = place_next(bottom_deck, w, h, x="left", y="center", padding=margin)
+    p0_hand    = place_inside(window, hand_width, h, x="center", y="bottom", padding=margin)
+    p0_wonders = place_next(p0_hand, hand_width, h, x="center", y="top", padding=margin)
+    p0_deck    = place_next(p0_hand, w, h, x="left", y="center", padding=margin)
+    p0_discard = place_next(p0_deck, w, h, x="left", y="center", padding=margin)
 
     # Top player: mirror bottom y positions, pushed partially offscreen.
     opponent_shift = int(h * 0.65)
     top_y = margin - opponent_shift
-    top_wonders_y = H - int(bottom_wonders.y) - h - opponent_shift
+    top_wonders_y = H - int(p0_wonders.y) - h - opponent_shift
 
     # Shared deck: vertically centered, off-screen to the left.
     shared_deck = place_inside(window, w, h, x="left", y="center")
     shared_deck.x = -w
     
     # Peoples
-    bp_peoples = Rectangle(discard.x,        bottom_wonders.y, peoples_width, h)
+    p0_peoples = Rectangle(p0_discard.x,        p0_wonders.y, peoples_width, h)
 
     # Pre-build top-player rects by reusing bottom positions with mirrored y.
-    tp_deck    = Rectangle(bottom_deck.x,    top_y,         w,             h)
-    tp_hand    = Rectangle(bottom_hand.x,    top_y,         hand_width,    h)
-    tp_discard = Rectangle(discard.x,        top_y,         w,             h)
-    tp_peoples = Rectangle(bp_peoples.x,     top_wonders_y, peoples_width, h)
-    tp_wonders = Rectangle(bottom_wonders.x, top_wonders_y, hand_width,    h)
+    p1_deck    = Rectangle(p0_deck.x,    top_y,         w,             h)
+    p1_hand    = Rectangle(p0_hand.x,    top_y,         hand_width,    h)
+    p1_discard = Rectangle(p0_discard.x,        top_y,         w,             h)
+    p1_peoples = Rectangle(p0_peoples.x,     top_wonders_y, peoples_width, h)
+    p1_wonders = Rectangle(p0_wonders.x, top_wonders_y, hand_width,    h)
 
-    bp = f"p{bottom_player}"
-    tp = f"p{1 - bottom_player}"
+    # If the bottom player is player 1, swap all stack positions. The stack indices will remain
+    # the same and this is important for online game, where the state must be the same but it should
+    # just be rendered flipped for player 1.
+    if bottom_player == 1:
+        def swap(a, b): a, b = b, a
 
-    S = kt.Stack
-    return {
-        f"{bp}_deck":    S(bottom_deck,  spread_x=0,           spread_y=spread_pile, face_up=False),
-        f"{bp}_hand":    S(bottom_hand,  spread_x=spread_hand, spread_y=0,           face_up=True),
-        f"{bp}_discard": S(discard,      spread_x=0,           spread_y=spread_pile, face_up=True),
-        f"{bp}_peoples": S(bp_peoples,   spread_x=spread_wonders, spread_y=0,        face_up=True),
-        f"{bp}_wonders": S(bottom_wonders, spread_x=spread_wonders, spread_y=0,      face_up=True),
-        f"{tp}_deck":    S(tp_deck,      spread_x=0,           spread_y=spread_pile, face_up=False),
-        f"{tp}_hand":    S(tp_hand,      spread_x=spread_hand, spread_y=0,           face_up=False),
-        f"{tp}_discard": S(tp_discard,   spread_x=0,           spread_y=spread_pile, face_up=True),
-        f"{tp}_peoples": S(tp_peoples,   spread_x=spread_wonders, spread_y=0,        face_up=True),
-        f"{tp}_wonders": S(tp_wonders,   spread_x=spread_wonders, spread_y=0,        face_up=True),
-        "shared_deck":   S(shared_deck,  spread_x=0,           spread_y=0,           face_up=True),
-    }
+        swap(p0_deck, p1_deck)
+        swap(p0_hand, p1_hand)
+        swap(p0_discard, p1_discard)
+        swap(p0_peoples, p1_peoples)
+        swap(p0_wonders, p1_wonders)
 
+    result = [
+        kt.Stack(p0_deck,  spread_x=0,           spread_y=spread_pile, face_up=False, name=f"p0_deck"),
+        kt.Stack(p0_hand,  spread_x=spread_hand, spread_y=0,           face_up=True, name=f"p0_hand"),
+        kt.Stack(p0_discard,      spread_x=0,           spread_y=spread_pile, face_up=True, name=f"p0_discard" ),
+        kt.Stack(p0_peoples,   spread_x=spread_wonders, spread_y=0,        face_up=True, name=f"p0_peoples" ),
+        kt.Stack(p0_wonders, spread_x=spread_wonders, spread_y=0,      face_up=True, name=f"p0_wonders" ),
+        kt.Stack(p1_deck,      spread_x=0,           spread_y=spread_pile, face_up=False, name=f"p1_deck"    ),
+        kt.Stack(p1_hand,      spread_x=spread_hand, spread_y=0,           face_up=False, name=f"p1_hand"    ),
+        kt.Stack(p1_discard,   spread_x=0,           spread_y=spread_pile, face_up=True, name=f"p1_discard" ),
+        kt.Stack(p1_peoples,   spread_x=spread_wonders, spread_y=0,        face_up=True, name=f"p1_peoples" ),
+        kt.Stack(p1_wonders,   spread_x=spread_wonders, spread_y=0,        face_up=True, name=f"p1_wonders" ),
+        kt.Stack(shared_deck,  spread_x=0,           spread_y=0,           face_up=True, name="shared_deck"   ),
+    ]
+    return result
 
 def get_image_path(card_name: str) -> str | None:
     filename = card_name.lower().replace(" ", "_") + ".jpg"

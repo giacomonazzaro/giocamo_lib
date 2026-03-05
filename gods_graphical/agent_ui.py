@@ -11,17 +11,6 @@ from pyray import *
 
 from kitchen_table.ui import immediate_button, UI_State
 
-
-# Global stack ordering agreed upon by both players in a network game.
-# Stacks are numbered by game player index (not by visual position):
-#   player 0 → indices 0-4, player 1 → indices 5-9, shared deck → 10.
-# The visual layout (who is top/bottom) is separate from this ordering.
-ZONE_ORDER = [
-    "p0_deck", "p0_hand", "p0_discard", "p0_peoples", "p0_wonders",
-    "p1_deck", "p1_hand", "p1_discard", "p1_peoples", "p1_wonders",
-    "shared_deck",
-]
-
 def stack_indices(player_index: int):
     """Return the global stack indices for a given player's zones.
 

@@ -17,13 +17,13 @@ from game.game import Choice, game_frame, game_loop, resolve_choice
 from gods.gameplay import compute_player_score, Agent_Minimax_Stochastic_Gods
 from gods.models import Game_State, effective_power
 from gods.setup import quick_setup
-from gods_graphical.agent_ui import Agent_UI, update_stacks, ZONE_ORDER
+from gods_graphical.agent_ui import Agent_UI, update_stacks
 from gods_graphical.ui import (
     draw_card_power_badge,
     draw_game_over_screen,
     draw_player_hud,
     get_image_path,
-    get_table_layout,
+    make_gods_stacks,
 )
 from gods_online.agent_remote import Agent_Local_Online, Agent_Remote
 from gods_online.protocol import send_message, try_recv_message
@@ -36,6 +36,11 @@ from gods_online.setup import peer_to_peer, setup_online_game
 
 app = typer.Typer()
 
+def find(iterable, predicate, default=None):
+    """
+    Returns the index of the first item in the iterable that satisfies the predicate.
+    """
+    return next((i for i, x in enumerate(iterable) if predicate(x)), default)
 
 def init_table_state(gods_state: Game_State, ui_state: UI_State, bottom_player: int = 0) -> kt.Table_State:
     def draw_power(card: kt.Card):
@@ -69,22 +74,19 @@ def init_table_state(gods_state: Game_State, ui_state: UI_State, bottom_player: 
     ]
 
     # Layout provides visual positions (rects) keyed by zone name.
-    layout = get_table_layout(bottom_player=bottom_player)
+    stacks = make_gods_stacks(bottom_player=bottom_player)
 
+    # Fill stacks with cards.
+    name_to_stack = {stack.name: i for i, stack in enumerate(stacks)}
     for i in range(2):
         p = gods_state.players[i]
-        layout[f"p{i}_deck"].cards    = list(p.deck)
-        layout[f"p{i}_hand"].cards    = list(p.hand)
-        layout[f"p{i}_discard"].cards = list(p.discard)
-        layout[f"p{i}_wonders"].cards = list(p.wonders)
-        layout[f"p{i}_peoples"].cards = [pid for pid in gods_state.peoples if gods_state.all_cards[pid].owner == i]
-    layout["shared_deck"].cards = list(gods_state.shared_deck)
+        stacks[name_to_stack[f"p{i}_deck"]].cards    = list(p.deck)
+        stacks[name_to_stack[f"p{i}_hand"]].cards    = list(p.hand)
+        stacks[name_to_stack[f"p{i}_discard"]].cards = list(p.discard)
+        stacks[name_to_stack[f"p{i}_wonders"]].cards = list(p.wonders)
+        stacks[name_to_stack[f"p{i}_peoples"]].cards = [pid for pid in gods_state.peoples if gods_state.all_cards[pid].owner == i]
+    stacks[name_to_stack["shared_deck"]].cards = list(gods_state.shared_deck)
 
-    stacks = []
-    for zone_name in ZONE_ORDER:
-        stack = layout[zone_name]
-        stack.name = zone_name
-        stacks.append(stack)
 
     table_state = kt.Table_State(cards=cards, stacks=stacks)
     for stack in table_state.stacks:
@@ -148,14 +150,13 @@ def play(gods_state: Game_State, table_state: kt.Table_State, ui_state: UI_State
         # if not agent:
         update_input(table_state)
         mx, my = pyray.get_mouse_x(), pyray.get_mouse_y()
-        discard_stack_you = ZONE_ORDER.index(f"p{player_index}_discard")
-        discard_stack_opponent = ZONE_ORDER.index(f"p{1 - player_index}_discard")
+        discard_stack_you = find(table_state.stacks, lambda s: s.name == f"p{player_index}_discard")
+        discard_stack_opponent = find(table_state.stacks, lambda s: s.name == f"p{1 - player_index}_discard")
         if pyray.is_mouse_button_pressed(pyray.MouseButton.MOUSE_BUTTON_LEFT):
             for stack_id in (discard_stack_opponent, discard_stack_you):
                 stack = table_state.stacks[stack_id]
                 is_expanded = stack.spread_x > 0
                 inside = point_in_stack_area(mx, my, stack)
-                print(f"[DISCARD] stack={stack.name} is_expanded={is_expanded} inside={inside} mouse=({mx},{my}) rect=({stack.rect.x:.0f},{stack.rect.y:.0f},{stack.rect.width:.0f},{stack.rect.height:.0f})")
                 if inside and not is_expanded:
                     # Expand when clicking on a collapsed stack.
                     stack.rect = ui_state.place(tweak["card_width"] * 7, tweak["card_height"], x="center", y="center")
@@ -164,7 +165,7 @@ def play(gods_state: Game_State, table_state: kt.Table_State, ui_state: UI_State
                     update_card_positions(stack, table_state, sort=False)
                 elif is_expanded and not inside:
                     # Clicking outside an expanded stack collapses it.
-                    stack.rect = get_table_layout(bottom_player=player_index)[stack.name].rect
+                    stack.rect = make_gods_stacks(bottom_player=player_index)[stack_id].rect
                     stack.spread_x = 0
                     stack.depth = 0.0 # reset depth
                     update_card_positions(stack, table_state, sort=False)
