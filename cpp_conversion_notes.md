@@ -37,21 +37,13 @@ Cards are stored in a homogeneous `list[Card]` but dispatch to subclass-specific
 
 **File:** `gods/cards.py` (throughout)
 
-Card `on_played` methods create closures that are stored in `Choice` objects and called later:
+Card `on_played` methods create closures that are stored in `Choice` objects and called later. See issue #4 for why capturing `self` directly was a problem for MCTS.
 
-```python
-def on_played(self, game: Game_State) -> list[Choice]:
-    miracle_card = self  # captures the card object
-    def resolve(state: Game_State, option_index: int) -> list[Choice]:
-        card.counters += effective_power(state, miracle_card)
-    return [Choice(..., resolve=resolve)]
-```
-
-**C++ approach:** Since cards are stored in `std::vector<Card*>` that is never modified at runtime, capturing `Card*` in a lambda is safe for normal gameplay. No pointer invalidation. See issue #4 for the MCTS problem.
+**Status: Fixed.** All closures now capture `my_id = self.id` (a plain `int`) and look up the card via `state.all_cards[my_id]` at call time. This is safe for both normal gameplay and MCTS cloning.
 
 ---
 
-## 4. Deep Copy for AI Search (Critical)
+## 4. Deep Copy for AI Search
 
 **Files:** `gods/agents/mcts.py:74`, `gods/agents/minimax_search.py:57,94`, `gods/agents/minimax_stochastic.py:33`
 
@@ -62,24 +54,9 @@ sim_choice = copy.deepcopy(choice)
 
 MCTS clones the full `Game_State` — including all `Card` objects and any pending `Choice` — to simulate future moves without affecting the real game.
 
-**C++ issue:** This is the one real problem. When you deep-copy a `Game_State`, you create new `Card` objects. But the closures inside the copied `Choice` still capture `Card*` pointers into the **original** game's card array. So when the MCTS simulation mutates `card.counters`, it silently corrupts the original game state. In Python, `deepcopy` handles this correctly by rewriting all internal references to point into the new copy — C++ `std::function` copy cannot do this.
+**C++ issue:** When deep-copying a `Game_State`, new `Card` objects are created. If closures inside the copied `Choice` captured `Card*` pointers into the original game's card array, MCTS mutations would silently corrupt the real game state. In Python, `deepcopy` rewrites all internal references automatically — C++ `std::function` copy cannot.
 
-**Fix:** Closures must capture card indices (ints), not pointers. Then they look up the card in the `state` parameter that is always passed explicitly:
-
-```python
-# Before: captures card object directly
-miracle_card = self
-def resolve(state, idx):
-    effective_power(state, miracle_card)  # points to original, not clone
-
-# After: captures index, looks up in the state passed at call time
-miracle_card_index = self.id  # card_index, a plain int
-def resolve(state, idx):
-    miracle_card = state.all_cards[miracle_card_index]  # always uses the right state
-    effective_power(state, miracle_card)
-```
-
-This pattern is already used correctly in several cards — but inconsistently. Making it universal is the key pre-port refactor.
+**Status: Fixed.** All closures now capture integer indices, so the copied `Choice` naturally uses the cloned state's cards when invoked.
 
 ---
 
@@ -139,25 +116,9 @@ Good refactor to do now — it catches typos, enables IDE autocompletion, and ma
 
 ## 7. String-to-Class Factory for Cards
 
-**File:** `gods/cards.py:595-636`
+**File:** `gods/cards.py`
 
-```python
-CARD_CLASSES: dict[str, type] = {"Light": Light, "Moon": Moon, ...}
-
-def _get_card_class(name: str) -> type:
-    return CARD_CLASSES.get(name, Card)
-```
-
-**Pre-port refactor:** Replace with explicit `match`/`case` in Python, which maps to a C++ factory function. No semantic difference, but explicit and IDE-navigable:
-
-```python
-def make_card(name: str, **kwargs) -> Card:
-    match name:
-        case "Light":   return Light(**kwargs)
-        case "Moon":    return Moon(**kwargs)
-        ...
-        case _:         return Card(**kwargs)
-```
+Cards are instantiated from JSON data by looking up their class by name string. Keeping the `CARD_CLASSES` dict is fine — it maps directly to a C++ factory function (`switch`/`if-else` on an enum). No change needed before porting.
 
 ---
 
@@ -203,22 +164,19 @@ if table_state.animated_cards is None:
 
 ## Summary
 
-| Issue | Action needed |
-|-------|--------------|
-| Closures capturing `Card*` vs clone in MCTS | **Fix before porting** — capture indices, not pointers |
+| Issue | Status |
+|-------|--------|
+| Closures capturing card objects in MCTS | ✅ Fixed — all closures capture `int` index |
+| Card polymorphism | No action — `std::vector<Card*>` + virtual methods |
+| Agent polymorphism | No action — `Agent*` pointers |
+| Callbacks in `Choice` / `kt.Card` | No action — `std::function` with pointer capture is fine |
+| Draw callbacks capturing game state | No action — `Game_State*` stable at runtime |
+| Optional / None values | No action — sentinel values or `std::optional` |
+| Animated cards deep copy | No action — plain copy + init flag |
 | `isinstance` / union type dispatch | Refactor to `match`/`case` (good for Python too) |
 | String area/description dispatch | Refactor to `enum.Enum` (good for Python too) |
-| String-to-class card factory | Refactor to explicit `match`/`case` factory |
-| Card polymorphism | `std::vector<Card*>` + virtual methods — trivial |
-| Agent polymorphism | `Agent*` — trivial |
-| Callbacks in `Choice` / `kt.Card` | `std::function` with pointer capture — fine for gameplay |
-| Draw callbacks capturing game state | `Game_State*` — fine as long as lifetime is managed |
-| Optional / None values | Sentinel values or `std::optional` — mechanical |
-| Animated cards deep copy | Plain copy + init flag — trivial |
 
-## Pre-Port Refactors (Recommended Order)
+## Remaining Pre-Port Refactors
 
-1. **Capture card indices in closures, not card pointers** — the only fix that affects correctness (MCTS). In every `on_played` closure, replace `captured_card = self` with `captured_index = self.id` and look up via `state.all_cards[captured_index]`.
-2. **Replace string areas with `Area` enum** — `Card_Id.area: Area`, `Choice.description: Choice_Kind`.
-3. **Replace `isinstance` dispatch with `match`/`case`** — cleaner and maps directly to C++ `std::visit`.
-4. **Replace string-to-class card factory with explicit `match`/`case` factory function.**
+1. **Replace string areas with `Area` enum** — `Card_Id.area: Area`, `Choice.description: Choice_Kind`. Touches `gods/models.py`, `gods/gameplay.py`, `gods/cards.py`, `gods_graphical/agent_ui.py`.
+2. **Replace `isinstance` dispatch with `match`/`case`** — in `gods/game.py` and anywhere else union types are checked.

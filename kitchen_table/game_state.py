@@ -4,7 +4,7 @@ from kitchen_table.models import Card, Stack, Table_State
 from kitchen_table.config import tweak
 
 
-def create_card(id: str, title: str, description: str = "") -> Card:
+def create_card_design(id: str, title: str, description: str = "") -> Card:
     return Card(id=id, title=title, description=description)
 
 def add_card_to_stack(card_id: int, stack: Stack, state: Table_State) -> None:
@@ -80,7 +80,7 @@ def create_sample_cards(state: Table_State) -> list[int]:
     """Create a sample set of cards for testing. Returns list of card indices."""
     card_ids = []
     for i in range(10):
-        card = create_card(f"card_{i}", f"Card {i + 1}")
+        card = create_card_design(f"card_{i}", f"Card {i + 1}")
         card_id = len(state.cards)
         state.cards.append(card)
         card_ids.append(card_id)

@@ -15,7 +15,7 @@ from game.agents.duel import Agent_Duel
 from game.agents.process import Agent_Process
 from game.game import Choice, game_frame, game_loop, resolve_choice
 from gods.gameplay import compute_player_score, Agent_Minimax_Stochastic_Gods
-from gods.models import Game_State, effective_power
+from gods.models import Game_State, card_designs, effective_power
 from gods.setup import quick_setup
 from gods_graphical.agent_ui import Agent_UI, update_stacks
 from gods_graphical.ui import (
@@ -65,9 +65,9 @@ def init_table_state(gods_state: Game_State, ui_state: UI_State, bottom_player: 
     cards = [
         kt.Card(
             id=card.id,
-            title=card.name,
-            description=card.effect,
-            image_path=get_image_path(card.name),
+            title=card_designs[card.id].name,
+            description=card_designs[card.id].effect,
+            image_path=get_image_path(card_designs[card.id].name),
             draw_callback=draw_power,
         )
         for card in gods_state.all_cards
@@ -124,7 +124,7 @@ def draw_hud(gods_state: Game_State, choice: Choice, ui_state: UI_State, bottom_
 
 from kitchen_table.ui import UI_State
 
-def play(gods_state: Game_State, table_state: kt.Table_State, ui_state: UI_State, agent: Agent | None, player_index: int, sock: socket.socket | None = None, friend_addr: tuple[str, int] | None = None):
+def play_gods(gods_state: Game_State, table_state: kt.Table_State, ui_state: UI_State, agent: Agent | None, player_index: int, sock: socket.socket | None = None, friend_addr: tuple[str, int] | None = None):
 
     # Window: re-use an existing window (e.g. opened by the menu) if one is ready.
     if not pyray.is_window_ready():
@@ -273,7 +273,7 @@ def main(
     else:
         agent = Agent_Duel(agent_local, agent_opponent, swap=player_index != 0)
 
-    play(gods_state, table_state, ui_state, agent, player_index, sock=sock, friend_addr=friend_addr)
+    play_gods(gods_state, table_state, ui_state, agent, player_index, sock=sock, friend_addr=friend_addr)
 
     if sock is not None:
         sock.close()

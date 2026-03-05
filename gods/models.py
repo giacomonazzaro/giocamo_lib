@@ -19,54 +19,53 @@ class Card_Color(Enum):
     YELLOW = "yellow"
 
 
+# Global list of card designs — set once at game initialization, never deep-copied.
+# All game state copies share this list; hook methods are looked up by card id.
+card_designs: list[Card_Design] = []
+
+
 @dataclass(slots=True)
-class Card:
+class Card_Design:
+    """Immutable card definition: display text and all hook methods.
+    Shared across all game state copies; excluded from MCTS deep copies."""
+    id: int
     name: str
     card_type: Card_Type
-    power: int
     color: Card_Color
     effect: str
-    destroyed: bool = False
-    counters: int = 0  # +1 counters
-    owner: int = -1  # player index who owns this card
-    id: int = -1  # index into Game_State.all_cards; also serves as the kitchen_table card id since both lists are aligned
 
     def on_draw(self, game: Game_State) -> list[Choice]: return []
     def on_draw_replacement(self, game: Game_State) -> list[Choice]: return []
     def on_played(self, game: Game_State) -> list[Choice]: return []
+    def on_game_end(self, game: Game_State) -> list[Choice]: return []
     def on_destroyed(self, game: Game_State) -> None: pass
     def on_play(self, game: Game_State, card_played: Card) -> None: pass
     def on_destroy(self, game: Game_State, card_destroyed: Card) -> None: pass
-    def on_restore(self, game: Game_State, card_destroyed: Card) -> None: pass
-    def on_discard(self, game: Game_State, card_discarded: Card) ->  list[Choice]: return []
+    def on_restore(self, game: Game_State, card_restored: Card) -> None: pass
+    def on_discard(self, game: Game_State, card_discarded: Card) -> list[Choice]: return []
     def on_pass(self, game: Game_State) -> list[Choice]: return []
     def on_turn_end(self, game: Game_State) -> list[Choice]: return []
     def on_turn_start(self, game: Game_State) -> list[Choice]: return []
-    def power_modifier(self, game: Game_State, card: Card, power: int) -> int:
-        """Modify another card's power. Override in subclasses."""
-        return power
-    
+    def power_modifier(self, game: Game_State, card: Card, power: int) -> int: return power
     def is_indestructible(self, game: Game_State, card: Card) -> bool: return False
+    def can_be_claimed(self, game: Game_State, player_index: int) -> int: return 0
+    def on_scoring(self, game: Game_State) -> int: return 0
+    def on_scoring_people(self, game: Game_State, people: Card, points: int) -> int: return points
+    def wins_tie(self, game: Game_State, people: Card) -> bool: return False
 
-    def can_be_claimed(self, game: Game_State, player_index: int) -> int:
-        """Evaluate points for a people card. Override in people subclasses."""
-        return 0
-    
-    def eval_points(self, game: Game_State, player_index: int) -> int:
-        """Evaluate points for a people card. Override in people subclasses."""
-        return 0
 
-    def on_scoring(self, game: Game_State) -> int:
-        """Points from this wonder at end of game. Override in subclasses."""
-        return 0
+@dataclass(slots=True)
+class Card:
+    """Runtime card state — only the mutable fields that change during a game.
+    Trivially copyable; MCTS deep copies contain only these, not Card_Design."""
+    id: int           # index into card_designs and Game_State.all_cards
+    card_type: Card_Type
+    color: Card_Color
+    power: int        # base power (mutable — Stars can reassign it for shared-deck cards)
+    counters: int = 0
+    destroyed: bool = False
+    owner: int = -1
 
-    def on_scoring_people(self, game: Game_State, people: Card, points: int) -> int:
-        """Bonus points for a people card. Override in subclasses."""
-        return points
-
-    def wins_tie(self, game: Game_State, people: Card) -> bool:
-        """Whether this card breaks ties for a people. Override in subclasses."""
-        return False
 
 @dataclass(slots=True)
 class Player:
@@ -92,7 +91,8 @@ class Card_Id:
 
 @dataclass(slots=True)
 class Game_State(Game):
-    all_cards: list[Card] = field(default_factory=list)  # master registry of all cards in the game
+    # Runtime card states only — card_designs is a module-level global, not copied.
+    all_cards: list[Card] = field(default_factory=list)
     players: list[Player] = field(default_factory=list)
     peoples: list[int] = field(default_factory=list)     # people cards in the center, indices into all_cards
     current_player: int = 0
@@ -115,7 +115,7 @@ class Game_State(Game):
 
             if self.current_phase == "start":
                 for wid in self.active_player().wonders:
-                    self.choices.extend(self.all_cards[wid].on_turn_start(self))
+                    self.choices.extend(card_designs[wid].on_turn_start(self))
                 self.current_phase = "main"
 
             elif self.current_phase == "main":
@@ -145,7 +145,7 @@ class Game_State(Game):
 
             elif self.current_phase == "end":
                 for wid in self.active_player().wonders:
-                    self.choices.extend(self.all_cards[wid].on_turn_end(self))
+                    self.choices.extend(card_designs[wid].on_turn_end(self))
                 self.switch_turn()
                 self.current_phase = "start"
 
@@ -158,7 +158,6 @@ class Game_State(Game):
         return self.players[1 - self.current_player]
 
     def peoples_ids(self) -> list[Card_Id]:
-        # card_index is the stable Card.id (index into all_cards), sorted for canonical ordering.
         return sorted([Card_Id(area="people", card_index=pid, owner_index=self.all_cards[pid].owner)
                        for pid in self.peoples], key=lambda c: c.card_index)
 
@@ -178,29 +177,25 @@ class Game_State(Game):
         self.current_player = 1 - self.current_player
 
     def get_card(self, card_id: Card_Id) -> Card:
-        # card_index is the stable Card.id, so lookup is a direct index into all_cards.
         assert not Card_Id.is_null(card_id)
         return self.all_cards[card_id.card_index]
 
     def card_list(self, player_id: int | None, area: str) -> list[Card_Id]:
         if player_id is None:
-            # Merge both players' lists and sort globally for canonical ordering.
             combined = self.card_list(player_id=0, area=area) + self.card_list(player_id=1, area=area)
             return sorted(combined, key=lambda c: c.card_index)
 
         player = self.players[player_id]
         area_list = {"hand": player.hand, "wonders": player.wonders,
                      "discard": player.discard, "deck": player.deck}[area]
-        # card_index is the stable Card.id, sorted for canonical ordering.
         return sorted([Card_Id(area, cid, player_id) for cid in area_list], key=lambda c: c.card_index)
 
 def effective_power(game: Game_State, card: Card) -> int:
     """Calculate effective power of a card, applying all wonder power modifiers."""
     power = card.power + card.counters
-    # Apply power modifiers from all wonders in play.
     for player in game.players:
         for wid in player.wonders:
-            power = game.all_cards[wid].power_modifier(game, card, power)
+            power = card_designs[wid].power_modifier(game, card, power)
     if power < 0:
         power = 0
     return power
