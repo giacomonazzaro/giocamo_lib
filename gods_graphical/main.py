@@ -31,7 +31,7 @@ from kitchen_table.config import tweak
 from kitchen_table.game_state import update_card_positions
 from kitchen_table.input import find_card_at, point_in_stack_area, update_input
 from kitchen_table.rendering import color_from_tuple, draw_background, draw_table, render_text, text_width
-from kitchen_table.ui import immediate_button, place_inside
+from kitchen_table.ui import immediate_button, place_inside, place_next
 from gods_online.setup import peer_to_peer, setup_online_game
 
 app = typer.Typer()
@@ -132,9 +132,35 @@ def draw_hud(table_state: kt.Table_State, gods_state: Game_State, choice: Choice
         # When leaving playground mode, sync visual state back into game logic.
         if not ui_state.playground:
             sync_game_state_from_table(table_state, gods_state)
+            ui_state.power_edit_card_id = -1
         else:
             table_state.is_drop_card_allowed = lambda *_: True
             ui_state.highlighted_cards = {}
+
+    # Power editor overlay: shown when a card's power is being edited in playground mode.
+    card_id = ui_state.power_edit_card_id
+    if card_id != -1 and ui_state.playground:
+        kt_card = table_state.animated_cards[card_id]
+        btn_w, btn_h, gap = 44, 36, 6
+        panel_w = 10 * btn_w + 9 * gap + 16
+        card_rect = pyray.Rectangle(kt_card.x, kt_card.y, tweak["card_width"], tweak["card_height"])
+        # Place the panel below the card, horizontally centered on it.
+        panel = place_next(card_rect, panel_w, btn_h + 16, x="center", y="bottom", padding=8)
+        # Clamp to window bounds.
+        panel.x = max(0, min(panel.x, tweak["window_width"] - panel_w))
+        panel.y = max(0, min(panel.y, tweak["window_height"] - panel.height))
+
+        pyray.draw_rectangle_rounded(panel, 0.3, 8, pyray.Color(20, 20, 20, 200))
+        # First button inside the panel, left edge, vertically centered.
+        btn = place_inside(panel, btn_w, btn_h, x="left", y="center", padding=8)
+        current_power = gods_state.all_cards[card_id].power
+        for v in range(1, 11):
+            # Highlight the currently active power value.
+            color = pyray.Color(80, 160, 80, 255) if v == current_power else None
+            if immediate_button(btn, str(v), color=color):
+                gods_state.all_cards[card_id].power = v
+                ui_state.power_edit_card_id = -1
+            btn.x += btn_w + gap
 
 
 from kitchen_table.ui import UI_State
@@ -148,7 +174,6 @@ def play_gods(gods_state: Game_State, table_state: kt.Table_State, ui_state: UI_
         pyray.set_target_fps(tweak["target_fps"])
 
     current_choice = None
-    prev_playground = ui_state.playground
     table_state.draw_callback = lambda table: draw_hud(table, gods_state, current_choice, ui_state, bottom_player=player_index)
 
     while not pyray.window_should_close():
@@ -166,6 +191,16 @@ def play_gods(gods_state: Game_State, table_state: kt.Table_State, ui_state: UI_
         # if not agent:
         update_input(table_state)
         mx, my = pyray.get_mouse_x(), pyray.get_mouse_y()
+
+        # In playground mode, P opens the power editor for the hovered card.
+        if ui_state.playground and pyray.is_key_pressed(pyray.KeyboardKey.KEY_P):
+            result = find_card_at(mx, my, table_state)
+            if result:
+                hovered_id = result[0]
+                # Toggle: pressing P on the same card again closes the editor.
+                ui_state.power_edit_card_id = -1 if ui_state.power_edit_card_id == hovered_id else hovered_id
+            else:
+                ui_state.power_edit_card_id = -1
         discard_stack_you = find(table_state.stacks, lambda s: s.name == f"p{player_index}_discard")
         discard_stack_opponent = find(table_state.stacks, lambda s: s.name == f"p{1 - player_index}_discard")
         if pyray.is_mouse_button_pressed(pyray.MouseButton.MOUSE_BUTTON_LEFT):

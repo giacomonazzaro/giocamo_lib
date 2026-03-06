@@ -113,6 +113,7 @@ class UI_State:
     highlighted_cards: dict[str, int] = field(default_factory=dict)
     window_size: tuple[int, int] = (tweak["window_width"], tweak["window_height"])
     playground: bool = False
+    power_edit_card_id: int = -1  # Card whose power is being edited; -1 = none
 
     
     def place(self, width: int, height: int, x: str = "left", y: str = "top", padding: int = 0) -> Rectangle:
