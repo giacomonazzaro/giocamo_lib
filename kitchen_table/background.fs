@@ -40,7 +40,7 @@ float eval_v(vec2 uv, float t) {
 }
 
 vec3 combine(vec3 a, vec3 b) {
-    vec3 s = a + b;
+    // return a+b
     return max(a, b);
 }
 
@@ -129,14 +129,14 @@ const mat2 GOLDEN_ROT2 = mat2(
     -0.73736887808,  0.67549029426,
     -0.67549029426, -0.73736887808);
 
-vec2 turbulence(vec2 pos, float time)
+vec2 turbulence(vec2 pos, float time, float amplitude)
 {
     float freq = TURB_FREQ;
     mat2 rot = GOLDEN_ROT2;
     for (float i = 0.0; i < TURB_NUM; i++)
     {
         float phase = freq * (pos * rot).y + TURB_SPEED * time + i;
-        pos += TURB_AMP * rot[0] * sin(phase) / freq;
+        pos += amplitude * rot[0] * sin(phase) / freq;
         rot *= GOLDEN_ROT2;
         freq *= TURB_EXP;
     }
@@ -148,7 +148,7 @@ void main() {
     vec2 uv = gl_FragCoord.xy / u_resolution.x; 
     float t = u_time * 0.5;
     // uv *= 2.0;
-    uv = turbulence(uv, u_time);
+    uv = turbulence(uv, u_time, TURB_AMP * (sin(u_time) * 0.5 + 0.5));
 
     float rt = t * 0.3;
     float value0 = eval_v(rotate(uv, rt), t*1.0);
