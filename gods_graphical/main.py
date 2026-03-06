@@ -95,7 +95,7 @@ def init_table_state(gods_state: Game_State, ui_state: UI_State, bottom_player: 
     return table_state
 
 
-def draw_hud(gods_state: Game_State, choice: Choice, ui_state: UI_State, bottom_player: int = 0):
+def draw_hud(table_state: kt.Table_State, gods_state: Game_State, choice: Choice, ui_state: UI_State, bottom_player: int = 0):
     H = tweak["window_height"]
     h = tweak["card_height"]
     margin = 20
@@ -115,12 +115,6 @@ def draw_hud(gods_state: Game_State, choice: Choice, ui_state: UI_State, bottom_
 
     ui_state.draw_buttons()
 
-    # Playground toggle button: top-left corner.
-    label = "Playground: ON" if ui_state.playground else "Playground: OFF"
-    btn_r = ui_state.place(160, 32, x="right", y="top", padding=20)
-    if immediate_button(btn_r, label):
-        ui_state.playground = not ui_state.playground
-
     text = choice.text_description if choice else ""
     if text:
         font_size = 22
@@ -128,7 +122,20 @@ def draw_hud(gods_state: Game_State, choice: Choice, ui_state: UI_State, bottom_
         r = ui_state.place(tw, font_size, x="right", y="center", padding=20)
         render_text(text, r.x, r.y - 50, font_size, pyray.Color(200, 200, 200, 255))
 
-    # draw_choice_description(ui_state.current_choice_text)
+
+    # Playground toggle button: top-left corner.
+    label = "Playground: ON" if ui_state.playground else "Playground: OFF"
+    button = ui_state.place(160, 32, x="right", y="top", padding=20)
+    if immediate_button(button, label, color=(20,20,20,100)):
+        ui_state.playground = not ui_state.playground
+
+        # When leaving playground mode, sync visual state back into game logic.
+        if not ui_state.playground:
+            sync_game_state_from_table(table_state, gods_state)
+        else:
+            table_state.is_drop_card_allowed = lambda *_: True
+            ui_state.highlighted_cards = {}
+
 
 from kitchen_table.ui import UI_State
 
@@ -142,7 +149,7 @@ def play_gods(gods_state: Game_State, table_state: kt.Table_State, ui_state: UI_
 
     current_choice = None
     prev_playground = ui_state.playground
-    table_state.draw_callback = lambda table: draw_hud(gods_state, current_choice, ui_state, bottom_player=player_index)
+    table_state.draw_callback = lambda table: draw_hud(table, gods_state, current_choice, ui_state, bottom_player=player_index)
 
     while not pyray.window_should_close():
         if gods_state.game_over:
@@ -206,20 +213,9 @@ def play_gods(gods_state: Game_State, table_state: kt.Table_State, ui_state: UI_
         turn = 1.0 if gods_state.current_player != player_index else 0.0
         draw_background(turn)
         draw_table(table_state)
-        
-        # When leaving playground mode, sync visual state back into game logic.
-        if prev_playground and not ui_state.playground:
-            sync_game_state_from_table(table_state, gods_state)
-            current_choice = None
-            
-        if not prev_playground and ui_state.playground:
-            table_state.is_drop_card_allowed = lambda *_: True
 
-        prev_playground = ui_state.playground
-
-        effective_agent = None if ui_state.playground else agent
-        if effective_agent:
-            current_choice = game_frame(gods_state, effective_agent, current_choice)
+        if agent and not ui_state.playground:
+            current_choice = game_frame(gods_state, agent, current_choice)
             update_stacks(table_state, gods_state)
         pyray.end_drawing()
 

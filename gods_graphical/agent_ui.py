@@ -41,9 +41,9 @@ def sync_game_state_from_table(table_state: Table_State, gods_state: Game_State)
             gods_state.all_cards[wid].owner = i
         for pid in table_state.stacks[s.peoples].cards:
             gods_state.all_cards[pid].owner = i
-    # Discard pending choices and restart from the main phase.
-    gods_state.choices = []
-    gods_state.current_phase = "main"
+    # # Discard pending choices and restart from the main phase.
+    # gods_state.choices = []
+    # gods_state.current_phase = "main"
 
 
 def update_stacks(table_state: Table_State, gods_state: Game_State):
@@ -69,6 +69,7 @@ class Agent_UI(Agent):
 
     def message(self, msg: str):
         pass
+
 
     def choose_action(self, state: Game_State, choice: Choice) -> int:
         """
