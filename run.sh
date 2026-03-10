@@ -7,7 +7,9 @@ VENV="$SCRIPT_DIR/venv"
 # Create venv and install dependencies on first run.
 if [ ! -d "$VENV" ]; then
     echo "Setting up virtual environment (first run only)..."
-    python3.12 -m venv "$VENV"
+    # Python 3.10+ is required. On Windows (MINGW64), python3.12 is not a valid command.
+    PYTHON=$(command -v python3.12 || command -v python3 || command -v python)
+    "$PYTHON" -m venv "$VENV"
     echo "Installing required packages..."
     "$VENV/bin/pip" install --quiet "raylib>=5.5.0.3" "typer>=0.23.1" "pystun3>=2.0.0"
 fi
