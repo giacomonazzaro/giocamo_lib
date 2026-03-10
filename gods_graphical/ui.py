@@ -46,7 +46,7 @@ def make_gods_stacks(bottom_player: int = 0) -> list[kt.Stack]:
 
     # Shared deck: vertically centered, off-screen to the left.
     shared_deck = place_inside(window, w, h, x="left", y="center")
-    shared_deck.x = -w
+    # shared_deck.x = -w
     
     # Peoples
     p0_peoples = Rectangle(p0_discard.x,        p0_wonders.y, peoples_width, h)
@@ -81,7 +81,7 @@ def make_gods_stacks(bottom_player: int = 0) -> list[kt.Stack]:
         kt.Stack(p1_discard,   spread_x=0,           spread_y=spread_pile, face_up=True, name=f"p1_discard" ),
         kt.Stack(p1_peoples,   spread_x=spread_wonders, spread_y=0,        face_up=True, name=f"p1_peoples" ),
         kt.Stack(p1_wonders,   spread_x=spread_wonders, spread_y=0,        face_up=True, name=f"p1_wonders" ),
-        kt.Stack(shared_deck,  spread_x=0,           spread_y=0,           face_up=True, name="shared_deck"   ),
+        kt.Stack(shared_deck,  spread_x=0,           spread_y=spread_pile,           face_up=False, name="shared_deck"   ),
     ]
     return result
 

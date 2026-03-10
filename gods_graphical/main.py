@@ -201,6 +201,20 @@ def play_gods(gods_state: Game_State, table_state: kt.Table_State, ui_state: UI_
                 ui_state.power_edit_card_id = -1 if ui_state.power_edit_card_id == hovered_id else hovered_id
             else:
                 ui_state.power_edit_card_id = -1
+
+        # While the power editor is open, keys 1-9 and 0 (=10) set the power directly.
+        if ui_state.power_edit_card_id != -1:
+            number_keys = [
+                pyray.KeyboardKey.KEY_ONE, pyray.KeyboardKey.KEY_TWO, pyray.KeyboardKey.KEY_THREE,
+                pyray.KeyboardKey.KEY_FOUR, pyray.KeyboardKey.KEY_FIVE, pyray.KeyboardKey.KEY_SIX,
+                pyray.KeyboardKey.KEY_SEVEN, pyray.KeyboardKey.KEY_EIGHT, pyray.KeyboardKey.KEY_NINE,
+                pyray.KeyboardKey.KEY_ZERO,
+            ]
+            for i, key in enumerate(number_keys):
+                if pyray.is_key_pressed(key):
+                    gods_state.all_cards[ui_state.power_edit_card_id].power = i + 1 if i < 9 else 10
+                    ui_state.power_edit_card_id = -1
+                    break
         discard_stack_you = find(table_state.stacks, lambda s: s.name == f"p{player_index}_discard")
         discard_stack_opponent = find(table_state.stacks, lambda s: s.name == f"p{1 - player_index}_discard")
         if pyray.is_mouse_button_pressed(pyray.MouseButton.MOUSE_BUTTON_LEFT):
