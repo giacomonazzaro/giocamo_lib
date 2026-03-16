@@ -78,6 +78,7 @@ def play_card(game: Game_State, card_id: Card_Id) -> list[Choice]:
     for w in wonders_by_priority(game):
         game.all_cards[w.id].on_play(game, card)
 
+    game.on_cards_changed()
     return choices
 
 def destroy_people(game: Game_State, card_id: Card_Id) -> None:
@@ -90,6 +91,7 @@ def destroy_people(game: Game_State, card_id: Card_Id) -> None:
     game.all_cards[people.id].on_destroyed(game)
     for card in wonders_by_priority(game):
         game.all_cards[card.id].on_destroy(game, people)
+    game.on_cards_changed()
 
 def destroy_wonder(game: Game_State, card_id: Card_Id) -> None:
     card = game.get_card(card_id)
@@ -107,6 +109,7 @@ def destroy_wonder(game: Game_State, card_id: Card_Id) -> None:
 def restore_people(game: Game_State, card_id: Card_Id) -> None:
     people = game.get_card(card_id)
     people.destroyed = False
+    game.on_cards_changed()
 
 def shuffle_card_into_deck(game: Game_State, card_id: Card_Id) -> None:
     card = game.get_card(card_id)
@@ -159,6 +162,7 @@ def make_claim_choice(game: Game_State) -> Optional[Choice]:
             # Transfer ownership from opponent to the active player.
             people = game.get_card(card_id)
             people.owner = player_index
+            game.on_cards_changed()
         return []
 
     return Choice(player_index=player_index, description="choose-card", text_description="Claim a people card from your opponent",

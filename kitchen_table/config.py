@@ -1,6 +1,6 @@
 tweak = {
     # Window settings
-    "window_width": int(1600 *1.0),
+    "window_width": int(1700 *1.0),
     "window_height": int(1000 *1.0),
     "window_title": "Gods",
     "target_fps": 60,

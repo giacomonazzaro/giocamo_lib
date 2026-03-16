@@ -137,6 +137,8 @@ class Game_State(Game):
     current_phase: str = "main"  # "start", "main", "end"
     shared_deck: list[int] = field(default_factory=list)
     game_over: bool = False
+    # Callback fired whenever any card's mutable state changes (power, counters, destroyed, owner).
+    on_cards_changed: object = field(default_factory=lambda: (lambda: None))  # Callable[[], None]
 
     def is_game_over(self) -> bool:
         return self.game_over

@@ -35,6 +35,7 @@ def make_gods_stacks(bottom_player: int = 0) -> list[kt.Stack]:
 
     # Bottom player: anchor zones to the bottom of the window, then chain leftward.
     p0_hand    = place_inside(window, hand_width, h, x="center", y="bottom", padding=margin)
+    p0_hand.x += 100
     p0_wonders = place_next(p0_hand, hand_width, h, x="center", y="top", padding=margin)
     p0_deck    = place_next(p0_hand, w, h, x="left", y="center", padding=margin)
     p0_discard = place_next(p0_deck, w, h, x="left", y="center", padding=margin)
@@ -45,11 +46,11 @@ def make_gods_stacks(bottom_player: int = 0) -> list[kt.Stack]:
     top_wonders_y = H - int(p0_wonders.y) - h - opponent_shift
 
     # Shared deck: vertically centered, off-screen to the left.
-    shared_deck = place_inside(window, w, h, x="left", y="center")
+    shared_deck = place_inside(window, w, h, x="right", y="center")
     # shared_deck.x = -w
     
     # Peoples
-    p0_peoples = Rectangle(p0_discard.x,        p0_wonders.y, peoples_width, h)
+    p0_peoples = place_next(p0_wonders, peoples_width, h, x="left", y="center", padding=margin)
 
     # Pre-build top-player rects by reusing bottom positions with mirrored y.
     p1_deck    = Rectangle(p0_deck.x,    top_y,         w,             h)

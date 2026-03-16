@@ -160,6 +160,7 @@ def draw_hud(table_state: kt.Table_State, gods_state: Game_State, choice: Choice
             if immediate_button(btn, str(v), color=color):
                 gods_state.all_cards[card_id].power = v
                 ui_state.power_edit_card_id = -1
+                gods_state.on_cards_changed()
             btn.x += btn_w + gap
 
 
@@ -175,6 +176,13 @@ def play_gods(gods_state: Game_State, table_state: kt.Table_State, ui_state: UI_
 
     current_choice = None
     table_state.draw_callback = lambda table: draw_hud(table, gods_state, current_choice, ui_state, bottom_player=player_index)
+
+    # In online mode, send all_cards whenever card state changes (power, counters, destroyed, owner).
+    if sock is not None and friend_addr is not None:
+        def _send_all_cards():
+            cards_data = [{"power": c.power, "counters": c.counters, "destroyed": c.destroyed, "owner": c.owner} for c in gods_state.all_cards]
+            send_message(sock, {"type": "all_cards", "all_cards": cards_data}, friend_addr)
+        gods_state.on_cards_changed = _send_all_cards
 
     while not pyray.window_should_close():
         if gods_state.game_over:
@@ -214,6 +222,7 @@ def play_gods(gods_state: Game_State, table_state: kt.Table_State, ui_state: UI_
                 if pyray.is_key_pressed(key):
                     gods_state.all_cards[ui_state.power_edit_card_id].power = i + 1 if i < 9 else 10
                     ui_state.power_edit_card_id = -1
+                    gods_state.on_cards_changed()
                     break
         discard_stack_you = find(table_state.stacks, lambda s: s.name == f"p{player_index}_discard")
         discard_stack_opponent = find(table_state.stacks, lambda s: s.name == f"p{1 - player_index}_discard")
@@ -249,12 +258,18 @@ def play_gods(gods_state: Game_State, table_state: kt.Table_State, ui_state: UI_
             if should_send:
                 stacks_data = [s.cards for s in table_state.stacks]
                 send_message(sock, {"type": "stacks", "stacks": stacks_data}, friend_addr)
-            # Apply any incoming stack update from the remote player.
+            # Apply any incoming update from the remote player.
             msg = try_recv_message(sock)
             if msg and msg.get("type") == "stacks":
                 for i, cards in enumerate(msg["stacks"]):
                     table_state.stacks[i].cards = list(cards)
                     update_card_positions(table_state.stacks[i], table_state, sort=False)
+            elif msg and msg.get("type") == "all_cards":
+                for card, data in zip(gods_state.all_cards, msg["all_cards"]):
+                    card.power = data["power"]
+                    card.counters = data["counters"]
+                    card.destroyed = data["destroyed"]
+                    card.owner = data["owner"]
 
         pyray.begin_drawing()
 
