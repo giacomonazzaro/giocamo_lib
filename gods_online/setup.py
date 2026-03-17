@@ -43,6 +43,7 @@ def fetch_address(room_code, suffix="", timeout=120):
                 msg = json.loads(line)
                 if msg.get("event") == "message":
                     payload = json.loads(msg["message"])
+                    print(f"[DEBUG NTFY] Found address for '{topic}': {payload['ip']}:{payload['port']}", flush=True)
                     return payload["ip"], payload["port"]
         except Exception:
             pass
@@ -77,6 +78,7 @@ def get_ip_info(sock):
                 port = struct.unpack('!H', response[offset+6:offset+8])[0]
                 ip_octets = struct.unpack('!BBBB', response[offset+8:offset+12])
                 ip = ".".join(map(str, ip_octets))
+                print(f"[DEBUG STUN] Public address: {ip}:{port}", flush=True)
                 return ip, port
             offset += 4 + attr_len
 
@@ -89,10 +91,12 @@ def get_ip_info(sock):
 
 
 def pick_seed(sock: socket.socket, seed: int, game_init: dict):
+    sock.settimeout(10)  # DEBUG: timeout so we can log heartbeats instead of blocking silently.
     typer.echo("[*] Waiting to receive seed from friend...")
     while True:
         try:
-            data, _ = sock.recvfrom(1024)
+            data, addr = sock.recvfrom(1024)
+            print(f"[DEBUG PICK_SEED] Got packet from {addr}: {data[:80]}", flush=True)
             msg = data.decode().strip()
             # If we receive "PUNCH", just print a notification, don't clutter chat.
             if msg == "PUNCH":
@@ -109,12 +113,18 @@ def pick_seed(sock: socket.socket, seed: int, game_init: dict):
                     game_init.update({"seed": friend_seed, "player_index": 1})
                 break
             # Non-init messages (e.g. game packets arriving early via UDP reordering) are ignored.
+            print(f"[DEBUG PICK_SEED] Ignoring non-init message: {parsed.get('type')}", flush=True)
+        except socket.timeout:
+            print("[DEBUG PICK_SEED] Still waiting for init (10s elapsed)...", flush=True)
+            continue
         except OSError as e:
             typer.echo(f"[!] Error receiving seed: {e}")
             break
-        except Exception:
+        except Exception as e:
+            print(f"[DEBUG PICK_SEED] Non-fatal exception, continuing: {e}", flush=True)
             # Non-fatal (malformed packet, binary STUN response, etc.) — keep waiting.
             continue
+    sock.settimeout(None)  # DEBUG: restore blocking mode.
 
 
 def _exchange_seeds(sock: socket.socket, local: bool, friend_addr: tuple[str, int]) -> tuple[int, int]:
@@ -127,6 +137,7 @@ def _exchange_seeds(sock: socket.socket, local: bool, friend_addr: tuple[str, in
     listener = threading.Thread(target=pick_seed, args=(sock, seed, game_init), daemon=True)
     listener.start()
 
+    print(f"[DEBUG EXCHANGE] Starting seed exchange with {friend_addr}, local seed={seed}", flush=True)
     if not local:
         for _ in range(5):
             typer.echo(f"[*] Sending hole punch packet to {friend_addr}...")
@@ -134,6 +145,7 @@ def _exchange_seeds(sock: socket.socket, local: bool, friend_addr: tuple[str, in
             time.sleep(0.5)
 
     sock.sendto(json.dumps({"type": "init", "seed": seed}).encode(), friend_addr)
+    print(f"[DEBUG EXCHANGE] Sent init to {friend_addr}", flush=True)
     typer.echo("[*] Exchanging seeds...")
     listener.join()
     player_index = game_init['player_index']
