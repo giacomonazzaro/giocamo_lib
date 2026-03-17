@@ -32,19 +32,24 @@ def publish_address(room_code, ip, port, suffix=""):
 
 def fetch_address(room_code, suffix="", timeout=120):
     topic = f"gods-{room_code}{suffix}"
+    # Use since=all but take the LAST message, not the first.
+    # ntfy.sh returns messages in chronological order (oldest first), so the last one is the most recent.
+    # Taking the first message would return a stale address from a previous session with the same room code.
     url = f"{NTFY_URL}/{topic}/json?poll=1&since=all"
     deadline = time.time() + timeout
     while time.time() < deadline:
         try:
             response = urllib.request.urlopen(url, timeout=10)
+            last_payload = None
             for line in response.read().decode().strip().split('\n'):
                 if not line:
                     continue
                 msg = json.loads(line)
                 if msg.get("event") == "message":
-                    payload = json.loads(msg["message"])
-                    print(f"[DEBUG NTFY] Found address for '{topic}': {payload['ip']}:{payload['port']}", flush=True)
-                    return payload["ip"], payload["port"]
+                    last_payload = json.loads(msg["message"])
+            if last_payload is not None:
+                print(f"[DEBUG NTFY] Found address for '{topic}': {last_payload['ip']}:{last_payload['port']}", flush=True)
+                return last_payload["ip"], last_payload["port"]
         except Exception:
             pass
         time.sleep(2)
