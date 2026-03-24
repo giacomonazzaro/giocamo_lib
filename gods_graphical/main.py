@@ -323,8 +323,8 @@ def p2p(
     join: Annotated[Optional[str], typer.Option("--join", "-j", help="Room code to join")] = None,
     game_logic: bool = True,
 ):
-    sock, your_ip, your_port = peer_to_peer(local)
-    player_index, seed, sock, friend_addr = setup_online_game(sock, local, your_ip, your_port, room_code=join)
+    sock, your_ip, your_port, local_ip, local_port = peer_to_peer(local)
+    player_index, seed, sock, friend_addr = setup_online_game(sock, local, your_ip, your_port, local_ip, local_port, room_code=join)
     main(player_index=player_index, seed=seed, sock=sock, friend_addr=friend_addr, game_logic=game_logic)
 
 @app.command()

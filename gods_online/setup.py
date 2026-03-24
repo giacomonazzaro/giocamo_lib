@@ -22,15 +22,32 @@ def generate_room_code(length=4):
     return ''.join(random.choice(chars) for _ in range(length))
 
 
-def publish_address(room_code, ip, port, suffix=""):
+def get_local_ip():
+    """Get the LAN IP address of this machine."""
+    try:
+        # Connect to a public address to determine which local interface is used.
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        s.connect(("8.8.8.8", 80))
+        ip = s.getsockname()[0]
+        s.close()
+        return ip
+    except Exception:
+        return socket.gethostbyname_ex(socket.gethostname())[-1][-1]
+
+
+def publish_address(room_code, ip, port, local_ip, local_port, suffix=""):
     topic = f"gods-{room_code}{suffix}"
     url = f"{NTFY_URL}/{topic}"
-    data = json.dumps({"ip": ip, "port": port}).encode()
+    data = json.dumps({
+        "ip": ip, "port": port,
+        "local_ip": local_ip, "local_port": local_port,
+    }).encode()
     req = urllib.request.Request(url, data=data)
     urllib.request.urlopen(req, timeout=10)
 
 
 def fetch_address(room_code, suffix="", timeout=120):
+    """Returns (public_ip, public_port, local_ip, local_port)."""
     topic = f"gods-{room_code}{suffix}"
     url = f"{NTFY_URL}/{topic}/json?poll=1&since=all"
     deadline = time.time() + timeout
@@ -43,11 +60,14 @@ def fetch_address(room_code, suffix="", timeout=120):
                 msg = json.loads(line)
                 if msg.get("event") == "message":
                     payload = json.loads(msg["message"])
-                    return payload["ip"], payload["port"]
+                    return (
+                        payload["ip"], payload["port"],
+                        payload.get("local_ip"), payload.get("local_port"),
+                    )
         except Exception:
             pass
         time.sleep(2)
-    return None, None
+    return None, None, None, None
 
 
 def get_ip_info(sock):
@@ -137,7 +157,7 @@ def _exchange_seeds(sock: socket.socket, local: bool, friend_addr: tuple[str, in
     return player_index, seed
 
 
-def setup_online_game(sock: socket.socket, local: bool, your_ip: str, your_port: int, room_code: str | None = None) -> tuple[int, int, socket.socket, tuple[str, int]]:
+def setup_online_game(sock: socket.socket, local: bool, your_ip: str, your_port: int, local_ip: str, local_port: int, room_code: str | None = None) -> tuple[int, int, socket.socket, tuple[str, int]]:
     """Set up connection with friend and exchange seeds."""
 
     # Keep-alive to prevent NAT port mapping from expiring.
@@ -149,6 +169,7 @@ def setup_online_game(sock: socket.socket, local: bool, your_ip: str, your_port:
     if not local:
         threading.Thread(target=keep_alive, daemon=True).start()
 
+    same_network = False
     if local:
         # Local mode: manual IP/port exchange.
         friend_ip = typer.prompt("What is your friend's IP address")
@@ -156,49 +177,67 @@ def setup_online_game(sock: socket.socket, local: bool, your_ip: str, your_port:
     elif room_code is None:
         # Hosting: publish our address, wait for joiner.
         room_code = generate_room_code()
-        publish_address(room_code, your_ip, your_port)
+        publish_address(room_code, your_ip, your_port, local_ip, local_port)
         typer.echo(f"[*] Room code: {room_code}")
         typer.echo("[*] Waiting for friend to join...")
-        friend_ip, friend_port = fetch_address(room_code, suffix="-join")
+        friend_ip, friend_port, friend_local_ip, friend_local_port = fetch_address(room_code, suffix="-join")
         if friend_ip is None:
             typer.echo("[!] Timed out waiting for friend to join.")
             raise typer.Exit(1)
+        # If both peers share the same public IP, use LAN addresses.
+        if friend_ip == your_ip and friend_local_ip:
+            typer.echo("[*] Same network detected, using LAN addresses.")
+            friend_ip = friend_local_ip
+            friend_port = friend_local_port
+            same_network = True
         typer.echo("[*] Friend joined!")
     else:
         # Joining: fetch host's address, publish ours.
         typer.echo(f"[*] Joining room {room_code}...")
-        friend_ip, friend_port = fetch_address(room_code)
+        friend_ip, friend_port, friend_local_ip, friend_local_port = fetch_address(room_code)
         if friend_ip is None:
             typer.echo("[!] Could not find room. Check the code and try again.")
             raise typer.Exit(1)
-        publish_address(room_code, your_ip, your_port, suffix="-join")
+        publish_address(room_code, your_ip, your_port, local_ip, local_port, suffix="-join")
+        # If both peers share the same public IP, use LAN addresses.
+        if friend_ip == your_ip and friend_local_ip:
+            typer.echo("[*] Same network detected, using LAN addresses.")
+            friend_ip = friend_local_ip
+            friend_port = friend_local_port
+            same_network = True
         typer.echo("[*] Connected to host!")
 
     stop_keepalive = True
     friend_addr = (friend_ip, friend_port)
 
-    player_index, seed = _exchange_seeds(sock, local, friend_addr)
+    # Skip hole punching on same network since LAN traffic doesn't need it.
+    player_index, seed = _exchange_seeds(sock, local or same_network, friend_addr)
     return player_index, seed, sock, friend_addr
 
 
-def peer_to_peer(local: bool = False) -> tuple[socket.socket, str, int]:
+def peer_to_peer(local: bool = False) -> tuple[socket.socket, str, int, str, int]:
+    """Returns (sock, public_ip, public_port, local_ip, local_port)."""
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
     if local:
         typer.echo("You're playing in local mode.")
-        your_ip = socket.gethostbyname_ex(socket.gethostname())[-1][-1]
-        your_port = typer.prompt("Enter the port to use for the game", type=int)
-        sock.bind(('0.0.0.0', your_port))
+        local_ip = get_local_ip()
+        local_port = typer.prompt("Enter the port to use for the game", type=int)
+        sock.bind(('0.0.0.0', local_port))
+        return sock, local_ip, local_port, local_ip, local_port
     else:
         sock.bind(('0.0.0.0', 0))
-        your_ip, your_port = get_ip_info(sock)
+        local_ip = get_local_ip()
+        local_port = sock.getsockname()[1]
+        public_ip, public_port = get_ip_info(sock)
 
-    if your_ip is None or your_port is None:
+    if public_ip is None or public_port is None:
         typer.echo("Could not discover your public IP and port using STUN.")
         raise typer.Exit(1)
 
-    typer.echo(f"[*] Your address: {your_ip}:{your_port}")
-    return sock, your_ip, your_port
+    typer.echo(f"[*] Public address: {public_ip}:{public_port}")
+    typer.echo(f"[*] Local address: {local_ip}:{local_port}")
+    return sock, public_ip, public_port, local_ip, local_port
 
 
 # --- Async wrappers for the graphical menu ---
@@ -224,19 +263,27 @@ def start_hosting(local: bool = False) -> Connection_State:
 
     def setup() -> None:
         try:
-            sock, your_ip, your_port = peer_to_peer(local)
+            sock, your_ip, your_port, local_ip, local_port = peer_to_peer(local)
             state.sock = sock
 
             # Publish before blocking so the UI has the code to display.
             state.room_code = generate_room_code()
-            publish_address(state.room_code, your_ip, your_port)
+            publish_address(state.room_code, your_ip, your_port, local_ip, local_port)
 
-            friend_ip, friend_port = fetch_address(state.room_code, suffix="-join")
+            friend_ip, friend_port, friend_local_ip, friend_local_port = fetch_address(state.room_code, suffix="-join")
             if friend_ip is None:
                 state.error = "Timed out waiting for a joiner."
                 return
 
-            player_index, seed = _exchange_seeds(sock, local, (friend_ip, friend_port))
+            # If both peers share the same public IP, use LAN addresses.
+            same_network = False
+            if friend_ip == your_ip and friend_local_ip:
+                typer.echo("[*] Same network detected, using LAN addresses.")
+                friend_ip = friend_local_ip
+                friend_port = friend_local_port
+                same_network = True
+
+            player_index, seed = _exchange_seeds(sock, local or same_network, (friend_ip, friend_port))
             state.player_index = player_index
             state.seed = seed
             state.friend_addr = (friend_ip, friend_port)
@@ -255,9 +302,9 @@ def join_room(room_code: str, local: bool = False) -> Connection_State:
 
     def setup() -> None:
         try:
-            sock, your_ip, your_port = peer_to_peer(local)
+            sock, your_ip, your_port, local_ip, local_port = peer_to_peer(local)
             player_index, seed, sock, friend_addr = setup_online_game(
-                sock, local, your_ip, your_port, room_code=state.room_code
+                sock, local, your_ip, your_port, local_ip, local_port, room_code=state.room_code
             )
             state.sock = sock
             state.player_index = player_index
