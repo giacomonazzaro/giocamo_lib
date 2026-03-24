@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import platform
 from dataclasses import dataclass
 from enum import Enum, auto
 
@@ -89,6 +90,23 @@ def _dots() -> str:
     return "." * (int(pyray.get_time() * 2) % 4)
 
 
+def _is_super_key_down() -> bool:
+    """Check if the platform modifier key is held (Cmd on Mac, Ctrl elsewhere)."""
+    if platform.system() == "Darwin":
+        return (pyray.is_key_down(pyray.KeyboardKey.KEY_LEFT_SUPER)
+                or pyray.is_key_down(pyray.KeyboardKey.KEY_RIGHT_SUPER))
+    return (pyray.is_key_down(pyray.KeyboardKey.KEY_LEFT_CONTROL)
+            or pyray.is_key_down(pyray.KeyboardKey.KEY_RIGHT_CONTROL))
+
+
+def _is_copy_pressed() -> bool:
+    return _is_super_key_down() and pyray.is_key_pressed(pyray.KeyboardKey.KEY_C)
+
+
+def _is_paste_pressed() -> bool:
+    return _is_super_key_down() and pyray.is_key_pressed(pyray.KeyboardKey.KEY_V)
+
+
 # --- Main menu entry point ---
 
 def run_menu() -> tuple[str, dict]:
@@ -115,10 +133,21 @@ def run_menu() -> tuple[str, dict]:
     while not pyray.window_should_close():
         # --- Per-frame text input ---
         if state.screen == Screen.JOINING:
-            state.text_input = _update_text_input(state.text_input)
+            # Cmd+V (Mac) or Ctrl+V (other) pastes from clipboard.
+            if _is_paste_pressed():
+                clipboard = pyray.get_clipboard_text()
+                if clipboard:
+                    state.text_input = (state.text_input + clipboard)[:16]
+            else:
+                state.text_input = _update_text_input(state.text_input)
             if pyray.is_key_pressed(pyray.KeyboardKey.KEY_ENTER) and state.text_input:
                 state.connection = join_room(state.text_input)
                 state.screen = Screen.CONNECTING
+
+        # Cmd+C (Mac) or Ctrl+C (other) copies the room code when creating.
+        if state.screen == Screen.CREATING:
+            if state.connection and state.connection.room_code and _is_copy_pressed():
+                pyray.set_clipboard_text(state.connection.room_code)
 
         # --- Poll async connection result ---
         if state.connection is not None:
@@ -182,8 +211,12 @@ def run_menu() -> tuple[str, dict]:
                 _draw_centered_text(
                     state.connection.room_code, center_y - 30, 50, (255, 215, 0, 255)
                 )
+                # Copy code button.
+                if _draw_button("Copy Code", center_y + 30, width=200, height=44):
+                    pyray.set_clipboard_text(state.connection.room_code)
+
                 _draw_centered_text(
-                    f"Waiting for opponent{_dots()}", center_y + 50, 22,
+                    f"Waiting for opponent{_dots()}", center_y + 90, 22,
                     (180, 180, 180, 255)
                 )
             else:
@@ -192,7 +225,7 @@ def run_menu() -> tuple[str, dict]:
                     (200, 200, 200, 255)
                 )
 
-            if _draw_button("Back", center_y + 150, width=180, height=46):
+            if _draw_button("Back", center_y + 170, width=180, height=46):
                 state.connection = None
                 state.screen = Screen.ONLINE
 
@@ -200,11 +233,16 @@ def run_menu() -> tuple[str, dict]:
             _draw_centered_text("JOIN GAME", 150, 54)
             _draw_text_input("Enter room code:", state.text_input, center_y - 40)
 
-            if _draw_button("Connect", center_y + 50) and state.text_input:
+            if _draw_button("Paste", center_y + 30, width=160, height=44):
+                clipboard = pyray.get_clipboard_text()
+                if clipboard:
+                    state.text_input = (state.text_input + clipboard)[:16]
+
+            if _draw_button("Connect", center_y + 90) and state.text_input:
                 state.connection = join_room(state.text_input)
                 state.screen = Screen.CONNECTING
 
-            if _draw_button("Back", center_y + 130, width=180, height=46):
+            if _draw_button("Back", center_y + 160, width=180, height=46):
                 state.text_input = ""
                 state.screen = Screen.ONLINE
 
