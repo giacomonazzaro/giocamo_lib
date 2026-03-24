@@ -181,6 +181,7 @@ def play_gods(gods_state: Game_State, table_state: kt.Table_State, ui_state: UI_
         pyray.set_target_fps(tweak["target_fps"])
 
     current_choice = None
+    prev_playground = ui_state.playground
     table_state.draw_callback = lambda table: draw_hud(table, gods_state, current_choice, ui_state, bottom_player=player_index)
 
     # In online mode, send all_cards whenever card state changes (power, counters, destroyed, owner).
@@ -252,7 +253,16 @@ def play_gods(gods_state: Game_State, table_state: kt.Table_State, ui_state: UI_
                     update_card_positions(stack, table_state, sort=False)
         
 
-        # Sync stacks with the remote player when game logic is not running.
+        # Sync playground mode with the remote player.
+        if sock is not None and friend_addr is not None and ui_state.playground != prev_playground:
+            send_message(sock, {"type": "playground", "on": ui_state.playground}, friend_addr)
+            if ui_state.playground:
+                # Send current stacks so the other player starts with the same state.
+                stacks_data = [s.cards for s in table_state.stacks]
+                send_message(sock, {"type": "stacks", "stacks": stacks_data}, friend_addr)
+        prev_playground = ui_state.playground
+
+        # Send stacks when in playground/no-logic mode and something changed.
         if (agent is None or ui_state.playground) and sock is not None and friend_addr is not None:
             # poll_dropped_card() consumes the event so it only fires once per drop,
             # not every frame while dropped_card stays set.
@@ -265,12 +275,22 @@ def play_gods(gods_state: Game_State, table_state: kt.Table_State, ui_state: UI_
             if should_send:
                 stacks_data = [s.cards for s in table_state.stacks]
                 send_message(sock, {"type": "stacks", "stacks": stacks_data}, friend_addr)
-            # Apply any incoming update from the remote player.
+
+        # Always receive messages from the remote player (playground toggle can arrive any time).
+        if sock is not None and friend_addr is not None:
             msg = try_recv_message(sock)
             if msg and msg.get("type") == "stacks":
                 for i, cards in enumerate(msg["stacks"]):
                     table_state.stacks[i].cards = list(cards)
                     update_card_positions(table_state.stacks[i], table_state, sort=False)
+            elif msg and msg.get("type") == "playground":
+                ui_state.playground = msg["on"]
+                if ui_state.playground:
+                    table_state.is_drop_card_allowed = lambda *_: True
+                    ui_state.highlighted_cards = {}
+                else:
+                    sync_game_state_from_table(table_state, gods_state)
+                    ui_state.power_edit_card_id = -1
             elif msg and msg.get("type") == "all_cards":
                 for card, data in zip(gods_state.all_cards, msg["all_cards"]):
                     card.power = data["power"]
