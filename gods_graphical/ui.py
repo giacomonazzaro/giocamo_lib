@@ -46,7 +46,7 @@ def make_gods_stacks(bottom_player: int = 0) -> list[kt.Stack]:
     top_wonders_y = H - int(p0_wonders.y) - h - opponent_shift
 
     # Shared deck: vertically centered, off-screen to the left.
-    shared_deck = place_inside(window, w, h, x="right", y="center")
+    shared_deck = place_next(window, w, h, x="right", y="center", padding=10)
     # shared_deck.x = -w
     
     # Peoples
@@ -140,7 +140,7 @@ def draw_card_power_badge(power: str, destroyed: bool):
 
 # --- HUD rendering ---
 
-def draw_player_hud(name: str, score: int, deck_count: int, is_current: bool, hud_y: int):
+def draw_player_hud(player_id: int, score: int, deck_count: int, is_current: bool, hud_y: int):
     w = tweak["card_width"]
     margin = 20
 
@@ -151,20 +151,20 @@ def draw_player_hud(name: str, score: int, deck_count: int, is_current: bool, hu
         )
 
     # Player name above score.
-    render_text(name, tweak["window_width"] - 200, hud_y, 18, Color(160, 160, 160, 180))
+    # render_text(name, tweak["window_width"] - 200, hud_y, 18, Color(160, 160, 160, 180))
 
     # Score.
     render_text(f"Points: {score}", tweak["window_width"] - 200, hud_y + 22, 40, Color(200, 200, 200, 255))
 
     # Deck count near deck stack.
-    deck_x = margin + w + margin
-    render_text(
-        str(deck_count),
-        deck_x + w // 2 - 10,
-        hud_y + 18 if hud_y < 400 else hud_y - 30,
-        18,
-        Color(180, 180, 180, 255),
-    )
+    # rect = place_next()
+    # render_text(
+    #     str(deck_count),
+    #     deck_x + w // 2 - 10,
+    #     hud_y + 18 if hud_y < 400 else hud_y - 30,
+    #     18,
+    #     Color(180, 180, 180, 255),
+    # )
 
 
 

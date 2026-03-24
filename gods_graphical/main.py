@@ -110,13 +110,12 @@ def draw_hud(table_state: kt.Table_State, gods_state: Game_State, choice: Choice
         is_current = i == gods_state.current_player
         hud_y = bottom_wonders_y + h // 2
         if i != bottom_player: hud_y = top_wonders_y + h // 2
-        name = "You" if i == bottom_player else "Opponent"
-        draw_player_hud(name, score, len(player.deck), is_current, hud_y)
+        draw_player_hud(i, score, len(player.deck), is_current, hud_y)
 
     ui_state.draw_buttons()
 
     text = choice.text_description if choice else ""
-    if text:
+    if text and not ui_state.playground:
         font_size = 22
         tw = text_width(text, font_size)
         r = ui_state.place(tw, font_size, x="right", y="center", padding=20)
@@ -163,6 +162,13 @@ def draw_hud(table_state: kt.Table_State, gods_state: Game_State, choice: Choice
                 gods_state.on_cards_changed()
             btn.x += btn_w + gap
 
+    # Place shared deck.
+    i = find(table_state.stacks, lambda s: s.name == "shared_deck")
+    if not ui_state.playground:
+        table_state.stacks[i].rect = place_next(window, tweak["card_width"], tweak["card_height"], x="right", y="center", padding=10)
+    else:
+        table_state.stacks[i].rect = place_inside(window, tweak["card_width"], tweak["card_height"], x="right", y="center", padding=10)
+    update_card_positions(table_state.stacks[i], table_state, sort=False)
 
 from kitchen_table.ui import UI_State
 
