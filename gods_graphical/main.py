@@ -252,8 +252,8 @@ def play_gods(gods_state: Game_State, table_state: kt.Table_State, ui_state: UI_
                     update_card_positions(stack, table_state, sort=False)
         
 
-        # In no-game-logic online mode, sync stacks with the remote player.
-        if agent is None and sock is not None and friend_addr is not None:
+        # Sync stacks with the remote player when game logic is not running.
+        if (agent is None or ui_state.playground) and sock is not None and friend_addr is not None:
             # poll_dropped_card() consumes the event so it only fires once per drop,
             # not every frame while dropped_card stays set.
             dropped = table_state.poll_dropped_card()
