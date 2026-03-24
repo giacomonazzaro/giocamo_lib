@@ -69,18 +69,19 @@ def make_gods_stacks(bottom_player: int = 0) -> list[kt.Stack]:
         p0_peoples, p1_peoples = p1_peoples, p0_peoples
         p0_wonders, p1_wonders = p1_wonders, p0_wonders
 
+    visible = bottom_player == 0
     result = [
-        kt.Stack(p0_deck,  spread_x=0,           spread_y=spread_pile, face_up=False, name=f"p0_deck"),
-        kt.Stack(p0_hand,  spread_x=spread_hand, spread_y=0,           face_up=True, name=f"p0_hand"),
-        kt.Stack(p0_discard,      spread_x=0,           spread_y=spread_pile, face_up=True, name=f"p0_discard" ),
-        kt.Stack(p0_peoples,   spread_x=spread_wonders, spread_y=0,        face_up=True, name=f"p0_peoples" ),
-        kt.Stack(p0_wonders, spread_x=spread_wonders, spread_y=0,      face_up=True, name=f"p0_wonders" ),
-        kt.Stack(p1_deck,      spread_x=0,           spread_y=spread_pile, face_up=False, name=f"p1_deck"    ),
-        kt.Stack(p1_hand,      spread_x=spread_hand, spread_y=0,           face_up=False, name=f"p1_hand"    ),
-        kt.Stack(p1_discard,   spread_x=0,           spread_y=spread_pile, face_up=True, name=f"p1_discard" ),
-        kt.Stack(p1_peoples,   spread_x=spread_wonders, spread_y=0,        face_up=True, name=f"p1_peoples" ),
-        kt.Stack(p1_wonders,   spread_x=spread_wonders, spread_y=0,        face_up=True, name=f"p1_wonders" ),
-        kt.Stack(shared_deck,  spread_x=0,           spread_y=spread_pile,           face_up=False, name="shared_deck"   ),
+        kt.Stack(p0_deck, spread_x=0, spread_y=spread_pile, face_up=False, name=f"p0_deck"),
+        kt.Stack(p0_hand, spread_x=spread_hand, spread_y=0, face_up=visible, name=f"p0_hand"),
+        kt.Stack(p0_discard, spread_x=0, spread_y=spread_pile, face_up=True, name=f"p0_discard" ),
+        kt.Stack(p0_peoples, spread_x=spread_wonders, spread_y=0, face_up=True, name=f"p0_peoples" ),
+        kt.Stack(p0_wonders, spread_x=spread_wonders, spread_y=0, face_up=True, name=f"p0_wonders" ),
+        kt.Stack(p1_deck, spread_x=0, spread_y=spread_pile, face_up=False, name=f"p1_deck"    ),
+        kt.Stack(p1_hand, spread_x=spread_hand, spread_y=0, face_up=not visible, name=f"p1_hand"    ),
+        kt.Stack(p1_discard, spread_x=0, spread_y=spread_pile, face_up=True, name=f"p1_discard" ),
+        kt.Stack(p1_peoples, spread_x=spread_wonders, spread_y=0, face_up=True, name=f"p1_peoples" ),
+        kt.Stack(p1_wonders, spread_x=spread_wonders, spread_y=0, face_up=True, name=f"p1_wonders" ),
+        kt.Stack(shared_deck, spread_x=0, spread_y=spread_pile, face_up=False, name="shared_deck"   ),
     ]
     return result
 
