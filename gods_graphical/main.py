@@ -230,6 +230,7 @@ def play_gods(gods_state: Game_State, table_state: kt.Table_State, ui_state: UI_
                     ui_state.power_edit_card_id = -1
                     gods_state.on_cards_changed()
                     break
+    
         discard_stack_you = find(table_state.stacks, lambda s: s.name == f"p{player_index}_discard")
         discard_stack_opponent = find(table_state.stacks, lambda s: s.name == f"p{1 - player_index}_discard")
         if pyray.is_mouse_button_pressed(pyray.MouseButton.MOUSE_BUTTON_LEFT):

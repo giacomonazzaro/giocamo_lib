@@ -110,12 +110,12 @@ def draw_card_power_badge(power: str, destroyed: bool):
     badge_cx = int(0.88 * w)
     badge_cy = int(0.12 * w)
     badge_r  = int(0.12 * w)
-    draw_circle(badge_cx, badge_cy, badge_r, Color(255, 255, 255, 255))
+    draw_circle(badge_cx, badge_cy, badge_r, Color(0, 0, 0, 255))
 
     # Center the power number on the badge circle.
     size = int(0.2 * w)
     tw = text_width(power, size)
-    render_text(power, badge_cx - tw // 2, badge_cy - size // 2, size, Color(0, 0, 0, 255))
+    render_text(power, badge_cx - tw // 2, badge_cy - size // 2, size, Color(255, 255, 255, 255))
 
     if destroyed:
         draw_rectangle_rounded(
