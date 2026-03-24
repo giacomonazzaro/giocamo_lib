@@ -63,13 +63,11 @@ def make_gods_stacks(bottom_player: int = 0) -> list[kt.Stack]:
     # the same and this is important for online game, where the state must be the same but it should
     # just be rendered flipped for player 1.
     if bottom_player == 1:
-        def swap(a, b): a, b = b, a
-
-        swap(p0_deck, p1_deck)
-        swap(p0_hand, p1_hand)
-        swap(p0_discard, p1_discard)
-        swap(p0_peoples, p1_peoples)
-        swap(p0_wonders, p1_wonders)
+        p0_deck, p1_deck = p1_deck, p0_deck
+        p0_hand, p1_hand = p1_hand, p0_hand
+        p0_discard, p1_discard = p1_discard, p0_discard
+        p0_peoples, p1_peoples = p1_peoples, p0_peoples
+        p0_wonders, p1_wonders = p1_wonders, p0_wonders
 
     result = [
         kt.Stack(p0_deck,  spread_x=0,           spread_y=spread_pile, face_up=False, name=f"p0_deck"),
