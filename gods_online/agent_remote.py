@@ -13,6 +13,8 @@ class Agent_Remote(Agent):
 
     def choose_action(self, state: Game, choice: Choice) -> int:
         msg = recv_message(self.sock)
+        if "index" not in msg:
+            return -1
         return msg["index"]
 
 
