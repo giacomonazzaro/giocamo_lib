@@ -19,7 +19,7 @@ class Choice:
 
 Similarly, `kt.Card` stores a `draw_callback` closure, and `Table_State` stores `is_drop_card_allowed`.
 
-**C++ issue:** `std::function` is copyable as long as captured variables are copyable — and captured `Card*` pointers are trivially copyable. So this is fine for normal gameplay. **However**, see issue #4 for why this breaks during MCTS search.
+**C++ issue:** `std::function` is copyable as long as captured variables are copyable — and captured `Card*` pointers are trivially copyable. So this is fine for normal gameplay. **However**, see issue #4 for why this breaks during Minimax search.
 
 ---
 
@@ -37,24 +37,24 @@ Cards are stored in a homogeneous `list[Card]` but dispatch to subclass-specific
 
 **File:** `gods/cards.py` (throughout)
 
-Card `on_played` methods create closures that are stored in `Choice` objects and called later. See issue #4 for why capturing `self` directly was a problem for MCTS.
+Card `on_played` methods create closures that are stored in `Choice` objects and called later. See issue #4 for why capturing `self` directly was a problem for Minimax.
 
-**Status: Fixed.** All closures now capture `my_id = self.id` (a plain `int`) and look up the card via `state.all_cards[my_id]` at call time. This is safe for both normal gameplay and MCTS cloning.
+**Status: Fixed.** All closures now capture `my_id = self.id` (a plain `int`) and look up the card via `state.all_cards[my_id]` at call time. This is safe for both normal gameplay and Minimax cloning.
 
 ---
 
 ## 4. Deep Copy for AI Search
 
-**Files:** `gods/agents/mcts.py:74`, `gods/agents/minimax_search.py:57,94`, `gods/agents/minimax_stochastic.py:33`
+**Files:** `gods/agents/minimax_search.py:57,94`, `gods/agents/minimax_stochastic.py:33`
 
 ```python
 sim_state = copy.deepcopy(state)
 sim_choice = copy.deepcopy(choice)
 ```
 
-MCTS clones the full `Game_State` — including all `Card` objects and any pending `Choice` — to simulate future moves without affecting the real game.
+Minimax clones the full `Game_State` — including all `Card` objects and any pending `Choice` — to simulate future moves without affecting the real game.
 
-**C++ issue:** When deep-copying a `Game_State`, new `Card` objects are created. If closures inside the copied `Choice` captured `Card*` pointers into the original game's card array, MCTS mutations would silently corrupt the real game state. In Python, `deepcopy` rewrites all internal references automatically — C++ `std::function` copy cannot.
+**C++ issue:** When deep-copying a `Game_State`, new `Card` objects are created. If closures inside the copied `Choice` captured `Card*` pointers into the original game's card array, Minimax mutations would silently corrupt the real game state. In Python, `deepcopy` rewrites all internal references automatically — C++ `std::function` copy cannot.
 
 **Status: Fixed.** All closures now capture integer indices, so the copied `Choice` naturally uses the cloned state's cards when invoked.
 
@@ -166,7 +166,7 @@ if table_state.animated_cards is None:
 
 | Issue | Status |
 |-------|--------|
-| Closures capturing card objects in MCTS | ✅ Fixed — all closures capture `int` index |
+| Closures capturing card objects in Minimax | ✅ Fixed — all closures capture `int` index |
 | Card polymorphism | No action — `std::vector<Card*>` + virtual methods |
 | Agent polymorphism | No action — `Agent*` pointers |
 | Callbacks in `Choice` / `kt.Card` | No action — `std::function` with pointer capture is fine |

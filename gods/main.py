@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from game.agents.mcts import Agent_MCTS
+from gods.gameplay import Agent_Minimax_Stochastic_Gods
 from game.agents.terminal import Agent_Terminal
 from game.agents.duel import Agent_Duel
 
@@ -20,7 +20,7 @@ def main():
 
     print("\nGame started! Each player has drawn 5 cards.")
 
-    agent = Agent_Duel(Agent_Terminal(), Agent_MCTS())
+    agent = Agent_Duel(Agent_Terminal(), Agent_Minimax_Stochastic_Gods())
     game_loop(game, agent, display_game_state)
 
     # Game over - calculate scores.

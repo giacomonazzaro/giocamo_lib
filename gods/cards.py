@@ -242,7 +242,7 @@ class Prophecy(Card_Design):
                 result: list[Choice] = []
                 if not Card_Id.is_null(card_id):
                     result.extend(play_card(state, card_id))
-                    # Look up design in the global registry so MCTS clones use the same design.
+                    # Look up design in the global registry so minimax clones use the same design.
                     result.extend(card_designs[my_id]._make_nth_choice(state, iteration + 1))
                 return result
             return resolve

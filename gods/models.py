@@ -23,7 +23,7 @@ class Card_Color(Enum):
 @dataclass(slots=True)
 class Card_Design:
     """Immutable card definition: display text and all hook methods.
-    Shared across all game state copies; excluded from MCTS deep copies."""
+    Shared across all game state copies; excluded from minimax deep copies."""
     id: int
     name: str
     card_type: Card_Type
@@ -57,7 +57,7 @@ card_designs: list[Card_Design] = []
 @dataclass(slots=True)
 class Card:
     """Runtime card state — only the mutable fields that change during a game.
-    Trivially copyable; MCTS deep copies contain only these, not Card_Design."""
+    Trivially copyable; Minimax deep copies contain only these, not Card_Design."""
     id: int           # index into card_designs and Game_State.all_cards
     card_type: Card_Type
     color: Card_Color
