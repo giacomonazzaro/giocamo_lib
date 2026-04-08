@@ -8,8 +8,7 @@ from kitchen_table.rendering import draw_table, draw_background, color_from_tupl
 from kitchen_table.ui import place_inside, place_next
 import kitchen_table.models as kt
 
-IMAGES_DIR = os.path.join(os.path.dirname(__file__), "..", "gods", "cards", "card-images")
-
+IMAGES_DIR = os.path.join(os.path.dirname(__file__), "..", "gods", "cards", "fronts")
 
 def make_gods_stacks(bottom_player: int = 0) -> list[kt.Stack]:
     """Return stack layout definitions for the card table.
@@ -77,7 +76,7 @@ def make_gods_stacks(bottom_player: int = 0) -> list[kt.Stack]:
         kt.Stack(p0_peoples, spread_x=spread_wonders, spread_y=0, face_up=True, name=f"p0_peoples" ),
         kt.Stack(p0_wonders, spread_x=spread_wonders, spread_y=0, face_up=True, name=f"p0_wonders" ),
         kt.Stack(p1_deck, spread_x=0, spread_y=spread_pile, face_up=False, name=f"p1_deck"    ),
-        kt.Stack(p1_hand, spread_x=spread_hand, spread_y=0, face_up=not visible, name=f"p1_hand"    ),
+        kt.Stack(p1_hand, spread_x=spread_hand, spread_y=0, face_up=visible, name=f"p1_hand"    ),
         kt.Stack(p1_discard, spread_x=0, spread_y=spread_pile, face_up=True, name=f"p1_discard" ),
         kt.Stack(p1_peoples, spread_x=spread_wonders, spread_y=0, face_up=True, name=f"p1_peoples" ),
         kt.Stack(p1_wonders, spread_x=spread_wonders, spread_y=0, face_up=True, name=f"p1_wonders" ),
@@ -86,7 +85,8 @@ def make_gods_stacks(bottom_player: int = 0) -> list[kt.Stack]:
     return result
 
 def get_image_path(card_name: str) -> str | None:
-    filename = card_name.lower().replace(" ", "_") + ".jpg"
+    if len(card_name) == 1: card_name = "0" + card_name
+    filename = card_name.lower().replace(" ", "_") + ".png"
     path = os.path.join(IMAGES_DIR, filename)
     if os.path.exists(path):
         return path

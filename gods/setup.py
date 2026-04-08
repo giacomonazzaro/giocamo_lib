@@ -1,8 +1,10 @@
 from __future__ import annotations
+from itertools import count
 from gods import cards
 import gods.models as models_module
 from gods.models import Card, Card_Design, Card_Type, Player, Game_State
 from gods.cards import create_card_design
+import csv
 import json
 import os
 import random
@@ -11,13 +13,24 @@ import random
 def load_cards_from_json(filepath: str) -> list[dict]:
     with open(filepath, 'r') as f:
         return json.load(f)
-
-
+    
 def all_card_designs(default_power: int = 3) -> list[Card_Design]:
-    filepath = os.path.join(os.path.dirname(__file__), "cards.json")
-    data = load_cards_from_json(filepath)
-    return [create_card_design(d, i) for i, d in enumerate(data)]
-
+    filepath = os.path.join(os.path.dirname(__file__), "cards.csv")
+    # Count number of lines in the file to determine how many cards to create.
+    with open(filepath, 'r') as f:
+        reader = csv.reader(f)
+        next(reader)  # Skip the header row.
+        count = sum(1 for _ in reader)
+    cards = []
+    for i in range(count):
+        cards.append(Card_Design(
+            id=i,
+            name=str(i),
+            card_type="none",
+            color="none",
+            effect="",
+        ))
+    return cards
 
 def get_people_cards() -> list[int]:
     return [d.id for d in all_card_designs() if d.card_type == Card_Type.PEOPLE]
