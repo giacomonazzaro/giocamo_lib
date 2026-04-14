@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from gods.gameplay import Agent_Minimax_Stochastic_Gods
-from game.agents.terminal import Agent_Terminal
+from gods.agent_terminal import Agent_Terminal
 from game.agents.duel import Agent_Duel
 
 from game.game import game_loop

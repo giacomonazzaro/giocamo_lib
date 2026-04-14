@@ -1,5 +1,6 @@
+from __future__ import annotations
 from game.game import Choice, Choose_Card, Choose_Cards, Choose_Option, Choose_Options, action_options
-from gods.models import Game_State
+from gods.models import Game_State, Card_Id
 
 class Agent_Terminal:
     def __init__(self):
@@ -19,7 +20,6 @@ class Agent_Terminal:
             for i, label in enumerate(options):
                 print(f"  {i + 1}: {label}")
         elif isinstance(action_type, Choose_Card):
-            from gods.models import Card_Id
             done_label = "Pass" if choice.description == "main" else "Done"
             for i, card_id in enumerate(options):
                 if Card_Id.is_null(card_id):
