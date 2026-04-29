@@ -14,7 +14,7 @@ def create_example_table_state() -> Table_State:
     # Create a few stacks at different positions
     h = tweak["card_height"]
     stack1 = Stack(Rectangle(100, 300, 300, h), spread_y=tweak["pile_spread_y"], spread_x=0, face_up=False)
-    stack2 = Stack(Rectangle(400, 550, 500, h), spread_x=tweak["hand_spread_x"])
+    stack2 = Stack(Rectangle(400, 550, 500, h), spread_x=tweak["hand_spread_x"], capacity=3)
     stack3 = Stack(Rectangle(1000, 300, 600, h), spread_y=tweak["pile_spread_y"])
 
     state.stacks = [stack1, stack2, stack3]

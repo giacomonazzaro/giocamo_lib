@@ -5,6 +5,11 @@ from kitchen_table.config import tweak
 import kitchen_table.game_state as gs
 
 
+def stack_is_full(stack: Stack) -> bool:
+    """Returns True if the stack has a capacity limit and has reached it."""
+    return stack.capacity >= 0 and len(stack.cards) >= stack.capacity
+
+
 def point_in_card(px: float, py: float, card: Card) -> bool:
     """Check if point (px, py) is inside the card bounds."""
     w = tweak["card_width"]
@@ -132,7 +137,7 @@ def handle_mouse_move(state: Table_State) -> None:
             state.stacks[drag.current_stack].cards.remove(drag.card_id)
             gs.update_card_positions(state.stacks[drag.current_stack], state, sort=True)
 
-        if state.is_drop_card_allowed(drag.original_stack, hovered_stack, drag.card_id):
+        if state.is_drop_card_allowed(drag.original_stack, hovered_stack, drag.card_id) and not stack_is_full(state.stacks[hovered_stack]):
             state.stacks[hovered_stack].cards.append(drag.card_id)
             gs.update_card_positions(state.stacks[hovered_stack], state, sort=True)
             drag.current_stack = hovered_stack
