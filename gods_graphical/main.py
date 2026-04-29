@@ -66,8 +66,6 @@ def init_table_state(gods_state: Game_State, ui_state: UI_State, bottom_player: 
     cards = [
         kt.Card(
             id=card.id,
-            title=card_designs[card.id].name,
-            description=card_designs[card.id].effect,
             image_path=get_image_path(card_designs[card.id].name),
             draw_callback=draw_power,
         )

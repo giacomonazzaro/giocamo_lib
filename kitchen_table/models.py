@@ -5,15 +5,17 @@ from pyray import Rectangle
 
 
 @dataclass(slots=True)
-class Card:
+class Thing:
     id: int
-    title: str
-    description: str = ""
     image_path: str | None = None
     x: float = 0.0
     y: float = 0.0
     rotation: int = 0  # Rotation angle in degrees (0, 90, 180, 270)
     draw_callback: callable | None = None  # Optional custom draw function
+
+@dataclass(slots=True)
+class Card(Thing):
+    pass
 
 @dataclass(slots=True)
 class Stack:
@@ -38,7 +40,7 @@ class Drag_State:
 
 @dataclass(slots=True)
 class Table_State:
-    cards: list[Card] = field(default_factory=list)
+    cards: list[Thing] = field(default_factory=list)
     stacks: list[Stack] = field(default_factory=list)
     loose_cards: list[int] = field(default_factory=list)  # Card indices not in any stack
     drag_state: Drag_State = field(default_factory=Drag_State)
