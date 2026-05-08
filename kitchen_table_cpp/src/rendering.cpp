@@ -146,7 +146,7 @@ static Texture2D* get_rounded_texture(const std::string& image_path) {
 
 // --- Text rendering ---
 
-void render_text(const std::string& text, int x, int y, int size, nb::object color) {
+void render_text(const std::string& text, float x, float y, int size, nb::object color) {
     Color c = extract_color(color);
     DrawTextEx(get_font(), text.c_str(), {(float)x, (float)y}, (float)size, kt::FONT_SPACING, c);
 }
@@ -409,9 +409,9 @@ void draw_table(Table_State& state) {
     }
 
     // Animate card positions toward their targets.
-    float dt = GetFrameTime();
+    // dt is hardcoded to match the original Python behavior (frame-rate independent lerp was not intended).
     nb::list anim_list = nb::cast<nb::list>(state.animated_cards);
-    animate(anim_list, state, dt);
+    animate(anim_list, state, 0.1f);
 
     // Draw stack placeholder when a drag is in progress.
     if (state.drag_state.current_stack != -1) {

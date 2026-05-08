@@ -154,6 +154,24 @@ void bind_models(nb::module_& m) {
     // Table_State — full table state passed to every render and input function.
     nb::class_<Table_State>(m, "Table_State")
         .def(nb::init<>())
+        .def("__init__", [](Table_State* t,
+                             nb::list cards, nb::list stacks, nb::list loose_cards,
+                             nb::object draw_callback, nb::object is_drop_card_allowed,
+                             int zoomed_card_id) {
+            new (t) Table_State();
+            if (nb::len(cards) > 0)       t->cards       = cards;
+            if (nb::len(stacks) > 0)      t->stacks      = stacks;
+            if (nb::len(loose_cards) > 0) t->loose_cards = loose_cards;
+            if (!draw_callback.is_none())        t->draw_callback        = draw_callback;
+            if (!is_drop_card_allowed.is_none()) t->is_drop_card_allowed = is_drop_card_allowed;
+            t->zoomed_card_id = zoomed_card_id;
+        }, nb::kw_only(),
+           "cards"_a               = nb::list(),
+           "stacks"_a              = nb::list(),
+           "loose_cards"_a         = nb::list(),
+           "draw_callback"_a       = nb::none(),
+           "is_drop_card_allowed"_a = nb::none(),
+           "zoomed_card_id"_a      = -1)
         .def_prop_rw("cards",
             [](Table_State& t) -> nb::list { return t.cards; },
             [](Table_State& t, nb::list l) { t.cards = l; })
