@@ -1,0 +1,17 @@
+#pragma once
+#include "kt_models.h"
+
+bool       stack_is_full(const Stack& stack);
+bool       point_in_card(float px, float py, const Thing& card);
+bool       card_pressed(const Thing& card);
+bool       point_in_stack_area(float px, float py, const Stack& stack);
+nb::object find_card_at(float px, float py, Table_State& state);
+int        find_stack_at(float px, float py, const Table_State& state);
+void       handle_mouse_press(Table_State& state);
+void       handle_mouse_release(Table_State& state);
+void       handle_mouse_move(Table_State& state);
+void       handle_rotate_card(Table_State& state, bool clockwise = true);
+void       shuffle_stack(Table_State& state, int stack_id);
+void       update_input(Table_State& state);
+
+void bind_input(nb::module_& m);
