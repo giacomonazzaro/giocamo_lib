@@ -397,7 +397,8 @@ void draw_zoomed_card(const Thing& card, bool face_up) {
 
 // --- draw_table ---
 
-void draw_table(Table_State& state) {
+void draw_table(nb::object state_obj) {
+    Table_State& state = nb::cast<Table_State&>(state_obj);
     // Initialize animated_cards on first call (deep copy of cards list).
     if (state.animated_cards.is_none()) {
         nb::list animated;
@@ -455,8 +456,10 @@ void draw_table(Table_State& state) {
     }
 
     // Call the optional Python draw callback for custom overlays.
+    // Pass state_obj (the original Python wrapper) so that mutations inside
+    // the callback (e.g. setting is_drop_card_allowed) affect the real object.
     if (!state.draw_callback.is_none()) {
-        state.draw_callback(nb::cast(state));
+        state.draw_callback(state_obj);
     }
 
     // Draw zoomed card on top of everything.

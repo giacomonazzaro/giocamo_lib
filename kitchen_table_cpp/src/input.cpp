@@ -6,6 +6,7 @@
 #include <nanobind/stl/optional.h>
 #include <algorithm>
 #include <random>
+#include <cstdio>
 namespace nb = nanobind;
 using namespace nb::literals;
 
@@ -124,8 +125,8 @@ void handle_mouse_release(Table_State& state) {
         }
     }
 
-    // Signal the drop event as (card_id, from_stack, to_stack).
-    state.dropped_card = nb::make_tuple(drag.card_id, drag.original_stack, drag.current_stack);
+    // Signal the drop event as (from_stack, to_stack, card_id) — matches Python original.
+    state.dropped_card = nb::make_tuple(drag.original_stack, drag.current_stack, drag.card_id);
 
     int original_stack = drag.original_stack;
     int current_stack  = drag.current_stack;
@@ -168,11 +169,15 @@ void handle_mouse_move(Table_State& state) {
             }
         }
 
-        Stack& hovered = nb::cast<Stack&>(state.stacks[(size_t)hovered_stack]);
+        nb::object hovered_obj = state.stacks[(size_t)hovered_stack];
+        Stack& hovered = nb::cast<Stack&>(hovered_obj);
         bool allowed = nb::cast<bool>(state.is_drop_card_allowed(
             nb::int_(drag.original_stack), nb::int_(hovered_stack), nb::int_(drag.card_id)));
+        bool full = stack_is_full(hovered);
+        fprintf(stderr, "[drag] orig=%d hover=%d card=%d allowed=%d full=%d\n",
+                drag.original_stack, hovered_stack, drag.card_id, (int)allowed, (int)full);
 
-        if (allowed && !stack_is_full(hovered)) {
+        if (allowed && !full) {
             hovered.cards.append(nb::int_(drag.card_id));
             update_card_positions(hovered, state, /*sort=*/true);
             drag.current_stack = hovered_stack;

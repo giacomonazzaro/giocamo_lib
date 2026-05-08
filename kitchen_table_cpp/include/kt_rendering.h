@@ -2,7 +2,7 @@
 #include "kt_models.h"
 
 void       draw_background(float turn = 0.0f);
-void       draw_table(Table_State& state);
+void       draw_table(nb::object state_obj);
 void       draw_card(const Thing& card, bool face_up = true);
 void       draw_stack(const Stack& stack, const Table_State& state);
 void       draw_card_back();
