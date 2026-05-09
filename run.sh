@@ -23,5 +23,11 @@ cmake --install kitchen_table_cpp/build
 cmake -S game_cpp -B game_cpp/build -DCMAKE_BUILD_TYPE=Release
 cmake --build game_cpp/build --parallel 4
 
+cmake -S gods_cpp -B gods_cpp/build \
+  -DPython_EXECUTABLE=venv/bin/python \
+  -DCMAKE_BUILD_TYPE=Release
+cmake --build gods_cpp/build --parallel 4
+cmake --install gods_cpp/build
+
 
 exec "$VENV/bin/python" -m gods_graphical.main "$@"

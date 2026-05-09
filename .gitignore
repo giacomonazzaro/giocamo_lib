@@ -1,7 +1,6 @@
 /venv
 
 **cpython**
-gods_cpp/
 
 gods/.mypy_cache/
 .mypy_cache/
