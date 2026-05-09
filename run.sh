@@ -14,11 +14,11 @@ if [ ! -d "$VENV" ]; then
     "$VENV/bin/pip" install --quiet "raylib>=5.5.0.3" "typer>=0.23.1" "pystun3>=2.0.0"
 fi
 
-cmake -S tabletop2D -B tabletop2D/build \
+cmake -S kitchen_table_cpp -B kitchen_table_cpp/build \
   -DPython_EXECUTABLE=venv/bin/python \
   -DCMAKE_BUILD_TYPE=Release
-cmake --build tabletop2D/build --parallel 4
-cmake --install tabletop2D/build
+cmake --build kitchen_table_cpp/build --parallel 4
+cmake --install kitchen_table_cpp/build
 
 cmake -S game_cpp -B game_cpp/build -DCMAKE_BUILD_TYPE=Release
 cmake --build game_cpp/build --parallel 4

@@ -25,30 +25,22 @@ from gods_graphical.ui import (
     get_image_path,
     make_gods_stacks,
 )
-from gods_online.agent_remote import Agent_Local_Online, Agent_Remote
-from gods_online.protocol import send_message, try_recv_message
-
-
-from _kt_cpp import (
-    find_card_at,
-    point_in_stack_area,
-    update_input,
-    update_card_positions,
-    tweak,
+from online.agent_remote import Agent_Local_Online, Agent_Remote
+from online.protocol import send_message, try_recv_message
+from kitchen_table.config import tweak
+from kitchen_table.game_state import update_card_positions
+from kitchen_table.input import find_card_at, point_in_stack_area, update_input
+from kitchen_table.rendering import (
     color_from_tuple,
     draw_background,
     draw_table,
     render_text,
     text_width,
 )
+from kitchen_table.ui import immediate_button, place_inside, place_next
 
-from kitchen_table.ui import (
-    immediate_button,
-    place_inside,
-    place_next,
-)
 
-from gods_online.setup import peer_to_peer, setup_online_game
+from online.setup import peer_to_peer, setup_online_game
 
 app = typer.Typer()
 

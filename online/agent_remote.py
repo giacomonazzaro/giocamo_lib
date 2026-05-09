@@ -3,11 +3,12 @@ import socket
 
 from game.game import Game, Choice
 from game.agents.agent import Agent
-from gods_online.protocol import send_message, recv_message
+from online.protocol import send_message, recv_message
 
 
 class Agent_Remote(Agent):
     """Receives opponent's action indices from the server."""
+
     def __init__(self, sock: socket.socket):
         self.sock = sock
 
@@ -20,7 +21,10 @@ class Agent_Remote(Agent):
 
 class Agent_Local_Online(Agent):
     """Wraps a local agent and sends chosen action indices to the server."""
-    def __init__(self, local_agent: Agent, sock: socket.socket, friend_addr: tuple[str, int]):
+
+    def __init__(
+        self, local_agent: Agent, sock: socket.socket, friend_addr: tuple[str, int]
+    ):
         self.local_agent = local_agent
         self.sock = sock
         self.friend_addr = friend_addr

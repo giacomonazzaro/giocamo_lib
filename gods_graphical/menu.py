@@ -6,16 +6,21 @@ from enum import Enum, auto
 
 import pyray
 
-from gods_online.setup import Connection_State, join_room, start_hosting
+from online.setup import Connection_State, join_room, start_hosting
 from kitchen_table.config import tweak
-from kitchen_table.rendering import color_from_tuple, draw_background, render_text, text_width
+from kitchen_table.rendering import (
+    color_from_tuple,
+    draw_background,
+    render_text,
+    text_width,
+)
 
 
 class Screen(Enum):
     MAIN = auto()
     ONLINE = auto()
-    CREATING = auto()    # Host: displaying room code, waiting for joiner.
-    JOINING = auto()     # Joiner: text input for room code.
+    CREATING = auto()  # Host: displaying room code, waiting for joiner.
+    JOINING = auto()  # Joiner: text input for room code.
     CONNECTING = auto()  # Joiner: connecting in progress.
 
 
@@ -29,12 +34,14 @@ class Menu_State:
 
 # --- Helpers ---
 
+
 def _centered_x(width: int) -> int:
     return (tweak["window_width"] - width) // 2
 
 
-def _draw_centered_text(text: str, y: int, font_size: int,
-                        color: tuple = (255, 255, 255, 255)) -> None:
+def _draw_centered_text(
+    text: str, y: int, font_size: int, color: tuple = (255, 255, 255, 255)
+) -> None:
     w = text_width(text, font_size)
     render_text(text, _centered_x(w), y, font_size, pyray.Color(*color))
 
@@ -45,22 +52,27 @@ def _draw_button(text: str, y: int, width: int = 320, height: int = 58) -> bool:
     mx, my = pyray.get_mouse_x(), pyray.get_mouse_y()
     hovered = x <= mx <= x + width and y <= my <= y + height
     # bg = color_from_tuple((15,15,15,255))
-    bg = color_from_tuple((20,20,20,100))
+    bg = color_from_tuple((20, 20, 20, 100))
     if hovered:
         pyray.draw_rectangle_rounded(pyray.Rectangle(x, y, width, height), 0.3, 8, bg)
     size = 30
     fg = color_from_tuple(tweak["button_text_color"])
     tw = text_width(text, size)
     render_text(text, x + (width - tw) // 2, y + (height - size) // 2, size, fg)
-    return hovered and pyray.is_mouse_button_pressed(pyray.MouseButton.MOUSE_BUTTON_LEFT)
+    return hovered and pyray.is_mouse_button_pressed(
+        pyray.MouseButton.MOUSE_BUTTON_LEFT
+    )
 
 
-def _draw_text_input(label: str, text: str, y: int,
-                     width: int = 380, height: int = 52) -> None:
+def _draw_text_input(
+    label: str, text: str, y: int, width: int = 380, height: int = 52
+) -> None:
     """Draw a centered, labeled text input box with a blinking cursor."""
     x = _centered_x(width)
     label_w = text_width(label, 18)
-    render_text(label, _centered_x(label_w), y - 30, 18, pyray.Color(200, 200, 200, 255))
+    render_text(
+        label, _centered_x(label_w), y - 30, 18, pyray.Color(200, 200, 200, 255)
+    )
     pyray.draw_rectangle_rounded(
         pyray.Rectangle(x, y, width, height), 0.2, 8, pyray.Color(30, 30, 50, 220)
     )
@@ -69,8 +81,13 @@ def _draw_text_input(label: str, text: str, y: int,
     )
     # Cursor blinks at 1 Hz.
     cursor = "_" if int(pyray.get_time() * 2) % 2 == 0 else " "
-    render_text(text + cursor, x + 12, y + (height - 24) // 2, 24,
-                pyray.Color(255, 255, 255, 255))
+    render_text(
+        text + cursor,
+        x + 12,
+        y + (height - 24) // 2,
+        24,
+        pyray.Color(255, 255, 255, 255),
+    )
 
 
 def _update_text_input(text: str, max_length: int = 16) -> str:
@@ -93,10 +110,12 @@ def _dots() -> str:
 def _is_super_key_down() -> bool:
     """Check if the platform modifier key is held (Cmd on Mac, Ctrl elsewhere)."""
     if platform.system() == "Darwin":
-        return (pyray.is_key_down(pyray.KeyboardKey.KEY_LEFT_SUPER)
-                or pyray.is_key_down(pyray.KeyboardKey.KEY_RIGHT_SUPER))
-    return (pyray.is_key_down(pyray.KeyboardKey.KEY_LEFT_CONTROL)
-            or pyray.is_key_down(pyray.KeyboardKey.KEY_RIGHT_CONTROL))
+        return pyray.is_key_down(pyray.KeyboardKey.KEY_LEFT_SUPER) or pyray.is_key_down(
+            pyray.KeyboardKey.KEY_RIGHT_SUPER
+        )
+    return pyray.is_key_down(pyray.KeyboardKey.KEY_LEFT_CONTROL) or pyray.is_key_down(
+        pyray.KeyboardKey.KEY_RIGHT_CONTROL
+    )
 
 
 def _is_copy_pressed() -> bool:
@@ -108,6 +127,7 @@ def _is_paste_pressed() -> bool:
 
 
 # --- Main menu entry point ---
+
 
 def run_menu() -> tuple[str, dict]:
     """Display the game menu and return the user's game choice.
@@ -155,9 +175,9 @@ def run_menu() -> tuple[str, dict]:
                 c = state.connection
                 return "online", {
                     "player_index": c.player_index,
-                    "seed":         c.seed,
-                    "sock":         c.sock,
-                    "friend_addr":  c.friend_addr,
+                    "seed": c.seed,
+                    "sock": c.sock,
+                    "friend_addr": c.friend_addr,
                 }
             if state.connection.error:
                 state.error_message = state.connection.error
@@ -204,8 +224,10 @@ def run_menu() -> tuple[str, dict]:
 
             if state.connection and state.connection.room_code:
                 _draw_centered_text(
-                    "Share this code with your friend:", center_y - 80, 20,
-                    (200, 200, 200, 255)
+                    "Share this code with your friend:",
+                    center_y - 80,
+                    20,
+                    (200, 200, 200, 255),
                 )
                 # Room code displayed prominently in gold.
                 _draw_centered_text(
@@ -216,13 +238,17 @@ def run_menu() -> tuple[str, dict]:
                     pyray.set_clipboard_text(state.connection.room_code)
 
                 _draw_centered_text(
-                    f"Waiting for opponent{_dots()}", center_y + 90, 22,
-                    (180, 180, 180, 255)
+                    f"Waiting for opponent{_dots()}",
+                    center_y + 90,
+                    22,
+                    (180, 180, 180, 255),
                 )
             else:
                 _draw_centered_text(
-                    f"Getting your room code{_dots()}", center_y, 26,
-                    (200, 200, 200, 255)
+                    f"Getting your room code{_dots()}",
+                    center_y,
+                    26,
+                    (200, 200, 200, 255),
                 )
 
             if _draw_button("Back", center_y + 170, width=180, height=46):

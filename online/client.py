@@ -2,7 +2,7 @@ from __future__ import annotations
 import socket
 import sys
 
-from gods_online.protocol import send_message, recv_message
+from online.protocol import send_message, recv_message
 
 DEFAULT_PORT = 9999
 
@@ -20,7 +20,9 @@ def render_state_text(state: dict) -> str:
         else:
             owner_str = " - Unclaimed"
         destroyed = " [DESTROYED]" if p["destroyed"] else ""
-        lines.append(f"  {p['name']} [{p['color']} {p['card_type']}, power {p['power']}]{destroyed}{owner_str}")
+        lines.append(
+            f"  {p['name']} [{p['color']} {p['card_type']}, power {p['power']}]{destroyed}{owner_str}"
+        )
         lines.append(f"    Effect: {p['effect']}")
 
     # Players
@@ -28,7 +30,9 @@ def render_state_text(state: dict) -> str:
         is_current = i == state["current_player"]
         marker = " <<< CURRENT TURN" if is_current else ""
         lines.append(f"\n--- {player['name']}{marker} ---")
-        lines.append(f"  Deck: {player['deck_count']} cards | Discard: {player['discard_count']} cards")
+        lines.append(
+            f"  Deck: {player['deck_count']} cards | Discard: {player['discard_count']} cards"
+        )
 
         if player["wonders"]:
             lines.append(f"  Wonders in play:")
@@ -39,7 +43,9 @@ def render_state_text(state: dict) -> str:
                 elif w["counters"] < 0:
                     counters = f" ({w['counters']})"
                 destroyed = " [DESTROYED]" if w["destroyed"] else ""
-                lines.append(f"    - {w['name']} [{w['color']} {w['card_type']}, power {w['power']}{counters}]{destroyed} - {w['effect']}")
+                lines.append(
+                    f"    - {w['name']} [{w['color']} {w['card_type']}, power {w['power']}{counters}]{destroyed} - {w['effect']}"
+                )
         else:
             lines.append(f"  Wonders in play: None")
 
@@ -51,7 +57,9 @@ def render_state_text(state: dict) -> str:
                     counters = f" (+{c['counters']})"
                 elif c["counters"] < 0:
                     counters = f" ({c['counters']})"
-                lines.append(f"    - {c['name']} [{c['color']} {c['card_type']}, power {c['power']}{counters}] - {c['effect']}")
+                lines.append(
+                    f"    - {c['name']} [{c['color']} {c['card_type']}, power {c['power']}{counters}] - {c['effect']}"
+                )
         else:
             lines.append(f"  Hand: {player['hand_count']} cards (hidden)")
 

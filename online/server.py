@@ -4,7 +4,7 @@ import random
 import threading
 import sys
 
-from gods_online.protocol import send_message, recv_message
+from online.protocol import send_message, recv_message
 
 DEFAULT_PORT = 9999
 
