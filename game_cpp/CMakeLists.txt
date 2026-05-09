@@ -13,6 +13,12 @@ add_library(game_cpp STATIC
 target_include_directories(game_cpp PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 target_compile_options(game_cpp PRIVATE -Wall -Wextra -Wpedantic)
 
-add_executable(tic_tac_toe tic_tac_toe.cpp)
+add_executable(tic_tac_toe tictactoe/tic_tac_toe.cpp)
 target_link_libraries(tic_tac_toe PRIVATE game_cpp)
+target_include_directories(tic_tac_toe PRIVATE tictactoe)
 target_compile_options(tic_tac_toe PRIVATE -Wall -Wextra -Wpedantic)
+
+add_executable(test_minimax_draws tictactoe/test_minimax_draws.cpp)
+target_link_libraries(test_minimax_draws PRIVATE game_cpp)
+target_include_directories(test_minimax_draws PRIVATE tictactoe)
+target_compile_options(test_minimax_draws PRIVATE -Wall -Wextra -Wpedantic)

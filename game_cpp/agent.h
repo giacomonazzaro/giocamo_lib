@@ -1,10 +1,13 @@
 #pragma once
 
+#include <algorithm>
 #include <iostream>
+#include <iterator>
 #include <random>
 #include <string>
 
 #include "game.h"
+#include "minimax.h"
 
 struct Agent {
   virtual ~Agent() = default;
@@ -26,6 +29,31 @@ struct Agent_Random : Agent {
   void message(const std::string&) override {}  // Silent agent.
 
   int choose_action(Game& state, const Choice& choice) override;
+};
+
+// Alpha-beta minimax. Templated on the concrete Game subclass so the search can
+// copy state by value (no clone() / unique_ptr needed).
+template <class Game_T>
+struct Agent_Minimax : Agent {
+  Evaluate_Fn<Game_T> evaluate;
+  int                 max_depth;
+
+  Agent_Minimax(Evaluate_Fn<Game_T> evaluate, int max_depth)
+      : evaluate(std::move(evaluate)), max_depth(max_depth) {}
+
+  void message(const std::string&) override {}
+
+  int choose_action(Game& state, const Choice& choice) override {
+    Game_T&   concrete    = static_cast<Game_T&>(state);
+    const int num_actions = action_options_count(choice.actions(state));
+    if (num_actions <= 0) return 0;
+    std::vector<float> scores = minimax_search<Game_T>(
+      concrete, evaluate, choice, num_actions, choice.player_index, max_depth
+    );
+    return static_cast<int>(
+      std::distance(scores.begin(), std::max_element(scores.begin(), scores.end()))
+    );
+  }
 };
 
 struct Agent_Duel : Agent {
