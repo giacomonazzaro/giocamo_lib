@@ -1,6 +1,8 @@
 // Tic-tac-toe demo for the game_cpp engine.
 // Human (X) plays first against minimax AI (O).
 
+#include "tic_tac_toe.h"
+
 #include <cstdlib>
 #include <iostream>
 #include <limits>
@@ -9,7 +11,6 @@
 #include "agent.h"
 #include "game.h"
 #include "minimax.h"
-#include "tic_tac_toe.h"
 
 // Prints the board with cell numbers (1-9) shown in empty cells as a hint.
 static void print_board(const Tic_Tac_Toe& ttt) {
@@ -67,7 +68,7 @@ struct Agent_Terminal_TTT : Agent {
 int main() {
   Tic_Tac_Toe                game;
   Agent_Terminal_TTT         human;
-  Agent_Minimax<Tic_Tac_Toe> minimax_ai(ttt_evaluate, 9);
+  Agent_Minimax<Tic_Tac_Toe> minimax_ai(9);
   Agent_Duel                 duel(&human, &minimax_ai, false);
 
   std::cout << "Tic-tac-toe: you are X (first), minimax AI is O.\n";

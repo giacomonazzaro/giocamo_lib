@@ -19,8 +19,8 @@ static int play_game(Tic_Tac_Toe start, Agent& minimax_x, Agent& minimax_o) {
 }
 
 int main() {
-  Agent_Minimax<Tic_Tac_Toe> minimax_x(ttt_evaluate, 9);
-  Agent_Minimax<Tic_Tac_Toe> minimax_o(ttt_evaluate, 9);
+  Agent_Minimax<Tic_Tac_Toe> minimax_x(9);
+  Agent_Minimax<Tic_Tac_Toe> minimax_o(9);
 
   int draws  = 0;
   int x_wins = 0;
@@ -34,16 +34,22 @@ int main() {
     game.current_player    = 1;
 
     const int w = play_game(game, minimax_x, minimax_o);
-    if (w == -1) ++draws;
-    else if (w == 0) ++x_wins;
-    else ++o_wins;
+    if (w == -1)
+      ++draws;
+    else if (w == 0)
+      ++x_wins;
+    else
+      ++o_wins;
 
     std::cout << "X opens at cell " << first_cell << ": "
-              << (w == -1 ? "draw" : w == 0 ? "X wins" : "O wins") << "\n";
+              << (w == -1  ? "draw"
+                  : w == 0 ? "X wins"
+                           : "O wins")
+              << "\n";
   }
 
-  std::cout << "\nResults: " << draws << " draws, " << x_wins << " X wins, " << o_wins
-            << " O wins (out of 9 games).\n";
+  std::cout << "\nResults: " << draws << " draws, " << x_wins << " X wins, "
+            << o_wins << " O wins (out of 9 games).\n";
 
   if (x_wins != 0 || o_wins != 0) {
     std::cerr << "FAIL: minimax-vs-minimax should always draw.\n";

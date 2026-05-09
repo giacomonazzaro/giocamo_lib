@@ -74,7 +74,7 @@ struct Tic_Tac_Toe : Game {
 };
 
 // Win/loss evaluation for tic-tac-toe from `player_index`'s perspective.
-inline float ttt_evaluate(Tic_Tac_Toe& ttt, int player_index) {
+float evaluate_state(const Tic_Tac_Toe& ttt, int player_index) {
   const int w = ttt.winner();
   if (w == player_index) return 1000.0f;
   if (w != -1) return -1000.0f;

@@ -13,7 +13,7 @@
 namespace nb = nanobind;
 using namespace nb::literals;
 
-namespace {
+namespace tressette {
 
 float evaluate_state(Game_State& game, int player_index) {
   int   my  = compute_player_score(game, player_index);
@@ -46,7 +46,7 @@ Game_State sample_state(
   return sampled;
 }
 
-}  // namespace
+}  // namespace tressette
 
 using namespace tressette;
 

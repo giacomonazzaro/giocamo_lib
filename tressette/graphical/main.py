@@ -16,7 +16,7 @@ from kitchen_table.ui import UI_State
 
 from tressette.game.game import game_frame
 from tressette.game.gameplay import (
-    Agent_Minimax_Stochastic_Tressette,
+    Tressette_Agent,
     compute_player_score,
 )
 from tressette.game.models import Game_State
@@ -142,7 +142,7 @@ def main(
 
     agent_ui = Agent_UI(table_state, ui_state)
     if vs_ai:
-        opponent = Agent_Process(Agent_Minimax_Stochastic_Tressette())
+        opponent = Agent_Process(Tressette_Agent())
         agent = Agent_Duel(agent_ui, opponent, swap=False)
     else:
         agent = Agent_Duel(agent_ui, agent_ui, swap=False)

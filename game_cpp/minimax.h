@@ -25,21 +25,21 @@ namespace minimax_detail {
 
 template <class Game_T>
 float minimax(
-  Game_T&                    state,
-  const Evaluate_Fn<Game_T>& evaluate,
-  int                        depth,
-  float                      alpha,
-  float                      beta,
-  int                        player_index
+  Game_T& state,
+  // const Evaluate_Fn<Game_T>& evaluate,
+  int   depth,
+  float alpha,
+  float beta,
+  int   player_index
 ) {
-  if (state.is_game_over()) return evaluate(state, player_index);
-  if (depth == 0) return evaluate(state, player_index);
+  if (state.is_game_over()) return evaluate_state(state, player_index);
+  if (depth == 0) return evaluate_state(state, player_index);
 
   std::optional<Choice> choice = state.next_choice();
-  if (!choice) return evaluate(state, player_index);
+  if (!choice) return evaluate_state(state, player_index);
 
   const int num_actions = action_options_count(choice->actions(state));
-  if (num_actions == 0) return evaluate(state, player_index);
+  if (num_actions == 0) return evaluate_state(state, player_index);
 
   const bool  maximizing = choice->player_index == player_index;
   const float inf        = std::numeric_limits<float>::infinity();
@@ -49,7 +49,7 @@ float minimax(
     Game_T new_state = state;
     resolve_choice(new_state, *choice, action_index);
     const float score =
-      minimax(new_state, evaluate, depth - 1, alpha, beta, player_index);
+      minimax(new_state, depth - 1, alpha, beta, player_index);
     if (maximizing) {
       value = std::max(value, score);
       alpha = std::max(alpha, value);
@@ -69,12 +69,12 @@ float minimax(
 // bounds), which matters when several actions tie and we want to pick the best.
 template <class Game_T>
 std::vector<float> minimax_search(
-  Game_T&                    state,
-  const Evaluate_Fn<Game_T>& evaluate,
-  const Choice&              choice,
-  int                        num_actions,
-  int                        player_index,
-  int                        max_depth
+  Game_T& state,
+  // const Evaluate_Fn<Game_T>& evaluate,
+  const Choice& choice,
+  int           num_actions,
+  int           player_index,
+  int           max_depth
 ) {
   using minimax_detail::minimax;
   const float        inf = std::numeric_limits<float>::infinity();
@@ -84,7 +84,7 @@ std::vector<float> minimax_search(
     Game_T new_state = state;
     resolve_choice(new_state, choice, action_index);
     scores[action_index] =
-      minimax(new_state, evaluate, max_depth, -inf, inf, player_index);
+      minimax(new_state, max_depth, -inf, inf, player_index);
   }
   return scores;
 }
@@ -93,11 +93,10 @@ std::vector<float> minimax_search(
 // copy state by value (no clone() / unique_ptr needed).
 template <class Game_T>
 struct Agent_Minimax : Agent {
-  Evaluate_Fn<Game_T> evaluate;
-  int                 max_depth;
+  // Evaluate_Fn<Game_T> evaluate;
+  int max_depth;
 
-  Agent_Minimax(Evaluate_Fn<Game_T> evaluate, int max_depth)
-      : evaluate(std::move(evaluate)), max_depth(max_depth) {}
+  Agent_Minimax(int max_depth) : max_depth(max_depth) {}
 
   void message(const std::string&) override {}
 
@@ -106,35 +105,29 @@ struct Agent_Minimax : Agent {
     const int num_actions = action_options_count(choice.actions(state));
     if (num_actions <= 0) return 0;
     std::vector<float> scores = minimax_search<Game_T>(
-      concrete, evaluate, choice, num_actions, choice.player_index, max_depth
+      concrete, choice, num_actions, choice.player_index, max_depth
     );
     return argmax(scores);
   }
 };
 
 template <class Game_T>
-using Sample_State = std::function<Game_T(const Game_T*, int, std::mt19937&)>;
+using Sample_State = std::function<Game_T(const Game_T&, int, std::mt19937&)>;
 
 template <class Game_T>
 struct Agent_Minimax_Stochastic : Agent_Minimax<Game_T> {
-  Sample_State<Game_T> sample_state;
-  int                  num_samples = 20;
+  int num_samples = 20;
 
-  Agent_Minimax_Stochastic(
-    Evaluate_Fn<Game_T>  evaluate,
-    Sample_State<Game_T> sample_state,
-    int                  max_depth,
-    int                  num_samples
-  )
-      : Agent_Minimax<Game_T>(std::move(evaluate), max_depth), sample_state(std::move(sample_state)), , num_samples(num_samples) {}
+  Agent_Minimax_Stochastic(int max_depth = 6, int num_samples = 20)
+      : Agent_Minimax<Game_T>(max_depth), num_samples(num_samples) {}
 
   void message(const std::string&) override {}
 
   // Heuristic position score from player_index's perspective.
   // Mirrors evaluate_state + evaluate_heuristic in Python.
-  static float evaluate_state(Game_T& game, int player_index);
+  // static float evaluate_state(Game_T& game, int player_index);
 
-  int choose_action(Game& state, const Choice& choice) {
+  int choose_action(Game& state, const Choice& choice) override {
     Game_T& concrete    = static_cast<Game_T&>(state);
     int     num_actions = action_options_count(choice.actions(state));
     if (num_actions <= 0) return 0;
@@ -151,7 +144,7 @@ struct Agent_Minimax_Stochastic : Agent_Minimax<Game_T> {
     for (int s = 0; s < num_samples; ++s) {
       Game_T sampled = sample_state(concrete, choice.player_index, rng);
       std::vector<float> scores = minimax_search<Game_T>(
-        sampled, evaluate, choice, num_actions, choice.player_index, max_depth
+        sampled, choice, num_actions, choice.player_index, this->max_depth
       );
       votes[argmax(scores)] += 1;
       for (int i = 0; i < num_actions; ++i) total_scores[i] += scores[i];
