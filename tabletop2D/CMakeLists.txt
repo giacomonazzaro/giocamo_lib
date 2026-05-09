@@ -27,12 +27,12 @@ if(NOT EXISTS "${RAYLIB_INCLUDE_DIR}/raylib.h")
 endif()
 
 nanobind_add_module(_kt_cpp NB_STATIC
-    src/models.cpp
-    src/config.cpp
-    src/game_state.cpp
-    src/input.cpp
-    src/rendering.cpp
-    src/bindings.cpp
+    code/models.cpp
+    code/config.cpp
+    code/game_state.cpp
+    code/input.cpp
+    code/rendering.cpp
+    code/bindings.cpp
 )
 target_include_directories(_kt_cpp PRIVATE include "${RAYLIB_INCLUDE_DIR}")
 

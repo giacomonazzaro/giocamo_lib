@@ -1,3 +1,5 @@
+#include "rendering.h"
+
 #include <nanobind/nanobind.h>
 #include <nanobind/stl/string.h>
 
@@ -6,8 +8,7 @@
 #include <string>
 #include <unordered_map>
 
-#include "kt_config.h"
-#include "kt_rendering.h"
+#include "config.h"
 #include "raylib.h"
 #include "rlgl.h"  // for rlPushMatrix, rlPopMatrix, rlTranslatef, rlRotatef, rlScalef
 
