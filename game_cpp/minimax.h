@@ -5,6 +5,7 @@
 #include <limits>
 #include <vector>
 
+#include "agent.h"
 #include "game.h"
 
 // Score the state from the perspective of player_index.
@@ -12,6 +13,13 @@
 // Templated on the concrete Game subclass so search can copy by value.
 template <class Game_T>
 using Evaluate_Fn = std::function<float(Game_T&, int)>;
+
+template <typename T>
+inline size_t argmax(const std::vector<T>& v) {
+  return static_cast<size_t>(
+    std::distance(v.begin(), std::max_element(v.begin(), v.end()))
+  );
+}
 
 namespace minimax_detail {
 
@@ -40,7 +48,8 @@ float minimax(
   for (int action_index = 0; action_index < num_actions; ++action_index) {
     Game_T new_state = state;
     resolve_choice(new_state, *choice, action_index);
-    const float score = minimax(new_state, evaluate, depth - 1, alpha, beta, player_index);
+    const float score =
+      minimax(new_state, evaluate, depth - 1, alpha, beta, player_index);
     if (maximizing) {
       value = std::max(value, score);
       alpha = std::max(alpha, value);
@@ -56,8 +65,8 @@ float minimax(
 }  // namespace minimax_detail
 
 // Plain alpha-beta search at the root. Each root action is searched with a full
-// [-inf, +inf] window so the returned scores are exact (not lower/upper bounds),
-// which matters when several actions tie and we want to pick the best.
+// [-inf, +inf] window so the returned scores are exact (not lower/upper
+// bounds), which matters when several actions tie and we want to pick the best.
 template <class Game_T>
 std::vector<float> minimax_search(
   Game_T&                    state,
@@ -79,3 +88,26 @@ std::vector<float> minimax_search(
   }
   return scores;
 }
+
+// Alpha-beta minimax. Templated on the concrete Game subclass so the search can
+// copy state by value (no clone() / unique_ptr needed).
+template <class Game_T>
+struct Agent_Minimax : Agent {
+  Evaluate_Fn<Game_T> evaluate;
+  int                 max_depth;
+
+  Agent_Minimax(Evaluate_Fn<Game_T> evaluate, int max_depth)
+      : evaluate(std::move(evaluate)), max_depth(max_depth) {}
+
+  void message(const std::string&) override {}
+
+  int choose_action(Game& state, const Choice& choice) override {
+    Game_T&   concrete    = static_cast<Game_T&>(state);
+    const int num_actions = action_options_count(choice.actions(state));
+    if (num_actions <= 0) return 0;
+    std::vector<float> scores = minimax_search<Game_T>(
+      concrete, evaluate, choice, num_actions, choice.player_index, max_depth
+    );
+    return argmax(scores);
+  }
+};

@@ -20,5 +20,8 @@ cmake -S tabletop2D -B tabletop2D/build \
 cmake --build tabletop2D/build --parallel 4
 cmake --install tabletop2D/build
 
+cmake -S game_cpp -B game_cpp/build -DCMAKE_BUILD_TYPE=Release
+cmake --build game_cpp/build --parallel 4
+
 
 exec "$VENV/bin/python" -m gods_graphical.main "$@"

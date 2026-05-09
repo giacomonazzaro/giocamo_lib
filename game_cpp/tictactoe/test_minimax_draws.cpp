@@ -7,6 +7,7 @@
 
 #include "agent.h"
 #include "game.h"
+#include "minimax.h"
 #include "tic_tac_toe.h"
 
 // Plays a single game from `start` to terminal between minimax_x and minimax_o.

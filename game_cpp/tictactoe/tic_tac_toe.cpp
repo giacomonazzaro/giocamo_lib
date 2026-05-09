@@ -8,6 +8,7 @@
 
 #include "agent.h"
 #include "game.h"
+#include "minimax.h"
 #include "tic_tac_toe.h"
 
 // Prints the board with cell numbers (1-9) shown in empty cells as a hint.
