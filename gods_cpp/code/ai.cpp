@@ -14,9 +14,7 @@
 namespace nb = nanobind;
 using namespace nb::literals;
 
-float Agent_Minimax_Stochastic_Gods::evaluate_state(
-  Game_State& game, int player_index
-) {
+float evaluate_state(Game_State& game, int player_index) {
   if (!game.is_game_over()) {
     // Heuristic for non-terminal positions.
     int   my_score  = compute_player_score(game, player_index);
@@ -43,8 +41,6 @@ float Agent_Minimax_Stochastic_Gods::evaluate_state(
   return (player_index == game.current_player) ? -1000.0f : +1000.0f;
 }
 
-namespace {
-
 // Sample hidden information: shuffle opponent's (hand + deck) and our deck.
 // Mirrors Agent_Minimax_Stochastic._sample_state.
 Game_State sample_state(
@@ -62,44 +58,6 @@ Game_State sample_state(
   Player& me = sampled.players[player_index];
   std::shuffle(me.deck.begin(), me.deck.end(), rng);
   return sampled;
-}
-
-}  // namespace
-
-int Agent_Minimax_Stochastic_Gods::choose_action(
-  Game& state, const Choice& choice
-) {
-  Game_State& concrete    = static_cast<Game_State&>(state);
-  int         num_actions = action_options_count(choice.actions(state));
-  if (num_actions <= 0) return 0;
-  if (num_actions == 1) return 0;
-
-  static thread_local std::mt19937 rng{std::random_device{}()};
-  std::vector<int>                 votes(num_actions, 0);
-  std::vector<float>               total_scores(num_actions, 0.0f);
-
-  Evaluate_Fn<Game_State> evaluate = [](Game_State& g, int pi) {
-    return Agent_Minimax_Stochastic_Gods::evaluate_state(g, pi);
-  };
-
-  for (int s = 0; s < num_samples; ++s) {
-    Game_State sampled = sample_state(concrete, choice.player_index, rng);
-    std::vector<float> scores = minimax_search<Game_State>(
-      sampled, evaluate, choice, num_actions, choice.player_index, max_depth
-    );
-    int best = 0;
-    for (int i = 1; i < num_actions; ++i) {
-      if (scores[i] > scores[best]) best = i;
-    }
-    votes[best]++;
-    for (int i = 0; i < num_actions; ++i) total_scores[i] += scores[i];
-  }
-
-  int best_action = 0;
-  for (int i = 1; i < num_actions; ++i) {
-    if (votes[i] > votes[best_action]) best_action = i;
-  }
-  return best_action;
 }
 
 void bind_agent(nb::module_& m) {

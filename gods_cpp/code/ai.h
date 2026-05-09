@@ -1,13 +1,18 @@
 #pragma once
 
-#include <nanobind/nanobind.h>
-
 #include <game_cpp/agent.h>
 #include <game_cpp/minimax.h>
+#include <nanobind/nanobind.h>
 
 #include "models.h"
 
 namespace nb = nanobind;
+
+float evaluate_state(Game_State& game, int player_index);
+
+Game_State sample_state(
+  const Game_State& state, int player_index, std::mt19937& rng
+);
 
 // Stochastic minimax agent for Gods.
 // Mirrors gods/gameplay.py:Agent_Minimax_Stochastic_Gods.
@@ -20,20 +25,6 @@ namespace nb = nanobind;
 //
 // Stays on the C++ side so the search can copy Game_State by value without
 // crossing the Python boundary.
-struct Agent_Minimax_Stochastic_Gods : Agent {
-  int max_depth   = 6;
-  int num_samples = 20;
-
-  Agent_Minimax_Stochastic_Gods() = default;
-  Agent_Minimax_Stochastic_Gods(int max_depth, int num_samples)
-      : max_depth(max_depth), num_samples(num_samples) {}
-
-  void message(const std::string&) override {}
-  int  choose_action(Game& state, const Choice& choice) override;
-
-  // Heuristic position score from player_index's perspective.
-  // Mirrors evaluate_state + evaluate_heuristic in Python.
-  static float evaluate_state(Game_State& game, int player_index);
-};
+using Agent_Minimax_Stochastic_Gods = Agent_Minimax_Stochastic<Game_State>;
 
 void bind_agent(nb::module_& m);

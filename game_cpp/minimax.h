@@ -137,10 +137,6 @@ struct Agent_Minimax_Stochastic : Agent_Minimax<Game_T> {
     std::vector<int>                 votes(num_actions, 0);
     std::vector<float>               total_scores(num_actions, 0.0f);
 
-    // Evaluate_Fn<Game_T> evaluate = [](Game_T& g, int pi) {
-    //   return Agent_Minimax_Stochastic_Gods::evaluate_state(g, pi);
-    // };
-
     for (int s = 0; s < num_samples; ++s) {
       Game_T sampled = sample_state(concrete, choice.player_index, rng);
       std::vector<float> scores = minimax_search<Game_T>(
