@@ -432,7 +432,7 @@ void draw_table(Table_State& state) {
 
     // Call the optional draw callback for custom overlays.
     if (state.draw_callback) {
-        state.draw_callback(state);
+        state.draw_callback(&state);
     }
 
     // Draw zoomed card on top of everything.

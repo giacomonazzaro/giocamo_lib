@@ -55,7 +55,10 @@ struct Table_State {
   std::vector<int> loose_cards; // Card IDs of cards not in any stack.
   Drag_State drag_state;
   std::vector<Card> animated_cards;
-  std::function<void(Table_State&)> draw_callback;
+  // Pointer (not reference) so nanobind's std::function caster preserves Python object
+  // identity through the instance map; with Table_State& it constructs a fresh wrapper
+  // and attribute writes (e.g. is_drop_card_allowed = ...) would only mutate the copy.
+  std::function<void(Table_State*)> draw_callback;
   int zoomed_card_id = -1;
   std::function<bool(int, int, int)> is_drop_card_allowed;
   std::optional<std::tuple<int,int,int>> dropped_card; // (src_stack, dst_stack, card_id) after a drop.
