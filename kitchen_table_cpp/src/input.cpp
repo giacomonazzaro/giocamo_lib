@@ -13,7 +13,7 @@ using namespace nb::literals;
 
 bool stack_is_full(const Stack& stack) {
     // Returns true if the stack has a capacity limit and has reached it.
-    return stack.capacity >= 0 && (int)nb::len(stack.cards) >= stack.capacity;
+    return stack.capacity >= 0 && (int)stack.cards.size() >= stack.capacity;
 }
 
 
@@ -49,24 +49,19 @@ nb::object find_card_at(float px, float py, Table_State& state) {
     // For loose cards, stack_index is -1.
 
     // Check loose cards first (on top of everything).
-    size_t loose_len = (size_t)nb::len(state.loose_cards);
-    for (size_t i = loose_len; i-- > 0; ) {
-        int card_id = nb::cast<int>(state.loose_cards[(size_t)i]);
-        Thing& card = nb::cast<Thing&>(state.cards[(size_t)card_id]);
-        if (point_in_card(px, py, card))
+    for (int i = (int)state.loose_cards.size() - 1; i >= 0; i--) {
+        int card_id = state.loose_cards[i];
+        if (point_in_card(px, py, state.cards[card_id]))
             return nb::make_tuple(card_id, -1);
     }
 
     // Check stacks (reverse order so we check top cards first).
-    size_t stacks_len = (size_t)nb::len(state.stacks);
-    for (size_t stack_idx = stacks_len; stack_idx-- > 0; ) {
-        Stack& stack = nb::cast<Stack&>(state.stacks[(size_t)stack_idx]);
-        size_t cards_len = (size_t)nb::len(stack.cards);
-        for (size_t j = cards_len; j-- > 0; ) {
-            int card_id = nb::cast<int>(stack.cards[(size_t)j]);
-            Thing& card = nb::cast<Thing&>(state.cards[(size_t)card_id]);
-            if (point_in_card(px, py, card))
-                return nb::make_tuple(card_id, (int)stack_idx);
+    for (int stack_idx = (int)state.stacks.size() - 1; stack_idx >= 0; stack_idx--) {
+        const Stack& stack = state.stacks[stack_idx];
+        for (int j = (int)stack.cards.size() - 1; j >= 0; j--) {
+            int card_id = stack.cards[j];
+            if (point_in_card(px, py, state.cards[card_id]))
+                return nb::make_tuple(card_id, stack_idx);
         }
     }
     return nb::none();
@@ -75,11 +70,9 @@ nb::object find_card_at(float px, float py, Table_State& state) {
 
 int find_stack_at(float px, float py, const Table_State& state) {
     // Find a stack at the given position. Returns stack index or -1.
-    size_t stacks_len = (size_t)nb::len(state.stacks);
-    for (size_t i = 0; i < stacks_len; i++) {
-        const Stack& stack = nb::cast<const Stack&>(state.stacks[(size_t)i]);
-        if (point_in_stack_area(px, py, stack))
-            return (int)i;
+    for (int i = 0; i < (int)state.stacks.size(); i++) {
+        if (point_in_stack_area(px, py, state.stacks[i]))
+            return i;
     }
     return -1;
 }
@@ -91,7 +84,6 @@ void handle_mouse_press(Table_State& state) {
     float my = (float)GetMouseY();
     Drag_State& drag = state.drag_state;
 
-    // Check if clicking a card.
     nb::object result = find_card_at(mx, my, state);
     if (result.is_none())
         return;
@@ -99,7 +91,7 @@ void handle_mouse_press(Table_State& state) {
     nb::tuple result_tup = nb::cast<nb::tuple>(result);
     int card_id   = nb::cast<int>(result_tup[0]);
     int stack_idx = nb::cast<int>(result_tup[1]);
-    Thing& card = nb::cast<Thing&>(state.cards[(size_t)card_id]);
+    Card& card = state.cards[card_id];
 
     drag.card_id        = card_id;
     drag.current_stack  = stack_idx;
@@ -115,29 +107,26 @@ void handle_mouse_release(Table_State& state) {
     if (drag.card_id < 0)
         return;
 
-    bool allowed = nb::cast<bool>(state.is_drop_card_allowed(
-        nb::int_(drag.original_stack), nb::int_(drag.current_stack), nb::int_(drag.card_id)));
+    bool allowed = state.is_drop_card_allowed(
+        drag.original_stack, drag.current_stack, drag.card_id);
 
     if (!allowed) {
         if (drag.current_stack == -1) {
-            Stack& orig = nb::cast<Stack&>(state.stacks[(size_t)drag.original_stack]);
-            orig.cards.append(nb::int_(drag.card_id));
+            state.stacks[drag.original_stack].cards.push_back(drag.card_id);
         }
     }
 
     // Signal the drop event as (from_stack, to_stack, card_id) — matches Python original.
-    state.dropped_card = nb::make_tuple(drag.original_stack, drag.current_stack, drag.card_id);
+    state.dropped_card = std::make_tuple(drag.original_stack, drag.current_stack, drag.card_id);
 
     int original_stack = drag.original_stack;
     int current_stack  = drag.current_stack;
     state.drag_state   = Drag_State();
 
-    Stack& orig_stack = nb::cast<Stack&>(state.stacks[(size_t)original_stack]);
-    update_card_positions(orig_stack, state, /*sort=*/true);
+    update_card_positions(state.stacks[original_stack], state, /*sort=*/true);
 
     if (current_stack >= 0) {
-        Stack& cur_stack = nb::cast<Stack&>(state.stacks[(size_t)current_stack]);
-        update_card_positions(cur_stack, state, /*sort=*/true);
+        update_card_positions(state.stacks[current_stack], state, /*sort=*/true);
     }
 }
 
@@ -150,7 +139,7 @@ void handle_mouse_move(Table_State& state) {
 
     float mx = (float)GetMouseX();
     float my = (float)GetMouseY();
-    Thing& card = nb::cast<Thing&>(state.cards[(size_t)drag.card_id]);
+    Card& card = state.cards[drag.card_id];
     card.x = mx - drag.offset_x;
     card.y = my - drag.offset_y;
 
@@ -161,24 +150,23 @@ void handle_mouse_move(Table_State& state) {
     if (drag.last_hovered_stack != hovered_stack) {
         // Remove card from current stack if it's there.
         if (drag.current_stack >= 0) {
-            Stack& cur = nb::cast<Stack&>(state.stacks[(size_t)drag.current_stack]);
-            bool has = nb::cast<bool>(cur.cards.attr("__contains__")(nb::int_(drag.card_id)));
-            if (has) {
-                cur.cards.attr("remove")(nb::int_(drag.card_id));
+            Stack& cur = state.stacks[drag.current_stack];
+            auto it = std::find(cur.cards.begin(), cur.cards.end(), drag.card_id);
+            if (it != cur.cards.end()) {
+                cur.cards.erase(it);
                 update_card_positions(cur, state, /*sort=*/true);
             }
         }
 
-        nb::object hovered_obj = state.stacks[(size_t)hovered_stack];
-        Stack& hovered = nb::cast<Stack&>(hovered_obj);
-        bool allowed = nb::cast<bool>(state.is_drop_card_allowed(
-            nb::int_(drag.original_stack), nb::int_(hovered_stack), nb::int_(drag.card_id)));
+        Stack& hovered = state.stacks[hovered_stack];
+        bool allowed = state.is_drop_card_allowed(
+            drag.original_stack, hovered_stack, drag.card_id);
         bool full = stack_is_full(hovered);
         fprintf(stderr, "[drag] orig=%d hover=%d card=%d allowed=%d full=%d\n",
                 drag.original_stack, hovered_stack, drag.card_id, (int)allowed, (int)full);
 
         if (allowed && !full) {
-            hovered.cards.append(nb::int_(drag.card_id));
+            hovered.cards.push_back(drag.card_id);
             update_card_positions(hovered, state, /*sort=*/true);
             drag.current_stack = hovered_stack;
         } else {
@@ -186,7 +174,7 @@ void handle_mouse_move(Table_State& state) {
         }
     }
 
-    Stack& hovered = nb::cast<Stack&>(state.stacks[(size_t)hovered_stack]);
+    Stack& hovered = state.stacks[hovered_stack];
     update_card_positions(hovered, state, /*sort=*/true);
     drag.last_hovered_stack = hovered_stack;
 }
@@ -202,7 +190,7 @@ void handle_rotate_card(Table_State& state, bool clockwise) {
         return;
 
     int card_id = nb::cast<int>(nb::cast<nb::tuple>(result)[0]);
-    Thing& card = nb::cast<Thing&>(state.cards[(size_t)card_id]);
+    Card& card = state.cards[card_id];
     if (clockwise)
         card.rotation = card.rotation + 90;
     else
@@ -214,28 +202,16 @@ void shuffle_stack(Table_State& state, int stack_id) {
     if (stack_id == -1)
         return;
 
-    Stack& stack = nb::cast<Stack&>(state.stacks[(size_t)stack_id]);
-
-    // Collect card ids into a std::vector, shuffle, rebuild the list.
-    size_t n = (size_t)nb::len(stack.cards);
-    std::vector<int> ids(n);
-    for (size_t i = 0; i < n; i++)
-        ids[i] = nb::cast<int>(stack.cards[(size_t)i]);
-
+    Stack& stack = state.stacks[stack_id];
     static std::mt19937 rng{ std::random_device{}() };
-    std::shuffle(ids.begin(), ids.end(), rng);
-
-    nb::list new_cards;
-    for (int id : ids) new_cards.append(nb::int_(id));
-    stack.cards = new_cards;
-
+    std::shuffle(stack.cards.begin(), stack.cards.end(), rng);
     update_card_positions(stack, state, /*sort=*/false);
 }
 
 
 void update_input(Table_State& state) {
     // Main input processing — call each frame.
-    state.dropped_card = nb::none();
+    state.dropped_card = std::nullopt;
 
     // Handle mouse.
     if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {

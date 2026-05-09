@@ -1,26 +1,26 @@
 #pragma once
 #include <nanobind/nanobind.h>
-#include <nanobind/stl/string.h>
 #include <string>
+#include <vector>
+#include <functional>
+#include <optional>
+#include <tuple>
 
 namespace nb = nanobind;
 
 // 2D rectangle matching pyray's Rectangle layout (x, y, width, height).
-// Implements __iter__ and __len__ so pyray's cffi accepts it as a Rectangle
-// argument.
+// Implements __iter__ and __len__ so pyray's cffi accepts it as a Rectangle argument.
 struct KT_Rectangle {
   float x = 0.0f, y = 0.0f, width = 0.0f, height = 0.0f;
 };
 
-// Base visual entity with optional Python draw callback.
+// Base visual entity with optional draw callback.
 struct Thing {
   int id = 0;
   std::string image_path;
   float x = 0.0f, y = 0.0f;
   int rotation = 0;
-  nb::object draw_callback; // Python callable or None.
-
-  Thing() : draw_callback(nb::none()) {}
+  std::function<void(Thing&)> draw_callback;
 };
 
 // A visual card — inherits all Thing fields.
@@ -31,7 +31,7 @@ struct Card : Thing {
 // An ordered pile of cards with layout parameters.
 struct Stack {
   KT_Rectangle rect;
-  nb::list cards; // Python list of int card IDs.
+  std::vector<int> cards; // Ordered list of card IDs.
   float spread_x = 0.0f, spread_y = 0.0f;
   bool face_up = true;
   std::string name;
@@ -50,20 +50,19 @@ struct Drag_State {
 
 // Full table state passed to every render and input function.
 struct Table_State {
-  nb::list cards;       // should be std::vector<Thing>
-  nb::list stacks;      // should be std::vector<Stack>
-  nb::list loose_cards; // should be std::vector<Thing>
+  std::vector<Card> cards;
+  std::vector<Stack> stacks;
+  std::vector<int> loose_cards; // Card IDs of cards not in any stack.
   Drag_State drag_state;
-  nb::object animated_cards; // should be std::vector<Card>
-  nb::object draw_callback;  // should be std::function with explicit signature
+  std::vector<Card> animated_cards;
+  std::function<void(Table_State&)> draw_callback;
   int zoomed_card_id = -1;
-  nb::object
-      is_drop_card_allowed; // should be std::function with explicit signature
-  nb::object dropped_card;  // None or tuple(src, tgt, card_id) after a drop.
+  std::function<bool(int, int, int)> is_drop_card_allowed;
+  std::optional<std::tuple<int,int,int>> dropped_card; // (src_stack, dst_stack, card_id) after a drop.
 
   Table_State();
-  // Returns dropped_card and resets it to None (consume-once event poll).
-  nb::object poll_dropped_card();
+  // Returns dropped_card and resets it to nullopt (consume-once event poll).
+  std::optional<std::tuple<int,int,int>> poll_dropped_card();
 };
 
 void bind_models(nb::module_ &m);

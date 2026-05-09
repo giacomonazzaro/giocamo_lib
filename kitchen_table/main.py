@@ -19,11 +19,12 @@ def create_example_table_state() -> Table_State:
 
     state.stacks = [stack1, stack2, stack3]
 
-    # Add sample cards to first stack
+    # Add sample cards to first stack.
+    # Use state.stacks[0] since assigning to state.stacks copies the Stack objects.
     card_ids = create_sample_cards(state)
     random.shuffle(card_ids)
     for card_id in card_ids:
-        add_card_to_stack(card_id, stack1, state)
+        add_card_to_stack(card_id, state.stacks[0], state)
 
     return state
 

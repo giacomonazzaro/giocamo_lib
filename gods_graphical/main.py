@@ -256,7 +256,7 @@ def play_gods(gods_state: Game_State, table_state: kt.Table_State, ui_state: UI_
             send_message(sock, {"type": "playground", "on": ui_state.playground}, friend_addr)
             if ui_state.playground:
                 # Send current stacks so the other player starts with the same state.
-                stacks_data = [s.cards for s in table_state.stacks]
+                stacks_data = [list(s.cards) for s in table_state.stacks]
                 send_message(sock, {"type": "stacks", "stacks": stacks_data}, friend_addr)
         prev_playground = ui_state.playground
 
@@ -271,7 +271,7 @@ def play_gods(gods_state: Game_State, table_state: kt.Table_State, ui_state: UI_
                 or pyray.is_key_pressed(pyray.KeyboardKey.KEY_S) # shuffle
             )
             if should_send:
-                stacks_data = [s.cards for s in table_state.stacks]
+                stacks_data = [list(s.cards) for s in table_state.stacks]
                 send_message(sock, {"type": "stacks", "stacks": stacks_data}, friend_addr)
 
         # Always receive messages from the remote player (playground toggle can arrive any time).

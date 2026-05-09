@@ -256,9 +256,9 @@ void draw_card_content(const Thing& card, bool face_up) {
         );
     }
 
-    // Invoke the Python draw callback if set.
-    if (!card.draw_callback.is_none()) {
-        card.draw_callback(nb::cast(const_cast<Thing&>(card)));
+    // Invoke the draw callback if set.
+    if (card.draw_callback) {
+        card.draw_callback(const_cast<Thing&>(card));
     }
 }
 
@@ -293,10 +293,8 @@ void draw_card(const Thing& card, bool face_up) {
 
 void draw_stack(const Stack& stack, const Table_State& state) {
     // Draw each card that belongs to this stack.
-    for (auto item : stack.cards) {
-        int card_id = nb::cast<int>(item);
-        Thing card  = nb::cast<Thing>(state.cards[(size_t)card_id]);
-        draw_card(card, stack.face_up);
+    for (int card_id : stack.cards) {
+        draw_card(state.cards[card_id], stack.face_up);
     }
 }
 
@@ -335,31 +333,26 @@ void draw_stack_placeholder(const Stack& stack) {
 
 // --- animate ---
 
-void animate(nb::list& cards, const Table_State& state, float dt) {
+void animate(std::vector<Card>& cards, const Table_State& state, float dt) {
     int selected_card_id = state.drag_state.card_id;
     int n = (int)cards.size();
     for (int i = 0; i < n; ++i) {
-        Thing acard  = nb::cast<Thing>(cards[(size_t)i]);
-        Thing target = nb::cast<Thing>(state.cards[(size_t)i]);
+        Card& acard        = cards[i];
+        const Card& target = state.cards[i];
 
         float old_x = acard.x;
-
         acard.x        = acard.x * (1.0f - dt) + target.x * dt;
         acard.y        = acard.y * (1.0f - dt) + target.y * dt;
         float vx       = acard.x - old_x;
         acard.rotation = (int)(acard.rotation * (1.0f - dt) + target.rotation * dt + vx * 0.1f);
-
-        // Write back the updated card into the list.
-        cards[(size_t)i] = nb::cast(acard);
     }
 
     // Dragged card snaps immediately to the target position.
     if (selected_card_id >= 0 && selected_card_id < n) {
-        Thing acard  = nb::cast<Thing>(cards[(size_t)selected_card_id]);
-        Thing target = nb::cast<Thing>(state.cards[(size_t)selected_card_id]);
+        Card& acard        = cards[selected_card_id];
+        const Card& target = state.cards[selected_card_id];
         acard.x = target.x;
         acard.y = target.y;
-        cards[(size_t)selected_card_id] = nb::cast(acard);
     }
 }
 
@@ -397,86 +390,63 @@ void draw_zoomed_card(const Thing& card, bool face_up) {
 
 // --- draw_table ---
 
-void draw_table(nb::object state_obj) {
-    Table_State& state = nb::cast<Table_State&>(state_obj);
-    // Initialize animated_cards on first call (deep copy of cards list).
-    if (state.animated_cards.is_none()) {
-        nb::list animated;
-        for (auto item : state.cards) {
-            Thing src = nb::cast<Thing>(item);
-            animated.append(nb::cast(src));
-        }
-        state.animated_cards = animated;
+void draw_table(Table_State& state) {
+    // Initialize animated_cards on first call (copy of cards list).
+    if (state.animated_cards.empty()) {
+        state.animated_cards = state.cards;
     }
 
     // Animate card positions toward their targets.
     // dt is hardcoded to match the original Python behavior (frame-rate independent lerp was not intended).
-    nb::list anim_list = nb::cast<nb::list>(state.animated_cards);
-    animate(anim_list, state, 0.1f);
+    animate(state.animated_cards, state, 0.1f);
 
     // Draw stack placeholder when a drag is in progress.
     if (state.drag_state.current_stack != -1) {
-        Stack stack = nb::cast<Stack>(state.stacks[(size_t)state.drag_state.current_stack]);
-        draw_stack_placeholder(stack);
+        draw_stack_placeholder(state.stacks[state.drag_state.current_stack]);
     }
 
     // Collect stacks and sort by depth (ascending) before drawing.
-    std::vector<Stack> stacks_sorted;
-    for (auto item : state.stacks) {
-        stacks_sorted.push_back(nb::cast<Stack>(item));
-    }
+    std::vector<Stack> stacks_sorted = state.stacks;
     std::sort(stacks_sorted.begin(), stacks_sorted.end(),
               [](const Stack& a, const Stack& b) { return a.depth < b.depth; });
 
     // Draw stacks (skip the card that is currently being dragged).
     for (const Stack& stack : stacks_sorted) {
-        for (auto id_item : stack.cards) {
-            int card_id = nb::cast<int>(id_item);
-            if (state.drag_state.card_id == card_id) {
-                continue;
-            }
-            Thing card = nb::cast<Thing>(anim_list[(size_t)card_id]);
-            draw_card(card, stack.face_up);
+        for (int card_id : stack.cards) {
+            if (state.drag_state.card_id == card_id) continue;
+            draw_card(state.animated_cards[card_id], stack.face_up);
         }
     }
 
     // Draw loose cards (always face up).
-    for (auto id_item : state.loose_cards) {
-        int card_id = nb::cast<int>(id_item);
-        Thing card  = nb::cast<Thing>(anim_list[(size_t)card_id]);
-        draw_card(card, true);
+    for (int card_id : state.loose_cards) {
+        draw_card(state.animated_cards[card_id], true);
     }
 
     // Draw the dragged card on top of everything else.
     if (state.drag_state.card_id >= 0) {
-        Thing card = nb::cast<Thing>(anim_list[(size_t)state.drag_state.card_id]);
-        Stack orig_stack = nb::cast<Stack>(state.stacks[(size_t)state.drag_state.original_stack]);
-        bool face_up = orig_stack.face_up;
+        const Card& card = state.animated_cards[state.drag_state.card_id];
+        bool face_up = state.stacks[state.drag_state.original_stack].face_up;
         draw_card(card, face_up);
     }
 
-    // Call the optional Python draw callback for custom overlays.
-    // Pass state_obj (the original Python wrapper) so that mutations inside
-    // the callback (e.g. setting is_drop_card_allowed) affect the real object.
-    if (!state.draw_callback.is_none()) {
-        state.draw_callback(state_obj);
+    // Call the optional draw callback for custom overlays.
+    if (state.draw_callback) {
+        state.draw_callback(state);
     }
 
     // Draw zoomed card on top of everything.
     if (state.zoomed_card_id >= 0) {
         // Determine face_up by checking which stack owns this card.
         bool face_up = true;
-        for (auto stack_item : state.stacks) {
-            Stack stack = nb::cast<Stack>(stack_item);
-            for (auto id_item : stack.cards) {
-                int cid = nb::cast<int>(id_item);
+        for (const Stack& stack : state.stacks) {
+            for (int cid : stack.cards) {
                 if (cid == state.zoomed_card_id) {
                     face_up = stack.face_up;
                 }
             }
         }
-        Thing card = nb::cast<Thing>(state.cards[(size_t)state.zoomed_card_id]);
-        draw_zoomed_card(card, face_up);
+        draw_zoomed_card(state.cards[state.zoomed_card_id], face_up);
     }
 }
 

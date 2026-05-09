@@ -2,8 +2,8 @@
 #include "kt_config.h"
 #include <nanobind/nanobind.h>
 #include <nanobind/stl/string.h>
+#include <nanobind/stl/optional.h>
 #include <algorithm>
-#include <random>
 namespace nb = nanobind;
 using namespace nb::literals;
 
@@ -16,16 +16,16 @@ Card create_card_design(int id) {
 
 
 void add_card_to_stack(int card_id, Stack& stack, Table_State& state) {
-    stack.cards.append(nb::int_(card_id));
+    stack.cards.push_back(card_id);
     update_card_positions(stack, state, false);
 }
 
 
 // Returns card_id on success, -1 if not found (matches header signature).
 int remove_card_from_stack(int card_id, Stack& stack, Table_State& state) {
-    bool found = nb::cast<bool>(stack.cards.attr("__contains__")(nb::int_(card_id)));
-    if (found) {
-        stack.cards.attr("remove")(nb::int_(card_id));
+    auto it = std::find(stack.cards.begin(), stack.cards.end(), card_id);
+    if (it != stack.cards.end()) {
+        stack.cards.erase(it);
         update_card_positions(stack, state, false);
         return card_id;
     }
@@ -35,17 +35,13 @@ int remove_card_from_stack(int card_id, Stack& stack, Table_State& state) {
 
 void update_card_positions(Stack& stack, Table_State& state, bool sort) {
     // Update x,y positions of all cards in a stack based on spread values.
-    size_t n = nb::len(stack.cards);
+    size_t n = stack.cards.size();
 
     if (sort && n > 0) {
         // Sort cards by their current x position.
-        stack.cards.attr("sort")(
-            "key"_a = nb::cpp_function([&state](nb::object cid) -> float {
-                int card_id = nb::cast<int>(cid);
-                Thing& card = nb::cast<Thing&>(state.cards[card_id]);
-                return card.x;
-            })
-        );
+        std::sort(stack.cards.begin(), stack.cards.end(), [&state](int a, int b) {
+            return state.cards[a].x < state.cards[b].x;
+        });
     }
 
     if (n == 0) return;
@@ -72,15 +68,13 @@ void update_card_positions(Stack& stack, Table_State& state, bool sort) {
     float start_y = stack.rect.y - total_spread_y / 2.0f;
 
     int drag_id = state.drag_state.card_id;
-    int i = 0;
-    for (auto item : stack.cards) {
-        int card_id = nb::cast<int>(item);
+    for (int i = 0; i < (int)n; i++) {
+        int card_id = stack.cards[i];
         if (card_id != drag_id) {
-            Thing& card = nb::cast<Thing&>(state.cards[card_id]);
+            Card& card = state.cards[card_id];
             card.x = start_x + static_cast<float>(i) * spread_x;
             card.y = start_y + static_cast<float>(i) * spread_y;
         }
-        i++;
     }
 }
 
@@ -93,12 +87,10 @@ void move_card_to_stack(int card_id, Stack& from_stack, Stack& to_stack, Table_S
 
 int find_stack_containing_card(int card_id, const Table_State& state) {
     // Return stack index, or -1 if not found.
-    int i = 0;
-    for (auto item : state.stacks) {
-        Stack& stack = nb::cast<Stack&>(item);
-        bool found = nb::cast<bool>(stack.cards.attr("__contains__")(nb::int_(card_id)));
-        if (found) return i;
-        i++;
+    for (int i = 0; i < (int)state.stacks.size(); i++) {
+        const Stack& stack = state.stacks[i];
+        if (std::find(stack.cards.begin(), stack.cards.end(), card_id) != stack.cards.end())
+            return i;
     }
     return -1;
 }
@@ -106,29 +98,29 @@ int find_stack_containing_card(int card_id, const Table_State& state) {
 
 void add_loose_card(int card_id, Table_State& state) {
     // Add a card to the table as a loose card.
-    state.loose_cards.append(nb::int_(card_id));
+    state.loose_cards.push_back(card_id);
 }
 
 
 // Returns card_id on success, -1 if not found (matches header signature).
 int remove_loose_card(int card_id, Table_State& state) {
-    bool found = nb::cast<bool>(state.loose_cards.attr("__contains__")(nb::int_(card_id)));
-    if (found) {
-        state.loose_cards.attr("remove")(nb::int_(card_id));
+    auto it = std::find(state.loose_cards.begin(), state.loose_cards.end(), card_id);
+    if (it != state.loose_cards.end()) {
+        state.loose_cards.erase(it);
         return card_id;
     }
     return -1;
 }
 
 
-nb::list create_sample_cards(Table_State& state) {
+std::vector<int> create_sample_cards(Table_State& state) {
     // Create a sample set of cards for testing. Returns list of card indices.
-    nb::list card_ids;
+    std::vector<int> card_ids;
     for (int i = 0; i < 10; i++) {
         Card card = create_card_design(i);
-        int card_id = static_cast<int>(nb::len(state.cards));
-        state.cards.append(card);
-        card_ids.append(nb::int_(card_id));
+        int card_id = static_cast<int>(state.cards.size());
+        state.cards.push_back(card);
+        card_ids.push_back(card_id);
     }
     return card_ids;
 }
