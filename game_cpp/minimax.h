@@ -111,3 +111,53 @@ struct Agent_Minimax : Agent {
     return argmax(scores);
   }
 };
+
+template <class Game_T>
+using Sample_State = std::function<Game_T(const Game_T*, int, std::mt19937&)>;
+
+template <class Game_T>
+struct Agent_Minimax_Stochastic : Agent_Minimax<Game_T> {
+  Sample_State<Game_T> sample_state;
+  int                  num_samples = 20;
+
+  Agent_Minimax_Stochastic(
+    Evaluate_Fn<Game_T>  evaluate,
+    Sample_State<Game_T> sample_state,
+    int                  max_depth,
+    int                  num_samples
+  )
+      : Agent_Minimax<Game_T>(std::move(evaluate), max_depth), sample_state(std::move(sample_state)), , num_samples(num_samples) {}
+
+  void message(const std::string&) override {}
+
+  // Heuristic position score from player_index's perspective.
+  // Mirrors evaluate_state + evaluate_heuristic in Python.
+  static float evaluate_state(Game_T& game, int player_index);
+
+  int choose_action(Game& state, const Choice& choice) {
+    Game_T& concrete    = static_cast<Game_T&>(state);
+    int     num_actions = action_options_count(choice.actions(state));
+    if (num_actions <= 0) return 0;
+    if (num_actions == 1) return 0;
+
+    static thread_local std::mt19937 rng{std::random_device{}()};
+    std::vector<int>                 votes(num_actions, 0);
+    std::vector<float>               total_scores(num_actions, 0.0f);
+
+    // Evaluate_Fn<Game_T> evaluate = [](Game_T& g, int pi) {
+    //   return Agent_Minimax_Stochastic_Gods::evaluate_state(g, pi);
+    // };
+
+    for (int s = 0; s < num_samples; ++s) {
+      Game_T sampled = sample_state(concrete, choice.player_index, rng);
+      std::vector<float> scores = minimax_search<Game_T>(
+        sampled, evaluate, choice, num_actions, choice.player_index, max_depth
+      );
+      votes[argmax(scores)] += 1;
+      for (int i = 0; i < num_actions; ++i) total_scores[i] += scores[i];
+    }
+
+    return argmax(votes);
+    // return argmax(total_scores);
+  }
+};

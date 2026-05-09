@@ -290,11 +290,11 @@ struct Prophecy : Card_Design {
       vector<Choice> result;
       if (!Card_Id::is_null(cid)) {
         auto play_choices = play_card(s, cid);
-        for (auto& c : play_choices) result.push_back(move(c));
+        for (auto& c : play_choices) result.push_back(std::move(c));
         // Look up design via the global registry so deepcopy-equivalents work.
         auto* design = static_cast<Prophecy*>(card_designs[my_id].get());
         auto  extra  = design->make_nth_choice(s, n + 1);
-        for (auto& c : extra) result.push_back(move(c));
+        for (auto& c : extra) result.push_back(std::move(c));
       }
       return result;
     };
@@ -343,7 +343,7 @@ struct Aurora : Card_Design {
     vector<Choice> result;
     for (int i = 0; i < power; ++i) {
       auto extra = draw_card(game, game.current_player);
-      for (auto& c : extra) result.push_back(move(c));
+      for (auto& c : extra) result.push_back(std::move(c));
     }
     return result;
   }

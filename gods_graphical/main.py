@@ -25,7 +25,7 @@ from gods_graphical.ui import (
     get_image_path,
     make_gods_stacks,
 )
-from online.agent_remote import Agent_Local_Online, Agent_Remote
+from gods_graphical.agent_remote import Agent_Local_Online, Agent_Remote
 from online.protocol import send_message, try_recv_message
 from kitchen_table.config import tweak
 from kitchen_table.game_state import update_card_positions
