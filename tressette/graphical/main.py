@@ -6,7 +6,6 @@ import pyray
 import typer
 
 import kitchen_table.models as kt
-from game.agents.duel import Agent_Duel
 from game.agents.process import Agent_Process
 from kitchen_table.config import tweak
 from kitchen_table.game_state import update_card_positions
@@ -14,12 +13,11 @@ from kitchen_table.input import update_input
 from kitchen_table.rendering import draw_background, draw_table
 from kitchen_table.ui import UI_State
 
-from tressette.game.game import game_frame
 from tressette.game.gameplay import (
     Tressette_Agent,
     compute_player_score,
 )
-from tressette.game.models import Game_State
+from tressette.game.models import Agent, Agent_Duel, Game_State, game_frame
 from tressette.game.setup import quick_setup
 from tressette.graphical.agent_ui import Agent_UI
 from tressette.graphical.ui import (
@@ -32,6 +30,25 @@ from tressette.graphical.ui import (
     make_card_draw_callback,
     make_tressette_stacks,
 )
+
+
+class _Cpp_Agent_Adapter(Agent):
+    """Lifts a duck-typed Python agent (one with .choose_action / .message) to
+    a C++ Agent subclass so it can be passed to the C++ Agent_Duel and
+    game_frame. Used to wrap Agent_Process — its forking logic is Python-side
+    and can't inherit directly from the bound Agent without coupling shared
+    code."""
+
+    def __init__(self, inner):
+        super().__init__()
+        self._inner = inner
+
+    def choose_action(self, state, choice):
+        return self._inner.choose_action(state, choice)
+
+    def message(self, msg):
+        if hasattr(self._inner, "message"):
+            self._inner.message(msg)
 
 
 def init_table_state(
@@ -142,7 +159,7 @@ def main(
 
     agent_ui = Agent_UI(table_state, ui_state)
     if vs_ai:
-        opponent = Agent_Process(Tressette_Agent())
+        opponent = _Cpp_Agent_Adapter(Agent_Process(Tressette_Agent()))
         agent = Agent_Duel(agent_ui, opponent, swap=False)
     else:
         agent = Agent_Duel(agent_ui, agent_ui, swap=False)

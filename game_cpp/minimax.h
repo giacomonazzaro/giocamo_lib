@@ -135,7 +135,7 @@ struct Agent_Minimax_Stochastic : Agent_Minimax<Game_T> {
 
     static thread_local std::mt19937 rng{std::random_device{}()};
     std::vector<int>                 votes(num_actions, 0);
-    std::vector<float>               total_scores(num_actions, 0.0f);
+    // std::vector<float>               total_scores(num_actions, 0.0f);
 
     for (int s = 0; s < num_samples; ++s) {
       Game_T sampled = sample_state(concrete, choice.player_index, rng);
@@ -143,7 +143,7 @@ struct Agent_Minimax_Stochastic : Agent_Minimax<Game_T> {
         sampled, choice, num_actions, choice.player_index, this->max_depth
       );
       votes[argmax(scores)] += 1;
-      for (int i = 0; i < num_actions; ++i) total_scores[i] += scores[i];
+      // for (int i = 0; i < num_actions; ++i) total_scores[i] += scores[i];
     }
 
     return argmax(votes);

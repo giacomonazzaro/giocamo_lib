@@ -1,11 +1,15 @@
 from __future__ import annotations
 
-from game.agents.agent import Agent
 from kitchen_table.models import Table_State
 from kitchen_table.ui import UI_State
 
-from tressette.game.game import Choice, Choose_Card, action_options
-from tressette.game.models import Game_State
+from tressette.game.models import (
+    Agent,
+    Choice,
+    Choose_Card,  # noqa: F401  (kept for type annotations / future use)
+    Game_State,
+    action_options,
+)
 from tressette.graphical.ui import HAND, TABLE_IDX
 
 
@@ -18,6 +22,7 @@ class Agent_UI(Agent):
     """
 
     def __init__(self, table_state: Table_State, ui_state: UI_State):
+        super().__init__()
         self.table_state = table_state
         self.ui_state = ui_state
 

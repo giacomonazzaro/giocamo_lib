@@ -98,66 +98,9 @@ void bind_models(nb::module_& m) {
     .DEF_INT_VEC(Player, "hand", hand)
     .DEF_INT_VEC(Player, "tricks_won", tricks_won);
 
-  // game_cpp choice variants — bound here so Python isinstance() works against
-  // the result of choice.actions(state). Tressette uses Choose_Card only, but
-  // we bind all four to keep the shim symmetric with gods.
-  nb::class_<Choose_Card>(m, "Choose_Card")
-    .def(nb::init<>())
-    .def_prop_ro("targets",
-                 [](const Choose_Card& c) { return c.targets; })
-    .def_rw("up_to", &Choose_Card::up_to);
-
-  nb::class_<Choose_Cards>(m, "Choose_Cards")
-    .def(nb::init<>())
-    .def_prop_ro("targets",
-                 [](const Choose_Cards& c) { return c.targets; })
-    .def_rw("count", &Choose_Cards::count)
-    .def_rw("up_to", &Choose_Cards::up_to);
-
-  nb::class_<Choose_Option>(m, "Choose_Option")
-    .def(nb::init<>())
-    .def_rw("targets", &Choose_Option::targets);
-
-  nb::class_<Choose_Options>(m, "Choose_Options")
-    .def(nb::init<>())
-    .def_rw("targets", &Choose_Options::targets)
-    .def_rw("count", &Choose_Options::count)
-    .def_rw("up_to", &Choose_Options::up_to);
-
-  nb::class_<Choice>(m, "Choice")
-    .def(nb::init<>())
-    .def_rw("player_index", &Choice::player_index)
-    .def_rw("description", &Choice::description)
-    .def_rw("text_description", &Choice::text_description)
-    .def("actions",
-         [](Choice& c, Game_State& g) -> nb::object {
-           Choose ch = c.actions(g);
-           // Return the variant alternative directly so Python isinstance works.
-           return std::visit([](auto&& v) -> nb::object { return nb::cast(v); }, ch);
-         },
-         "state"_a)
-    .def("resolve",
-         [](Choice& c, Game_State& g, int index) { return c.resolve(g, index); },
-         "state"_a, "index"_a);
-
-  // action_options(choose) — enumerate selectable options as a Python list.
-  // Tressette only ever produces Choose_Card; the others are no-ops kept for
-  // symmetry with gods.
-  m.def("action_options",
-        [](nb::object choose) -> nb::list {
-          nb::list result;
-          if (nb::isinstance<Choose_Card>(choose)) {
-            const Choose_Card& c = nb::cast<const Choose_Card&>(choose);
-            for (int t : c.targets) result.append(t);
-          } else if (nb::isinstance<Choose_Option>(choose)) {
-            const Choose_Option& c = nb::cast<const Choose_Option&>(choose);
-            for (const auto& s : c.targets) result.append(s);
-          }
-          return result;
-        },
-        "choose"_a);
-
-  nb::class_<Game_State>(m, "Game_State")
+  // Game / Choice / Choose_* / action_options come from game._game_cpp; this
+  // module only adds the tressette-specific Game_State subclass.
+  nb::class_<Game_State, Game>(m, "Game_State")
     .def(nb::init<>())
     .def_rw("all_cards", &Game_State::all_cards)
     .def_rw("players", &Game_State::players)
@@ -167,9 +110,6 @@ void bind_models(nb::module_& m) {
     .def_rw("current_player", &Game_State::current_player)
     .def_rw("last_trick_winner", &Game_State::last_trick_winner)
     .def_rw("game_over", &Game_State::game_over)
-    .def_rw("choices", &Game_State::choices)
     .def_rw("on_cards_changed", &Game_State::on_cards_changed)
-    .def("is_game_over", &Game_State::is_game_over)
-    .def("next_choice", &Game_State::next_choice)
     .def("switch_turn", &Game_State::switch_turn);
 }
