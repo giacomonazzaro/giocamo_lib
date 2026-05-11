@@ -112,7 +112,7 @@ bool immediate_button(
 }
 
 UI_State::UI_State()
-    : window_width(kt::WINDOW_WIDTH), window_height(kt::WINDOW_HEIGHT) {}
+    : window_width(tt::WINDOW_WIDTH), window_height(tt::WINDOW_HEIGHT) {}
 
 Rectangle UI_State::place(
   int width, int height, const std::string& x, const std::string& y, int padding

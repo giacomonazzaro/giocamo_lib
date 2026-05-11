@@ -1,9 +1,9 @@
 #include "menu.h"
 
-#include <kitchen_table_cpp/code/config.h>
-#include <kitchen_table_cpp/code/rendering.h>
-#include <kitchen_table_cpp/code/ui.h>
 #include <raylib.h>
+#include <tabletop_cpp/code/config.h>
+#include <tabletop_cpp/code/rendering.h>
+#include <tabletop_cpp/code/ui.h>
 
 #include <algorithm>
 #include <cstdlib>
@@ -17,7 +17,7 @@ struct Menu_State {
   std::string                       error_message;
 };
 
-static int centered_x(int width) { return (kt::WINDOW_WIDTH - width) / 2; }
+static int centered_x(int width) { return (tt::WINDOW_WIDTH - width) / 2; }
 
 static void draw_centered_text(
   const std::string& text, int y, int font_size, Color color
@@ -121,12 +121,12 @@ static bool is_super_down() {
 }
 
 Menu_Result run_menu() {
-  int W = kt::WINDOW_WIDTH;
-  int H = kt::WINDOW_HEIGHT;
+  int W = tt::WINDOW_WIDTH;
+  int H = tt::WINDOW_HEIGHT;
 
   SetConfigFlags(FLAG_WINDOW_HIGHDPI);
   InitWindow(W, H, "Gods");
-  SetTargetFPS(kt::TARGET_FPS);
+  SetTargetFPS(tt::TARGET_FPS);
 
   Menu_State state;
   int        center_y = H / 2;

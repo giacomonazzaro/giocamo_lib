@@ -3,7 +3,7 @@ project(gods_graphical_cpp CXX)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-# Fetch raylib so kitchen_table_cpp_lib can link against it.
+# Fetch raylib so tabletop_cpp_lib can link against it.
 include(FetchContent)
 FetchContent_Declare(
     raylib
@@ -28,7 +28,7 @@ set(STANDALONE_CPP_ONLY ON CACHE BOOL "" FORCE)
 # Pull in the sibling libraries. Each one exposes a *_lib static target when
 # raylib (or nlohmann_json) is already defined by this parent project.
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/../game_cpp           ${CMAKE_BINARY_DIR}/game_cpp_build)
-add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/../kitchen_table_cpp  ${CMAKE_BINARY_DIR}/kt_build)
+add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/../tabletop_cpp  ${CMAKE_BINARY_DIR}/kt_build)
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/../gods_cpp           ${CMAKE_BINARY_DIR}/gods_build)
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/../online_cpp         ${CMAKE_BINARY_DIR}/online_build)
 
@@ -46,7 +46,7 @@ target_include_directories(gods_graphical_cpp PRIVATE
 target_link_libraries(gods_graphical_cpp PRIVATE
     game_cpp
     gods_cpp_lib
-    kitchen_table_cpp_lib
+    tabletop_cpp_lib
     online_cpp_lib
     raylib
     nlohmann_json::nlohmann_json

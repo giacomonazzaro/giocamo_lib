@@ -1,6 +1,6 @@
 #pragma once
 
-namespace kt {
+namespace tt {
 constexpr int         WINDOW_WIDTH       = 1700;
 constexpr int         WINDOW_HEIGHT      = 1000;
 constexpr int         TARGET_FPS         = 60;
@@ -18,4 +18,4 @@ constexpr int         PILE_SPREAD_Y      = -3;
 constexpr int         WONDERS_SPREAD_X   = 160;
 constexpr const char* FONT_PATH = "./fonts/Cinzel/Cinzel-VariableFont_wght.ttf";
 constexpr const char* WINDOW_TITLE = "Gods";
-}  // namespace kt
+}  // namespace tt

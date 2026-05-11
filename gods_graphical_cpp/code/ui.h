@@ -1,6 +1,6 @@
 #pragma once
 
-#include <kitchen_table_cpp/code/models.h>
+#include <tabletop_cpp/code/models.h>
 
 #include <string>
 #include <vector>

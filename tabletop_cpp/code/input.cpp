@@ -15,8 +15,8 @@ bool stack_is_full(const Stack& stack) {
 
 bool point_in_card(float px, float py, const Thing& card) {
   // Check if point (px, py) is inside the card bounds.
-  float w = (float)kt::CARD_WIDTH;
-  float h = (float)kt::CARD_HEIGHT;
+  float w = (float)tt::CARD_WIDTH;
+  float h = (float)tt::CARD_HEIGHT;
   return (card.x <= px && px <= card.x + w && card.y <= py && py <= card.y + h);
 }
 
@@ -29,7 +29,7 @@ bool card_pressed(const Thing& card) {
 
 bool point_in_stack_area(float px, float py, const Stack& stack) {
   // Check if point is in the stack's general area (for drop targets).
-  float h = (float)kt::CARD_HEIGHT;
+  float h = (float)tt::CARD_HEIGHT;
   float x = stack.rect.x;
   float y = stack.rect.y;
   float w = stack.rect.width;

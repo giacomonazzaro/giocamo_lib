@@ -1,9 +1,9 @@
 #include "ui.h"
 
-#include <kitchen_table_cpp/code/config.h>
-#include <kitchen_table_cpp/code/rendering.h>
-#include <kitchen_table_cpp/code/ui.h>
 #include <raylib.h>
+#include <tabletop_cpp/code/config.h>
+#include <tabletop_cpp/code/rendering.h>
+#include <tabletop_cpp/code/ui.h>
 
 #include <algorithm>
 #include <cctype>
@@ -18,10 +18,10 @@ static const std::string IMAGES_DIR = []() {
 }();
 
 std::vector<Stack> make_gods_stacks(int bottom_player) {
-  int W      = kt::WINDOW_WIDTH;
-  int H      = kt::WINDOW_HEIGHT;
-  int w      = kt::CARD_WIDTH;
-  int h      = kt::CARD_HEIGHT;
+  int W      = tt::WINDOW_WIDTH;
+  int H      = tt::WINDOW_HEIGHT;
+  int w      = tt::CARD_WIDTH;
+  int h      = tt::CARD_HEIGHT;
   int margin = 20;
 
   int spread_hand    = 160;
@@ -107,9 +107,9 @@ std::string get_image_path(const std::string& card_name) {
 }
 
 void draw_card_power_badge(const std::string& power, bool destroyed) {
-  int w = kt::CARD_WIDTH;
-  int h = kt::CARD_HEIGHT;
-  int r = kt::CARD_CORNER_RADIUS;
+  int w = tt::CARD_WIDTH;
+  int h = tt::CARD_HEIGHT;
+  int r = tt::CARD_CORNER_RADIUS;
 
   int badge_cx = (int)(0.88f * (float)w);
   int badge_cy = (int)(0.12f * (float)w);
@@ -145,7 +145,7 @@ void draw_player_hud(
   if (is_current) {
     DrawRectangleRounded(
       Rectangle{
-        (float)(kt::WINDOW_WIDTH - 10), (float)(hud_y + 28), 6.0f, 50.0f
+        (float)(tt::WINDOW_WIDTH - 10), (float)(hud_y + 28), 6.0f, 50.0f
       },
       0.5f,
       4,
@@ -156,7 +156,7 @@ void draw_player_hud(
   std::string score_text = "Points: " + std::to_string(score);
   render_text(
     score_text,
-    (float)(kt::WINDOW_WIDTH - 200),
+    (float)(tt::WINDOW_WIDTH - 200),
     (float)(hud_y + 22),
     40,
     Color{200, 200, 200, 255}

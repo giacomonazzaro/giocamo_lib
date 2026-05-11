@@ -18,14 +18,14 @@
 #include <gods_cpp/code/gameplay.h>
 #include <gods_cpp/code/models.h>
 #include <gods_cpp/code/setup.h>
-#include <kitchen_table_cpp/code/config.h>
-#include <kitchen_table_cpp/code/game_state.h>
-#include <kitchen_table_cpp/code/input.h>
-#include <kitchen_table_cpp/code/models.h>
-#include <kitchen_table_cpp/code/rendering.h>
-#include <kitchen_table_cpp/code/ui.h>
 #include <online_cpp/code/protocol.h>
 #include <online_cpp/code/setup.h>
+#include <tabletop_cpp/code/config.h>
+#include <tabletop_cpp/code/game_state.h>
+#include <tabletop_cpp/code/input.h>
+#include <tabletop_cpp/code/models.h>
+#include <tabletop_cpp/code/rendering.h>
+#include <tabletop_cpp/code/ui.h>
 
 #include <nlohmann/json.hpp>
 
@@ -128,8 +128,8 @@ static Table_State init_table_state(
     draw_card_power_badge(power, gcard.destroyed);
 
     // Highlight ring for cards the agent is asking us to choose from.
-    int w = kt::CARD_WIDTH;
-    int h = kt::CARD_HEIGHT;
+    int w = tt::CARD_WIDTH;
+    int h = tt::CARD_HEIGHT;
     for (const auto& [k, kt_card_id] : ui_state.highlighted_cards) {
       if (kt_card_id == card.id) {
         DrawRectangleRoundedLinesEx(
@@ -187,10 +187,10 @@ static void draw_hud(
   UI_State&                    ui_state,
   int                          bottom_player
 ) {
-  int       H      = kt::WINDOW_HEIGHT;
-  int       h      = kt::CARD_HEIGHT;
+  int       H      = tt::WINDOW_HEIGHT;
+  int       h      = tt::CARD_HEIGHT;
   int       margin = 20;
-  Rectangle window = {0.0f, 0.0f, (float)kt::WINDOW_WIDTH, (float)H};
+  Rectangle window = {0.0f, 0.0f, (float)tt::WINDOW_WIDTH, (float)H};
   int       bottom_wonders_y =
     (int)place_inside(window, 0, h, "left", "bottom", 2 * margin + h).y;
   int opponent_shift = (int)(h * 0.65f);
@@ -240,14 +240,14 @@ static void draw_hud(
     int            btn_w = 44, btn_h = 36, gap = 6;
     int            panel_w   = 10 * btn_w + 9 * gap + 16;
     Rectangle      card_rect = {
-      kt_card.x, kt_card.y, (float)kt::CARD_WIDTH, (float)kt::CARD_HEIGHT
+      kt_card.x, kt_card.y, (float)tt::CARD_WIDTH, (float)tt::CARD_HEIGHT
     };
     Rectangle panel =
       place_next(card_rect, panel_w, btn_h + 16, "center", "bottom", 8);
     panel.x =
-      std::max(0.0f, std::min(panel.x, (float)(kt::WINDOW_WIDTH - panel_w)));
+      std::max(0.0f, std::min(panel.x, (float)(tt::WINDOW_WIDTH - panel_w)));
     panel.y = std::max(
-      0.0f, std::min(panel.y, (float)(kt::WINDOW_HEIGHT - (int)panel.height))
+      0.0f, std::min(panel.y, (float)(tt::WINDOW_HEIGHT - (int)panel.height))
     );
     DrawRectangleRounded(
       Rectangle{panel.x, panel.y, panel.width, panel.height},
@@ -275,10 +275,10 @@ static void draw_hud(
       Rectangle target =
         ui_state.playground
           ? place_inside(
-              window, kt::CARD_WIDTH, kt::CARD_HEIGHT, "right", "center", 10
+              window, tt::CARD_WIDTH, tt::CARD_HEIGHT, "right", "center", 10
             )
           : place_next(
-              window, kt::CARD_WIDTH, kt::CARD_HEIGHT, "right", "center", 10
+              window, tt::CARD_WIDTH, tt::CARD_HEIGHT, "right", "center", 10
             );
       s.rect = target;
       update_card_positions(s, *table_state, false);
@@ -299,8 +299,8 @@ static void play_gods(
 ) {
   if (!IsWindowReady()) {
     SetConfigFlags(FLAG_WINDOW_HIGHDPI);
-    InitWindow(kt::WINDOW_WIDTH, kt::WINDOW_HEIGHT, "Gods Online");
-    SetTargetFPS(kt::TARGET_FPS);
+    InitWindow(tt::WINDOW_WIDTH, tt::WINDOW_HEIGHT, "Gods Online");
+    SetTargetFPS(tt::TARGET_FPS);
   }
 
   std::optional<Choice> current_choice;
@@ -332,7 +332,7 @@ static void play_gods(
   while (!WindowShouldClose()) {
     if (gods_state.game_over) break;
 
-    // SPACE-to-zoom: handled by kitchen_table's update_input, but our outer
+    // SPACE-to-zoom: handled by tabletop's update_input, but our outer
     // loop also peeks SPACE for the same gesture (to keep parity with Python).
     if (IsKeyDown(KEY_SPACE)) {
       auto r =
@@ -401,7 +401,7 @@ static void play_gods(
         bool   inside      = point_in_stack_area((float)mx, (float)my, s);
         if (inside && !is_expanded) {
           s.rect = ui_state.place(
-            kt::CARD_WIDTH * 7, kt::CARD_HEIGHT, "center", "center"
+            tt::CARD_WIDTH * 7, tt::CARD_HEIGHT, "center", "center"
           );
           s.spread_x = 150.0f;
           s.depth    = 1.0f;

@@ -41,7 +41,7 @@ void update_card_positions(Stack& stack, Table_State& state, bool sort) {
 
   float spread_x   = stack.spread_x;
   float spread_y   = stack.spread_y;
-  float card_width = static_cast<float>(kt::CARD_WIDTH);
+  float card_width = static_cast<float>(tt::CARD_WIDTH);
 
   // Adaptive spread: shrink if cards exceed stack width when spread_x is
   // non-zero.

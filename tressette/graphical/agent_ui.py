@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from kitchen_table.models import Table_State
-from kitchen_table.ui import UI_State
+from tabletop.models import Table_State
+from tabletop.ui import UI_State
 
 from tressette.game.models import (
     Agent,

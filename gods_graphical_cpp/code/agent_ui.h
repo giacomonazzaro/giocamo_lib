@@ -2,8 +2,8 @@
 
 #include <game_cpp/agent.h>
 #include <gods_cpp/code/models.h>
-#include <kitchen_table_cpp/code/models.h>
-#include <kitchen_table_cpp/code/ui.h>
+#include <tabletop_cpp/code/models.h>
+#include <tabletop_cpp/code/ui.h>
 
 #include <set>
 

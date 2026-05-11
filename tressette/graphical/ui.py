@@ -2,14 +2,14 @@ from __future__ import annotations
 
 from typing import Callable
 
-import kitchen_table.models as kt
-from kitchen_table.config import tweak
-from kitchen_table.rendering import (
+import tabletop.models as kt
+from tabletop.config import tweak
+from tabletop.rendering import (
     color_from_tuple,
     render_text,
     text_width,
 )
-from kitchen_table.ui import place_inside, place_next
+from tabletop.ui import place_inside, place_next
 from pyray import (
     Color,
     Rectangle,

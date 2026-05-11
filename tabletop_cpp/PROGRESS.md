@@ -1,17 +1,17 @@
-# kitchen_table C++ Conversion Progress
+# tabletop C++ Conversion Progress
 
 ## Goal
-Convert `kitchen_table/` Python module to C++ with nanobind bindings so
+Convert `tabletop/` Python module to C++ with nanobind bindings so
 `gods_graphical/` Python code imports it unchanged.
 
 ## Status (resume point)
 
 ### Done
 - [x] nanobind installed in `venv/`
-- [x] `kitchen_table_cpp/CMakeLists.txt` — downloads raylib 5.5 headers via `file(DOWNLOAD)`,
+- [x] `tabletop_cpp/CMakeLists.txt` — downloads raylib 5.5 headers via `file(DOWNLOAD)`,
       links with `-undefined dynamic_lookup` so pyray's _raylib_cffi.so provides symbols at runtime
-- [x] All 5 header files in `kitchen_table_cpp/include/`
-- [x] Stub `.cpp` files in `kitchen_table_cpp/src/` (compile but do nothing)
+- [x] All 5 header files in `tabletop_cpp/include/`
+- [x] Stub `.cpp` files in `tabletop_cpp/src/` (compile but do nothing)
 
 ### Remaining
 - [ ] `src/models.cpp` — nanobind bindings for Thing, Card, Stack, Drag_State, Table_State
@@ -19,14 +19,14 @@ Convert `kitchen_table/` Python module to C++ with nanobind bindings so
 - [ ] `src/game_state.cpp` — layout functions (no Raylib, pure math)
 - [ ] `src/input.cpp` — Raylib input handling (drag, zoom, rotate, shuffle)
 - [ ] `src/rendering.cpp` — Raylib drawing (shaders, textures, fonts, animation)
-- [ ] Python shim files (replace each `kitchen_table/*.py` with 1-liner re-exports from `_kt_cpp`)
-- [ ] Build test: `cmake -S kitchen_table_cpp -B kitchen_table_cpp/build -DPython_EXECUTABLE=venv/bin/python`
+- [ ] Python shim files (replace each `tabletop/*.py` with 1-liner re-exports from `_kt_cpp`)
+- [ ] Build test: `cmake -S tabletop_cpp -B tabletop_cpp/build -DPython_EXECUTABLE=venv/bin/python`
 - [ ] Integration test: `sh run.sh`
 
 ## Key Design Decisions
 
 ### Rectangle interop
-`KT_Rectangle` is bound as `kitchen_table._kt_cpp.Rectangle`. Implements `__iter__` yielding
+`KT_Rectangle` is bound as `tabletop._kt_cpp.Rectangle`. Implements `__iter__` yielding
 `(x, y, width, height)` and `__len__` = 4, so pyray's cffi accepts it as a Rectangle parameter.
 Stack constructor reads `.x .y .width .height` via `nb::object` duck-typing.
 
@@ -54,7 +54,7 @@ It imports `render_text`, `text_width`, `color_from_tuple` from the shim.
 ## File Map
 
 ```
-kitchen_table_cpp/
+tabletop_cpp/
   CMakeLists.txt
   include/
     kt_models.h       — KT_Rectangle, Thing, Card, Stack, Drag_State, Table_State
@@ -70,31 +70,31 @@ kitchen_table_cpp/
     rendering.cpp     — Raylib draw calls
     bindings.cpp      — NB_MODULE(_kt_cpp) calling all bind_* functions
 
-kitchen_table/        — becomes shim package after conversion
+tabletop/        — becomes shim package after conversion
   __init__.py         — UNCHANGED
   ui.py               — UNCHANGED
   background.fs       — UNCHANGED
-  models.py           — → from kitchen_table._kt_cpp import Thing, Card, ...
-  config.py           — → from kitchen_table._kt_cpp import tweak
-  game_state.py       — → from kitchen_table._kt_cpp import ...
-  input.py            — → from kitchen_table._kt_cpp import ...
-  rendering.py        — → from kitchen_table._kt_cpp import ...
+  models.py           — → from tabletop._kt_cpp import Thing, Card, ...
+  config.py           — → from tabletop._kt_cpp import tweak
+  game_state.py       — → from tabletop._kt_cpp import ...
+  input.py            — → from tabletop._kt_cpp import ...
+  rendering.py        — → from tabletop._kt_cpp import ...
 ```
 
 ## Build Command
 ```bash
 cd /path/to/gods-app
-cmake -S kitchen_table_cpp -B kitchen_table_cpp/build \
+cmake -S tabletop_cpp -B tabletop_cpp/build \
   -DPython_EXECUTABLE=venv/bin/python \
   -DCMAKE_BUILD_TYPE=Release
-cmake --build kitchen_table_cpp/build --parallel 4
-cmake --install kitchen_table_cpp/build
-# Installs _kt_cpp.cpython-312-darwin.so into kitchen_table/
+cmake --build tabletop_cpp/build --parallel 4
+cmake --install tabletop_cpp/build
+# Installs _kt_cpp.cpython-312-darwin.so into tabletop/
 ```
 
 ## Python Source Files (reference for porting)
-- `kitchen_table/models.py`      — Thing, Card, Stack, Drag_State, Table_State
-- `kitchen_table/config.py`      — tweak dict
-- `kitchen_table/game_state.py`  — layout functions
-- `kitchen_table/input.py`       — input functions
-- `kitchen_table/rendering.py`   — rendering functions
+- `tabletop/models.py`      — Thing, Card, Stack, Drag_State, Table_State
+- `tabletop/config.py`      — tweak dict
+- `tabletop/game_state.py`  — layout functions
+- `tabletop/input.py`       — input functions
+- `tabletop/rendering.py`   — rendering functions

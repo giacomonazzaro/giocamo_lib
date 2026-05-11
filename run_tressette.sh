@@ -12,12 +12,12 @@ if [ ! -d "$VENV" ]; then
     "$VENV/bin/pip" install --quiet "raylib>=5.5.0.3" "typer>=0.23.1"
 fi
 
-# kitchen_table_cpp is shared with Gods.
-cmake -S kitchen_table_cpp -B kitchen_table_cpp/build \
+# tabletop_cpp is shared with Gods.
+cmake -S tabletop_cpp -B tabletop_cpp/build \
   -DPython_EXECUTABLE="$VENV/bin/python" \
   -DCMAKE_BUILD_TYPE=Release
-cmake --build kitchen_table_cpp/build --parallel 4
-cmake --install kitchen_table_cpp/build
+cmake --build tabletop_cpp/build --parallel 4
+cmake --install tabletop_cpp/build
 
 cmake -S game_cpp -B game_cpp/build -DCMAKE_BUILD_TYPE=Release
 cmake --build game_cpp/build --parallel 4

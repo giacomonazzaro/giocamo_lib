@@ -40,7 +40,7 @@ enum class Suit {
 // Rank meaning (carte napoletane):
 //   1 = Asso, 2..7 = number cards, 8 = Donna, 9 = Cavallo, 10 = Re.
 // Lives in the tressette:: namespace so its typeinfo is distinct from the
-// kitchen_table_cpp `::Card` type — otherwise nanobind treats both as the
+// tabletop_cpp `::Card` type — otherwise nanobind treats both as the
 // same type and the second registration is dropped.
 struct Card {
   int  id   = 0;  // 0..39, index into Game_State.all_cards.

@@ -27,7 +27,7 @@ static std::unordered_map<std::string, Texture2D> s_rounded_texture_cache;
 
 static void load_background_shader() {
   // Load the fragment shader source from disk.
-  char* fs_code       = LoadFileText("kitchen_table_cpp/code/background.frag");
+  char* fs_code       = LoadFileText("tabletop_cpp/code/background.frag");
   s_background_shader = LoadShaderFromMemory(nullptr, fs_code);
   s_bg_time_loc       = GetShaderLocation(s_background_shader, "u_time");
   s_bg_resolution_loc = GetShaderLocation(s_background_shader, "u_resolution");

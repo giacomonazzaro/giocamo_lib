@@ -1,8 +1,8 @@
 #include "agent_ui.h"
 
-#include <kitchen_table_cpp/code/config.h>
-#include <kitchen_table_cpp/code/game_state.h>
-#include <kitchen_table_cpp/code/input.h>
+#include <tabletop_cpp/code/config.h>
+#include <tabletop_cpp/code/game_state.h>
+#include <tabletop_cpp/code/input.h>
 #include <raylib.h>
 
 #include <variant>

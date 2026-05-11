@@ -5,13 +5,13 @@ from typing import Annotated
 import pyray
 import typer
 
-import kitchen_table.models as kt
+import tabletop.models as kt
 from game.agents.process import Agent_Process
-from kitchen_table.config import tweak
-from kitchen_table.game_state import update_card_positions
-from kitchen_table.input import update_input
-from kitchen_table.rendering import draw_background, draw_table
-from kitchen_table.ui import UI_State
+from tabletop.config import tweak
+from tabletop.game_state import update_card_positions
+from tabletop.input import update_input
+from tabletop.rendering import draw_background, draw_table
+from tabletop.ui import UI_State
 
 from tressette.game.gameplay import (
     Tressette_Agent,
