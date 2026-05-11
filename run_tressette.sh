@@ -12,20 +12,20 @@ if [ ! -d "$VENV" ]; then
     "$VENV/bin/pip" install --quiet "raylib>=5.5.0.3" "typer>=0.23.1"
 fi
 
-# tabletop_cpp is shared with Gods.
-cmake -S tabletop_cpp -B tabletop_cpp/build \
+# tabletop is shared with Gods.
+cmake -S tabletop -B tabletop/build \
   -DPython_EXECUTABLE="$VENV/bin/python" \
   -DCMAKE_BUILD_TYPE=Release
-cmake --build tabletop_cpp/build --parallel 4
-cmake --install tabletop_cpp/build
+cmake --build tabletop/build --parallel 4
+cmake --install tabletop/build
 
-cmake -S game_cpp -B game_cpp/build -DCMAKE_BUILD_TYPE=Release
-cmake --build game_cpp/build --parallel 4
+cmake -S game -B game/build -DCMAKE_BUILD_TYPE=Release
+cmake --build game/build --parallel 4
 
-cmake -S tressette/cpp -B tressette/cpp/build \
+cmake -S tressette -B tressette/build \
   -DPython_EXECUTABLE="$VENV/bin/python" \
   -DCMAKE_BUILD_TYPE=Release
-cmake --build tressette/cpp/build --parallel 4
-cmake --install tressette/cpp/build
+cmake --build tressette/build --parallel 4
+cmake --install tressette/build
 
 exec "$VENV/bin/python" -m tressette.graphical.main "$@"

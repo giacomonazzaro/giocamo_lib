@@ -1,10 +1,10 @@
-"""Re-exports for the tressette game types and the shared game_cpp engine.
+"""Re-exports for the tressette game types and the shared game engine.
 
 The Choice / Choose_* / Game / Agent / game_frame symbols come from
-game._game_cpp (the framework). Tressette-specific types come from
+game._game (the framework). Tressette-specific types come from
 _tressette_cpp."""
 
-from game._game_cpp import (  # noqa: F401
+from game._game import (  # noqa: F401
     Agent,
     Agent_Duel,
     Agent_Random,
