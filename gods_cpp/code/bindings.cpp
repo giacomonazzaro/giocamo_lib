@@ -1,3 +1,5 @@
+#ifdef GODS_BUILD_PYTHON
+
 #include <nanobind/nanobind.h>
 
 #include "ai.h"
@@ -15,3 +17,5 @@ NB_MODULE(_gods_cpp, m) {
   bind_setup(m);
   bind_agent(m);
 }
+
+#endif // GODS_BUILD_PYTHON

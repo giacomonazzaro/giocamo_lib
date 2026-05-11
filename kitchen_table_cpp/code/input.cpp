@@ -1,8 +1,5 @@
 #include "input.h"
 
-#include <nanobind/nanobind.h>
-#include <nanobind/stl/optional.h>
-
 #include <algorithm>
 #include <cstdio>
 #include <random>
@@ -10,8 +7,6 @@
 #include "config.h"
 #include "game_state.h"
 #include "raylib.h"
-namespace nb = nanobind;
-using namespace nb::literals;
 
 bool stack_is_full(const Stack& stack) {
   // Returns true if the stack has a capacity limit and has reached it.
@@ -41,15 +36,15 @@ bool point_in_stack_area(float px, float py, const Stack& stack) {
   return (x <= px && px <= x + w && y <= py && py <= y + h);
 }
 
-nb::object find_card_at(float px, float py, Table_State& state) {
-  // Find the topmost card at position. Returns (card_id, stack_index) or None.
-  // For loose cards, stack_index is -1.
+std::optional<std::pair<int, int>>
+find_card_at(float px, float py, Table_State& state) {
+  // Find the topmost card at position. stack_index is -1 for loose cards.
 
   // Check loose cards first (on top of everything).
   for (int i = (int)state.loose_cards.size() - 1; i >= 0; i--) {
     int card_id = state.loose_cards[i];
     if (point_in_card(px, py, state.cards[card_id]))
-      return nb::make_tuple(card_id, -1);
+      return std::make_pair(card_id, -1);
   }
 
   // Check stacks (reverse order so we check top cards first).
@@ -59,10 +54,10 @@ nb::object find_card_at(float px, float py, Table_State& state) {
     for (int j = (int)stack.cards.size() - 1; j >= 0; j--) {
       int card_id = stack.cards[j];
       if (point_in_card(px, py, state.cards[card_id]))
-        return nb::make_tuple(card_id, stack_idx);
+        return std::make_pair(card_id, stack_idx);
     }
   }
-  return nb::none();
+  return std::nullopt;
 }
 
 int find_stack_at(float px, float py, const Table_State& state) {
@@ -79,13 +74,12 @@ void handle_mouse_press(Table_State& state) {
   float       my   = (float)GetMouseY();
   Drag_State& drag = state.drag_state;
 
-  nb::object result = find_card_at(mx, my, state);
-  if (result.is_none()) return;
+  auto result = find_card_at(mx, my, state);
+  if (!result) return;
 
-  nb::tuple result_tup = nb::cast<nb::tuple>(result);
-  int       card_id    = nb::cast<int>(result_tup[0]);
-  int       stack_idx  = nb::cast<int>(result_tup[1]);
-  Card&     card       = state.cards[card_id];
+  int   card_id   = result->first;
+  int   stack_idx = result->second;
+  KT_Card& card      = state.cards[card_id];
 
   drag.card_id        = card_id;
   drag.current_stack  = stack_idx;
@@ -109,8 +103,7 @@ void handle_mouse_release(Table_State& state) {
     }
   }
 
-  // Signal the drop event as (from_stack, to_stack, card_id) — matches Python
-  // original.
+  // Signal the drop event as (from_stack, to_stack, card_id) — matches Python original.
   state.dropped_card =
     std::make_tuple(drag.original_stack, drag.current_stack, drag.card_id);
 
@@ -132,7 +125,7 @@ void handle_mouse_move(Table_State& state) {
 
   float mx   = (float)GetMouseX();
   float my   = (float)GetMouseY();
-  Card& card = state.cards[drag.card_id];
+  KT_Card& card = state.cards[drag.card_id];
   card.x     = mx - drag.offset_x;
   card.y     = my - drag.offset_y;
 
@@ -184,11 +177,11 @@ void handle_rotate_card(Table_State& state, bool clockwise) {
   float mx = (float)GetMouseX();
   float my = (float)GetMouseY();
 
-  nb::object result = find_card_at(mx, my, state);
-  if (result.is_none()) return;
+  auto result = find_card_at(mx, my, state);
+  if (!result) return;
 
-  int   card_id = nb::cast<int>(nb::cast<nb::tuple>(result)[0]);
-  Card& card    = state.cards[card_id];
+  int   card_id = result->first;
+  KT_Card& card    = state.cards[card_id];
   if (clockwise)
     card.rotation = card.rotation + 90;
   else
@@ -229,11 +222,8 @@ void update_input(Table_State& state) {
   float my = (float)GetMouseY();
 
   if (IsKeyDown(KEY_SPACE)) {
-    nb::object result = find_card_at(mx, my, state);
-    if (!result.is_none())
-      state.zoomed_card_id = nb::cast<int>(nb::cast<nb::tuple>(result)[0]);
-    else
-      state.zoomed_card_id = -1;
+    auto result = find_card_at(mx, my, state);
+    state.zoomed_card_id = result ? result->first : -1;
   } else {
     state.zoomed_card_id = -1;
   }
@@ -244,12 +234,27 @@ void update_input(Table_State& state) {
   }
 }
 
+#ifdef KT_BUILD_PYTHON
+
+#include <nanobind/stl/optional.h>
+using namespace nb::literals;
+
 void bind_input(nb::module_& m) {
   m.def("stack_is_full", &stack_is_full, "stack"_a);
   m.def("point_in_card", &point_in_card, "px"_a, "py"_a, "card"_a);
   m.def("card_pressed", &card_pressed, "card"_a);
   m.def("point_in_stack_area", &point_in_stack_area, "px"_a, "py"_a, "stack"_a);
-  m.def("find_card_at", &find_card_at, "px"_a, "py"_a, "state"_a);
+  m.def(
+    "find_card_at",
+    [](float px, float py, Table_State& state) -> nb::object {
+      auto r = find_card_at(px, py, state);
+      if (!r) return nb::none();
+      return nb::make_tuple(r->first, r->second);
+    },
+    "px"_a,
+    "py"_a,
+    "state"_a
+  );
   m.def("find_stack_at", &find_stack_at, "px"_a, "py"_a, "state"_a);
   m.def("handle_mouse_press", &handle_mouse_press, "state"_a);
   m.def("handle_mouse_release", &handle_mouse_release, "state"_a);
@@ -260,3 +265,5 @@ void bind_input(nb::module_& m) {
   m.def("shuffle_stack", &shuffle_stack, "state"_a, "stack_id"_a);
   m.def("update_input", &update_input, "state"_a);
 }
+
+#endif // KT_BUILD_PYTHON

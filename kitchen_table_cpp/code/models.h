@@ -1,17 +1,25 @@
 #pragma once
-#include <nanobind/nanobind.h>
-#include <string>
-#include <vector>
+#include <cstdint>
 #include <functional>
 #include <optional>
+#include <string>
 #include <tuple>
+#include <vector>
 
+#ifdef KT_BUILD_PYTHON
+#include <nanobind/nanobind.h>
 namespace nb = nanobind;
+#endif
 
 // 2D rectangle matching pyray's Rectangle layout (x, y, width, height).
-// Implements __iter__ and __len__ so pyray's cffi accepts it as a Rectangle argument.
 struct KT_Rectangle {
   float x = 0.0f, y = 0.0f, width = 0.0f, height = 0.0f;
+};
+
+// 8-bit RGBA color, layout-compatible with raylib's Color so the same bytes can
+// be reinterpret_cast or trivially constructed across the boundary.
+struct KT_Color {
+  uint8_t r = 0, g = 0, b = 0, a = 255;
 };
 
 // Base visual entity with optional draw callback.
@@ -24,7 +32,7 @@ struct Thing {
 };
 
 // A visual card — inherits all Thing fields.
-struct Card : Thing {
+struct KT_Card : Thing {
   using Thing::Thing;
 };
 
@@ -50,11 +58,11 @@ struct Drag_State {
 
 // Full table state passed to every render and input function.
 struct Table_State {
-  std::vector<Card> cards;
+  std::vector<KT_Card> cards;
   std::vector<Stack> stacks;
-  std::vector<int> loose_cards; // Card IDs of cards not in any stack.
+  std::vector<int> loose_cards; // KT_Card IDs of cards not in any stack.
   Drag_State drag_state;
-  std::vector<Card> animated_cards;
+  std::vector<KT_Card> animated_cards;
   // Pointer (not reference) so nanobind's std::function caster preserves Python object
   // identity through the instance map; with Table_State& it constructs a fresh wrapper
   // and attribute writes (e.g. is_drop_card_allowed = ...) would only mutate the copy.
@@ -68,4 +76,6 @@ struct Table_State {
   std::optional<std::tuple<int,int,int>> poll_dropped_card();
 };
 
-void bind_models(nb::module_ &m);
+#ifdef KT_BUILD_PYTHON
+void bind_models(nb::module_& m);
+#endif

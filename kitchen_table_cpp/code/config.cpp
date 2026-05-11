@@ -1,8 +1,8 @@
 #include "config.h"
 
-#include <nanobind/nanobind.h>
+#ifdef KT_BUILD_PYTHON
+
 #include <nanobind/stl/string.h>
-namespace nb = nanobind;
 
 void bind_config(nb::module_& m) {
   nb::dict d;
@@ -50,3 +50,5 @@ void bind_config(nb::module_& m) {
 
   m.attr("tweak") = d;
 }
+
+#endif // KT_BUILD_PYTHON

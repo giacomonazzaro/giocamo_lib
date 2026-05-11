@@ -6,8 +6,6 @@
 
 #include "models.h"
 
-namespace nb = nanobind;
-
 // Factory: build the right Card_Design subclass for a given card name.
 // Falls back to the base Card_Design if name is not in the registry.
 std::unique_ptr<Card_Design> create_card_design(
@@ -18,4 +16,6 @@ std::unique_ptr<Card_Design> create_card_design(
 // Returns true if a specialized class exists for this card name.
 bool has_card_class(const std::string& name);
 
+#ifdef GODS_BUILD_PYTHON
 void bind_cards(nb::module_& m);
+#endif

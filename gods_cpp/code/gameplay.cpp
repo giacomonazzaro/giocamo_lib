@@ -1,11 +1,5 @@
 #include "gameplay.h"
 
-#include <nanobind/nanobind.h>
-#include <nanobind/stl/function.h>
-#include <nanobind/stl/optional.h>
-#include <nanobind/stl/string.h>
-#include <nanobind/stl/vector.h>
-
 #include <algorithm>
 #include <cassert>
 #include <numeric>
@@ -13,8 +7,13 @@
 
 #include "models.h"
 
-namespace nb = nanobind;
+#ifdef GODS_BUILD_PYTHON
+#include <nanobind/stl/function.h>
+#include <nanobind/stl/optional.h>
+#include <nanobind/stl/string.h>
+#include <nanobind/stl/vector.h>
 using namespace nb::literals;
+#endif
 
 // ---- Local utilities ----
 
@@ -421,6 +420,7 @@ Choice make_main_choice(Game_State& game) {
 
 // ---- Bindings ----
 
+#ifdef GODS_BUILD_PYTHON
 void bind_gameplay(nb::module_& m) {
   m.def("draw_card", &draw_card, "game"_a, "player_id"_a, "replacement_effects"_a = true);
   m.def("discard_cards", &discard_cards, "game"_a, "card_ids"_a);
@@ -438,3 +438,4 @@ void bind_gameplay(nb::module_& m) {
     return result;
   }, "game"_a);
 }
+#endif // GODS_BUILD_PYTHON

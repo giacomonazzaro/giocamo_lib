@@ -1,14 +1,17 @@
 #pragma once
-#include <nanobind/nanobind.h>
 #include <atomic>
 #include <map>
+#include <memory>
 #include <mutex>
 #include <queue>
 #include <set>
 #include <string>
 #include <thread>
 
+#ifdef ONLINE_BUILD_PYTHON
+#include <nanobind/nanobind.h>
 namespace nb = nanobind;
+#endif
 
 // --- CONFIGURATION ---
 constexpr int    MAX_PACKET_SIZE = 65507;
@@ -45,7 +48,7 @@ struct Reliable_UDP_State {
     void send_ack(const std::string& msg_id, const std::string& ip, int port);
 };
 
-// Opaque UDP socket wrapper exposed to Python. Owns the Reliable_UDP_State.
+// Opaque UDP socket wrapper. Owns the Reliable_UDP_State.
 struct UDP_Socket {
     int fd = -1;
     std::shared_ptr<Reliable_UDP_State> state;

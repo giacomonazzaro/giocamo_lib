@@ -1,11 +1,6 @@
 #include "setup.h"
 #include "protocol.h"
 
-#include <nanobind/stl/string.h>
-#include <nanobind/stl/optional.h>
-#include <nanobind/stl/tuple.h>
-#include <nanobind/stl/shared_ptr.h>
-
 #include <arpa/inet.h>
 #include <netdb.h>
 #include <sys/socket.h>
@@ -20,8 +15,6 @@
 #include <random>
 #include <sstream>
 #include <thread>
-
-using namespace nb::literals;
 
 // ---- Utilities ----
 
@@ -61,7 +54,6 @@ static const char* STUN_SERVER = "stun.l.google.com";
 static const int   STUN_PORT   = 19302;
 
 std::pair<std::string, int> get_ip_info(int fd) {
-    // Resolve STUN server hostname.
     addrinfo hints{}, *res = nullptr;
     hints.ai_family   = AF_INET;
     hints.ai_socktype = SOCK_DGRAM;
@@ -72,13 +64,10 @@ std::pair<std::string, int> get_ip_info(int fd) {
     std::memcpy(&stun_addr, res->ai_addr, sizeof(stun_addr));
     ::freeaddrinfo(res);
 
-    // Build a minimal STUN Binding Request (20-byte header, no attributes).
-    // RFC 5389: message type 0x0001, length 0, magic cookie, 12-byte transaction ID.
     uint8_t req[20] = {};
-    req[0] = 0x00; req[1] = 0x01; // Binding Request.
-    req[2] = 0x00; req[3] = 0x00; // Message length = 0.
-    req[4] = 0x21; req[5] = 0xA4; req[6] = 0x12; req[7] = 0xAA; // Magic cookie.
-    // Transaction ID (bytes 8-19): leave as zero.
+    req[0] = 0x00; req[1] = 0x01;
+    req[2] = 0x00; req[3] = 0x00;
+    req[4] = 0x21; req[5] = 0xA4; req[6] = 0x12; req[7] = 0xAA;
 
     timeval tv{2, 0};
     ::setsockopt(fd, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
@@ -87,23 +76,20 @@ std::pair<std::string, int> get_ip_info(int fd) {
     ::sendto(fd, req, sizeof(req), 0,
              reinterpret_cast<sockaddr*>(&stun_addr), sizeof(stun_addr));
 
-    uint8_t  buf[2048];
-    ssize_t  n = ::recvfrom(fd, buf, sizeof(buf), 0, nullptr, nullptr);
+    uint8_t buf[2048];
+    ssize_t n = ::recvfrom(fd, buf, sizeof(buf), 0, nullptr, nullptr);
 
-    // Remove receive timeout.
     timeval zero{0, 0};
     ::setsockopt(fd, SOL_SOCKET, SO_RCVTIMEO, &zero, sizeof(zero));
 
     if (n < 20) throw std::runtime_error("STUN response too short");
 
-    // Parse attributes starting at byte 20.
     int offset = 20;
     while (offset + 4 <= static_cast<int>(n)) {
         uint16_t attr_type = (static_cast<uint16_t>(buf[offset]) << 8) | buf[offset + 1];
         uint16_t attr_len  = (static_cast<uint16_t>(buf[offset + 2]) << 8) | buf[offset + 3];
 
         if (attr_type == 0x0001 && offset + 12 <= static_cast<int>(n)) {
-            // MAPPED-ADDRESS: 1 byte reserved, 1 byte family, 2 bytes port, 4 bytes IP.
             int port = (static_cast<int>(buf[offset + 6]) << 8) | buf[offset + 7];
             char ip_buf[INET_ADDRSTRLEN];
             snprintf(ip_buf, sizeof(ip_buf), "%d.%d.%d.%d",
@@ -162,7 +148,6 @@ void publish_address(const std::string& room_code, const std::string& ip, int po
     curl_post(url, body);
 }
 
-// Minimal JSON string extractor: finds the first "key":"value" pair.
 static std::string json_str(const std::string& s, const std::string& key) {
     std::string needle = "\"" + key + "\":\"";
     auto pos = s.find(needle);
@@ -172,13 +157,11 @@ static std::string json_str(const std::string& s, const std::string& key) {
     return (end == std::string::npos) ? "" : s.substr(pos, end - pos);
 }
 
-// Minimal JSON integer extractor.
 static int json_int(const std::string& s, const std::string& key) {
     std::string needle = "\"" + key + "\":";
     auto pos = s.find(needle);
     if (pos == std::string::npos) return 0;
     pos += needle.size();
-    // Skip whitespace.
     while (pos < s.size() && s[pos] == ' ') ++pos;
     return std::stoi(s.substr(pos));
 }
@@ -192,20 +175,13 @@ fetch_address(const std::string& room_code, const std::string& suffix, int timeo
     while (std::chrono::steady_clock::now() < deadline) {
         std::string body = curl_get(url);
         if (!body.empty()) {
-            // Response may contain multiple JSON lines; scan each.
             std::istringstream ss(body);
             std::string line;
             while (std::getline(ss, line)) {
                 if (line.empty()) continue;
                 if (line.find("\"event\":\"message\"") == std::string::npos) continue;
-                // The "message" field holds the published JSON payload as a string.
                 std::string msg_field = json_str(line, "message");
                 if (msg_field.empty()) continue;
-                // msg_field itself is a JSON object like {"ip":"...","port":..., ...}
-                // but it was already JSON-encoded in the outer envelope so we may need
-                // to unescape it. Simplest: extract fields directly from the raw line
-                // since ntfy embeds the message inline.
-                // Try extracting from msg_field first; if that fails, from the full line.
                 std::string pub_ip       = json_str(msg_field, "ip");
                 int         pub_port     = json_int(msg_field, "port");
                 std::string pub_local_ip = json_str(msg_field, "local_ip");
@@ -232,7 +208,6 @@ std::pair<int, int> exchange_seeds(int fd, bool skip_holepunch,
     friend_addr.sin_port   = htons(static_cast<uint16_t>(friend_port));
     inet_pton(AF_INET, friend_ip.c_str(), &friend_addr.sin_addr);
 
-    // Hole-punch first (unless same-network).
     if (!skip_holepunch) {
         for (int i = 0; i < 5; ++i) {
             std::cout << "[*] Sending hole punch packet to " << friend_ip
@@ -244,13 +219,11 @@ std::pair<int, int> exchange_seeds(int fd, bool skip_holepunch,
         }
     }
 
-    // Send our seed.
     std::string init_msg = "{\"type\":\"init\",\"seed\":" + std::to_string(my_seed) + "}";
     ::sendto(fd, init_msg.c_str(), init_msg.size(), 0,
              reinterpret_cast<sockaddr*>(&friend_addr), sizeof(friend_addr));
     std::cout << "[*] Exchanging seeds...\n";
 
-    // Receive friend's seed (wait up to 30 s).
     char buf[1024];
     timeval tv{30, 0};
     ::setsockopt(fd, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
@@ -287,18 +260,17 @@ std::pair<int, int> exchange_seeds(int fd, bool skip_holepunch,
     return {player_index, game_seed};
 }
 
-// ---- peer_to_peer ----
+// ---- peer_to_peer_cpp (pure C++) ----
 
-nb::tuple peer_to_peer(bool local) {
+P2P_Setup peer_to_peer_cpp(bool local) {
     int fd = ::socket(AF_INET, SOCK_DGRAM, 0);
     if (fd < 0) throw std::runtime_error("Failed to create UDP socket");
 
-    std::string public_ip, local_ip;
-    int         public_port, local_port_val;
+    P2P_Setup out;
 
     if (local) {
         std::cout << "You're playing in local mode.\n";
-        local_ip = get_local_ip();
+        out.local_ip = get_local_ip();
         std::cout << "Enter the port to use for the game: ";
         int port = 0;
         std::cin >> port;
@@ -307,9 +279,9 @@ nb::tuple peer_to_peer(bool local) {
         bind_addr.sin_port        = htons(static_cast<uint16_t>(port));
         bind_addr.sin_addr.s_addr = INADDR_ANY;
         ::bind(fd, reinterpret_cast<sockaddr*>(&bind_addr), sizeof(bind_addr));
-        public_ip   = local_ip;
-        public_port = port;
-        local_port_val = port;
+        out.public_ip   = out.local_ip;
+        out.public_port = port;
+        out.local_port  = port;
     } else {
         sockaddr_in bind_addr{};
         bind_addr.sin_family      = AF_INET;
@@ -320,32 +292,31 @@ nb::tuple peer_to_peer(bool local) {
         sockaddr_in local_addr{};
         socklen_t   len = sizeof(local_addr);
         ::getsockname(fd, reinterpret_cast<sockaddr*>(&local_addr), &len);
-        local_port_val = ntohs(local_addr.sin_port);
-        local_ip       = get_local_ip();
+        out.local_port = ntohs(local_addr.sin_port);
+        out.local_ip   = get_local_ip();
 
         auto [pip, pport] = get_ip_info(fd);
         if (pip.empty()) {
             ::close(fd);
             throw std::runtime_error("Could not discover your public IP and port using STUN.");
         }
-        public_ip   = pip;
-        public_port = pport;
-        std::cout << "[*] Public address: " << public_ip << ":" << public_port << "\n";
-        std::cout << "[*] Local address: "  << local_ip  << ":" << local_port_val  << "\n";
+        out.public_ip   = pip;
+        out.public_port = pport;
+        std::cout << "[*] Public address: " << out.public_ip << ":" << out.public_port << "\n";
+        std::cout << "[*] Local address: "  << out.local_ip  << ":" << out.local_port  << "\n";
     }
 
-    auto sock = std::make_shared<UDP_Socket>();
-    sock->fd = fd;
-    return nb::make_tuple(sock, public_ip, public_port, local_ip, local_port_val);
+    out.sock     = std::make_shared<UDP_Socket>();
+    out.sock->fd = fd;
+    return out;
 }
 
-// ---- setup_online_game ----
+// ---- setup_online_game_cpp (pure C++) ----
 
-nb::tuple setup_online_game(UDP_Socket& sock, bool local,
-                             const std::string& your_ip, int your_port,
-                             const std::string& local_ip_arg, int local_port_arg,
-                             const std::string& room_code_arg) {
-    // Keep-alive to prevent NAT port mapping from expiring.
+Online_Game_Setup setup_online_game_cpp(UDP_Socket& sock, bool local,
+                                         const std::string& your_ip, int your_port,
+                                         const std::string& local_ip_arg, int local_port_arg,
+                                         const std::string& room_code_arg) {
     std::atomic<bool> stop_keepalive{false};
     if (!local) {
         std::thread([&stop_keepalive, fd = sock.fd]() {
@@ -367,7 +338,7 @@ nb::tuple setup_online_game(UDP_Socket& sock, bool local,
     }
 
     std::string friend_ip;
-    int         friend_port = 0;
+    int         friend_port  = 0;
     bool        same_network = false;
     std::string room_code    = room_code_arg;
 
@@ -377,7 +348,6 @@ nb::tuple setup_online_game(UDP_Socket& sock, bool local,
         std::cout << "What is your friend's port: ";
         std::cin >> friend_port;
     } else if (room_code.empty()) {
-        // Hosting.
         room_code = generate_room_code();
         publish_address(room_code, your_ip, your_port, local_ip_arg, local_port_arg);
         std::cout << "[*] Room code: " << room_code << "\n";
@@ -398,7 +368,6 @@ nb::tuple setup_online_game(UDP_Socket& sock, bool local,
         }
         std::cout << "[*] Friend joined!\n";
     } else {
-        // Joining.
         std::cout << "[*] Joining room " << room_code << "...\n";
         auto [fip, fport, flip, flport] = fetch_address(room_code);
         if (fip.empty()) {
@@ -423,13 +392,14 @@ nb::tuple setup_online_game(UDP_Socket& sock, bool local,
     auto [player_index, seed] = exchange_seeds(sock.fd, local || same_network,
                                                 friend_ip, friend_port);
 
-    // Return (player_index, seed, sock, friend_addr_tuple).
-    nb::tuple friend_addr = nb::make_tuple(friend_ip, friend_port);
-    // Return a reference to the same sock object (via shared_ptr wrapper).
-    auto sock_ptr = std::make_shared<UDP_Socket>();
-    sock_ptr->fd    = sock.fd;
-    sock_ptr->state = sock.state;
-    return nb::make_tuple(player_index, seed, sock_ptr, friend_addr);
+    Online_Game_Setup out;
+    out.player_index = player_index;
+    out.seed         = seed;
+    out.sock         = std::make_shared<UDP_Socket>();
+    out.sock->fd     = sock.fd;
+    out.sock->state  = sock.state;
+    out.friend_addr  = std::make_pair(friend_ip, friend_port);
+    return out;
 }
 
 // ---- Async wrappers ----
@@ -473,7 +443,6 @@ std::shared_ptr<Connection_State> start_hosting(bool local) {
                 state->sock = sock;
             }
 
-            // Publish early so the UI can display the room code immediately.
             std::string room_code = generate_room_code();
             publish_address(room_code, public_ip, public_port, local_ip_val, local_port_val);
             {
@@ -516,7 +485,6 @@ std::shared_ptr<Connection_State> join_room(const std::string& room_code, bool l
     {
         std::lock_guard<std::mutex> lg(state->state_lock);
         state->room_code = room_code;
-        // Strip leading/trailing whitespace.
         auto& rc = state->room_code;
         rc.erase(0, rc.find_first_not_of(" \t\r\n"));
         rc.erase(rc.find_last_not_of(" \t\r\n") + 1);
@@ -556,7 +524,6 @@ std::shared_ptr<Connection_State> join_room(const std::string& room_code, bool l
                 state->sock = sock;
             }
 
-            // Fetch host address.
             auto [fip, fport, flip, flport] = fetch_address(rc);
             if (fip.empty()) {
                 state->error = "Could not find room. Check the code and try again.";
@@ -589,6 +556,29 @@ std::shared_ptr<Connection_State> join_room(const std::string& room_code, bool l
 }
 
 // ---- Nanobind bindings ----
+
+#ifdef ONLINE_BUILD_PYTHON
+
+#include <nanobind/stl/string.h>
+#include <nanobind/stl/tuple.h>
+#include <nanobind/stl/shared_ptr.h>
+
+using namespace nb::literals;
+
+nb::tuple peer_to_peer(bool local) {
+    P2P_Setup s = peer_to_peer_cpp(local);
+    return nb::make_tuple(s.sock, s.public_ip, s.public_port, s.local_ip, s.local_port);
+}
+
+nb::tuple setup_online_game(UDP_Socket& sock, bool local,
+                             const std::string& your_ip, int your_port,
+                             const std::string& local_ip, int local_port,
+                             const std::string& room_code) {
+    Online_Game_Setup s = setup_online_game_cpp(sock, local, your_ip, your_port,
+                                                  local_ip, local_port, room_code);
+    nb::tuple friend_addr = nb::make_tuple(s.friend_addr.first, s.friend_addr.second);
+    return nb::make_tuple(s.player_index, s.seed, s.sock, friend_addr);
+}
 
 void bind_setup(nb::module_& m) {
     nb::class_<Connection_State>(m, "Connection_State")
@@ -632,3 +622,5 @@ void bind_setup(nb::module_& m) {
     }, "sock"_a, "local"_a, "your_ip"_a, "your_port"_a,
        "local_ip"_a, "local_port"_a, "room_code"_a = "");
 }
+
+#endif // ONLINE_BUILD_PYTHON

@@ -1,17 +1,5 @@
 #include "models.h"
 
-#include <nanobind/nanobind.h>
-#include <nanobind/stl/bind_vector.h>
-#include <nanobind/stl/function.h>
-#include <nanobind/stl/optional.h>
-#include <nanobind/stl/string.h>
-#include <nanobind/stl/tuple.h>
-
-#include <sstream>
-
-namespace nb = nanobind;
-using namespace nb::literals;
-
 Table_State::Table_State()
     : is_drop_card_allowed([](int, int, int) { return true; }) {}
 
@@ -21,6 +9,18 @@ std::optional<std::tuple<int, int, int>> Table_State::poll_dropped_card() {
   return result;
 }
 
+#ifdef KT_BUILD_PYTHON
+
+#include <nanobind/stl/bind_vector.h>
+#include <nanobind/stl/function.h>
+#include <nanobind/stl/optional.h>
+#include <nanobind/stl/string.h>
+#include <nanobind/stl/tuple.h>
+
+#include <sstream>
+
+using namespace nb::literals;
+
 // Proxy types that hold a raw pointer to a vector and a Python reference to the
 // owner, giving true element reference semantics from Python without copying on
 // __getitem__.
@@ -29,7 +29,7 @@ struct Stacks_Ref {
   nb::object          owner;
 };
 struct Cards_Ref {
-  std::vector<Card>* vec;
+  std::vector<KT_Card>* vec;
   nb::object         owner;
 };
 
@@ -110,13 +110,14 @@ void bind_models(nb::module_& m) {
     .def_rw("rotation", &Thing::rotation)
     .def_rw("draw_callback", &Thing::draw_callback);
 
-  // Card — inherits all Thing fields.
-  nb::class_<Card, Thing>(m, "Card")
+  // KT_Card — inherits all Thing fields. Bound as "Card" in Python (the
+  // Python-visible name predates the C++ rename to KT_Card).
+  nb::class_<KT_Card, Thing>(m, "Card")
     .def(nb::init<>())
     .def(
       "__init__",
       [](
-        Card*                       c,
+        KT_Card*                       c,
         int                         id,
         std::string                 image_path,
         float                       x,
@@ -124,7 +125,7 @@ void bind_models(nb::module_& m) {
         int                         rotation,
         std::function<void(Thing&)> draw_callback
       ) {
-        new (c) Card();
+        new (c) KT_Card();
         c->id            = id;
         c->image_path    = image_path;
         c->x             = x;
@@ -215,7 +216,7 @@ void bind_models(nb::module_& m) {
     .def("__len__", [](const Cards_Ref& r) { return r.vec->size(); })
     .def(
       "__getitem__",
-      [](Cards_Ref& r, int i) -> Card& {
+      [](Cards_Ref& r, int i) -> KT_Card& {
         int n = (int)r.vec->size();
         if (i < 0) i += n;
         if (i < 0 || i >= n) throw nb::index_error("index out of range");
@@ -225,13 +226,13 @@ void bind_models(nb::module_& m) {
     )
     .def(
       "__setitem__",
-      [](Cards_Ref& r, int i, const Card& v) {
+      [](Cards_Ref& r, int i, const KT_Card& v) {
         int n = (int)r.vec->size();
         if (i < 0) i += n;
         (*r.vec)[i] = v;
       }
     )
-    .def("append", [](Cards_Ref& r, const Card& c) { r.vec->push_back(c); })
+    .def("append", [](Cards_Ref& r, const KT_Card& c) { r.vec->push_back(c); })
     .def("__iter__", [](Cards_Ref& r) {
       nb::list l;
       for (const auto& c : *r.vec) l.append(nb::cast(c));
@@ -294,7 +295,7 @@ void bind_models(nb::module_& m) {
         int                                zoomed_card_id
       ) {
         new (t) Table_State();
-        for (auto item : cards) t->cards.push_back(nb::cast<Card>(item));
+        for (auto item : cards) t->cards.push_back(nb::cast<KT_Card>(item));
         for (auto item : stacks) t->stacks.push_back(nb::cast<Stack>(item));
         for (auto item : loose_cards)
           t->loose_cards.push_back(nb::cast<int>(item));
@@ -320,7 +321,7 @@ void bind_models(nb::module_& m) {
       },
       [](Table_State& t, nb::list v) {
         t.cards.clear();
-        for (auto item : v) t.cards.push_back(nb::cast<Card>(item));
+        for (auto item : v) t.cards.push_back(nb::cast<KT_Card>(item));
       }
     )
     .def_prop_rw(
@@ -350,7 +351,7 @@ void bind_models(nb::module_& m) {
       },
       [](Table_State& t, nb::list v) {
         t.animated_cards.clear();
-        for (auto item : v) t.animated_cards.push_back(nb::cast<Card>(item));
+        for (auto item : v) t.animated_cards.push_back(nb::cast<KT_Card>(item));
       }
     )
     // Used by the StackVector proxy's __getitem__ to return a true Stack
@@ -366,3 +367,5 @@ void bind_models(nb::module_& m) {
     .def_rw("dropped_card", &Table_State::dropped_card)
     .def("poll_dropped_card", &Table_State::poll_dropped_card);
 }
+
+#endif // KT_BUILD_PYTHON

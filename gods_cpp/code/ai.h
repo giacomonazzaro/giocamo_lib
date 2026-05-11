@@ -2,11 +2,8 @@
 
 #include <game_cpp/agent.h>
 #include <game_cpp/minimax.h>
-#include <nanobind/nanobind.h>
 
 #include "models.h"
-
-namespace nb = nanobind;
 
 float evaluate_state(Game_State& game, int player_index);
 
@@ -27,4 +24,8 @@ Game_State sample_state(
 // crossing the Python boundary.
 using Agent_Minimax_Stochastic_Gods = Agent_Minimax_Stochastic<Game_State>;
 
+#ifdef GODS_BUILD_PYTHON
+#include <nanobind/nanobind.h>
+namespace nb = nanobind;
 void bind_agent(nb::module_& m);
+#endif

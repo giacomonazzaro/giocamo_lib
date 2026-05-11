@@ -1,4 +1,6 @@
 #pragma once
+#include <string>
+
 #include "models.h"
 
 void draw_background(float turn = 0.0f);
@@ -9,15 +11,10 @@ void draw_card_back();
 void draw_card_content(const Thing& card, bool face_up);
 void draw_zoomed_card(const Thing& card, bool face_up);
 void draw_stack_placeholder(const Stack& stack);
-void animate(
-  std::vector<Card>& cards, const Table_State& state, float dt = 0.1f
-);
-// color is a pyray.Color cffi object; constructed via color_from_tuple or
-// direct pyray call.
-void render_text(
-  const std::string& text, float x, float y, int size, nb::object color
-);
-int        text_width(const std::string& text, int size);
-nb::object color_from_tuple(nb::object color_tuple);
+void animate(std::vector<KT_Card>& cards, const Table_State& state, float dt = 0.1f);
+void render_text(const std::string& text, float x, float y, int size, KT_Color color);
+int  text_width(const std::string& text, int size);
 
+#ifdef KT_BUILD_PYTHON
 void bind_rendering(nb::module_& m);
+#endif

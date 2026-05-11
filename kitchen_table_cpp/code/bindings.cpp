@@ -1,3 +1,5 @@
+#ifdef KT_BUILD_PYTHON
+
 #include <nanobind/nanobind.h>
 
 #include "config.h"
@@ -17,3 +19,5 @@ NB_MODULE(_kt_cpp, m) {
   bind_rendering(m);
   bind_ui(m);
 }
+
+#endif // KT_BUILD_PYTHON

@@ -1,19 +1,15 @@
 #include "protocol.h"
 
-#include <nanobind/stl/string.h>
-#include <nanobind/stl/optional.h>
-
-using namespace nb::literals;
-
 #include <arpa/inet.h>
 #include <sys/socket.h>
 #include <unistd.h>
 
 #include <chrono>
 #include <cstring>
+#include <iomanip>
 #include <random>
 #include <sstream>
-#include <iomanip>
+#include <thread>
 
 // --- UUID generation (8 hex chars, enough for msg IDs) ---
 
@@ -103,14 +99,8 @@ void Reliable_UDP_State::receiver_loop() {
                 std::string p_needle = "\"p\":";
                 auto p_pos = raw.find(p_needle);
                 if (p_pos != std::string::npos) {
-                    // Payload starts right after "p":
                     std::string payload = raw.substr(p_pos + p_needle.size());
-                    // Strip trailing } that closes the envelope.
-                    // The payload itself can be any JSON value so we just
-                    // strip the last character if it is '}'.
                     if (!payload.empty() && payload.back() == '}') {
-                        // Only strip if the payload itself isn't an object
-                        // ending in '}'.  We count braces to be safe.
                         int depth = 0;
                         bool in_str = false;
                         for (size_t i = 0; i < payload.size(); ++i) {
@@ -163,76 +153,108 @@ void Reliable_UDP_State::retry_loop() {
     }
 }
 
-// --- Public API ---
+// --- Pure C++ API ---
 
-void send_message(UDP_Socket& sock, nb::object data, nb::object addr_tuple) {
-    // Serialize payload to JSON using Python's json module (GIL is held here).
-    std::string payload = nb::cast<std::string>(nb::module_::import_("json").attr("dumps")(data));
+Reliable_UDP_State& get_state(UDP_Socket& sock) {
+    if (!sock.state) sock.state = std::make_shared<Reliable_UDP_State>(sock.fd);
+    return *sock.state;
+}
+
+void send_message(UDP_Socket& sock, const nlohmann::json& data, const std::pair<std::string, int>& addr) {
+    std::string payload = data.dump();
     std::string msg_id  = make_msg_id();
 
-    // Build the envelope manually to avoid a JSON library dependency.
     std::string packet = "{\"t\":\"DATA\",\"i\":\"" + msg_id + "\",\"p\":" + payload + "}";
-
-    std::string ip   = nb::cast<std::string>(addr_tuple[nb::int_(0)]);
-    int         port = nb::cast<int>(addr_tuple[nb::int_(1)]);
 
     Pending_Msg pm;
     pm.packet_bytes = std::move(packet);
-    pm.addr_ip      = std::move(ip);
-    pm.addr_port    = port;
+    pm.addr_ip      = addr.first;
+    pm.addr_port    = addr.second;
     pm.send_time    = 0.0; // 0 forces immediate first send by retry_loop.
     pm.retries      = 0;
 
-    // Lazily create the state (and background threads) on first use.
-    if (!sock.state) {
-        sock.state = std::make_shared<Reliable_UDP_State>(sock.fd);
-    }
-    std::lock_guard<std::mutex> lg(sock.state->lock);
-    sock.state->pending_acks[msg_id] = std::move(pm);
+    Reliable_UDP_State& st = get_state(sock);
+    std::lock_guard<std::mutex> lg(st.lock);
+    st.pending_acks[msg_id] = std::move(pm);
 }
 
-nb::object recv_message(UDP_Socket& sock) {
-    if (!sock.state) {
-        sock.state = std::make_shared<Reliable_UDP_State>(sock.fd);
-    }
-    // Block until a message arrives. Release GIL while waiting so Python can run other threads.
+nlohmann::json recv_message(UDP_Socket& sock) {
+    Reliable_UDP_State& st = get_state(sock);
     std::string payload;
+    while (true) {
+        {
+            std::lock_guard<std::mutex> lg(st.lock);
+            if (!st.incoming.empty()) {
+                payload = std::move(st.incoming.front());
+                st.incoming.pop();
+                break;
+            }
+        }
+        std::this_thread::sleep_for(std::chrono::milliseconds(5));
+    }
+    return nlohmann::json::parse(payload);
+}
+
+std::optional<nlohmann::json> try_recv_message(UDP_Socket& sock) {
+    Reliable_UDP_State& st = get_state(sock);
+    std::string payload;
+    {
+        std::lock_guard<std::mutex> lg(st.lock);
+        if (st.incoming.empty()) return std::nullopt;
+        payload = std::move(st.incoming.front());
+        st.incoming.pop();
+    }
+    return nlohmann::json::parse(payload);
+}
+
+// --- Python bindings (adapter layer) ---
+
+#ifdef ONLINE_BUILD_PYTHON
+
+#include <nanobind/stl/string.h>
+#include <nanobind/stl/optional.h>
+
+using namespace nb::literals;
+
+// Convert nlohmann::json ↔ Python dict by piping through Python's json module.
+// This keeps the existing Python API unchanged.
+static nb::object json_to_py(const nlohmann::json& j) {
+    return nb::module_::import_("json").attr("loads")(j.dump());
+}
+
+static nlohmann::json py_to_json(nb::object obj) {
+    std::string s = nb::cast<std::string>(nb::module_::import_("json").attr("dumps")(obj));
+    return nlohmann::json::parse(s);
+}
+
+static void send_message_py(UDP_Socket& sock, nb::object data, nb::object addr_tuple) {
+    std::string ip = nb::cast<std::string>(addr_tuple[nb::int_(0)]);
+    int port       = nb::cast<int>(addr_tuple[nb::int_(1)]);
+    send_message(sock, py_to_json(data), std::make_pair(ip, port));
+}
+
+static nb::object recv_message_py(UDP_Socket& sock) {
+    nlohmann::json j;
     {
         nb::gil_scoped_release release;
-        while (true) {
-            {
-                std::lock_guard<std::mutex> lg(sock.state->lock);
-                if (!sock.state->incoming.empty()) {
-                    payload = std::move(sock.state->incoming.front());
-                    sock.state->incoming.pop();
-                    break;
-                }
-            }
-            std::this_thread::sleep_for(std::chrono::milliseconds(5));
-        }
+        j = recv_message(sock);
     }
-    return nb::module_::import_("json").attr("loads")(payload);
+    return json_to_py(j);
 }
 
-nb::object try_recv_message(UDP_Socket& sock) {
-    if (!sock.state) {
-        sock.state = std::make_shared<Reliable_UDP_State>(sock.fd);
-    }
-    std::string payload;
-    {
-        std::lock_guard<std::mutex> lg(sock.state->lock);
-        if (sock.state->incoming.empty()) return nb::none();
-        payload = std::move(sock.state->incoming.front());
-        sock.state->incoming.pop();
-    }
-    return nb::module_::import_("json").attr("loads")(payload);
+static nb::object try_recv_message_py(UDP_Socket& sock) {
+    auto j = try_recv_message(sock);
+    if (!j) return nb::none();
+    return json_to_py(*j);
 }
 
 void bind_protocol(nb::module_& m) {
     nb::class_<UDP_Socket>(m, "UDP_Socket")
         .def(nb::init<>());
 
-    m.def("send_message",     &send_message,     "sock"_a, "data"_a, "addr"_a);
-    m.def("recv_message",     &recv_message,     "sock"_a);
-    m.def("try_recv_message", &try_recv_message, "sock"_a);
+    m.def("send_message",     &send_message_py,     "sock"_a, "data"_a, "addr"_a);
+    m.def("recv_message",     &recv_message_py,     "sock"_a);
+    m.def("try_recv_message", &try_recv_message_py, "sock"_a);
 }
+
+#endif // ONLINE_BUILD_PYTHON

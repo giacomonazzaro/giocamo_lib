@@ -1,15 +1,7 @@
 #include "setup.h"
 
-#include <nanobind/nanobind.h>
-#include <nanobind/stl/string.h>
-#include <nanobind/stl/tuple.h>
-#include <nanobind/stl/vector.h>
-
 #include "cards.h"
 #include "models.h"
-
-namespace nb = nanobind;
-using namespace nb::literals;
 
 void set_card_designs(
   const std::vector<std::tuple<std::string, std::string, std::string, std::string>>& entries
@@ -25,8 +17,15 @@ void set_card_designs(
   }
 }
 
+#ifdef GODS_BUILD_PYTHON
+#include <nanobind/stl/string.h>
+#include <nanobind/stl/tuple.h>
+#include <nanobind/stl/vector.h>
+using namespace nb::literals;
+
 void bind_setup(nb::module_& m) {
   m.def("set_card_designs", &set_card_designs, "entries"_a,
         "Replace the global card_designs registry. Each entry is "
         "(name, type, color, effect); ids assigned in order from 0.");
 }
+#endif // GODS_BUILD_PYTHON

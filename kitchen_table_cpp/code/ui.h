@@ -1,6 +1,9 @@
 #pragma once
-#include "models.h"
+#include <optional>
 #include <string>
+#include <unordered_map>
+
+#include "models.h"
 
 bool         point_in_rect(float px, float py, float x, float y, float w, float h);
 KT_Rectangle place_next(const KT_Rectangle& rect, int width, int height, const std::string& x, const std::string& y, int padding = 0);
@@ -12,21 +15,30 @@ struct Button {
   bool pressed() const;
 };
 
-bool       immediate_button(KT_Rectangle rect, const std::string& label, nb::object color, nb::object text_color);
-nb::object immediate_buttons(nb::object size, nb::list buttons, nb::object color, nb::object text_color);
+// Draws an immediate-mode button. Returns true if it was clicked this frame.
+// If color/text_color is empty, defaults to the styled button look.
+bool immediate_button(
+  KT_Rectangle rect, const std::string& label,
+  std::optional<KT_Color> color = std::nullopt,
+  std::optional<KT_Color> text_color = std::nullopt
+);
 
 struct UI_State {
-  nb::dict buttons;
-  nb::dict highlighted_cards;
+  // Persistent buttons drawn each frame by draw_buttons().
+  std::unordered_map<int, Button> buttons;
+  // Highlight overlay keyed by choice index → kt card id.
+  std::unordered_map<int, int> highlighted_cards;
   int      window_width       = 0;
   int      window_height      = 0;
   bool     playground         = false;
-  int      power_edit_card_id = -1; // Card whose power is being edited; -1 = none.
+  int      power_edit_card_id = -1; // KT_Card whose power is being edited; -1 = none.
 
   UI_State();
-  KT_Rectangle place(int width, int height, const std::string& x = "left", const std::string& y = "top", int padding = 0) const;
-  nb::object   clicked(float mouse_x, float mouse_y) const;
-  void         draw_buttons() const;
+  KT_Rectangle      place(int width, int height, const std::string& x = "left", const std::string& y = "top", int padding = 0) const;
+  std::optional<int> clicked(float mouse_x, float mouse_y) const;
+  void              draw_buttons() const;
 };
 
+#ifdef KT_BUILD_PYTHON
 void bind_ui(nb::module_& m);
+#endif

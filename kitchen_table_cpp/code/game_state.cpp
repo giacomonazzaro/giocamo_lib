@@ -1,17 +1,17 @@
 #include "game_state.h"
 
-#include <nanobind/nanobind.h>
-#include <nanobind/stl/optional.h>
-#include <nanobind/stl/string.h>
-
 #include <algorithm>
 
 #include "config.h"
-namespace nb = nanobind;
-using namespace nb::literals;
 
-Card create_card_design(int id) {
-  Card card;
+#ifdef KT_BUILD_PYTHON
+#include <nanobind/stl/optional.h>
+#include <nanobind/stl/string.h>
+using namespace nb::literals;
+#endif
+
+KT_Card create_card_design(int id) {
+  KT_Card card;
   card.id = id;
   return card;
 }
@@ -71,7 +71,7 @@ void update_card_positions(Stack& stack, Table_State& state, bool sort) {
   for (int i = 0; i < (int)n; i++) {
     int card_id = stack.cards[i];
     if (card_id != drag_id) {
-      Card& card = state.cards[card_id];
+      KT_Card& card = state.cards[card_id];
       card.x     = start_x + static_cast<float>(i) * spread_x;
       card.y     = start_y + static_cast<float>(i) * spread_y;
     }
@@ -116,7 +116,7 @@ std::vector<int> create_sample_cards(Table_State& state) {
   // Create a sample set of cards for testing. Returns list of card indices.
   std::vector<int> card_ids;
   for (int i = 0; i < 10; i++) {
-    Card card    = create_card_design(i);
+    KT_Card card    = create_card_design(i);
     int  card_id = static_cast<int>(state.cards.size());
     state.cards.push_back(card);
     card_ids.push_back(card_id);
@@ -124,6 +124,7 @@ std::vector<int> create_sample_cards(Table_State& state) {
   return card_ids;
 }
 
+#ifdef KT_BUILD_PYTHON
 void bind_game_state(nb::module_& m) {
   m.def("create_card_design", &create_card_design, nb::arg("id"));
 
@@ -190,3 +191,4 @@ void bind_game_state(nb::module_& m) {
 
   m.def("create_sample_cards", &create_sample_cards, nb::arg("state"));
 }
+#endif // KT_BUILD_PYTHON

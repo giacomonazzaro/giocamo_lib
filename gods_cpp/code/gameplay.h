@@ -9,8 +9,6 @@
 
 #include "models.h"
 
-namespace nb = nanobind;
-
 // ---- Choice helpers ----
 //
 // In game_cpp, Choose_Card / Choose_Cards carry std::vector<int> targets.
@@ -97,4 +95,6 @@ int compute_player_score(Game_State& game, int player_index);
 // Build the main "play a card or pass" choice for the active player.
 Choice make_main_choice(Game_State& game);
 
+#ifdef GODS_BUILD_PYTHON
 void bind_gameplay(nb::module_& m);
+#endif

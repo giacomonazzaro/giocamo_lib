@@ -1,3 +1,5 @@
+#ifdef ONLINE_BUILD_PYTHON
+
 #include <nanobind/nanobind.h>
 
 #include "protocol.h"
@@ -9,3 +11,5 @@ NB_MODULE(_online_cpp, m) {
     bind_protocol(m);
     bind_setup(m);
 }
+
+#endif // ONLINE_BUILD_PYTHON

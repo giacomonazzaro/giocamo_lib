@@ -1,8 +1,5 @@
 #include "rendering.h"
 
-#include <nanobind/nanobind.h>
-#include <nanobind/stl/string.h>
-
 #include <algorithm>
 #include <cmath>
 #include <string>
@@ -11,9 +8,6 @@
 #include "config.h"
 #include "raylib.h"
 #include "rlgl.h"  // for rlPushMatrix, rlPopMatrix, rlTranslatef, rlRotatef, rlScalef
-
-namespace nb = nanobind;
-using namespace nb::literals;
 
 // --- Static globals (lazy initialized) ---
 
@@ -29,34 +23,16 @@ static bool s_font_loaded = false;
 static std::unordered_map<std::string, Texture2D> s_texture_cache;
 static std::unordered_map<std::string, Texture2D> s_rounded_texture_cache;
 
-// --- Helper: extract a C Raylib Color from a pyray Color Python object ---
-
-static Color extract_color(nb::object pycolor) {
-  return Color{
-    (unsigned char)nb::cast<int>(pycolor.attr("r")),
-    (unsigned char)nb::cast<int>(pycolor.attr("g")),
-    (unsigned char)nb::cast<int>(pycolor.attr("b")),
-    (unsigned char)nb::cast<int>(pycolor.attr("a"))
-  };
-}
-
-// --- color_from_tuple: convert a 4-int tuple to a pyray.Color object ---
-
-nb::object color_from_tuple(nb::object c) {
-  nb::module_ pyray = nb::module_::import_("pyray");
-  nb::tuple   ct    = nb::cast<nb::tuple>(c);
-  int         r     = nb::cast<int>(ct[0]);
-  int         g     = nb::cast<int>(ct[1]);
-  int         b     = nb::cast<int>(ct[2]);
-  int         a     = nb::cast<int>(ct[3]);
-  return pyray.attr("Color")(r, g, b, a);
+// Convert KT_Color → raylib Color (bit-compatible layout).
+static inline ::Color to_rl(KT_Color c) {
+  return ::Color{c.r, c.g, c.b, c.a};
 }
 
 // --- Background shader loading ---
 
 static void load_background_shader() {
   // Load the fragment shader source from disk.
-  char* fs_code       = LoadFileText("kitchen_table/background.fs");
+  char* fs_code       = LoadFileText("kitchen_table_cpp/code/background.frag");
   s_background_shader = LoadShaderFromMemory(nullptr, fs_code);
   s_bg_time_loc       = GetShaderLocation(s_background_shader, "u_time");
   s_bg_resolution_loc = GetShaderLocation(s_background_shader, "u_resolution");
@@ -121,7 +97,7 @@ static Texture2D* get_rounded_texture(const std::string& image_path) {
   int sr = (int)(r * std::min((float)iw / w, (float)ih / h));
 
   // Create rounded rectangle mask at image resolution.
-  Image mask = GenImageColor(iw, ih, Color{0, 0, 0, 0});
+  Image mask = GenImageColor(iw, ih, ::Color{0, 0, 0, 0});
   ImageDrawRectangle(&mask, sr, 0, iw - 2 * sr, ih, WHITE);
   ImageDrawRectangle(&mask, 0, sr, iw, ih - 2 * sr, WHITE);
   ImageDrawCircle(&mask, sr, sr, sr, WHITE);
@@ -143,16 +119,15 @@ static Texture2D* get_rounded_texture(const std::string& image_path) {
 // --- Text rendering ---
 
 void render_text(
-  const std::string& text, float x, float y, int size, nb::object color
+  const std::string& text, float x, float y, int size, KT_Color color
 ) {
-  Color c = extract_color(color);
   DrawTextEx(
     get_font(),
     text.c_str(),
     {(float)x, (float)y},
     (float)size,
     kt::FONT_SPACING,
-    c
+    to_rl(color)
   );
 }
 
@@ -200,12 +175,12 @@ void draw_card_back() {
   float h = (float)kt::CARD_HEIGHT;
   float r = (float)kt::CARD_CORNER_RADIUS;
 
-  // Card colors from kt namespace (matching config.py defaults).
-  Color back_color    = {60, 80, 120, 255};
-  Color pattern_color = {80, 100, 140, 255};
-  Color border_color  = {80, 80, 80, 255};
+  // KT_Card colors from kt namespace (matching config.py defaults).
+  ::Color back_color    = {60, 80, 120, 255};
+  ::Color pattern_color = {80, 100, 140, 255};
+  ::Color border_color  = {80, 80, 80, 255};
 
-  // Card background.
+  // KT_Card background.
   DrawRectangleRounded(
     Rectangle{x, y, w, h}, r / std::min(w, h), 8, back_color
   );
@@ -239,7 +214,7 @@ void draw_card_content(const Thing& card, bool face_up) {
   float h = (float)kt::CARD_HEIGHT;
   float r = (float)kt::CARD_CORNER_RADIUS;
 
-  // Card background: image with rounded corners, or solid color fallback.
+  // KT_Card background: image with rounded corners, or solid color fallback.
   Texture2D* texture = nullptr;
   if (!card.image_path.empty()) {
     texture = get_rounded_texture(card.image_path);
@@ -256,7 +231,7 @@ void draw_card_content(const Thing& card, bool face_up) {
     );
   } else {
     // Fallback: solid color background.
-    Color bg = {255, 255, 255, 255};
+    ::Color bg = {255, 255, 255, 255};
     DrawRectangleRounded(Rectangle{x, y, w, h}, r / std::min(w, h), 8, bg);
   }
 
@@ -313,34 +288,30 @@ void draw_stack_placeholder(const Stack& stack) {
     r / std::min(w, h),
     8,
     1.0f,
-    Color{100, 100, 100, 100}
+    ::Color{100, 100, 100, 100}
   );
 
   // Label centered in the placeholder.
   const std::string& label   = stack.name;
   int                label_w = text_width(label, 14);
 
-  // Build a pyray Color for the label.
-  nb::module_ pyray       = nb::module_::import_("pyray");
-  nb::object  label_color = pyray.attr("Color")(100, 100, 100, 150);
-
   render_text(
     label,
     (int)(stack.rect.x + (w - (float)label_w) / 2.0f),
     (int)(stack.rect.y + h / 2.0f - 7.0f),
     14,
-    label_color
+    KT_Color{100, 100, 100, 150}
   );
 }
 
 // --- animate ---
 
-void animate(std::vector<Card>& cards, const Table_State& state, float dt) {
+void animate(std::vector<KT_Card>& cards, const Table_State& state, float dt) {
   int selected_card_id = state.drag_state.card_id;
   int n                = (int)cards.size();
   for (int i = 0; i < n; ++i) {
-    Card&       acard  = cards[i];
-    const Card& target = state.cards[i];
+    KT_Card&       acard  = cards[i];
+    const KT_Card& target = state.cards[i];
 
     float old_x = acard.x;
     acard.x     = acard.x * (1.0f - dt) + target.x * dt;
@@ -352,8 +323,8 @@ void animate(std::vector<Card>& cards, const Table_State& state, float dt) {
 
   // Dragged card snaps immediately to the target position.
   if (selected_card_id >= 0 && selected_card_id < n) {
-    Card&       acard  = cards[selected_card_id];
-    const Card& target = state.cards[selected_card_id];
+    KT_Card&       acard  = cards[selected_card_id];
+    const KT_Card& target = state.cards[selected_card_id];
     acard.x            = target.x;
     acard.y            = target.y;
   }
@@ -366,7 +337,7 @@ void draw_zoomed_card(const Thing& card, bool face_up) {
   int screen_h = GetScreenHeight();
 
   // Dim background.
-  DrawRectangle(0, 0, screen_w, screen_h, Color{0, 0, 0, 160});
+  DrawRectangle(0, 0, screen_w, screen_h, ::Color{0, 0, 0, 160});
 
   float card_w = (float)kt::CARD_WIDTH;
   float card_h = (float)kt::CARD_HEIGHT;
@@ -430,7 +401,7 @@ void draw_table(Table_State& state) {
 
   // Draw the dragged card on top of everything else.
   if (state.drag_state.card_id >= 0) {
-    const Card& card    = state.animated_cards[state.drag_state.card_id];
+    const KT_Card& card    = state.animated_cards[state.drag_state.card_id];
     bool        face_up = state.stacks[state.drag_state.original_stack].face_up;
     draw_card(card, face_up);
   }
@@ -455,7 +426,44 @@ void draw_table(Table_State& state) {
   }
 }
 
-// --- bind_rendering: expose functions to Python ---
+#ifdef KT_BUILD_PYTHON
+
+#include <nanobind/stl/string.h>
+using namespace nb::literals;
+
+// Pyray Color (cffi) or (r,g,b,a) tuple → KT_Color helper.
+static KT_Color kt_color_from_pyobj(nb::object pycolor) {
+  if (nb::isinstance<nb::tuple>(pycolor)) {
+    nb::tuple t = nb::cast<nb::tuple>(pycolor);
+    return KT_Color{
+      (uint8_t)nb::cast<int>(t[0]),
+      (uint8_t)nb::cast<int>(t[1]),
+      (uint8_t)nb::cast<int>(t[2]),
+      (uint8_t)nb::cast<int>(t[3])
+    };
+  }
+  return KT_Color{
+    (uint8_t)nb::cast<int>(pycolor.attr("r")),
+    (uint8_t)nb::cast<int>(pycolor.attr("g")),
+    (uint8_t)nb::cast<int>(pycolor.attr("b")),
+    (uint8_t)nb::cast<int>(pycolor.attr("a"))
+  };
+}
+
+// Build a pyray.Color from r/g/b/a ints (used by color_from_tuple).
+static nb::object pycolor_from_rgba(int r, int g, int b, int a) {
+  return nb::module_::import_("pyray").attr("Color")(r, g, b, a);
+}
+
+static nb::object color_from_tuple_py(nb::object c) {
+  nb::tuple ct = nb::cast<nb::tuple>(c);
+  return pycolor_from_rgba(
+    nb::cast<int>(ct[0]),
+    nb::cast<int>(ct[1]),
+    nb::cast<int>(ct[2]),
+    nb::cast<int>(ct[3])
+  );
+}
 
 void bind_rendering(nb::module_& m) {
   m.def("draw_background", &draw_background, "turn"_a = 0.0f);
@@ -477,8 +485,18 @@ void bind_rendering(nb::module_& m) {
   );
   m.def("draw_stack_placeholder", &draw_stack_placeholder, "stack"_a);
   m.def(
-    "render_text", &render_text, "text"_a, "x"_a, "y"_a, "size"_a, "color"_a
+    "render_text",
+    [](const std::string& text, float x, float y, int size, nb::object color) {
+      render_text(text, x, y, size, kt_color_from_pyobj(color));
+    },
+    "text"_a,
+    "x"_a,
+    "y"_a,
+    "size"_a,
+    "color"_a
   );
   m.def("text_width", &text_width, "text"_a, "size"_a);
-  m.def("color_from_tuple", &color_from_tuple, "color_tuple"_a);
+  m.def("color_from_tuple", &color_from_tuple_py, "color_tuple"_a);
 }
+
+#endif // KT_BUILD_PYTHON

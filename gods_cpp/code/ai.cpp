@@ -2,7 +2,6 @@
 
 #include <game_cpp/game.h>
 #include <game_cpp/minimax.h>
-#include <nanobind/nanobind.h>
 
 #include <algorithm>
 #include <chrono>
@@ -11,8 +10,9 @@
 #include "gameplay.h"
 #include "models.h"
 
-namespace nb = nanobind;
+#ifdef GODS_BUILD_PYTHON
 using namespace nb::literals;
+#endif
 
 float evaluate_state(Game_State& game, int player_index) {
   if (!game.is_game_over()) {
@@ -60,6 +60,7 @@ Game_State sample_state(
   return sampled;
 }
 
+#ifdef GODS_BUILD_PYTHON
 void bind_agent(nb::module_& m) {
   nb::class_<Agent_Minimax_Stochastic_Gods>(m, "Agent_Minimax_Stochastic_Gods")
     .def(nb::init<>())
@@ -76,3 +77,4 @@ void bind_agent(nb::module_& m) {
       "choice"_a
     );
 }
+#endif // GODS_BUILD_PYTHON

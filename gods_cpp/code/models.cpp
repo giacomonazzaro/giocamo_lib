@@ -1,13 +1,5 @@
 #include "models.h"
 
-#include <nanobind/nanobind.h>
-#include <nanobind/stl/bind_vector.h>
-#include <nanobind/stl/function.h>
-#include <nanobind/stl/optional.h>
-#include <nanobind/stl/string.h>
-#include <nanobind/stl/variant.h>
-#include <nanobind/stl/vector.h>
-
 #include <algorithm>
 #include <numeric>
 #include <sstream>
@@ -16,8 +8,15 @@
 
 #include "gameplay.h"  // For make_main_choice / make_claim_choice in next_choice.
 
-namespace nb = nanobind;
+#ifdef GODS_BUILD_PYTHON
+#include <nanobind/stl/bind_vector.h>
+#include <nanobind/stl/function.h>
+#include <nanobind/stl/optional.h>
+#include <nanobind/stl/string.h>
+#include <nanobind/stl/variant.h>
+#include <nanobind/stl/vector.h>
 using namespace nb::literals;
+#endif
 
 // ---- Card_Id packing ----
 
@@ -192,6 +191,8 @@ std::optional<Choice> Game_State::next_choice() {
 // the underlying vector by reference (so list.pop/append mutate C++ state) and
 // accepts any Python iterable as a setter. The cast lambdas need an explicit
 // host type so nanobind can introspect the signature.
+#ifdef GODS_BUILD_PYTHON
+
 #define DEF_INT_VEC(CLS, NAME, MEMBER)                                       \
   def_prop_rw(                                                                \
     NAME,                                                                     \
@@ -495,3 +496,5 @@ void bind_models(nb::module_& m) {
   // Bind it as a property on the module via a callable: `card_designs` in
   // Python returns a list. Done in the shim instead — see gods/models.py.
 }
+
+#endif // GODS_BUILD_PYTHON
