@@ -1,0 +1,275 @@
+[
+  {
+    "name": "Miracle",
+    "type": "event",
+    "power": 0,
+    "color": "red",
+    "effect": "Play another event, it gets +○."
+  },
+  {
+    "name": "Forgive",
+    "type": "event",
+    "power": 0,
+    "color": "red",
+    "effect": "Add ○ +1 counters on a people."
+  },
+  {
+    "name": "Blessing",
+    "type": "event",
+    "power": 0,
+    "color": "red",
+    "effect": "Add ○ +1 counters on a wonder."
+  },
+  {
+    "name": "Spring",
+    "type": "event",
+    "power": 0,
+    "color": "green",
+    "effect": "Add ○ +1 counters on a people."
+  },
+  {
+    "name": "Earthquake",
+    "type": "event",
+    "power": 0,
+    "color": "green",
+    "effect": "Destroy all peoples with power ○ or less."
+  },
+  {
+    "name": "Flood",
+    "type": "event",
+    "power": 0,
+    "color": "green",
+    "effect": "Put ○ -1 counters on all people."
+  },
+  {
+    "name": "Prophecy",
+    "type": "event",
+    "power": 0,
+    "color": "blue",
+    "effect": "You may play up to ○ extra cards this turn."
+  },
+  {
+    "name": "Flashback",
+    "type": "event",
+    "power": 0,
+    "color": "blue",
+    "effect": "Return ○ event cards from your discard pile to your hand."
+  },
+  {
+    "name": "Darkness",
+    "type": "event",
+    "power": 0,
+    "color": "red",
+    "effect": "The opponent discards ○ cards from their hand."
+  },
+  {
+    "name": "Unmaking",
+    "type": "event",
+    "power": 0,
+    "color": "red",
+    "effect": "Destroy a wonder with power ○ or less."
+  },
+  {
+    "name": "Revolt",
+    "type": "event",
+    "power": 0,
+    "color": "red",
+    "effect": "Destroy a people with power ○ or less."
+  },
+  {
+    "name": "Regrowth",
+    "type": "event",
+    "power": 0,
+    "color": "green",
+    "effect": "Restore a people with power ○ or less."
+  },
+  {
+    "name": "Eruption",
+    "type": "event",
+    "power": 0,
+    "color": "green",
+    "effect": "Shuffle up to ○ blue wonders into their owners' decks."
+  },
+  {
+    "name": "Time Warp",
+    "type": "event",
+    "power": 0,
+    "color": "blue",
+    "effect": "Return up to ○ wonders from play to their owners' hands."
+  },
+  {
+    "name": "Aurora",
+    "type": "event",
+    "power": 0,
+    "color": "blue",
+    "effect": "Draw ○ cards."
+  },
+  {
+    "name": "Meteorite",
+    "type": "event",
+    "power": 0,
+    "color": "blue",
+    "effect": "Destroy all opponent peoples with power ○ or less."
+  },
+  {
+    "name": "Fire",
+    "type": "wonder",
+    "power": 0,
+    "color": "red",
+    "effect": "Your red events get +○."
+  },
+  {
+    "name": "Wisdom",
+    "type": "wonder",
+    "power": 0,
+    "color": "red",
+    "effect": "When you pass, you may play a card with power ○ or less."
+  },
+  {
+    "name": "Rivers",
+    "type": "wonder",
+    "power": 0,
+    "color": "green",
+    "effect": "You can score tied peoples with power ○ or less."
+  },
+  {
+    "name": "Forests",
+    "type": "wonder",
+    "power": 0,
+    "color": "green",
+    "effect": "When you pass, you may restore a people with power ○ or less."
+  },
+  {
+    "name": "Deserts",
+    "type": "wonder",
+    "power": 0,
+    "color": "green",
+    "effect": "You can score destroyed peoples with power ○ or less."
+  },
+  {
+    "name": "Sky",
+    "type": "wonder",
+    "power": 0,
+    "color": "blue",
+    "effect": "Your other blue wonders get +○."
+  },
+  {
+    "name": "Sun",
+    "type": "wonder",
+    "power": 0,
+    "color": "blue",
+    "effect": "Your green wonders get +○."
+  },
+  {
+    "name": "Light",
+    "type": "wonder",
+    "power": 0,
+    "color": "blue",
+    "effect": "When you end the game, you may play a card with power ○ or less."
+  },
+  {
+    "name": "War",
+    "type": "wonder",
+    "power": 0,
+    "color": "red",
+    "effect": "When you pass, you may destroy a people with power ○ or less."
+  },
+  {
+    "name": "Love",
+    "type": "wonder",
+    "power": 0,
+    "color": "red",
+    "effect": "Your peoples are worth ○ points extra."
+  },
+  {
+    "name": "Knowledge",
+    "type": "wonder",
+    "power": 0,
+    "color": "red",
+    "effect": "Opponent events get -○, down to a minimum of 1 power."
+  },
+  {
+    "name": "Mountains",
+    "type": "wonder",
+    "power": 0,
+    "color": "green",
+    "effect": "Your peoples with power ○ or less are indestructible."
+  },
+  {
+    "name": "Animals",
+    "type": "wonder",
+    "power": 0,
+    "color": "green",
+    "effect": "This is worth ○ points at the end of the game."
+  },
+  {
+    "name": "Seas",
+    "type": "wonder",
+    "power": 0,
+    "color": "green",
+    "effect": "Your alive peoples with power ○ or less are worth +1 points."
+  },
+  {
+    "name": "Moon",
+    "type": "wonder",
+    "power": 0,
+    "color": "blue",
+    "effect": "Whenever you have less than ○ cards in hand, draw back to ○."
+  },
+  {
+    "name": "Stars",
+    "type": "wonder",
+    "power": 0,
+    "color": "blue",
+    "effect": "When you draw cards, you may do from the shared deck. They have power ○."
+  },
+  {
+    "name": "Greeks",
+    "type": "people",
+    "power": 2,
+    "color": "yellow",
+    "effect": "You have twice or more cards in hand than the opponent."
+  },
+  {
+    "name": "Egyptians",
+    "type": "people",
+    "power": 4,
+    "color": "yellow",
+    "effect": "You have the most total power among green wonders."
+  },
+  {
+    "name": "Romans",
+    "type": "people",
+    "power": 4,
+    "color": "yellow",
+    "effect": "You have the most total power among red wonders."
+  },
+  {
+    "name": "Judeans",
+    "type": "people",
+    "power": 4,
+    "color": "yellow",
+    "effect": "You have the most total power among blue wonders."
+  },
+  {
+    "name": "Vikings",
+    "type": "people",
+    "power": 2,
+    "color": "yellow",
+    "effect": "You have the most cards in your deck."
+  },
+  {
+    "name": "Babylonians",
+    "type": "people",
+    "power": 3,
+    "color": "yellow",
+    "effect": "You have the most total power among wonders."
+  },
+  {
+    "name": "Minoans",
+    "type": "people",
+    "power": 3,
+    "color": "yellow",
+    "effect": "You have the most wonders."
+  }
+]
