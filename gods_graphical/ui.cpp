@@ -1,9 +1,9 @@
 #include "ui.h"
 
 #include <raylib.h>
-#include <tabletop/code/config.h>
-#include <tabletop/code/rendering.h>
-#include <tabletop/code/ui.h>
+#include <tabletop/config.h>
+#include <tabletop/rendering.h>
+#include <tabletop/ui.h>
 
 #include <algorithm>
 #include <cctype>
@@ -12,7 +12,7 @@
 namespace fs = std::filesystem;
 
 static const std::string IMAGES_DIR = []() {
-  // gods_graphical/code/../.. is the gods-app root.
+  // gods_graphical/../.. is the gods-app root.
   fs::path p = fs::current_path() / "gods" / "card-images";
   return p.string();
 }();

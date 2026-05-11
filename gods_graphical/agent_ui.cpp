@@ -1,8 +1,8 @@
 #include "agent_ui.h"
 
-#include <tabletop/code/config.h>
-#include <tabletop/code/game_state.h>
-#include <tabletop/code/input.h>
+#include <tabletop/config.h>
+#include <tabletop/game_state.h>
+#include <tabletop/input.h>
 #include <raylib.h>
 
 #include <variant>

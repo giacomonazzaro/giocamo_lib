@@ -33,14 +33,14 @@ add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/../gods           ${CMAKE_BINARY_DI
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/../online         ${CMAKE_BINARY_DIR}/online_build)
 
 add_executable(gods_graphical
-    code/main.cpp
-    code/ui.cpp
-    code/agent_ui.cpp
-    code/menu.cpp
-    code/agent_remote.cpp
+    main.cpp
+    ui.cpp
+    agent_ui.cpp
+    menu.cpp
+    agent_remote.cpp
 )
 target_include_directories(gods_graphical PRIVATE
-    code
+    .
     "${CMAKE_CURRENT_SOURCE_DIR}/.."  # so headers can use <game/x.h>
 )
 target_link_libraries(gods_graphical PRIVATE

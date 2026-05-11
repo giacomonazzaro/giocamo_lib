@@ -19,10 +19,10 @@ find_package(nanobind CONFIG REQUIRED)
 add_subdirectory("${CMAKE_SOURCE_DIR}/../../game" game_build)
 
 nanobind_add_module(_tressette_cpp NB_STATIC
-    code/models.cpp
-    code/gameplay.cpp
-    code/ai.cpp
-    code/bindings.cpp
+    models.cpp
+    gameplay.cpp
+    ai.cpp
+    bindings.cpp
 )
 target_link_libraries(_tressette_cpp PRIVATE game)
 # Include the parent of game so headers can be referenced as <game/x.h>.

@@ -1,9 +1,9 @@
 #pragma once
 
 #include <game/agent.h>
-#include <gods/code/models.h>
-#include <tabletop/code/models.h>
-#include <tabletop/code/ui.h>
+#include <gods/models.h>
+#include <tabletop/models.h>
+#include <tabletop/ui.h>
 
 #include <set>
 

@@ -1,7 +1,7 @@
 #pragma once
 
 #include <game/agent.h>
-#include <online/code/protocol.h>
+#include <online/protocol.h>
 
 #include <utility>
 

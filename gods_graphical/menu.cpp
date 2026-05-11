@@ -1,9 +1,9 @@
 #include "menu.h"
 
 #include <raylib.h>
-#include <tabletop/code/config.h>
-#include <tabletop/code/rendering.h>
-#include <tabletop/code/ui.h>
+#include <tabletop/config.h>
+#include <tabletop/rendering.h>
+#include <tabletop/ui.h>
 
 #include <algorithm>
 #include <cstdlib>

@@ -1,6 +1,6 @@
 #pragma once
 
-#include <tabletop/code/models.h>
+#include <tabletop/models.h>
 
 #include <string>
 #include <vector>

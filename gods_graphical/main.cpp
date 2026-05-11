@@ -14,18 +14,18 @@
 // macros that conflict with our Card_Color enum values.
 #include <game/agent.h>
 #include <game/game.h>
-#include <gods/code/ai.h>
-#include <gods/code/gameplay.h>
-#include <gods/code/models.h>
-#include <gods/code/setup.h>
-#include <online/code/protocol.h>
-#include <online/code/setup.h>
-#include <tabletop/code/config.h>
-#include <tabletop/code/game_state.h>
-#include <tabletop/code/input.h>
-#include <tabletop/code/models.h>
-#include <tabletop/code/rendering.h>
-#include <tabletop/code/ui.h>
+#include <gods/ai.h>
+#include <gods/gameplay.h>
+#include <gods/models.h>
+#include <gods/setup.h>
+#include <online/protocol.h>
+#include <online/setup.h>
+#include <tabletop/config.h>
+#include <tabletop/game_state.h>
+#include <tabletop/input.h>
+#include <tabletop/models.h>
+#include <tabletop/rendering.h>
+#include <tabletop/ui.h>
 
 #include <nlohmann/json.hpp>
 
@@ -71,7 +71,6 @@ static int random_int(std::mt19937& rng, int lo, int hi) {
   return std::uniform_int_distribution<int>(lo, hi)(rng);
 }
 
-// Replicates gods/setup.py:quick_setup → create_draft.
 // All cards drawn from the shared deck; players start with 5-card hands.
 static Game_State quick_setup(std::optional<int> seed) {
   std::mt19937 rng(seed ? *seed : std::random_device{}());
@@ -287,7 +286,6 @@ static void draw_hud(
   }
 }
 
-// The main game loop, mirrors play_gods() from main.py.
 static void play_gods(
   Game_State&                 gods_state,
   Table_State&                table_state,
@@ -333,7 +331,7 @@ static void play_gods(
     if (gods_state.game_over) break;
 
     // SPACE-to-zoom: handled by tabletop's update_input, but our outer
-    // loop also peeks SPACE for the same gesture (to keep parity with Python).
+    // loop also peeks SPACE for the same gesture.
     if (IsKeyDown(KEY_SPACE)) {
       auto r =
         find_card_at((float)GetMouseX(), (float)GetMouseY(), table_state);

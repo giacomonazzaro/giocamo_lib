@@ -1,0 +1,23 @@
+BasedOnStyle: Google
+
+# Language:        Cpp
+Standard:        Cpp11
+
+AlignConsecutiveAssignments: true
+AlignConsecutiveDeclarations: true
+
+AllowShortCaseLabelsOnASingleLine: true
+
+BreakConstructorInitializersBeforeComma: true
+BreakStringLiterals: false
+
+PenaltyBreakAssignment: 20
+PenaltyBreakBeforeFirstCallParameter: 50
+
+DerivePointerAlignment: false
+PointerAlignment: Left
+
+BinPackParameters: false
+BinPackArguments: false
+AlignAfterOpenBracket: BlockIndent
+ContinuationIndentWidth: 2

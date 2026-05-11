@@ -6,8 +6,8 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 find_package(CURL REQUIRED)
 
 set(ONLINE_SOURCES
-    code/protocol.cpp
-    code/setup.cpp
+    protocol.cpp
+    setup.cpp
 )
 
 # nlohmann_json is required for both builds. If the parent project hasn't
@@ -24,7 +24,7 @@ endif()
 # ----- Standalone C++ static library -----
 if(NOT TARGET online_lib)
     add_library(online_lib STATIC ${ONLINE_SOURCES})
-    target_include_directories(online_lib PUBLIC code)
+    target_include_directories(online_lib PUBLIC .)
     target_link_libraries(online_lib PUBLIC CURL::libcurl nlohmann_json::nlohmann_json)
 endif()
 

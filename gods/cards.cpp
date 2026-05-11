@@ -64,7 +64,6 @@ bool Card::wins_tie(Game_State& g, const Card& p) {
 }
 
 // ---- Card subclasses ----
-// Each subclass mirrors the corresponding Python class in gods/cards.py.
 // Hooks capture `int my_id = this->id` (a stable index into card_designs) so
 // closures stay valid after Game_State is value-copied during minimax search.
 
