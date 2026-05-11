@@ -190,7 +190,7 @@ static void draw_hud(
   int          H      = kt::WINDOW_HEIGHT;
   int          h      = kt::CARD_HEIGHT;
   int          margin = 20;
-  KT_Rectangle window = {0.0f, 0.0f, (float)kt::WINDOW_WIDTH, (float)H};
+  Rectangle window = {0.0f, 0.0f, (float)kt::WINDOW_WIDTH, (float)H};
   int          bottom_wonders_y =
     (int)place_inside(window, 0, h, "left", "bottom", 2 * margin + h).y;
   int opponent_shift = (int)(h * 0.65f);
@@ -213,16 +213,16 @@ static void draw_hud(
     if (!text.empty()) {
       int          font_size = 22;
       int          tw        = text_width(text, font_size);
-      KT_Rectangle r = ui_state.place(tw, font_size, "right", "center", 20);
-      render_text(text, r.x, r.y - 50, font_size, KT_Color{200, 200, 200, 255});
+      Rectangle r = ui_state.place(tw, font_size, "right", "center", 20);
+      render_text(text, r.x, r.y - 50, font_size, Color{200, 200, 200, 255});
     }
   }
 
   // Playground toggle button (top-right).
   std::string  label  = ui_state.playground ? "Playground: ON"
                                             : "Playground: OFF";
-  KT_Rectangle button = ui_state.place(160, 32, "right", "top", 20);
-  if (immediate_button(button, label, KT_Color{20, 20, 20, 100})) {
+  Rectangle button = ui_state.place(160, 32, "right", "top", 20);
+  if (immediate_button(button, label, Color{20, 20, 20, 100})) {
     ui_state.playground = !ui_state.playground;
     if (!ui_state.playground) {
       sync_game_state_from_table(*table_state, gods_state);
@@ -239,10 +239,10 @@ static void draw_hud(
     const KT_Card& kt_card = table_state->animated_cards[card_id];
     int            btn_w = 44, btn_h = 36, gap = 6;
     int            panel_w   = 10 * btn_w + 9 * gap + 16;
-    KT_Rectangle   card_rect = {
+    Rectangle   card_rect = {
       kt_card.x, kt_card.y, (float)kt::CARD_WIDTH, (float)kt::CARD_HEIGHT
     };
-    KT_Rectangle panel =
+    Rectangle panel =
       place_next(card_rect, panel_w, btn_h + 16, "center", "bottom", 8);
     panel.x =
       std::max(0.0f, std::min(panel.x, (float)(kt::WINDOW_WIDTH - panel_w)));
@@ -255,11 +255,11 @@ static void draw_hud(
       8,
       ::Color{20, 20, 20, 200}
     );
-    KT_Rectangle btn = place_inside(panel, btn_w, btn_h, "left", "center", 8);
+    Rectangle btn = place_inside(panel, btn_w, btn_h, "left", "center", 8);
     int          current_power = gods_state.all_cards[card_id].power;
     for (int v = 1; v <= 10; ++v) {
-      std::optional<KT_Color> col = std::nullopt;
-      if (v == current_power) col = KT_Color{80, 160, 80, 255};
+      std::optional<Color> col = std::nullopt;
+      if (v == current_power) col = Color{80, 160, 80, 255};
       if (immediate_button(btn, std::to_string(v), col)) {
         gods_state.all_cards[card_id].power = v;
         ui_state.power_edit_card_id         = -1;
@@ -272,7 +272,7 @@ static void draw_hud(
   // Re-place the shared deck so it stays anchored.
   for (Stack& s : table_state->stacks) {
     if (s.name == "shared_deck") {
-      KT_Rectangle target =
+      Rectangle target =
         ui_state.playground
           ? place_inside(
               window, kt::CARD_WIDTH, kt::CARD_HEIGHT, "right", "center", 10

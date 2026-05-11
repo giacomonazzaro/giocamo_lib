@@ -97,9 +97,9 @@ int Agent_UI::choose_action(Game& state, const Choice& choice) {
   int button_height  = 40;
   int button_width   = 140;
   int all_buttons_w  = button_count * button_width + button_count * gap;
-  KT_Rectangle all_buttons =
+  Rectangle all_buttons =
       ui_state->place(all_buttons_w, button_height, "right", "center", gap);
-  KT_Rectangle button = {all_buttons.x, all_buttons.y, (float)button_width, (float)button_height};
+  Rectangle button = {all_buttons.x, all_buttons.y, (float)button_width, (float)button_height};
 
   bool mouse_clicked = IsMouseButtonPressed(MOUSE_BUTTON_LEFT);
 

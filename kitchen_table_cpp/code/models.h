@@ -6,16 +6,7 @@
 #include <tuple>
 #include <vector>
 
-// 2D rectangle matching pyray's Rectangle layout (x, y, width, height).
-struct KT_Rectangle {
-  float x = 0.0f, y = 0.0f, width = 0.0f, height = 0.0f;
-};
-
-// 8-bit RGBA color, layout-compatible with raylib's Color so the same bytes can
-// be reinterpret_cast or trivially constructed across the boundary.
-struct KT_Color {
-  uint8_t r = 0, g = 0, b = 0, a = 255;
-};
+#include "raylib.h"
 
 // Base visual entity with optional draw callback.
 struct Thing {
@@ -33,7 +24,7 @@ struct KT_Card : Thing {
 
 // An ordered pile of cards with layout parameters.
 struct Stack {
-  KT_Rectangle rect;
+  Rectangle rect;
   std::vector<int> cards; // Ordered list of card IDs.
   float spread_x = 0.0f, spread_y = 0.0f;
   bool face_up = true;

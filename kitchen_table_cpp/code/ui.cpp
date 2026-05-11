@@ -7,20 +7,17 @@
 #include "rendering.h"
 
 // Default button colors (kept in sync with the tweak dict in config.cpp).
-static const KT_Color s_button_color       = {70, 130, 180, 255};
-static const KT_Color s_button_hover_color = {90, 150, 200, 255};
-static const KT_Color s_button_text_color  = {255, 255, 255, 255};
+static const Color s_button_color       = {70, 130, 180, 255};
+static const Color s_button_hover_color = {90, 150, 200, 255};
+static const Color s_button_text_color  = {255, 255, 255, 255};
 
-static inline ::Color to_rl(KT_Color c) {
-  return ::Color{c.r, c.g, c.b, c.a};
-}
 
 bool point_in_rect(float px, float py, float x, float y, float w, float h) {
   return x <= px && px <= x + w && y <= py && py <= y + h;
 }
 
-KT_Rectangle place_next(
-  const KT_Rectangle& rect,
+Rectangle place_next(
+  const Rectangle& rect,
   int                  width,
   int                  height,
   const std::string&   x,
@@ -43,11 +40,11 @@ KT_Rectangle place_next(
   else // center
     ny = rect.y + rect.height / 2.0f - (float)height / 2.0f;
 
-  return KT_Rectangle{nx, ny, (float)width, (float)height};
+  return Rectangle{nx, ny, (float)width, (float)height};
 }
 
-KT_Rectangle place_inside(
-  const KT_Rectangle& rect,
+Rectangle place_inside(
+  const Rectangle& rect,
   int                  width,
   int                  height,
   const std::string&   x,
@@ -70,7 +67,7 @@ KT_Rectangle place_inside(
   else // center
     ny = rect.y + rect.height / 2.0f - (float)height / 2.0f;
 
-  return KT_Rectangle{nx, ny, (float)width, (float)height};
+  return Rectangle{nx, ny, (float)width, (float)height};
 }
 
 bool Button::pressed() const {
@@ -81,10 +78,10 @@ bool Button::pressed() const {
 }
 
 bool immediate_button(
-  KT_Rectangle              rect,
+  Rectangle              rect,
   const std::string&        label,
-  std::optional<KT_Color>   color,
-  std::optional<KT_Color>   text_color
+  std::optional<Color>   color,
+  std::optional<Color>   text_color
 ) {
   // Expand width to fit label text if necessary.
   int tw     = text_width(label, 20);
@@ -95,7 +92,7 @@ bool immediate_button(
   bool  hovered = point_in_rect(mx, my, rect.x, rect.y, rect.width, rect.height);
 
   // Resolve button background color: hover always wins.
-  KT_Color c;
+  Color c;
   if (hovered)
     c = s_button_hover_color;
   else if (!color)
@@ -103,12 +100,12 @@ bool immediate_button(
   else
     c = *color;
 
-  KT_Color tc = text_color ? *text_color : s_button_text_color;
+  Color tc = text_color ? *text_color : s_button_text_color;
 
   Rectangle rl_rect = {rect.x, rect.y, rect.width, rect.height};
-  DrawRectangleRounded(rl_rect, 0.3f, 8, to_rl(c));
+  DrawRectangleRounded(rl_rect, 0.3f, 8, c);
 
-  KT_Rectangle tr = place_inside(rect, tw, 20, "center", "center");
+  Rectangle tr = place_inside(rect, tw, 20, "center", "center");
   render_text(label, tr.x, tr.y, 20, tc);
 
   if (!IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) return false;
@@ -118,14 +115,14 @@ bool immediate_button(
 UI_State::UI_State()
     : window_width(kt::WINDOW_WIDTH), window_height(kt::WINDOW_HEIGHT) {}
 
-KT_Rectangle UI_State::place(
+Rectangle UI_State::place(
   int                width,
   int                height,
   const std::string& x,
   const std::string& y,
   int                padding
 ) const {
-  KT_Rectangle window = {0.0f, 0.0f, (float)window_width, (float)window_height};
+  Rectangle window = {0.0f, 0.0f, (float)window_width, (float)window_height};
   return place_inside(window, width, height, x, y, padding);
 }
 
@@ -146,14 +143,14 @@ void UI_State::draw_buttons() const {
 
   for (const auto& [key, btn] : buttons) {
     bool     hovered = point_in_rect(mx, my, (float)btn.x, (float)btn.y, (float)btn.width, (float)btn.height);
-    KT_Color c       = hovered ? s_button_hover_color : s_button_color;
+    Color c       = hovered ? s_button_hover_color : s_button_color;
 
     Rectangle    rl_rect = {(float)btn.x, (float)btn.y, (float)btn.width, (float)btn.height};
-    DrawRectangleRounded(rl_rect, 0.3f, 8, to_rl(c));
+    DrawRectangleRounded(rl_rect, 0.3f, 8, c);
 
     int          tw = text_width(btn.text, 20);
-    KT_Rectangle br = {(float)btn.x, (float)btn.y, (float)btn.width, (float)btn.height};
-    KT_Rectangle tr = place_inside(br, tw, 20, "center", "center");
+    Rectangle br = {(float)btn.x, (float)btn.y, (float)btn.width, (float)btn.height};
+    Rectangle tr = place_inside(br, tw, 20, "center", "center");
     render_text(btn.text, tr.x, tr.y, 20, s_button_text_color);
   }
 }

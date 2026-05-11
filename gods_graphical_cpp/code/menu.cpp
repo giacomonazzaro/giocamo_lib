@@ -22,7 +22,7 @@ static int centered_x(int width) {
   return (kt::WINDOW_WIDTH - width) / 2;
 }
 
-static void draw_centered_text(const std::string& text, int y, int font_size, KT_Color color) {
+static void draw_centered_text(const std::string& text, int y, int font_size, Color color) {
   int w = text_width(text, font_size);
   render_text(text, (float)centered_x(w), (float)y, font_size, color);
 }
@@ -43,7 +43,7 @@ static bool draw_button(const std::string& text, int y, int width = 320, int hei
   int size = 30;
   int tw   = text_width(text, size);
   render_text(text, (float)(x + (width - tw) / 2), (float)(y + (height - size) / 2),
-              size, KT_Color{255, 255, 255, 255});
+              size, Color{255, 255, 255, 255});
 
   return hovered && IsMouseButtonPressed(MOUSE_BUTTON_LEFT);
 }
@@ -53,7 +53,7 @@ static void draw_text_input(const std::string& label, const std::string& text, i
   int x = centered_x(width);
   int label_w = text_width(label, 18);
   render_text(label, (float)centered_x(label_w), (float)(y - 30), 18,
-              KT_Color{200, 200, 200, 255});
+              Color{200, 200, 200, 255});
   DrawRectangleRounded(
     Rectangle{(float)x, (float)y, (float)width, (float)height},
     0.2f, 8, ::Color{30, 30, 50, 220}
@@ -65,7 +65,7 @@ static void draw_text_input(const std::string& label, const std::string& text, i
   bool blink_on = ((int)(GetTime() * 2) % 2) == 0;
   std::string display = text + (blink_on ? "_" : " ");
   render_text(display, (float)(x + 12), (float)(y + (height - 24) / 2), 24,
-              KT_Color{255, 255, 255, 255});
+              Color{255, 255, 255, 255});
 }
 
 static void update_text_input(std::string& text, size_t max_length = 16) {
@@ -157,7 +157,7 @@ Menu_Result run_menu() {
     draw_background();
 
     if (state.screen == Screen::MAIN) {
-      draw_centered_text("GODS", center_y - 180, 90, KT_Color{255, 255, 255, 255});
+      draw_centered_text("GODS", center_y - 180, 90, Color{255, 255, 255, 255});
       if (draw_button("Play vs AI",  center_y - 20)) {
         Menu_Result r;
         r.mode = Menu_Result::VS_AI;
@@ -168,9 +168,9 @@ Menu_Result run_menu() {
       if (draw_button("Play Online", center_y + 60)) state.screen = Screen::ONLINE;
 
     } else if (state.screen == Screen::ONLINE) {
-      draw_centered_text("PLAY ONLINE", 150, 54, KT_Color{255, 255, 255, 255});
+      draw_centered_text("PLAY ONLINE", 150, 54, Color{255, 255, 255, 255});
       if (!state.error_message.empty()) {
-        draw_centered_text(state.error_message, center_y - 120, 18, KT_Color{255, 100, 100, 255});
+        draw_centered_text(state.error_message, center_y - 120, 18, Color{255, 100, 100, 255});
       }
       if (draw_button("Create Game", center_y - 60)) {
         state.error_message.clear();
@@ -188,7 +188,7 @@ Menu_Result run_menu() {
       }
 
     } else if (state.screen == Screen::CREATING) {
-      draw_centered_text("CREATE GAME", 150, 54, KT_Color{255, 255, 255, 255});
+      draw_centered_text("CREATE GAME", 150, 54, Color{255, 255, 255, 255});
       std::string code;
       if (state.connection) {
         std::lock_guard<std::mutex> lg(state.connection->state_lock);
@@ -196,16 +196,16 @@ Menu_Result run_menu() {
       }
       if (!code.empty()) {
         draw_centered_text("Share this code with your friend:", center_y - 80, 20,
-                           KT_Color{200, 200, 200, 255});
-        draw_centered_text(code, center_y - 30, 50, KT_Color{255, 215, 0, 255});
+                           Color{200, 200, 200, 255});
+        draw_centered_text(code, center_y - 30, 50, Color{255, 215, 0, 255});
         if (draw_button("Copy Code", center_y + 30, 200, 44)) {
           SetClipboardText(code.c_str());
         }
         draw_centered_text("Waiting for opponent" + dots(), center_y + 90, 22,
-                           KT_Color{180, 180, 180, 255});
+                           Color{180, 180, 180, 255});
       } else {
         draw_centered_text("Getting your room code" + dots(), center_y, 26,
-                           KT_Color{200, 200, 200, 255});
+                           Color{200, 200, 200, 255});
       }
       if (draw_button("Back", center_y + 170, 180, 46)) {
         state.connection.reset();
@@ -213,7 +213,7 @@ Menu_Result run_menu() {
       }
 
     } else if (state.screen == Screen::JOINING) {
-      draw_centered_text("JOIN GAME", 150, 54, KT_Color{255, 255, 255, 255});
+      draw_centered_text("JOIN GAME", 150, 54, Color{255, 255, 255, 255});
       draw_text_input("Enter room code:", state.text_input, center_y - 40);
       if (draw_button("Paste", center_y + 30, 160, 44)) {
         const char* clip = GetClipboardText();
@@ -229,8 +229,8 @@ Menu_Result run_menu() {
       }
 
     } else if (state.screen == Screen::CONNECTING) {
-      draw_centered_text("JOIN GAME", 150, 54, KT_Color{255, 255, 255, 255});
-      draw_centered_text("Connecting" + dots(), center_y - 20, 30, KT_Color{200, 200, 200, 255});
+      draw_centered_text("JOIN GAME", 150, 54, Color{255, 255, 255, 255});
+      draw_centered_text("Connecting" + dots(), center_y - 20, 30, Color{200, 200, 200, 255});
       if (draw_button("Back", center_y + 100, 180, 46)) {
         state.connection.reset();
         state.screen = Screen::JOINING;

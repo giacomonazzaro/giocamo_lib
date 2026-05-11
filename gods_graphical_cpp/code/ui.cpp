@@ -29,29 +29,29 @@ std::vector<Stack> make_gods_stacks(int bottom_player) {
   int spread_wonders = 160;
   int spread_pile    = -3;
 
-  KT_Rectangle window = {0.0f, 0.0f, (float)W, (float)H};
+  Rectangle window = {0.0f, 0.0f, (float)W, (float)H};
   int hand_width    = (int)((float)w * 5.5f * (float)W / 1600.0f);
   int peoples_width = 2 * w + spread_wonders;
 
   // Bottom player layout (player 0 by default).
-  KT_Rectangle p0_hand    = place_inside(window, hand_width, h, "center", "bottom", margin);
+  Rectangle p0_hand    = place_inside(window, hand_width, h, "center", "bottom", margin);
   p0_hand.x += 100;
-  KT_Rectangle p0_wonders = place_next(p0_hand, hand_width, h, "center", "top", margin);
-  KT_Rectangle p0_deck    = place_next(p0_hand, w, h, "left", "center", margin);
-  KT_Rectangle p0_discard = place_next(p0_deck, w, h, "left", "center", margin);
+  Rectangle p0_wonders = place_next(p0_hand, hand_width, h, "center", "top", margin);
+  Rectangle p0_deck    = place_next(p0_hand, w, h, "left", "center", margin);
+  Rectangle p0_discard = place_next(p0_deck, w, h, "left", "center", margin);
 
   int opponent_shift = (int)(h * 0.65f);
   int top_y          = margin - opponent_shift;
   int top_wonders_y  = H - (int)p0_wonders.y - h - opponent_shift;
 
-  KT_Rectangle shared_deck = place_next(window, w, h, "right", "center", 10);
-  KT_Rectangle p0_peoples  = place_next(p0_wonders, peoples_width, h, "left", "center", margin);
+  Rectangle shared_deck = place_next(window, w, h, "right", "center", 10);
+  Rectangle p0_peoples  = place_next(p0_wonders, peoples_width, h, "left", "center", margin);
 
-  KT_Rectangle p1_deck    = {p0_deck.x,    (float)top_y,        (float)w,             (float)h};
-  KT_Rectangle p1_hand    = {p0_hand.x,    (float)top_y,        (float)hand_width,    (float)h};
-  KT_Rectangle p1_discard = {p0_discard.x, (float)top_y,        (float)w,             (float)h};
-  KT_Rectangle p1_peoples = {p0_peoples.x, (float)top_wonders_y, (float)peoples_width, (float)h};
-  KT_Rectangle p1_wonders = {p0_wonders.x, (float)top_wonders_y, (float)hand_width,    (float)h};
+  Rectangle p1_deck    = {p0_deck.x,    (float)top_y,        (float)w,             (float)h};
+  Rectangle p1_hand    = {p0_hand.x,    (float)top_y,        (float)hand_width,    (float)h};
+  Rectangle p1_discard = {p0_discard.x, (float)top_y,        (float)w,             (float)h};
+  Rectangle p1_peoples = {p0_peoples.x, (float)top_wonders_y, (float)peoples_width, (float)h};
+  Rectangle p1_wonders = {p0_wonders.x, (float)top_wonders_y, (float)hand_width,    (float)h};
 
   if (bottom_player == 1) {
     std::swap(p0_deck,    p1_deck);
@@ -63,7 +63,7 @@ std::vector<Stack> make_gods_stacks(int bottom_player) {
 
   bool visible = (bottom_player == 0);
 
-  auto mk = [](KT_Rectangle r, int sx, int sy, bool face_up, std::string name) {
+  auto mk = [](Rectangle r, int sx, int sy, bool face_up, std::string name) {
     Stack s;
     s.rect     = r;
     s.spread_x = (float)sx;
@@ -112,7 +112,7 @@ void draw_card_power_badge(const std::string& power, bool destroyed) {
   int size = (int)(0.2f * (float)w);
   int tw   = text_width(power, size);
   render_text(power, (float)(badge_cx - tw / 2), (float)(badge_cy - size / 2), size,
-              KT_Color{255, 255, 255, 255});
+              Color{255, 255, 255, 255});
 
   if (destroyed) {
     DrawRectangleRounded(
@@ -137,7 +137,7 @@ void draw_player_hud(int player_id, int score, int deck_count, bool is_current, 
 
   std::string score_text = "Points: " + std::to_string(score);
   render_text(score_text, (float)(kt::WINDOW_WIDTH - 200), (float)(hud_y + 22), 40,
-              KT_Color{200, 200, 200, 255});
+              Color{200, 200, 200, 255});
 }
 
 void draw_game_over_screen(
@@ -156,7 +156,7 @@ void draw_game_over_screen(
     // Semi-transparent overlay (matches tweak["modal_overlay"]: 0,0,0,180).
     DrawRectangle(0, 0, w_width, w_height, ::Color{0, 0, 0, 180});
 
-    KT_Rectangle screen = {0.0f, 0.0f, (float)w_width, (float)w_height};
+    Rectangle screen = {0.0f, 0.0f, (float)w_width, (float)w_height};
     std::string score_text = std::to_string(scores[0]) + "     |     " + std::to_string(scores[1]);
 
     int go_w = text_width("GAME OVER", 60);
@@ -164,11 +164,11 @@ void draw_game_over_screen(
     int st_w = text_width(score_text, 30);
 
     render_text("GAME OVER", place_inside(screen, go_w, 60, "center", "top").x, 350, 60,
-                KT_Color{255, 255, 255, 255});
+                Color{255, 255, 255, 255});
     render_text(result_text, place_inside(screen, rt_w, 40, "center", "top").x, 430, 40,
-                KT_Color{255, 215, 0, 255});
+                Color{255, 215, 0, 255});
     render_text(score_text,  place_inside(screen, st_w, 30, "center", "top").x, 490, 30,
-                KT_Color{200, 200, 200, 255});
+                Color{200, 200, 200, 255});
 
     EndDrawing();
   }

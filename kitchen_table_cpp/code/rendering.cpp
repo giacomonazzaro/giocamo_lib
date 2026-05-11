@@ -23,10 +23,6 @@ static bool s_font_loaded = false;
 static std::unordered_map<std::string, Texture2D> s_texture_cache;
 static std::unordered_map<std::string, Texture2D> s_rounded_texture_cache;
 
-// Convert KT_Color → raylib Color (bit-compatible layout).
-static inline ::Color to_rl(KT_Color c) {
-  return ::Color{c.r, c.g, c.b, c.a};
-}
 
 // --- Background shader loading ---
 
@@ -97,7 +93,7 @@ static Texture2D* get_rounded_texture(const std::string& image_path) {
   int sr = (int)(r * std::min((float)iw / w, (float)ih / h));
 
   // Create rounded rectangle mask at image resolution.
-  Image mask = GenImageColor(iw, ih, ::Color{0, 0, 0, 0});
+  Image mask = GenImageColor(iw, ih, Color{0, 0, 0, 0});
   ImageDrawRectangle(&mask, sr, 0, iw - 2 * sr, ih, WHITE);
   ImageDrawRectangle(&mask, 0, sr, iw, ih - 2 * sr, WHITE);
   ImageDrawCircle(&mask, sr, sr, sr, WHITE);
@@ -119,7 +115,7 @@ static Texture2D* get_rounded_texture(const std::string& image_path) {
 // --- Text rendering ---
 
 void render_text(
-  const std::string& text, float x, float y, int size, KT_Color color
+  const std::string& text, float x, float y, int size, Color color
 ) {
   DrawTextEx(
     get_font(),
@@ -127,7 +123,7 @@ void render_text(
     {(float)x, (float)y},
     (float)size,
     kt::FONT_SPACING,
-    to_rl(color)
+    color
   );
 }
 
@@ -176,9 +172,9 @@ void draw_card_back() {
   float r = (float)kt::CARD_CORNER_RADIUS;
 
   // KT_Card colors from kt namespace (matching config.py defaults).
-  ::Color back_color    = {60, 80, 120, 255};
-  ::Color pattern_color = {80, 100, 140, 255};
-  ::Color border_color  = {80, 80, 80, 255};
+  Color back_color    = {60, 80, 120, 255};
+  Color pattern_color = {80, 100, 140, 255};
+  Color border_color  = {80, 80, 80, 255};
 
   // KT_Card background.
   DrawRectangleRounded(
@@ -231,7 +227,7 @@ void draw_card_content(const Thing& card, bool face_up) {
     );
   } else {
     // Fallback: solid color background.
-    ::Color bg = {255, 255, 255, 255};
+    Color bg = {255, 255, 255, 255};
     DrawRectangleRounded(Rectangle{x, y, w, h}, r / std::min(w, h), 8, bg);
   }
 
@@ -288,7 +284,7 @@ void draw_stack_placeholder(const Stack& stack) {
     r / std::min(w, h),
     8,
     1.0f,
-    ::Color{100, 100, 100, 100}
+    Color{100, 100, 100, 100}
   );
 
   // Label centered in the placeholder.
@@ -300,7 +296,7 @@ void draw_stack_placeholder(const Stack& stack) {
     (int)(stack.rect.x + (w - (float)label_w) / 2.0f),
     (int)(stack.rect.y + h / 2.0f - 7.0f),
     14,
-    KT_Color{100, 100, 100, 150}
+    Color{100, 100, 100, 150}
   );
 }
 
@@ -337,7 +333,7 @@ void draw_zoomed_card(const Thing& card, bool face_up) {
   int screen_h = GetScreenHeight();
 
   // Dim background.
-  DrawRectangle(0, 0, screen_w, screen_h, ::Color{0, 0, 0, 160});
+  DrawRectangle(0, 0, screen_w, screen_h, Color{0, 0, 0, 160});
 
   float card_w = (float)kt::CARD_WIDTH;
   float card_h = (float)kt::CARD_HEIGHT;
