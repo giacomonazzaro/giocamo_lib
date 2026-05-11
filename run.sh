@@ -29,5 +29,10 @@ cmake -S gods_cpp -B gods_cpp/build \
 cmake --build gods_cpp/build --parallel 4
 cmake --install gods_cpp/build
 
+cmake -S online_cpp -B online_cpp/build \
+  -DPython_EXECUTABLE=venv/bin/python \
+  -DCMAKE_BUILD_TYPE=Release
+cmake --build online_cpp/build --parallel 4
+cmake --install online_cpp/build
 
 exec "$VENV/bin/python" -m gods_graphical.main "$@"
