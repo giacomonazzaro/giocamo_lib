@@ -1,10 +1,10 @@
 #pragma once
 
+#include <online_cpp/code/setup.h>
+
 #include <memory>
 #include <string>
 #include <utility>
-
-#include <online_cpp/code/setup.h>
 
 struct Menu_Result {
   enum Mode { VS_AI, ONLINE } mode = VS_AI;
@@ -16,5 +16,6 @@ struct Menu_Result {
 };
 
 // Opens a raylib window for the menu and returns the user's choice.
-// The window stays open after this returns so main can render the game inside it.
+// The window stays open after this returns so main can render the game inside
+// it.
 Menu_Result run_menu();

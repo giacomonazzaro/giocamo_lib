@@ -66,8 +66,8 @@ void update_card_positions(Stack& stack, Table_State& state, bool sort) {
     int card_id = stack.cards[i];
     if (card_id != drag_id) {
       KT_Card& card = state.cards[card_id];
-      card.x     = start_x + static_cast<float>(i) * spread_x;
-      card.y     = start_y + static_cast<float>(i) * spread_y;
+      card.x        = start_x + static_cast<float>(i) * spread_x;
+      card.y        = start_y + static_cast<float>(i) * spread_y;
     }
   }
 }
@@ -111,7 +111,7 @@ std::vector<int> create_sample_cards(Table_State& state) {
   std::vector<int> card_ids;
   for (int i = 0; i < 10; i++) {
     KT_Card card    = create_card_design(i);
-    int  card_id = static_cast<int>(state.cards.size());
+    int     card_id = static_cast<int>(state.cards.size());
     state.cards.push_back(card);
     card_ids.push_back(card_id);
   }

@@ -27,7 +27,8 @@ struct Choose_Options {
   bool                     up_to = true;
 };
 
-using Choose = std::variant<Choose_Card, Choose_Cards, Choose_Option, Choose_Options>;
+using Choose =
+  std::variant<Choose_Card, Choose_Cards, Choose_Option, Choose_Options>;
 
 struct Game;
 struct Choice;
@@ -62,5 +63,9 @@ void resolve_choice(Game& game, const Choice& choice, int index);
 // Forward declaration; defined in agent.h.
 struct Agent;
 
-void                  game_loop(Game& game, Agent& agent, std::function<void(Game&)> callback = nullptr);
-std::optional<Choice> game_frame(Game& game, Agent& agent, std::optional<Choice> choice);
+void game_loop(
+  Game& game, Agent& agent, std::function<void(Game&)> callback = nullptr
+);
+std::optional<Choice> game_frame(
+  Game& game, Agent& agent, std::optional<Choice> choice
+);

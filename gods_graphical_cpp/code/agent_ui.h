@@ -1,11 +1,11 @@
 #pragma once
 
-#include <set>
-
 #include <game_cpp/agent.h>
 #include <gods_cpp/code/models.h>
 #include <kitchen_table_cpp/code/models.h>
 #include <kitchen_table_cpp/code/ui.h>
+
+#include <set>
 
 // Indices into Table_State.stacks for a given player's zones. Layout is the
 // one produced by make_gods_stacks(): deck/hand/discard/peoples/wonders, each
@@ -25,7 +25,9 @@ inline Stack_Indices stack_indices(int player_index) {
 
 // Copy current visual stack contents back into the Game_State (used when
 // exiting Playground mode so game logic resumes from the user-arranged layout).
-void sync_game_state_from_table(Table_State& table_state, Game_State& gods_state);
+void sync_game_state_from_table(
+  Table_State& table_state, Game_State& gods_state
+);
 
 // Push the current Game_State zones into Table_State.stacks and refresh card
 // positions.
@@ -43,9 +45,9 @@ struct Card_Id_Less {
 // UI-driven agent: reads drag/drop, button clicks, and card presses from the
 // player to feed choose_action with an action index. Mirrors agent_ui.py.
 struct Agent_UI : Agent {
-  Table_State* table_state;
-  UI_State*    ui_state;
-  int          bottom_player;
+  Table_State*                    table_state;
+  UI_State*                       ui_state;
+  int                             bottom_player;
   std::set<Card_Id, Card_Id_Less> card_multiselection;
 
   Agent_UI(Table_State* t, UI_State* u, int bp)

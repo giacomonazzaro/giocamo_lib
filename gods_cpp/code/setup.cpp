@@ -4,7 +4,8 @@
 #include "models.h"
 
 void set_card_designs(
-  const std::vector<std::tuple<std::string, std::string, std::string, std::string>>& entries
+  const std::vector<
+    std::tuple<std::string, std::string, std::string, std::string>>& entries
 ) {
   card_designs.clear();
   card_designs.reserve(entries.size());

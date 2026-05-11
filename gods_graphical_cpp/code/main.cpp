@@ -187,11 +187,11 @@ static void draw_hud(
   UI_State&                    ui_state,
   int                          bottom_player
 ) {
-  int          H      = kt::WINDOW_HEIGHT;
-  int          h      = kt::CARD_HEIGHT;
-  int          margin = 20;
+  int       H      = kt::WINDOW_HEIGHT;
+  int       h      = kt::CARD_HEIGHT;
+  int       margin = 20;
   Rectangle window = {0.0f, 0.0f, (float)kt::WINDOW_WIDTH, (float)H};
-  int          bottom_wonders_y =
+  int       bottom_wonders_y =
     (int)place_inside(window, 0, h, "left", "bottom", 2 * margin + h).y;
   int opponent_shift = (int)(h * 0.65f);
   int top_wonders_y  = H - bottom_wonders_y - h - opponent_shift;
@@ -211,17 +211,17 @@ static void draw_hud(
   if (current_choice && !ui_state.playground) {
     const std::string& text = current_choice->text_description;
     if (!text.empty()) {
-      int          font_size = 22;
-      int          tw        = text_width(text, font_size);
+      int       font_size = 22;
+      int       tw        = text_width(text, font_size);
       Rectangle r = ui_state.place(tw, font_size, "right", "center", 20);
       render_text(text, r.x, r.y - 50, font_size, Color{200, 200, 200, 255});
     }
   }
 
   // Playground toggle button (top-right).
-  std::string  label  = ui_state.playground ? "Playground: ON"
-                                            : "Playground: OFF";
-  Rectangle button = ui_state.place(160, 32, "right", "top", 20);
+  std::string label  = ui_state.playground ? "Playground: ON"
+                                           : "Playground: OFF";
+  Rectangle   button = ui_state.place(160, 32, "right", "top", 20);
   if (immediate_button(button, label, Color{20, 20, 20, 100})) {
     ui_state.playground = !ui_state.playground;
     if (!ui_state.playground) {
@@ -239,7 +239,7 @@ static void draw_hud(
     const KT_Card& kt_card = table_state->animated_cards[card_id];
     int            btn_w = 44, btn_h = 36, gap = 6;
     int            panel_w   = 10 * btn_w + 9 * gap + 16;
-    Rectangle   card_rect = {
+    Rectangle      card_rect = {
       kt_card.x, kt_card.y, (float)kt::CARD_WIDTH, (float)kt::CARD_HEIGHT
     };
     Rectangle panel =
@@ -256,7 +256,7 @@ static void draw_hud(
       ::Color{20, 20, 20, 200}
     );
     Rectangle btn = place_inside(panel, btn_w, btn_h, "left", "center", 8);
-    int          current_power = gods_state.all_cards[card_id].power;
+    int       current_power = gods_state.all_cards[card_id].power;
     for (int v = 1; v <= 10; ++v) {
       std::optional<Color> col = std::nullopt;
       if (v == current_power) col = Color{80, 160, 80, 255};

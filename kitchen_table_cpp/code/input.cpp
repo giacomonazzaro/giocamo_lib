@@ -36,8 +36,9 @@ bool point_in_stack_area(float px, float py, const Stack& stack) {
   return (x <= px && px <= x + w && y <= py && py <= y + h);
 }
 
-std::optional<std::pair<int, int>>
-find_card_at(float px, float py, Table_State& state) {
+std::optional<std::pair<int, int>> find_card_at(
+  float px, float py, Table_State& state
+) {
   // Find the topmost card at position. stack_index is -1 for loose cards.
 
   // Check loose cards first (on top of everything).
@@ -77,8 +78,8 @@ void handle_mouse_press(Table_State& state) {
   auto result = find_card_at(mx, my, state);
   if (!result) return;
 
-  int   card_id   = result->first;
-  int   stack_idx = result->second;
+  int      card_id   = result->first;
+  int      stack_idx = result->second;
   KT_Card& card      = state.cards[card_id];
 
   drag.card_id        = card_id;
@@ -103,7 +104,8 @@ void handle_mouse_release(Table_State& state) {
     }
   }
 
-  // Signal the drop event as (from_stack, to_stack, card_id) — matches Python original.
+  // Signal the drop event as (from_stack, to_stack, card_id) — matches Python
+  // original.
   state.dropped_card =
     std::make_tuple(drag.original_stack, drag.current_stack, drag.card_id);
 
@@ -123,11 +125,11 @@ void handle_mouse_move(Table_State& state) {
   Drag_State& drag = state.drag_state;
   if (drag.card_id < 0) return;
 
-  float mx   = (float)GetMouseX();
-  float my   = (float)GetMouseY();
+  float    mx   = (float)GetMouseX();
+  float    my   = (float)GetMouseY();
   KT_Card& card = state.cards[drag.card_id];
-  card.x     = mx - drag.offset_x;
-  card.y     = my - drag.offset_y;
+  card.x        = mx - drag.offset_x;
+  card.y        = my - drag.offset_y;
 
   int hovered_stack = find_stack_at(mx, my, state);
   if (hovered_stack < 0) return;
@@ -180,7 +182,7 @@ void handle_rotate_card(Table_State& state, bool clockwise) {
   auto result = find_card_at(mx, my, state);
   if (!result) return;
 
-  int   card_id = result->first;
+  int      card_id = result->first;
   KT_Card& card    = state.cards[card_id];
   if (clockwise)
     card.rotation = card.rotation + 90;
@@ -222,7 +224,7 @@ void update_input(Table_State& state) {
   float my = (float)GetMouseY();
 
   if (IsKeyDown(KEY_SPACE)) {
-    auto result = find_card_at(mx, my, state);
+    auto result          = find_card_at(mx, my, state);
     state.zoomed_card_id = result ? result->first : -1;
   } else {
     state.zoomed_card_id = -1;

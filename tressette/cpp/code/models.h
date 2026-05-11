@@ -1,12 +1,11 @@
 #pragma once
 
+#include <game_cpp/game.h>
 #include <nanobind/nanobind.h>
 
 #include <functional>
 #include <string>
 #include <vector>
-
-#include <game_cpp/game.h>
 
 namespace nb = nanobind;
 
@@ -44,8 +43,8 @@ enum class Suit {
 // kitchen_table_cpp `::Card` type — otherwise nanobind treats both as the
 // same type and the second registration is dropped.
 struct Card {
-  int  id   = 0;             // 0..39, index into Game_State.all_cards.
-  int  rank = 1;             // 1..10.
+  int  id   = 0;  // 0..39, index into Game_State.all_cards.
+  int  rank = 1;  // 1..10.
   Suit suit = Suit::COPPE;
 };
 
@@ -59,14 +58,14 @@ struct Player {
 // Full Tressette game state. Subclasses game_cpp's abstract Game so the
 // templated minimax / game_loop work directly on it.
 struct Game_State : Game {
-  std::vector<Card>     all_cards;          // 40 fixed cards.
-  std::vector<Player>   players;            // exactly 2.
-  std::vector<int>      stock;              // face-down draw pile.
-  std::vector<int>      trick;              // 0..2 cards on the table.
-  int                   trick_leader      = 0;
-  int                   current_player    = 0;
-  int                   last_trick_winner = -1;  // for the +1 ultima bonus.
-  bool                  game_over         = false;
+  std::vector<Card>   all_cards;  // 40 fixed cards.
+  std::vector<Player> players;    // exactly 2.
+  std::vector<int>    stock;      // face-down draw pile.
+  std::vector<int>    trick;      // 0..2 cards on the table.
+  int                 trick_leader      = 0;
+  int                 current_player    = 0;
+  int                 last_trick_winner = -1;  // for the +1 ultima bonus.
+  bool                game_over         = false;
   // True after both cards have been played but before the trick is moved to
   // the winner's pile and the next draw happens. Lets the UI hold both cards
   // on the table until the player clicks to advance.

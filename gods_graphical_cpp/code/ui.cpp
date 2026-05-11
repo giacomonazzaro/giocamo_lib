@@ -1,14 +1,13 @@
 #include "ui.h"
 
-#include <algorithm>
-#include <cctype>
-#include <filesystem>
-
-#include <raylib.h>
-
 #include <kitchen_table_cpp/code/config.h>
 #include <kitchen_table_cpp/code/rendering.h>
 #include <kitchen_table_cpp/code/ui.h>
+#include <raylib.h>
+
+#include <algorithm>
+#include <cctype>
+#include <filesystem>
 
 namespace fs = std::filesystem;
 
@@ -19,24 +18,26 @@ static const std::string IMAGES_DIR = []() {
 }();
 
 std::vector<Stack> make_gods_stacks(int bottom_player) {
-  int   W = kt::WINDOW_WIDTH;
-  int   H = kt::WINDOW_HEIGHT;
-  int   w = kt::CARD_WIDTH;
-  int   h = kt::CARD_HEIGHT;
-  int   margin = 20;
+  int W      = kt::WINDOW_WIDTH;
+  int H      = kt::WINDOW_HEIGHT;
+  int w      = kt::CARD_WIDTH;
+  int h      = kt::CARD_HEIGHT;
+  int margin = 20;
 
   int spread_hand    = 160;
   int spread_wonders = 160;
   int spread_pile    = -3;
 
-  Rectangle window = {0.0f, 0.0f, (float)W, (float)H};
-  int hand_width    = (int)((float)w * 5.5f * (float)W / 1600.0f);
-  int peoples_width = 2 * w + spread_wonders;
+  Rectangle window        = {0.0f, 0.0f, (float)W, (float)H};
+  int       hand_width    = (int)((float)w * 5.5f * (float)W / 1600.0f);
+  int       peoples_width = 2 * w + spread_wonders;
 
   // Bottom player layout (player 0 by default).
-  Rectangle p0_hand    = place_inside(window, hand_width, h, "center", "bottom", margin);
+  Rectangle p0_hand =
+    place_inside(window, hand_width, h, "center", "bottom", margin);
   p0_hand.x += 100;
-  Rectangle p0_wonders = place_next(p0_hand, hand_width, h, "center", "top", margin);
+  Rectangle p0_wonders =
+    place_next(p0_hand, hand_width, h, "center", "top", margin);
   Rectangle p0_deck    = place_next(p0_hand, w, h, "left", "center", margin);
   Rectangle p0_discard = place_next(p0_deck, w, h, "left", "center", margin);
 
@@ -45,17 +46,22 @@ std::vector<Stack> make_gods_stacks(int bottom_player) {
   int top_wonders_y  = H - (int)p0_wonders.y - h - opponent_shift;
 
   Rectangle shared_deck = place_next(window, w, h, "right", "center", 10);
-  Rectangle p0_peoples  = place_next(p0_wonders, peoples_width, h, "left", "center", margin);
+  Rectangle p0_peoples =
+    place_next(p0_wonders, peoples_width, h, "left", "center", margin);
 
-  Rectangle p1_deck    = {p0_deck.x,    (float)top_y,        (float)w,             (float)h};
-  Rectangle p1_hand    = {p0_hand.x,    (float)top_y,        (float)hand_width,    (float)h};
-  Rectangle p1_discard = {p0_discard.x, (float)top_y,        (float)w,             (float)h};
-  Rectangle p1_peoples = {p0_peoples.x, (float)top_wonders_y, (float)peoples_width, (float)h};
-  Rectangle p1_wonders = {p0_wonders.x, (float)top_wonders_y, (float)hand_width,    (float)h};
+  Rectangle p1_deck    = {p0_deck.x, (float)top_y, (float)w, (float)h};
+  Rectangle p1_hand    = {p0_hand.x, (float)top_y, (float)hand_width, (float)h};
+  Rectangle p1_discard = {p0_discard.x, (float)top_y, (float)w, (float)h};
+  Rectangle p1_peoples = {
+    p0_peoples.x, (float)top_wonders_y, (float)peoples_width, (float)h
+  };
+  Rectangle p1_wonders = {
+    p0_wonders.x, (float)top_wonders_y, (float)hand_width, (float)h
+  };
 
   if (bottom_player == 1) {
-    std::swap(p0_deck,    p1_deck);
-    std::swap(p0_hand,    p1_hand);
+    std::swap(p0_deck, p1_deck);
+    std::swap(p0_hand, p1_hand);
     std::swap(p0_discard, p1_discard);
     std::swap(p0_peoples, p1_peoples);
     std::swap(p0_wonders, p1_wonders);
@@ -74,25 +80,26 @@ std::vector<Stack> make_gods_stacks(int bottom_player) {
   };
 
   std::vector<Stack> out;
-  out.push_back(mk(p0_deck,    0,              spread_pile, false,   "p0_deck"));
-  out.push_back(mk(p0_hand,    spread_hand,    0,           visible, "p0_hand"));
-  out.push_back(mk(p0_discard, 0,              spread_pile, true,    "p0_discard"));
-  out.push_back(mk(p0_peoples, spread_wonders, 0,           true,    "p0_peoples"));
-  out.push_back(mk(p0_wonders, spread_wonders, 0,           true,    "p0_wonders"));
-  out.push_back(mk(p1_deck,    0,              spread_pile, false,   "p1_deck"));
-  out.push_back(mk(p1_hand,    spread_hand,    0,           visible, "p1_hand"));
-  out.push_back(mk(p1_discard, 0,              spread_pile, true,    "p1_discard"));
-  out.push_back(mk(p1_peoples, spread_wonders, 0,           true,    "p1_peoples"));
-  out.push_back(mk(p1_wonders, spread_wonders, 0,           true,    "p1_wonders"));
-  out.push_back(mk(shared_deck, 0,             spread_pile, false,   "shared_deck"));
+  out.push_back(mk(p0_deck, 0, spread_pile, false, "p0_deck"));
+  out.push_back(mk(p0_hand, spread_hand, 0, visible, "p0_hand"));
+  out.push_back(mk(p0_discard, 0, spread_pile, true, "p0_discard"));
+  out.push_back(mk(p0_peoples, spread_wonders, 0, true, "p0_peoples"));
+  out.push_back(mk(p0_wonders, spread_wonders, 0, true, "p0_wonders"));
+  out.push_back(mk(p1_deck, 0, spread_pile, false, "p1_deck"));
+  out.push_back(mk(p1_hand, spread_hand, 0, visible, "p1_hand"));
+  out.push_back(mk(p1_discard, 0, spread_pile, true, "p1_discard"));
+  out.push_back(mk(p1_peoples, spread_wonders, 0, true, "p1_peoples"));
+  out.push_back(mk(p1_wonders, spread_wonders, 0, true, "p1_wonders"));
+  out.push_back(mk(shared_deck, 0, spread_pile, false, "shared_deck"));
   return out;
 }
 
 std::string get_image_path(const std::string& card_name) {
   std::string name = card_name;
   if (name.size() == 1) name = "0" + name;
-  std::transform(name.begin(), name.end(), name.begin(),
-                 [](unsigned char c) { return (char)std::tolower(c); });
+  std::transform(name.begin(), name.end(), name.begin(), [](unsigned char c) {
+    return (char)std::tolower(c);
+  });
   std::replace(name.begin(), name.end(), ' ', '_');
   fs::path path = fs::path(IMAGES_DIR) / (name + ".png");
   if (fs::exists(path)) return path.string();
@@ -111,8 +118,13 @@ void draw_card_power_badge(const std::string& power, bool destroyed) {
 
   int size = (int)(0.2f * (float)w);
   int tw   = text_width(power, size);
-  render_text(power, (float)(badge_cx - tw / 2), (float)(badge_cy - size / 2), size,
-              Color{255, 255, 255, 255});
+  render_text(
+    power,
+    (float)(badge_cx - tw / 2),
+    (float)(badge_cy - size / 2),
+    size,
+    Color{255, 255, 255, 255}
+  );
 
   if (destroyed) {
     DrawRectangleRounded(
@@ -124,25 +136,38 @@ void draw_card_power_badge(const std::string& power, bool destroyed) {
   }
 }
 
-void draw_player_hud(int player_id, int score, int deck_count, bool is_current, int hud_y) {
+void draw_player_hud(
+  int player_id, int score, int deck_count, bool is_current, int hud_y
+) {
   (void)player_id;
   (void)deck_count;
 
   if (is_current) {
     DrawRectangleRounded(
-      Rectangle{(float)(kt::WINDOW_WIDTH - 10), (float)(hud_y + 28), 6.0f, 50.0f},
-      0.5f, 4, ::Color{255, 255, 255, 255}
+      Rectangle{
+        (float)(kt::WINDOW_WIDTH - 10), (float)(hud_y + 28), 6.0f, 50.0f
+      },
+      0.5f,
+      4,
+      ::Color{255, 255, 255, 255}
     );
   }
 
   std::string score_text = "Points: " + std::to_string(score);
-  render_text(score_text, (float)(kt::WINDOW_WIDTH - 200), (float)(hud_y + 22), 40,
-              Color{200, 200, 200, 255});
+  render_text(
+    score_text,
+    (float)(kt::WINDOW_WIDTH - 200),
+    (float)(hud_y + 22),
+    40,
+    Color{200, 200, 200, 255}
+  );
 }
 
 void draw_game_over_screen(
-    Table_State& table_state, const std::string& result_text,
-    const std::vector<std::string>& names, const std::vector<int>& scores
+  Table_State&                    table_state,
+  const std::string&              result_text,
+  const std::vector<std::string>& names,
+  const std::vector<int>&         scores
 ) {
   (void)names;
   int w_width  = GetScreenWidth();
@@ -156,19 +181,35 @@ void draw_game_over_screen(
     // Semi-transparent overlay (matches tweak["modal_overlay"]: 0,0,0,180).
     DrawRectangle(0, 0, w_width, w_height, ::Color{0, 0, 0, 180});
 
-    Rectangle screen = {0.0f, 0.0f, (float)w_width, (float)w_height};
-    std::string score_text = std::to_string(scores[0]) + "     |     " + std::to_string(scores[1]);
+    Rectangle   screen     = {0.0f, 0.0f, (float)w_width, (float)w_height};
+    std::string score_text = std::to_string(scores[0]) + "     |     " +
+                             std::to_string(scores[1]);
 
     int go_w = text_width("GAME OVER", 60);
     int rt_w = text_width(result_text, 40);
     int st_w = text_width(score_text, 30);
 
-    render_text("GAME OVER", place_inside(screen, go_w, 60, "center", "top").x, 350, 60,
-                Color{255, 255, 255, 255});
-    render_text(result_text, place_inside(screen, rt_w, 40, "center", "top").x, 430, 40,
-                Color{255, 215, 0, 255});
-    render_text(score_text,  place_inside(screen, st_w, 30, "center", "top").x, 490, 30,
-                Color{200, 200, 200, 255});
+    render_text(
+      "GAME OVER",
+      place_inside(screen, go_w, 60, "center", "top").x,
+      350,
+      60,
+      Color{255, 255, 255, 255}
+    );
+    render_text(
+      result_text,
+      place_inside(screen, rt_w, 40, "center", "top").x,
+      430,
+      40,
+      Color{255, 215, 0, 255}
+    );
+    render_text(
+      score_text,
+      place_inside(screen, st_w, 30, "center", "top").x,
+      490,
+      30,
+      Color{200, 200, 200, 255}
+    );
 
     EndDrawing();
   }

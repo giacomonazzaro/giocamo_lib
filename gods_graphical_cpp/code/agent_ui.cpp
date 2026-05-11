@@ -1,16 +1,17 @@
 #include "agent_ui.h"
 
-#include <variant>
-
-#include <raylib.h>
-
 #include <kitchen_table_cpp/code/config.h>
 #include <kitchen_table_cpp/code/game_state.h>
 #include <kitchen_table_cpp/code/input.h>
+#include <raylib.h>
 
-void sync_game_state_from_table(Table_State& table_state, Game_State& gods_state) {
+#include <variant>
+
+void sync_game_state_from_table(
+  Table_State& table_state, Game_State& gods_state
+) {
   for (int i = 0; i < 2; ++i) {
-    Stack_Indices s = stack_indices(i);
+    Stack_Indices s               = stack_indices(i);
     gods_state.players[i].deck    = table_state.stacks[s.deck].cards;
     gods_state.players[i].hand    = table_state.stacks[s.hand].cards;
     gods_state.players[i].discard = table_state.stacks[s.discard].cards;
@@ -27,13 +28,15 @@ void sync_game_state_from_table(Table_State& table_state, Game_State& gods_state
 void update_stacks(Table_State& table_state, Game_State& gods_state) {
   auto refresh = [&](int stack_id, const std::vector<int>& card_ids) {
     table_state.stacks[stack_id].cards = card_ids;
-    update_card_positions(table_state.stacks[stack_id], table_state, /*sort=*/false);
+    update_card_positions(
+      table_state.stacks[stack_id], table_state, /*sort=*/false
+    );
   };
 
   for (int i = 0; i < 2; ++i) {
     Stack_Indices s = stack_indices(i);
-    refresh(s.deck,    gods_state.players[i].deck);
-    refresh(s.hand,    gods_state.players[i].hand);
+    refresh(s.deck, gods_state.players[i].deck);
+    refresh(s.hand, gods_state.players[i].hand);
     refresh(s.discard, gods_state.players[i].discard);
     std::vector<int> owned_people;
     for (int pid : gods_state.peoples) {
@@ -45,7 +48,7 @@ void update_stacks(Table_State& table_state, Game_State& gods_state) {
 }
 
 int Agent_UI::choose_action(Game& state, const Choice& choice) {
-  Game_State& gods_state = static_cast<Game_State&>(state);
+  Game_State& gods_state  = static_cast<Game_State&>(state);
   Choose      action_type = choice.actions(state);
 
   int total_options = action_options_count(action_type);
@@ -55,11 +58,11 @@ int Agent_UI::choose_action(Game& state, const Choice& choice) {
   int play_stack = choice.player_index * 5 + 4;
 
   // Set drag-and-drop permission (safe to call every frame).
-  table_state->is_drop_card_allowed =
-      [hand_stack, play_stack](int src, int dst, int) {
-        if (src == dst) return true;
-        return src == hand_stack && dst == play_stack;
-      };
+  table_state->is_drop_card_allowed = [hand_stack,
+                                       play_stack](int src, int dst, int) {
+    if (src == dst) return true;
+    return src == hand_stack && dst == play_stack;
+  };
 
   // Clear highlights — repopulated below for this frame.
   ui_state->highlighted_cards.clear();
@@ -68,12 +71,14 @@ int Agent_UI::choose_action(Game& state, const Choice& choice) {
   auto dropped = table_state->poll_dropped_card();
   if (dropped) {
     auto [orig, target, dropped_card_id] = *dropped;
-    if (choice.description == "main" && orig == hand_stack && target == play_stack) {
+    if (choice.description == "main" && orig == hand_stack &&
+        target == play_stack) {
       // Find the Card_Id in the Choose_Card targets whose card_index matches.
       if (auto* cc = std::get_if<Choose_Card>(&action_type)) {
         for (int i = 0; i < (int)cc->targets.size(); ++i) {
           Card_Id cid = unpack_card_id(cc->targets[i]);
-          if (!Card_Id::is_null(cid) && cid.card_index == dropped_card_id) return i;
+          if (!Card_Id::is_null(cid) && cid.card_index == dropped_card_id)
+            return i;
         }
       }
     }
@@ -93,13 +98,15 @@ int Agent_UI::choose_action(Game& state, const Choice& choice) {
     button_count = (int)std::get<Choose_Options>(action_type).targets.size();
   }
 
-  int gap            = 20;
-  int button_height  = 40;
-  int button_width   = 140;
-  int all_buttons_w  = button_count * button_width + button_count * gap;
+  int       gap           = 20;
+  int       button_height = 40;
+  int       button_width  = 140;
+  int       all_buttons_w = button_count * button_width + button_count * gap;
   Rectangle all_buttons =
-      ui_state->place(all_buttons_w, button_height, "right", "center", gap);
-  Rectangle button = {all_buttons.x, all_buttons.y, (float)button_width, (float)button_height};
+    ui_state->place(all_buttons_w, button_height, "right", "center", gap);
+  Rectangle button = {
+    all_buttons.x, all_buttons.y, (float)button_width, (float)button_height
+  };
 
   bool mouse_clicked = IsMouseButtonPressed(MOUSE_BUTTON_LEFT);
 
@@ -112,7 +119,8 @@ int Agent_UI::choose_action(Game& state, const Choice& choice) {
   }
 
   if (auto* cc = std::get_if<Choose_Card>(&action_type)) {
-    const std::string done_label = (choice.description == "main") ? "Pass" : "Done";
+    const std::string done_label = (choice.description == "main") ? "Pass"
+                                                                  : "Done";
     for (int i = 0; i < (int)cc->targets.size(); ++i) {
       Card_Id cid = unpack_card_id(cc->targets[i]);
       if (Card_Id::is_null(cid)) {
@@ -122,7 +130,7 @@ int Agent_UI::choose_action(Game& state, const Choice& choice) {
         }
         button.x += button.width + (float)gap;
       } else {
-        int kt_card_id = gods_state.get_card(cid).id;
+        int kt_card_id                 = gods_state.get_card(cid).id;
         ui_state->highlighted_cards[i] = kt_card_id;
         if (mouse_clicked && choice.description != "main") {
           const KT_Card& kt_card = table_state->cards[kt_card_id];
@@ -140,7 +148,7 @@ int Agent_UI::choose_action(Game& state, const Choice& choice) {
     // Build all combinations as sets so we can compare against the running
     // multiselection.
     std::vector<std::set<Card_Id, Card_Id_Less>> combos;
-    std::set<Card_Id, Card_Id_Less> all_card_ids;
+    std::set<Card_Id, Card_Id_Less>              all_card_ids;
     auto unpack_combo = [&](int packed_combo_index) {
       // Choose_Cards in game_cpp encodes combinations differently; for now
       // fall through to enumerating combinations via all_combinations() lives
@@ -173,13 +181,14 @@ int Agent_UI::choose_action(Game& state, const Choice& choice) {
 
     // Iterate game_cpp choice space looking for a match. We use
     // action_options_count semantics: index by combination order.
-    // For now we expose a "Done" button so the player can confirm any selection.
+    // For now we expose a "Done" button so the player can confirm any
+    // selection.
     if (!card_multiselection.empty()) {
       if (immediate_button(button, "Done")) {
-        // Linear scan over total_options indices to find a matching combination.
-        // game_cpp's resolve_choice picks via index; we don't have direct
-        // visibility of which index corresponds to which combination without
-        // re-running all_combinations(). For the current data set the
+        // Linear scan over total_options indices to find a matching
+        // combination. game_cpp's resolve_choice picks via index; we don't have
+        // direct visibility of which index corresponds to which combination
+        // without re-running all_combinations(). For the current data set the
         // combinations are enumerated in the same order the Python code did:
         // each index corresponds to a combination of card ids from the
         // (now-unpacked) targets.

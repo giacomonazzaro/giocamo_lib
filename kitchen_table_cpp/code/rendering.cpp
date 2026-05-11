@@ -23,7 +23,6 @@ static bool s_font_loaded = false;
 static std::unordered_map<std::string, Texture2D> s_texture_cache;
 static std::unordered_map<std::string, Texture2D> s_rounded_texture_cache;
 
-
 // --- Background shader loading ---
 
 static void load_background_shader() {
@@ -309,20 +308,20 @@ void animate(std::vector<KT_Card>& cards, const Table_State& state, float dt) {
     KT_Card&       acard  = cards[i];
     const KT_Card& target = state.cards[i];
 
-    float old_x = acard.x;
-    acard.x     = acard.x * (1.0f - dt) + target.x * dt;
-    acard.y     = acard.y * (1.0f - dt) + target.y * dt;
-    float vx    = acard.x - old_x;
-    acard.rotation =
-      acard.rotation * (1.0f - dt) + target.rotation * dt + vx * 0.1f;
+    float old_x    = acard.x;
+    acard.x        = acard.x * (1.0f - dt) + target.x * dt;
+    acard.y        = acard.y * (1.0f - dt) + target.y * dt;
+    float vx       = acard.x - old_x;
+    acard.rotation = acard.rotation * (1.0f - dt) + target.rotation * dt +
+                     vx * 0.1f;
   }
 
   // Dragged card snaps immediately to the target position.
   if (selected_card_id >= 0 && selected_card_id < n) {
     KT_Card&       acard  = cards[selected_card_id];
     const KT_Card& target = state.cards[selected_card_id];
-    acard.x            = target.x;
-    acard.y            = target.y;
+    acard.x               = target.x;
+    acard.y               = target.y;
   }
 }
 
@@ -397,8 +396,8 @@ void draw_table(Table_State& state) {
 
   // Draw the dragged card on top of everything else.
   if (state.drag_state.card_id >= 0) {
-    const KT_Card& card    = state.animated_cards[state.drag_state.card_id];
-    bool        face_up = state.stacks[state.drag_state.original_stack].face_up;
+    const KT_Card& card = state.animated_cards[state.drag_state.card_id];
+    bool face_up        = state.stacks[state.drag_state.original_stack].face_up;
     draw_card(card, face_up);
   }
 

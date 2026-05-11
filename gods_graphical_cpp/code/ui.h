@@ -1,9 +1,9 @@
 #pragma once
 
+#include <kitchen_table_cpp/code/models.h>
+
 #include <string>
 #include <vector>
-
-#include <kitchen_table_cpp/code/models.h>
 
 // Build the 11 standard stack layouts for a Gods table (deck/hand/discard/
 // wonders/peoples per player + shared_deck), keyed by bottom_player.
@@ -18,11 +18,16 @@ std::string get_image_path(const std::string& card_name);
 // caller is responsible for translating to the card origin first.
 void draw_card_power_badge(const std::string& power, bool destroyed);
 
-// HUD: per-player score panel anchored at hud_y on the right side of the screen.
-void draw_player_hud(int player_id, int score, int deck_count, bool is_current, int hud_y);
+// HUD: per-player score panel anchored at hud_y on the right side of the
+// screen.
+void draw_player_hud(
+  int player_id, int score, int deck_count, bool is_current, int hud_y
+);
 
 // Game-over screen: blocks the main loop drawing until the window is closed.
 void draw_game_over_screen(
-    Table_State& table_state, const std::string& result_text,
-    const std::vector<std::string>& names, const std::vector<int>& scores
+  Table_State&                    table_state,
+  const std::string&              result_text,
+  const std::vector<std::string>& names,
+  const std::vector<int>&         scores
 );

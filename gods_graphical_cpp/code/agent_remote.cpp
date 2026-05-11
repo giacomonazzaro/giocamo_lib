@@ -9,7 +9,7 @@ int Agent_Remote::choose_action(Game& state, const Choice& choice) {
 }
 
 int Agent_Local_Online::choose_action(Game& state, const Choice& choice) {
-  int index = local_agent->choose_action(state, choice);
+  int            index = local_agent->choose_action(state, choice);
   nlohmann::json m;
   m["type"]  = "action";
   m["index"] = index;

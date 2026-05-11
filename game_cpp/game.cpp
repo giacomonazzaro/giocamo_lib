@@ -4,7 +4,8 @@
 
 namespace {
 
-// Binomial coefficient C(n, k). Iterative, no overflow guard for typical hand sizes.
+// Binomial coefficient C(n, k). Iterative, no overflow guard for typical hand
+// sizes.
 long long binomial(int n, int k) {
   if (k < 0 || k > n) return 0;
   if (k == 0 || k == n) return 1;
@@ -31,7 +32,8 @@ int action_options_count(const Choose& choose) {
   return std::visit(
     [](const auto& c) -> int {
       using T = std::decay_t<decltype(c)>;
-      if constexpr (std::is_same_v<T, Choose_Card> || std::is_same_v<T, Choose_Option>) {
+      if constexpr (std::is_same_v<T, Choose_Card> ||
+                    std::is_same_v<T, Choose_Option>) {
         return static_cast<int>(c.targets.size());
       } else {
         // Choose_Cards / Choose_Options: enumerate valid combinations.
@@ -68,7 +70,9 @@ void game_loop(Game& game, Agent& agent, std::function<void(Game&)> callback) {
   if (callback) callback(game);
 }
 
-std::optional<Choice> game_frame(Game& game, Agent& agent, std::optional<Choice> choice) {
+std::optional<Choice> game_frame(
+  Game& game, Agent& agent, std::optional<Choice> choice
+) {
   // Only fetch a new choice when the previous one has been resolved.
   if (!choice) {
     choice = game.next_choice();

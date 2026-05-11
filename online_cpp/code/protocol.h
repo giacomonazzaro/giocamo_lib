@@ -1,9 +1,8 @@
 #pragma once
+#include <nlohmann/json.hpp>
 #include <optional>
 #include <string>
 #include <utility>
-
-#include <nlohmann/json.hpp>
 
 #include "models.h"
 
@@ -11,7 +10,11 @@
 Reliable_UDP_State& get_state(UDP_Socket& sock);
 
 // Sends data reliably (non-blocking). Retried in the background until ACK'd.
-void send_message(UDP_Socket& sock, const nlohmann::json& data, const std::pair<std::string, int>& addr);
+void send_message(
+  UDP_Socket&                        sock,
+  const nlohmann::json&              data,
+  const std::pair<std::string, int>& addr
+);
 
 // Blocks until a message arrives; returns the JSON payload.
 nlohmann::json recv_message(UDP_Socket& sock);

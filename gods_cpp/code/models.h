@@ -1,11 +1,11 @@
 #pragma once
 
+#include <game_cpp/game.h>
+
 #include <functional>
 #include <memory>
 #include <string>
 #include <vector>
-
-#include <game_cpp/game.h>
 
 // Card kind (matches Python Card_Type enum string values).
 enum class Card_Type {
@@ -41,8 +41,8 @@ struct Card_Id {
   }
 
   bool operator==(const Card_Id& o) const {
-    return area == o.area && card_index == o.card_index
-           && owner_index == o.owner_index;
+    return area == o.area && card_index == o.card_index &&
+           owner_index == o.owner_index;
   }
   bool operator!=(const Card_Id& o) const { return !(*this == o); }
 };
@@ -72,7 +72,7 @@ Card_Id unpack_card_id(int packed);
 // Trivially copyable; value-copied during minimax search.
 // Mirrors gods/models.py:Card.
 struct Card {
-  int        id        = 0;  // index into Game_State.all_cards and card_designs.
+  int        id = 0;  // index into Game_State.all_cards and card_designs.
   Card_Type  card_type = Card_Type::EVENT;
   Card_Color color     = Card_Color::RED;
   int        power     = 0;
@@ -98,8 +98,8 @@ struct Card {
   bool                is_indestructible(Game_State& g, const Card& c);
   int                 can_be_claimed(Game_State& g, int player_index);
   int                 on_scoring(Game_State& g);
-  int                 on_scoring_people(Game_State& g, const Card& people, int points);
-  bool                wins_tie(Game_State& g, const Card& people);
+  int  on_scoring_people(Game_State& g, const Card& people, int points);
+  bool wins_tie(Game_State& g, const Card& people);
 };
 
 // Player state — owns lists of card ids referencing Game_State.all_cards.
@@ -116,11 +116,12 @@ struct Player {
 // game_loop / minimax templates work directly on it.
 // Mirrors gods/models.py:Game_State.
 struct Game_State : Game {
-  std::vector<Card>     all_cards;
-  std::vector<Player>   players;
-  std::vector<int>      peoples;
-  int                   current_player = 0;
-  std::string           current_phase  = "main";  // "start","main","post-play","post-pass-effects","post-pass-draw","claim","end"
+  std::vector<Card>   all_cards;
+  std::vector<Player> players;
+  std::vector<int>    peoples;
+  int                 current_player = 0;
+  std::string         current_phase =
+    "main";  // "start","main","post-play","post-pass-effects","post-pass-draw","claim","end"
   std::vector<int>      shared_deck;
   bool                  game_over = false;
   std::function<void()> on_cards_changed;  // Fired when any card mutates.
@@ -139,11 +140,11 @@ struct Game_State : Game {
   std::vector<Card_Id> discard_of(int player_index) const;
   std::vector<Card_Id> hand_of(int player_index) const;
   void                 switch_turn() { current_player = 1 - current_player; }
-  Card&                get_card(const Card_Id& cid) { return all_cards[cid.card_index]; }
+  Card& get_card(const Card_Id& cid) { return all_cards[cid.card_index]; }
   // player_id == -1 means "both players".
   std::vector<Card_Id> card_list(int player_id, const std::string& area) const;
   int                  effective_power(int card_id) const;
-  int                  owner(int card_id) const { return all_cards[card_id].owner; }
+  int owner(int card_id) const { return all_cards[card_id].owner; }
 
   // Fire the on_cards_changed callback (no-op if not set).
   void notify_cards_changed() {
@@ -155,7 +156,7 @@ struct Game_State : Game {
 // All cards derive from this; subclasses override the hooks they implement.
 // Mirrors gods/models.py:Card_Design.
 struct Card_Design {
-  int         id        = 0;
+  int         id = 0;
   std::string name;
   Card_Type   card_type = Card_Type::EVENT;
   Card_Color  color     = Card_Color::RED;
@@ -176,14 +177,16 @@ struct Card_Design {
   virtual std::vector<Choice> on_pass(Game_State&) { return {}; }
   virtual std::vector<Choice> on_turn_end(Game_State&) { return {}; }
   virtual std::vector<Choice> on_turn_start(Game_State&) { return {}; }
-  virtual int                 power_modifier(Game_State&, const Card&, int p) { return p; }
-  virtual bool                is_indestructible(Game_State&, const Card&) { return false; }
-  virtual int                 can_be_claimed(Game_State&, int) { return 0; }
-  virtual int                 on_scoring(Game_State&) { return 0; }
-  virtual int                 on_scoring_people(Game_State&, const Card&, int points) { return points; }
-  virtual bool                wins_tie(Game_State&, const Card&) { return false; }
+  virtual int  power_modifier(Game_State&, const Card&, int p) { return p; }
+  virtual bool is_indestructible(Game_State&, const Card&) { return false; }
+  virtual int  can_be_claimed(Game_State&, int) { return 0; }
+  virtual int  on_scoring(Game_State&) { return 0; }
+  virtual int  on_scoring_people(Game_State&, const Card&, int points) {
+    return points;
+  }
+  virtual bool wins_tie(Game_State&, const Card&) { return false; }
 };
 
-// Global registry of card designs — populated once by setup, read by Card hooks.
-// Not deep-copied (designs are stateless); Cards just look up by id.
+// Global registry of card designs — populated once by setup, read by Card
+// hooks. Not deep-copied (designs are stateless); Cards just look up by id.
 extern std::vector<std::unique_ptr<Card_Design>> card_designs;

@@ -1,32 +1,32 @@
 #include "models.h"
 
+#include <game_cpp/game.h>
+
 #include <algorithm>
 #include <numeric>
 #include <sstream>
-
-#include <game_cpp/game.h>
 
 #include "gameplay.h"  // For make_main_choice / make_claim_choice in next_choice.
 
 // ---- Card_Id packing ----
 
 static int area_to_code(const std::string& area) {
-  if (area == "deck")    return area_code::DECK;
-  if (area == "hand")    return area_code::HAND;
+  if (area == "deck") return area_code::DECK;
+  if (area == "hand") return area_code::HAND;
   if (area == "discard") return area_code::DISCARD;
   if (area == "wonders") return area_code::WONDERS;
-  if (area == "people")  return area_code::PEOPLE;
+  if (area == "people") return area_code::PEOPLE;
   return area_code::NONE;
 }
 
 static std::string code_to_area(int code) {
   switch (code) {
-    case area_code::DECK:    return "deck";
-    case area_code::HAND:    return "hand";
+    case area_code::DECK: return "deck";
+    case area_code::HAND: return "hand";
     case area_code::DISCARD: return "discard";
     case area_code::WONDERS: return "wonders";
-    case area_code::PEOPLE:  return "people";
-    default:                 return "none";
+    case area_code::PEOPLE: return "people";
+    default: return "none";
   }
 }
 
@@ -54,8 +54,9 @@ std::vector<Card_Id> Game_State::peoples_ids() const {
   for (int pid : peoples) {
     out.push_back(Card_Id{"people", pid, all_cards[pid].owner});
   }
-  std::sort(out.begin(), out.end(),
-            [](const Card_Id& a, const Card_Id& b) { return a.card_index < b.card_index; });
+  std::sort(out.begin(), out.end(), [](const Card_Id& a, const Card_Id& b) {
+    return a.card_index < b.card_index;
+  });
   return out;
 }
 
@@ -64,8 +65,9 @@ std::vector<Card_Id> Game_State::wonders_of(int player_index) const {
   for (int wid : players[player_index].wonders) {
     out.push_back(Card_Id{"wonders", wid, player_index});
   }
-  std::sort(out.begin(), out.end(),
-            [](const Card_Id& a, const Card_Id& b) { return a.card_index < b.card_index; });
+  std::sort(out.begin(), out.end(), [](const Card_Id& a, const Card_Id& b) {
+    return a.card_index < b.card_index;
+  });
   return out;
 }
 
@@ -74,8 +76,9 @@ std::vector<Card_Id> Game_State::discard_of(int player_index) const {
   for (int did : players[player_index].discard) {
     out.push_back(Card_Id{"discard", did, player_index});
   }
-  std::sort(out.begin(), out.end(),
-            [](const Card_Id& a, const Card_Id& b) { return a.card_index < b.card_index; });
+  std::sort(out.begin(), out.end(), [](const Card_Id& a, const Card_Id& b) {
+    return a.card_index < b.card_index;
+  });
   return out;
 }
 
@@ -84,44 +87,53 @@ std::vector<Card_Id> Game_State::hand_of(int player_index) const {
   for (int hid : players[player_index].hand) {
     out.push_back(Card_Id{"hand", hid, player_index});
   }
-  std::sort(out.begin(), out.end(),
-            [](const Card_Id& a, const Card_Id& b) { return a.card_index < b.card_index; });
+  std::sort(out.begin(), out.end(), [](const Card_Id& a, const Card_Id& b) {
+    return a.card_index < b.card_index;
+  });
   return out;
 }
 
-std::vector<Card_Id> Game_State::card_list(int player_id, const std::string& area) const {
+std::vector<Card_Id> Game_State::card_list(
+  int player_id, const std::string& area
+) const {
   if (player_id == -1) {
     auto a = card_list(0, area);
     auto b = card_list(1, area);
     a.insert(a.end(), b.begin(), b.end());
-    std::sort(a.begin(), a.end(),
-              [](const Card_Id& x, const Card_Id& y) { return x.card_index < y.card_index; });
+    std::sort(a.begin(), a.end(), [](const Card_Id& x, const Card_Id& y) {
+      return x.card_index < y.card_index;
+    });
     return a;
   }
-  const Player& p = players[player_id];
+  const Player&           p   = players[player_id];
   const std::vector<int>* src = nullptr;
-  if      (area == "hand")    src = &p.hand;
-  else if (area == "wonders") src = &p.wonders;
-  else if (area == "discard") src = &p.discard;
-  else if (area == "deck")    src = &p.deck;
+  if (area == "hand")
+    src = &p.hand;
+  else if (area == "wonders")
+    src = &p.wonders;
+  else if (area == "discard")
+    src = &p.discard;
+  else if (area == "deck")
+    src = &p.deck;
   std::vector<Card_Id> out;
   if (src) {
     for (int cid : *src) out.push_back(Card_Id{area, cid, player_id});
   }
-  std::sort(out.begin(), out.end(),
-            [](const Card_Id& a, const Card_Id& b) { return a.card_index < b.card_index; });
+  std::sort(out.begin(), out.end(), [](const Card_Id& a, const Card_Id& b) {
+    return a.card_index < b.card_index;
+  });
   return out;
 }
 
 int Game_State::effective_power(int card_id) const {
-  const Card& card = all_cards[card_id];
-  int power = card.power + card.counters;
+  const Card& card  = all_cards[card_id];
+  int         power = card.power + card.counters;
   for (const Player& player : players) {
     for (int wid : player.wonders) {
       // const_cast: power_modifier may be a virtual called on a non-const
       // Game_State&; semantically it must not mutate state during a query.
-      power = const_cast<Card&>(all_cards[wid]).power_modifier(
-        const_cast<Game_State&>(*this), card, power);
+      power = const_cast<Card&>(all_cards[wid])
+                .power_modifier(const_cast<Game_State&>(*this), card, power);
     }
   }
   if (power < 0) power = 0;

@@ -19,8 +19,9 @@ static std::vector<int> pack_targets(const std::vector<Card_Id>& cids) {
 
 // ---- Combinations ----
 
-std::vector<std::vector<Card_Id>>
-all_combinations(const std::vector<Card_Id>& card_ids, int num_cards, bool up_to) {
+std::vector<std::vector<Card_Id>> all_combinations(
+  const std::vector<Card_Id>& card_ids, int num_cards, bool up_to
+) {
   int n = std::min(num_cards, (int)card_ids.size());
   std::vector<std::vector<Card_Id>> result;
   if (up_to) {
@@ -31,12 +32,13 @@ all_combinations(const std::vector<Card_Id>& card_ids, int num_cards, bool up_to
         continue;
       }
       // Iterate combinations of card_ids choose k.
-      auto sz = (int)card_ids.size();
+      auto              sz = (int)card_ids.size();
       std::vector<bool> mask(sz, false);
       std::fill(mask.end() - k, mask.end(), true);
       do {
         std::vector<Card_Id> combo;
-        for (int i = 0; i < sz; ++i) if (mask[i]) combo.push_back(card_ids[i]);
+        for (int i = 0; i < sz; ++i)
+          if (mask[i]) combo.push_back(card_ids[i]);
         result.push_back(std::move(combo));
       } while (std::next_permutation(mask.begin(), mask.end()));
     }
@@ -50,7 +52,8 @@ all_combinations(const std::vector<Card_Id>& card_ids, int num_cards, bool up_to
     std::fill(mask.end() - n, mask.end(), true);
     do {
       std::vector<Card_Id> combo;
-      for (int i = 0; i < sz; ++i) if (mask[i]) combo.push_back(card_ids[i]);
+      for (int i = 0; i < sz; ++i)
+        if (mask[i]) combo.push_back(card_ids[i]);
       result.push_back(std::move(combo));
     } while (std::next_permutation(mask.begin(), mask.end()));
   }
@@ -60,10 +63,10 @@ all_combinations(const std::vector<Card_Id>& card_ids, int num_cards, bool up_to
 // ---- Choice helpers ----
 
 Choice make_choose_card_choice(
-  int                                                          player_index,
-  std::function<std::vector<Card_Id>(Game_State&)>             get_targets,
-  std::function<std::vector<Choice>(Game_State&, Card_Id)>     on_chosen,
-  std::string                                                  text_description
+  int                                                      player_index,
+  std::function<std::vector<Card_Id>(Game_State&)>         get_targets,
+  std::function<std::vector<Choice>(Game_State&, Card_Id)> on_chosen,
+  std::string                                              text_description
 ) {
   Choice c;
   c.player_index     = player_index;
@@ -73,10 +76,11 @@ Choice make_choose_card_choice(
     auto& gs = static_cast<Game_State&>(g);
     return Choose_Card{pack_targets(get_targets(gs)), true};
   };
-  c.resolve = [get_targets, on_chosen](Game& g, int option_index) -> std::vector<Choice> {
-    auto& gs      = static_cast<Game_State&>(g);
-    auto targets  = get_targets(gs);
-    Card_Id chosen = targets[option_index];
+  c.resolve = [get_targets,
+               on_chosen](Game& g, int option_index) -> std::vector<Choice> {
+    auto&   gs      = static_cast<Game_State&>(g);
+    auto    targets = get_targets(gs);
+    Card_Id chosen  = targets[option_index];
     if (Card_Id::is_null(chosen)) return {};
     return on_chosen(gs, chosen);
   };
@@ -84,12 +88,13 @@ Choice make_choose_card_choice(
 }
 
 Choice make_choose_cards_choice(
-  int                                                                  player_index,
-  std::function<std::vector<Card_Id>(Game_State&)>                     get_targets,
-  std::function<int(Game_State&)>                                      get_count,
-  bool                                                                 up_to,
-  std::function<std::vector<Choice>(Game_State&, std::vector<Card_Id>)> on_chosen,
-  std::string                                                          text_description
+  int                                              player_index,
+  std::function<std::vector<Card_Id>(Game_State&)> get_targets,
+  std::function<int(Game_State&)>                  get_count,
+  bool                                             up_to,
+  std::function<std::vector<Choice>(Game_State&, std::vector<Card_Id>)>
+              on_chosen,
+  std::string text_description
 ) {
   Choice c;
   c.player_index     = player_index;
@@ -99,10 +104,12 @@ Choice make_choose_cards_choice(
     auto& gs = static_cast<Game_State&>(g);
     return Choose_Cards{pack_targets(get_targets(gs)), get_count(gs), up_to};
   };
-  c.resolve = [get_targets, get_count, up_to, on_chosen](Game& g, int option_index)
-    -> std::vector<Choice> {
-    auto& gs    = static_cast<Game_State&>(g);
-    auto combos = all_combinations(get_targets(gs), get_count(gs), up_to);
+  c.resolve = [get_targets,
+               get_count,
+               up_to,
+               on_chosen](Game& g, int option_index) -> std::vector<Choice> {
+    auto& gs     = static_cast<Game_State&>(g);
+    auto  combos = all_combinations(get_targets(gs), get_count(gs), up_to);
     return on_chosen(gs, combos[option_index]);
   };
   return c;
@@ -111,26 +118,33 @@ Choice make_choose_cards_choice(
 // ---- Selection helpers ----
 
 bool beats_opponent(
-  Game_State& game, int player_index,
+  Game_State&                                 game,
+  int                                         player_index,
   const std::function<int(Game_State&, int)>& metric
 ) {
-  int n = (int)game.players.size();
+  int              n = (int)game.players.size();
   std::vector<int> scores(n);
   for (int i = 0; i < n; ++i) scores[i] = metric(game, i);
   return scores[player_index] > scores[1 - player_index];
 }
 
 std::vector<Card_Id> card_selection(
-  Game_State& state, int player_id, const std::string& area,
-  const std::function<bool(const Card&)>& f, bool include_null
+  Game_State&                             state,
+  int                                     player_id,
+  const std::string&                      area,
+  const std::function<bool(const Card&)>& f,
+  bool                                    include_null
 ) {
   std::vector<Card_Id> result;
-  auto cards = state.card_list(player_id, area);
+  auto                 cards = state.card_list(player_id, area);
   for (const auto& cid : cards) {
     if (f(state.all_cards[cid.card_index])) result.push_back(cid);
   }
-  std::sort(result.begin(), result.end(),
-            [](const Card_Id& a, const Card_Id& b) { return a.card_index < b.card_index; });
+  std::sort(
+    result.begin(), result.end(), [](const Card_Id& a, const Card_Id& b) {
+      return a.card_index < b.card_index;
+    }
+  );
   if (include_null) result.push_back(Card_Id::null());
   return result;
 }
@@ -144,8 +158,11 @@ std::vector<Card_Id> people_selection(
       result.push_back(Card_Id{"people", pid, game.owner(pid)});
     }
   }
-  std::sort(result.begin(), result.end(),
-            [](const Card_Id& a, const Card_Id& b) { return a.card_index < b.card_index; });
+  std::sort(
+    result.begin(), result.end(), [](const Card_Id& a, const Card_Id& b) {
+      return a.card_index < b.card_index;
+    }
+  );
   if (include_null) result.push_back(Card_Id::null());
   return result;
 }
@@ -161,14 +178,19 @@ std::vector<Card_Id> wonders_selection(
       }
     }
   }
-  std::sort(result.begin(), result.end(),
-            [](const Card_Id& a, const Card_Id& b) { return a.card_index < b.card_index; });
+  std::sort(
+    result.begin(), result.end(), [](const Card_Id& a, const Card_Id& b) {
+      return a.card_index < b.card_index;
+    }
+  );
   return result;
 }
 
 // ---- Game mechanics ----
 
-std::vector<Choice> draw_card(Game_State& game, int player_id, bool replacement_effects) {
+std::vector<Choice> draw_card(
+  Game_State& game, int player_id, bool replacement_effects
+) {
   Player& player = game.players[player_id];
   if (player.deck.empty()) return {};
 
@@ -191,7 +213,9 @@ std::vector<Choice> draw_card(Game_State& game, int player_id, bool replacement_
   return {};
 }
 
-std::vector<Choice> discard_cards(Game_State& game, const std::vector<Card_Id>& card_ids) {
+std::vector<Choice> discard_cards(
+  Game_State& game, const std::vector<Card_Id>& card_ids
+) {
   if (card_ids.empty()) return {};
   // All cards must come from the same player's hand.
   for (const auto& cid : card_ids) {
@@ -199,12 +223,12 @@ std::vector<Choice> discard_cards(Game_State& game, const std::vector<Card_Id>& 
     assert(cid.owner_index == card_ids[0].owner_index);
   }
 
-  int player_id = card_ids[0].owner_index;
-  Player& player = game.players[player_id];
+  int                player_id = card_ids[0].owner_index;
+  Player&            player    = game.players[player_id];
   std::vector<Card*> cards;
   for (const auto& cid : card_ids) {
     Card& card = game.all_cards[cid.card_index];
-    auto it = std::find(player.hand.begin(), player.hand.end(), card.id);
+    auto  it   = std::find(player.hand.begin(), player.hand.end(), card.id);
     if (it != player.hand.end()) player.hand.erase(it);
     player.discard.push_back(card.id);
     cards.push_back(&card);
@@ -231,7 +255,8 @@ std::vector<Choice> play_card(Game_State& game, const Card_Id& card_id) {
   Card&   card   = game.all_cards[card_id.card_index];
 
   if (card_id.area == "hand") {
-    auto it = std::find(player.hand.begin(), player.hand.end(), card_id.card_index);
+    auto it =
+      std::find(player.hand.begin(), player.hand.end(), card_id.card_index);
     if (it != player.hand.end()) player.hand.erase(it);
   }
 
@@ -314,7 +339,8 @@ std::optional<Choice> make_claim_choice(Game_State& game) {
     return false;
   };
 
-  auto build_actions = [opponent_index, can_claim](Game_State& g) -> std::vector<Card_Id> {
+  auto build_actions = [opponent_index,
+                        can_claim](Game_State& g) -> std::vector<Card_Id> {
     std::vector<Card_Id> result;
     for (int pid : g.peoples) {
       if (g.owner(pid) == opponent_index && can_claim(g, pid)) {
@@ -335,10 +361,11 @@ std::optional<Choice> make_claim_choice(Game_State& game) {
     auto& gs = static_cast<Game_State&>(g);
     return Choose_Card{pack_targets(build_actions(gs)), true};
   };
-  c.resolve = [build_actions, player_index](Game& g, int option_index) -> std::vector<Choice> {
-    auto& gs = static_cast<Game_State&>(g);
-    auto targets = build_actions(gs);
-    Card_Id chosen = targets[option_index];
+  c.resolve = [build_actions,
+               player_index](Game& g, int option_index) -> std::vector<Choice> {
+    auto&   gs      = static_cast<Game_State&>(g);
+    auto    targets = build_actions(gs);
+    Card_Id chosen  = targets[option_index];
     if (!Card_Id::is_null(chosen)) {
       Card& people = gs.get_card(chosen);
       people.owner = player_index;
@@ -350,7 +377,7 @@ std::optional<Choice> make_claim_choice(Game_State& game) {
 }
 
 int compute_player_score(Game_State& game, int player_index) {
-  int score = 0;
+  int     score  = 0;
   Player& player = game.players[player_index];
   for (int people_id : game.peoples) {
     Card& people = game.all_cards[people_id];
@@ -375,8 +402,11 @@ Choice make_main_choice(Game_State& game) {
     for (int cid : g.players[g.current_player].hand) {
       result.push_back(Card_Id{"hand", cid, g.current_player});
     }
-    std::sort(result.begin(), result.end(),
-              [](const Card_Id& a, const Card_Id& b) { return a.card_index < b.card_index; });
+    std::sort(
+      result.begin(), result.end(), [](const Card_Id& a, const Card_Id& b) {
+        return a.card_index < b.card_index;
+      }
+    );
     result.push_back(Card_Id::null());
     return result;
   };
@@ -389,17 +419,18 @@ Choice make_main_choice(Game_State& game) {
     auto& gs = static_cast<Game_State&>(g);
     return Choose_Card{pack_targets(build_actions(gs)), true};
   };
-  c.resolve = [build_actions](Game& g, int option_index) -> std::vector<Choice> {
-    auto& gs       = static_cast<Game_State&>(g);
-    auto  actions  = build_actions(gs);
-    Card_Id chosen = actions[option_index];
+  c.resolve =
+    [build_actions](Game& g, int option_index) -> std::vector<Choice> {
+    auto&   gs      = static_cast<Game_State&>(g);
+    auto    actions = build_actions(gs);
+    Card_Id chosen  = actions[option_index];
     if (!Card_Id::is_null(chosen)) {
-      auto choices = play_card(gs, chosen);
+      auto choices     = play_card(gs, chosen);
       gs.current_phase = "post-play";
       return choices;
     }
     std::vector<Choice> result;
-    Player& player = gs.active_player();
+    Player&             player = gs.active_player();
     for (int wid : player.wonders) {
       auto extra = gs.all_cards[wid].on_pass(gs);
       for (auto& ch : extra) result.push_back(std::move(ch));

@@ -1,9 +1,9 @@
 #pragma once
 
-#include <utility>
-
 #include <game_cpp/agent.h>
 #include <online_cpp/code/protocol.h>
+
+#include <utility>
 
 // Receives opponent's action indices from the server.
 struct Agent_Remote : Agent {
