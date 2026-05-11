@@ -18,7 +18,3 @@ nlohmann::json recv_message(UDP_Socket& sock);
 
 // Non-blocking receive; returns nullopt if no message is available.
 std::optional<nlohmann::json> try_recv_message(UDP_Socket& sock);
-
-#ifdef ONLINE_BUILD_PYTHON
-void bind_protocol(nb::module_& m);
-#endif

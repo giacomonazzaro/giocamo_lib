@@ -4,12 +4,6 @@
 
 #include "config.h"
 
-#ifdef KT_BUILD_PYTHON
-#include <nanobind/stl/optional.h>
-#include <nanobind/stl/string.h>
-using namespace nb::literals;
-#endif
-
 KT_Card create_card_design(int id) {
   KT_Card card;
   card.id = id;
@@ -123,72 +117,3 @@ std::vector<int> create_sample_cards(Table_State& state) {
   }
   return card_ids;
 }
-
-#ifdef KT_BUILD_PYTHON
-void bind_game_state(nb::module_& m) {
-  m.def("create_card_design", &create_card_design, nb::arg("id"));
-
-  m.def(
-    "add_card_to_stack",
-    &add_card_to_stack,
-    nb::arg("card_id"),
-    nb::arg("stack"),
-    nb::arg("state")
-  );
-
-  m.def(
-    "remove_card_from_stack",
-    [](int card_id, Stack& stack, Table_State& state) -> nb::object {
-      // Return None when the card was not found (Python: int | None).
-      int result = remove_card_from_stack(card_id, stack, state);
-      if (result != -1) return nb::int_(result);
-      return nb::none();
-    },
-    nb::arg("card_id"),
-    nb::arg("stack"),
-    nb::arg("state")
-  );
-
-  m.def(
-    "move_card_to_stack",
-    &move_card_to_stack,
-    nb::arg("card_id"),
-    nb::arg("from_stack"),
-    nb::arg("to_stack"),
-    nb::arg("state")
-  );
-
-  m.def(
-    "update_card_positions",
-    &update_card_positions,
-    nb::arg("stack"),
-    nb::arg("state"),
-    nb::arg("sort")
-  );
-
-  m.def(
-    "find_stack_containing_card",
-    &find_stack_containing_card,
-    nb::arg("card_id"),
-    nb::arg("state")
-  );
-
-  m.def(
-    "add_loose_card", &add_loose_card, nb::arg("card_id"), nb::arg("state")
-  );
-
-  m.def(
-    "remove_loose_card",
-    [](int card_id, Table_State& state) -> nb::object {
-      // Return None when the card was not found (Python: int | None).
-      int result = remove_loose_card(card_id, state);
-      if (result != -1) return nb::int_(result);
-      return nb::none();
-    },
-    nb::arg("card_id"),
-    nb::arg("state")
-  );
-
-  m.def("create_sample_cards", &create_sample_cards, nb::arg("state"));
-}
-#endif // KT_BUILD_PYTHON

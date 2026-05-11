@@ -10,7 +10,3 @@ int  find_stack_containing_card(int card_id, const Table_State& state);
 void add_loose_card(int card_id, Table_State& state);
 int  remove_loose_card(int card_id, Table_State& state);
 std::vector<int> create_sample_cards(Table_State& state);
-
-#ifdef KT_BUILD_PYTHON
-void bind_game_state(nb::module_& m);
-#endif

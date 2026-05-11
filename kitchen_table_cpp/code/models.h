@@ -6,11 +6,6 @@
 #include <tuple>
 #include <vector>
 
-#ifdef KT_BUILD_PYTHON
-#include <nanobind/nanobind.h>
-namespace nb = nanobind;
-#endif
-
 // 2D rectangle matching pyray's Rectangle layout (x, y, width, height).
 struct KT_Rectangle {
   float x = 0.0f, y = 0.0f, width = 0.0f, height = 0.0f;
@@ -63,9 +58,6 @@ struct Table_State {
   std::vector<int> loose_cards; // KT_Card IDs of cards not in any stack.
   Drag_State drag_state;
   std::vector<KT_Card> animated_cards;
-  // Pointer (not reference) so nanobind's std::function caster preserves Python object
-  // identity through the instance map; with Table_State& it constructs a fresh wrapper
-  // and attribute writes (e.g. is_drop_card_allowed = ...) would only mutate the copy.
   std::function<void(Table_State*)> draw_callback;
   int zoomed_card_id = -1;
   std::function<bool(int, int, int)> is_drop_card_allowed;
@@ -75,7 +67,3 @@ struct Table_State {
   // Returns dropped_card and resets it to nullopt (consume-once event poll).
   std::optional<std::tuple<int,int,int>> poll_dropped_card();
 };
-
-#ifdef KT_BUILD_PYTHON
-void bind_models(nb::module_& m);
-#endif

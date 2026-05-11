@@ -23,9 +23,3 @@ Game_State sample_state(
 // Stays on the C++ side so the search can copy Game_State by value without
 // crossing the Python boundary.
 using Agent_Minimax_Stochastic_Gods = Agent_Minimax_Stochastic<Game_State>;
-
-#ifdef GODS_BUILD_PYTHON
-#include <nanobind/nanobind.h>
-namespace nb = nanobind;
-void bind_agent(nb::module_& m);
-#endif

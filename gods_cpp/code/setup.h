@@ -13,9 +13,3 @@
 void set_card_designs(
   const std::vector<std::tuple<std::string, std::string, std::string, std::string>>& entries
 );
-
-#ifdef GODS_BUILD_PYTHON
-#include <nanobind/nanobind.h>
-namespace nb = nanobind;
-void bind_setup(nb::module_& m);
-#endif

@@ -24,32 +24,3 @@ if(NOT TARGET gods_cpp_lib)
     target_link_libraries(gods_cpp_lib PUBLIC game_cpp)
 endif()
 
-# ----- Python extension module (existing nanobind build) -----
-if(STANDALONE_CPP_ONLY)
-    return()
-endif()
-find_package(Python 3.12 COMPONENTS Interpreter Development.Module QUIET)
-if(Python_FOUND)
-    execute_process(
-        COMMAND "${Python_EXECUTABLE}" -c "import nanobind; print(nanobind.cmake_dir())"
-        OUTPUT_VARIABLE NB_DIR OUTPUT_STRIP_TRAILING_WHITESPACE
-        RESULT_VARIABLE NB_RC
-    )
-    if(NB_RC EQUAL 0)
-        list(APPEND CMAKE_PREFIX_PATH "${NB_DIR}")
-        find_package(nanobind CONFIG QUIET)
-    endif()
-endif()
-
-if(nanobind_FOUND AND NOT TARGET _gods_cpp)
-    nanobind_add_module(_gods_cpp NB_STATIC
-        ${GODS_SOURCES}
-        code/bindings.cpp
-    )
-    target_compile_definitions(_gods_cpp PRIVATE GODS_BUILD_PYTHON)
-    target_link_libraries(_gods_cpp PRIVATE game_cpp)
-    target_include_directories(_gods_cpp PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/..")
-
-    # Install the .so next to gods/ so `import gods._gods_cpp` works.
-    install(TARGETS _gods_cpp DESTINATION "${CMAKE_CURRENT_SOURCE_DIR}/../gods")
-endif()

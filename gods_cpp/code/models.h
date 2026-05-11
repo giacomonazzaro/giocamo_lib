@@ -7,19 +7,6 @@
 
 #include <game_cpp/game.h>
 
-#ifdef GODS_BUILD_PYTHON
-#include <nanobind/nanobind.h>
-namespace nb = nanobind;
-
-// Tell nanobind to treat std::vector<int> as an opaque bound class (IntVector)
-// instead of auto-converting it to a Python list. This is what gives Python
-// access to mutating ops (.pop, .append) that propagate back into C++ — needed
-// because Player.deck/hand/etc. and Game_State.shared_deck/peoples are
-// std::vector<int> and gods/setup.py mutates them in place.
-// Must come before any STL header that defines a caster for it.
-NB_MAKE_OPAQUE(std::vector<int>)
-#endif
-
 // Card kind (matches Python Card_Type enum string values).
 enum class Card_Type {
   WONDER,
@@ -200,7 +187,3 @@ struct Card_Design {
 // Global registry of card designs — populated once by setup, read by Card hooks.
 // Not deep-copied (designs are stateless); Cards just look up by id.
 extern std::vector<std::unique_ptr<Card_Design>> card_designs;
-
-#ifdef GODS_BUILD_PYTHON
-void bind_models(nb::module_& m);
-#endif

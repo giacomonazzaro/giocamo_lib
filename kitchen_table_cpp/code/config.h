@@ -1,12 +1,5 @@
 #pragma once
 
-#ifdef KT_BUILD_PYTHON
-#include <nanobind/nanobind.h>
-namespace nb = nanobind;
-#endif
-
-// C++ constants mirroring the Python tweak dict.
-// Kept in sync with config.cpp's `tweak` entries — update both if values change.
 namespace kt {
     constexpr int   WINDOW_WIDTH       = 1700;
     constexpr int   WINDOW_HEIGHT      = 1000;
@@ -26,7 +19,3 @@ namespace kt {
     constexpr const char* FONT_PATH    = "./fonts/Cinzel/Cinzel-VariableFont_wght.ttf";
     constexpr const char* WINDOW_TITLE = "Gods";
 }
-
-#ifdef KT_BUILD_PYTHON
-void bind_config(nb::module_& m);
-#endif

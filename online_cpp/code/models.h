@@ -8,11 +8,6 @@
 #include <string>
 #include <thread>
 
-#ifdef ONLINE_BUILD_PYTHON
-#include <nanobind/nanobind.h>
-namespace nb = nanobind;
-#endif
-
 // --- CONFIGURATION ---
 constexpr int    MAX_PACKET_SIZE = 65507;
 constexpr double RETRY_INTERVAL  = 1.0;

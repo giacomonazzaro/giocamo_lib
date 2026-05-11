@@ -18,7 +18,3 @@ void handle_mouse_move(Table_State& state);
 void handle_rotate_card(Table_State& state, bool clockwise = true);
 void shuffle_stack(Table_State& state, int stack_id);
 void update_input(Table_State& state);
-
-#ifdef KT_BUILD_PYTHON
-void bind_input(nb::module_& m);
-#endif

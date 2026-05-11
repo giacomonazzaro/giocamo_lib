@@ -38,7 +38,3 @@ struct UI_State {
   std::optional<int> clicked(float mouse_x, float mouse_y) const;
   void              draw_buttons() const;
 };
-
-#ifdef KT_BUILD_PYTHON
-void bind_ui(nb::module_& m);
-#endif

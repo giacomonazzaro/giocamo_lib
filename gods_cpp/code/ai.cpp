@@ -10,10 +10,6 @@
 #include "gameplay.h"
 #include "models.h"
 
-#ifdef GODS_BUILD_PYTHON
-using namespace nb::literals;
-#endif
-
 float evaluate_state(Game_State& game, int player_index) {
   if (!game.is_game_over()) {
     // Heuristic for non-terminal positions.
@@ -59,22 +55,3 @@ Game_State sample_state(
   std::shuffle(me.deck.begin(), me.deck.end(), rng);
   return sampled;
 }
-
-#ifdef GODS_BUILD_PYTHON
-void bind_agent(nb::module_& m) {
-  nb::class_<Agent_Minimax_Stochastic_Gods>(m, "Agent_Minimax_Stochastic_Gods")
-    .def(nb::init<>())
-    .def(nb::init<int, int>(), "max_depth"_a = 6, "num_samples"_a = 20)
-    .def_rw("max_depth", &Agent_Minimax_Stochastic_Gods::max_depth)
-    .def_rw("num_samples", &Agent_Minimax_Stochastic_Gods::num_samples)
-    .def("message", [](Agent_Minimax_Stochastic_Gods&, const std::string&) {})
-    .def(
-      "choose_action",
-      [](Agent_Minimax_Stochastic_Gods& self, Game_State& g, const Choice& c) {
-        return self.choose_action(g, c);
-      },
-      "state"_a,
-      "choice"_a
-    );
-}
-#endif // GODS_BUILD_PYTHON

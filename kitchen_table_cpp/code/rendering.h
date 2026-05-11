@@ -14,7 +14,3 @@ void draw_stack_placeholder(const Stack& stack);
 void animate(std::vector<KT_Card>& cards, const Table_State& state, float dt = 0.1f);
 void render_text(const std::string& text, float x, float y, int size, KT_Color color);
 int  text_width(const std::string& text, int size);
-
-#ifdef KT_BUILD_PYTHON
-void bind_rendering(nb::module_& m);
-#endif

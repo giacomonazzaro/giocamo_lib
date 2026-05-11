@@ -7,14 +7,6 @@
 
 #include "models.h"
 
-#ifdef GODS_BUILD_PYTHON
-#include <nanobind/stl/function.h>
-#include <nanobind/stl/optional.h>
-#include <nanobind/stl/string.h>
-#include <nanobind/stl/vector.h>
-using namespace nb::literals;
-#endif
-
 // ---- Local utilities ----
 
 // Convert a list of Card_Id to packed-int targets for game_cpp's Choose_Card.
@@ -419,23 +411,3 @@ Choice make_main_choice(Game_State& game) {
 }
 
 // ---- Bindings ----
-
-#ifdef GODS_BUILD_PYTHON
-void bind_gameplay(nb::module_& m) {
-  m.def("draw_card", &draw_card, "game"_a, "player_id"_a, "replacement_effects"_a = true);
-  m.def("discard_cards", &discard_cards, "game"_a, "card_ids"_a);
-  m.def("play_card", &play_card, "game"_a, "card_id"_a);
-  m.def("destroy_people", &destroy_people, "game"_a, "card_id"_a);
-  m.def("destroy_wonder", &destroy_wonder, "game"_a, "card_id"_a);
-  m.def("restore_people", &restore_people, "game"_a, "card_id"_a);
-  m.def("shuffle_card_into_deck", &shuffle_card_into_deck, "game"_a, "card_id"_a);
-  m.def("make_claim_choice", &make_claim_choice, "game"_a);
-  m.def("compute_player_score", &compute_player_score, "game"_a, "player_index"_a);
-  m.def("make_main_choice", &make_main_choice, "game"_a);
-  m.def("wonders_by_priority", [](Game_State& game) {
-    std::vector<Card> result;
-    for (int wid : wonders_by_priority(game)) result.push_back(game.all_cards[wid]);
-    return result;
-  }, "game"_a);
-}
-#endif // GODS_BUILD_PYTHON

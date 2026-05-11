@@ -15,7 +15,3 @@ std::unique_ptr<Card_Design> create_card_design(
 
 // Returns true if a specialized class exists for this card name.
 bool has_card_class(const std::string& name);
-
-#ifdef GODS_BUILD_PYTHON
-void bind_cards(nb::module_& m);
-#endif

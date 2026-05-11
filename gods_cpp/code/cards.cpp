@@ -5,11 +5,6 @@
 #include "gameplay.h"
 #include "models.h"
 
-#ifdef GODS_BUILD_PYTHON
-#include <nanobind/stl/string.h>
-using namespace nb::literals;
-#endif
-
 using namespace std;
 
 // Global registry definition (declared in models.h).
@@ -868,15 +863,3 @@ unique_ptr<Card_Design> create_card_design(
   design->effect    = effect;
   return design;
 }
-
-#ifdef GODS_BUILD_PYTHON
-void bind_cards(nb::module_& m) {
-  m.def("has_card_class", &has_card_class, "name"_a);
-  // CARD_CLASSES is exposed as a Python dict[str, str] (name → class name).
-  // Python rarely needs the actual class object — only Whether the name is
-  // known.
-  nb::dict classes;
-  for (const auto& kv : card_classes()) classes[kv.first.c_str()] = kv.first;
-  m.attr("CARD_CLASSES") = classes;
-}
-#endif // GODS_BUILD_PYTHON

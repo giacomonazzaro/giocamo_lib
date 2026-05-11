@@ -233,37 +233,3 @@ void update_input(Table_State& state) {
     shuffle_stack(state, stack_id);
   }
 }
-
-#ifdef KT_BUILD_PYTHON
-
-#include <nanobind/stl/optional.h>
-using namespace nb::literals;
-
-void bind_input(nb::module_& m) {
-  m.def("stack_is_full", &stack_is_full, "stack"_a);
-  m.def("point_in_card", &point_in_card, "px"_a, "py"_a, "card"_a);
-  m.def("card_pressed", &card_pressed, "card"_a);
-  m.def("point_in_stack_area", &point_in_stack_area, "px"_a, "py"_a, "stack"_a);
-  m.def(
-    "find_card_at",
-    [](float px, float py, Table_State& state) -> nb::object {
-      auto r = find_card_at(px, py, state);
-      if (!r) return nb::none();
-      return nb::make_tuple(r->first, r->second);
-    },
-    "px"_a,
-    "py"_a,
-    "state"_a
-  );
-  m.def("find_stack_at", &find_stack_at, "px"_a, "py"_a, "state"_a);
-  m.def("handle_mouse_press", &handle_mouse_press, "state"_a);
-  m.def("handle_mouse_release", &handle_mouse_release, "state"_a);
-  m.def("handle_mouse_move", &handle_mouse_move, "state"_a);
-  m.def(
-    "handle_rotate_card", &handle_rotate_card, "state"_a, "clockwise"_a = true
-  );
-  m.def("shuffle_stack", &shuffle_stack, "state"_a, "stack_id"_a);
-  m.def("update_input", &update_input, "state"_a);
-}
-
-#endif // KT_BUILD_PYTHON

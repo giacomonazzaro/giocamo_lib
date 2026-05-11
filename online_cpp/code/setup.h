@@ -51,12 +51,3 @@ Online_Game_Setup setup_online_game_cpp(UDP_Socket& sock, bool local,
 // Async wrappers used by the graphical menu.
 std::shared_ptr<Connection_State> start_hosting(bool local = false);
 std::shared_ptr<Connection_State> join_room(const std::string& room_code, bool local = false);
-
-#ifdef ONLINE_BUILD_PYTHON
-nb::tuple peer_to_peer(bool local = false);
-nb::tuple setup_online_game(UDP_Socket& sock, bool local,
-                             const std::string& your_ip, int your_port,
-                             const std::string& local_ip, int local_port,
-                             const std::string& room_code = "");
-void bind_setup(nb::module_& m);
-#endif
