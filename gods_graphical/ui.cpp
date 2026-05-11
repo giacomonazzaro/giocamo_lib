@@ -17,7 +17,7 @@ static const std::string IMAGES_DIR = []() {
   return p.string();
 }();
 
-std::vector<Stack> make_gods_stacks(int bottom_player) {
+std::vector<Thing> make_gods_stacks(int bottom_player) {
   int W      = tt::WINDOW_WIDTH;
   int H      = tt::WINDOW_HEIGHT;
   int w      = tt::CARD_WIDTH;
@@ -70,16 +70,16 @@ std::vector<Stack> make_gods_stacks(int bottom_player) {
   bool visible = (bottom_player == 0);
 
   auto mk = [](Rectangle r, int sx, int sy, bool face_up, std::string name) {
-    Stack s;
-    s.rect     = r;
-    s.spread_x = (float)sx;
-    s.spread_y = (float)sy;
-    s.face_up  = face_up;
-    s.name     = std::move(name);
-    return s;
+    Thing t;
+    t.rect     = r;
+    t.spread_x = (float)sx;
+    t.spread_y = (float)sy;
+    t.face_up  = face_up;
+    t.name     = std::move(name);
+    return t;
   };
 
-  std::vector<Stack> out;
+  std::vector<Thing> out;
   out.push_back(mk(p0_deck, 0, spread_pile, false, "p0_deck"));
   out.push_back(mk(p0_hand, spread_hand, 0, visible, "p0_hand"));
   out.push_back(mk(p0_discard, 0, spread_pile, true, "p0_discard"));

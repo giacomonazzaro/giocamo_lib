@@ -10,27 +10,25 @@
 
 // Base visual entity with optional draw callback.
 struct Thing {
+  std::string                 name;
   int                         id = 0;
   std::string                 image_path;
-  Rectangle                   rect = {0.0f, 0.0f, 0.0f, 0.0f};
+  Rectangle                   rect     = {0.0f, 0.0f, 0.0f, 0.0f};
   float                       rotation = 0.0f;
   std::function<void(Thing&)> draw_callback;
+  bool                        face_up = true;
+  float                       depth   = 0.0f;
+
+  // Container
+  int              capacity = -1;  // -1 = unlimited.
+  std::vector<int> children;       // Ordered list of thing IDs.
+  float            spread_x = 0.0f;
+  float            spread_y = 0.0f;
 };
 
 // A visual card — inherits all Thing fields.
 struct KT_Card : Thing {
   using Thing::Thing;
-};
-
-// An ordered pile of cards with layout parameters.
-struct Stack {
-  Rectangle        rect;
-  std::vector<int> cards;  // Ordered list of card IDs.
-  float            spread_x = 0.0f, spread_y = 0.0f;
-  bool             face_up = true;
-  std::string      name;
-  float            depth    = 0.0f;
-  int              capacity = -1;  // -1 = unlimited.
 };
 
 // Drag operation in progress.
@@ -44,11 +42,12 @@ struct Drag_State {
 
 // Full table state passed to every render and input function.
 struct Table_State {
-  std::vector<KT_Card> cards;
-  std::vector<Stack>   stacks;
-  std::vector<int>     loose_cards;  // KT_Card IDs of cards not in any stack.
-  Drag_State           drag_state;
-  std::vector<KT_Card> animated_cards;
+  std::vector<Thing> things;
+  int                root      = -1;  // Thing id of the scene-tree root.
+  int                num_cards = 0;   // Cards occupy ids [0, num_cards).
+  Drag_State         drag_state;
+  // Smoothed mirror of `things`, used for animation. Same indexing.
+  std::vector<Thing>                 animated_cards;
   std::function<void(Table_State*)>  draw_callback;
   int                                zoomed_card_id = -1;
   std::function<bool(int, int, int)> is_drop_card_allowed;

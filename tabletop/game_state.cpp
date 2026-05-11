@@ -3,6 +3,44 @@
 #include <algorithm>
 
 #include "config.h"
+#include "raylib.h"
+
+bool is_card(const Thing& t) {
+  // Cards have an image path; containers (stacks, root) do not.
+  return !t.image_path.empty();
+}
+
+bool is_container(const Thing& t) { return t.image_path.empty(); }
+
+int find_parent(int thing_id, const Table_State& state) {
+  // Linear scan: tree depth is small (2) and total things is in the hundreds.
+  for (int i = 0; i < (int)state.things.size(); ++i) {
+    const auto& children = state.things[i].children;
+    if (std::find(children.begin(), children.end(), thing_id) != children.end())
+      return i;
+  }
+  return -1;
+}
+
+Vector2 local_to_world(int thing_id, const Table_State& state) {
+  // Walk up the parent chain summing local rects; stop at root or detached.
+  float x = 0.0f, y = 0.0f;
+  int   cur = thing_id;
+  while (cur >= 0) {
+    const Thing& t = state.things[cur];
+    x += t.rect.x;
+    y += t.rect.y;
+    if (cur == state.root) break;
+    cur = find_parent(cur, state);
+  }
+  return Vector2{x, y};
+}
+
+Rectangle world_rect(int thing_id, const Table_State& state) {
+  Vector2      p = local_to_world(thing_id, state);
+  const Thing& t = state.things[thing_id];
+  return Rectangle{p.x, p.y, t.rect.width, t.rect.height};
+}
 
 KT_Card create_card_design(int id) {
   KT_Card card;
@@ -10,31 +48,37 @@ KT_Card create_card_design(int id) {
   return card;
 }
 
-void add_card_to_stack(int card_id, Stack& stack, Table_State& state) {
-  stack.cards.push_back(card_id);
-  update_card_positions(stack, state, false);
+void add_card_to_stack(int card_id, int stack_id, Table_State& state) {
+  state.things[stack_id].children.push_back(card_id);
+  update_card_positions(stack_id, state, false);
 }
 
 // Returns card_id on success, -1 if not found (matches header signature).
-int remove_card_from_stack(int card_id, Stack& stack, Table_State& state) {
-  auto it = std::find(stack.cards.begin(), stack.cards.end(), card_id);
-  if (it != stack.cards.end()) {
-    stack.cards.erase(it);
-    update_card_positions(stack, state, false);
+int remove_card_from_stack(int card_id, int stack_id, Table_State& state) {
+  auto& children = state.things[stack_id].children;
+  auto  it       = std::find(children.begin(), children.end(), card_id);
+  if (it != children.end()) {
+    children.erase(it);
+    update_card_positions(stack_id, state, false);
     return card_id;
   }
   return -1;
 }
 
-void update_card_positions(Stack& stack, Table_State& state, bool sort) {
-  // Update x,y positions of all cards in a stack based on spread values.
-  size_t n = stack.cards.size();
+void update_card_positions(int stack_id, Table_State& state, bool sort) {
+  // Set each child's local rect (x, y) within the stack based on spread.
+  Thing& stack = state.things[stack_id];
+  size_t n     = stack.children.size();
 
   if (sort && n > 0) {
-    // Sort cards by their current x position.
-    std::sort(stack.cards.begin(), stack.cards.end(), [&state](int a, int b) {
-      return state.cards[a].rect.x < state.cards[b].rect.x;
-    });
+    // Sort children by their current local x position.
+    std::sort(
+      stack.children.begin(),
+      stack.children.end(),
+      [&state](int a, int b) {
+        return state.things[a].rect.x < state.things[b].rect.x;
+      }
+    );
   }
 
   if (n == 0) return;
@@ -43,8 +87,7 @@ void update_card_positions(Stack& stack, Table_State& state, bool sort) {
   float spread_y   = stack.spread_y;
   float card_width = static_cast<float>(tt::CARD_WIDTH);
 
-  // Adaptive spread: shrink if cards exceed stack width when spread_x is
-  // non-zero.
+  // Adaptive spread: shrink if cards would exceed stack width.
   if (n > 1 && stack.rect.width > 0.0f && spread_x != 0.0f) {
     float total_width = static_cast<float>(n - 1) * spread_x + card_width;
     if (total_width > stack.rect.width) {
@@ -55,52 +98,55 @@ void update_card_positions(Stack& stack, Table_State& state, bool sort) {
   float total_spread_x = (n > 1) ? static_cast<float>(n - 1) * spread_x : 0.0f;
   float total_spread_y = (n > 1) ? static_cast<float>(n - 1) * spread_y : 0.0f;
 
-  float mid_x   = (stack.rect.width > 0.0f)
-                    ? stack.rect.x + stack.rect.width / 2.0f
-                    : stack.rect.x;
-  float start_x = mid_x - (total_spread_x + card_width) / 2.0f;
-  float start_y = stack.rect.y - total_spread_y / 2.0f;
+  // In local space: center horizontally inside the stack's rect.
+  float mid_x_local =
+    (stack.rect.width > 0.0f) ? stack.rect.width / 2.0f : 0.0f;
+  float start_x_local = mid_x_local - (total_spread_x + card_width) / 2.0f;
+  // Vertical: cards float around the stack's top edge as in the original.
+  float start_y_local = -total_spread_y / 2.0f;
 
   int drag_id = state.drag_state.card_id;
   for (int i = 0; i < (int)n; i++) {
-    int card_id = stack.cards[i];
+    int card_id = stack.children[i];
     if (card_id != drag_id) {
-      KT_Card& card = state.cards[card_id];
-      card.rect.x   = start_x + static_cast<float>(i) * spread_x;
-      card.rect.y   = start_y + static_cast<float>(i) * spread_y;
+      Thing& card = state.things[card_id];
+      card.rect.x = start_x_local + static_cast<float>(i) * spread_x;
+      card.rect.y = start_y_local + static_cast<float>(i) * spread_y;
     }
   }
 }
 
 void move_card_to_stack(
-  int card_id, Stack& from_stack, Stack& to_stack, Table_State& state
+  int card_id, int from_stack_id, int to_stack_id, Table_State& state
 ) {
-  remove_card_from_stack(card_id, from_stack, state);
-  add_card_to_stack(card_id, to_stack, state);
+  remove_card_from_stack(card_id, from_stack_id, state);
+  add_card_to_stack(card_id, to_stack_id, state);
 }
 
 int find_stack_containing_card(int card_id, const Table_State& state) {
-  // Return stack index, or -1 if not found.
-  for (int i = 0; i < (int)state.stacks.size(); i++) {
-    const Stack& stack = state.stacks[i];
-    if (std::find(stack.cards.begin(), stack.cards.end(), card_id) !=
-        stack.cards.end())
-      return i;
+  // Iterate root's children; return the container that holds card_id.
+  const auto& root_children = state.things[state.root].children;
+  for (int child_id : root_children) {
+    const Thing& t = state.things[child_id];
+    if (!is_container(t)) continue;
+    if (std::find(t.children.begin(), t.children.end(), card_id) !=
+        t.children.end())
+      return child_id;
   }
   return -1;
 }
 
 void add_loose_card(int card_id, Table_State& state) {
-  // Add a card to the table as a loose card.
-  state.loose_cards.push_back(card_id);
+  // Loose cards live directly under root.
+  state.things[state.root].children.push_back(card_id);
 }
 
 // Returns card_id on success, -1 if not found (matches header signature).
 int remove_loose_card(int card_id, Table_State& state) {
-  auto it =
-    std::find(state.loose_cards.begin(), state.loose_cards.end(), card_id);
-  if (it != state.loose_cards.end()) {
-    state.loose_cards.erase(it);
+  auto& children = state.things[state.root].children;
+  auto  it       = std::find(children.begin(), children.end(), card_id);
+  if (it != children.end()) {
+    children.erase(it);
     return card_id;
   }
   return -1;
@@ -111,8 +157,9 @@ std::vector<int> create_sample_cards(Table_State& state) {
   std::vector<int> card_ids;
   for (int i = 0; i < 10; i++) {
     KT_Card card    = create_card_design(i);
-    int     card_id = static_cast<int>(state.cards.size());
-    state.cards.push_back(card);
+    int     card_id = static_cast<int>(state.things.size());
+    card.id         = card_id;
+    state.things.push_back(card);
     card_ids.push_back(card_id);
   }
   return card_ids;

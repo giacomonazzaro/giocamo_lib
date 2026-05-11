@@ -7,9 +7,9 @@
 
 #include <set>
 
-// Indices into Table_State.stacks for a given player's zones. Layout is the
-// one produced by make_gods_stacks(): deck/hand/discard/peoples/wonders, each
-// player gets 5 consecutive entries starting at player_index*5.
+// Thing-ids of a given player's zones. Layout is the one produced by
+// make_gods_stacks(): deck/hand/discard/peoples/wonders, each player gets 5
+// consecutive entries starting at num_cards + player_index*5.
 struct Stack_Indices {
   int deck;
   int hand;
@@ -18,8 +18,8 @@ struct Stack_Indices {
   int wonders;
 };
 
-inline Stack_Indices stack_indices(int player_index) {
-  int base = player_index * 5;
+inline Stack_Indices stack_indices(int player_index, const Table_State& state) {
+  int base = state.num_cards + player_index * 5;
   return Stack_Indices{base, base + 1, base + 2, base + 3, base + 4};
 }
 

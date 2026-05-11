@@ -11,15 +11,15 @@ void sync_game_state_from_table(
   Table_State& table_state, Game_State& gods_state
 ) {
   for (int i = 0; i < 2; ++i) {
-    Stack_Indices s               = stack_indices(i);
-    gods_state.players[i].deck    = table_state.stacks[s.deck].cards;
-    gods_state.players[i].hand    = table_state.stacks[s.hand].cards;
-    gods_state.players[i].discard = table_state.stacks[s.discard].cards;
-    gods_state.players[i].wonders = table_state.stacks[s.wonders].cards;
+    Stack_Indices s               = stack_indices(i, table_state);
+    gods_state.players[i].deck    = table_state.things[s.deck].children;
+    gods_state.players[i].hand    = table_state.things[s.hand].children;
+    gods_state.players[i].discard = table_state.things[s.discard].children;
+    gods_state.players[i].wonders = table_state.things[s.wonders].children;
     for (int wid : gods_state.players[i].wonders) {
       gods_state.all_cards[wid].owner = i;
     }
-    for (int pid : table_state.stacks[s.peoples].cards) {
+    for (int pid : table_state.things[s.peoples].children) {
       gods_state.all_cards[pid].owner = i;
     }
   }
@@ -27,14 +27,12 @@ void sync_game_state_from_table(
 
 void update_stacks(Table_State& table_state, Game_State& gods_state) {
   auto refresh = [&](int stack_id, const std::vector<int>& card_ids) {
-    table_state.stacks[stack_id].cards = card_ids;
-    update_card_positions(
-      table_state.stacks[stack_id], table_state, /*sort=*/false
-    );
+    table_state.things[stack_id].children = card_ids;
+    update_card_positions(stack_id, table_state, /*sort=*/false);
   };
 
   for (int i = 0; i < 2; ++i) {
-    Stack_Indices s = stack_indices(i);
+    Stack_Indices s = stack_indices(i, table_state);
     refresh(s.deck, gods_state.players[i].deck);
     refresh(s.hand, gods_state.players[i].hand);
     refresh(s.discard, gods_state.players[i].discard);
@@ -54,8 +52,9 @@ int Agent_UI::choose_action(Game& state, const Choice& choice) {
   int total_options = action_options_count(action_type);
   if (total_options == 1 && choice.description != "main") return 0;
 
-  int hand_stack = choice.player_index * 5 + 1;
-  int play_stack = choice.player_index * 5 + 4;
+  Stack_Indices my_zones = stack_indices(choice.player_index, *table_state);
+  int           hand_stack = my_zones.hand;
+  int           play_stack = my_zones.wonders;
 
   // Set drag-and-drop permission (safe to call every frame).
   table_state->is_drop_card_allowed = [hand_stack,
@@ -133,8 +132,7 @@ int Agent_UI::choose_action(Game& state, const Choice& choice) {
         int kt_card_id                 = gods_state.get_card(cid).id;
         ui_state->highlighted_cards[i] = kt_card_id;
         if (mouse_clicked && choice.description != "main") {
-          const KT_Card& kt_card = table_state->cards[kt_card_id];
-          if (card_pressed(kt_card)) {
+          if (card_pressed(kt_card_id, *table_state)) {
             ui_state->highlighted_cards.clear();
             return i;
           }
@@ -170,8 +168,7 @@ int Agent_UI::choose_action(Game& state, const Choice& choice) {
       if (card_multiselection.find(cid) == card_multiselection.end()) {
         ui_state->highlighted_cards[kt_card_id] = kt_card_id;
         if (frame_mouse_clicked) {
-          const KT_Card& kt_card = table_state->cards[kt_card_id];
-          if (card_pressed(kt_card)) {
+          if (card_pressed(kt_card_id, *table_state)) {
             card_multiselection.insert(cid);
             frame_mouse_clicked = 0;
           }

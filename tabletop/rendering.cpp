@@ -6,6 +6,7 @@
 #include <unordered_map>
 
 #include "config.h"
+#include "game_state.h"
 #include "raylib.h"
 #include "rlgl.h"  // for rlPushMatrix, rlPopMatrix, rlTranslatef, rlRotatef, rlScalef
 
@@ -236,64 +237,25 @@ void draw_card_content(const Thing& card, bool face_up) {
   }
 }
 
-// --- draw_card ---
-
-void draw_card(const Thing& card, bool face_up) {
-  float w = (float)tt::CARD_WIDTH;
-  float h = (float)tt::CARD_HEIGHT;
-
-  if (card.rotation == 0) {
-    // No rotation: translate to card position and draw at origin.
-    rlPushMatrix();
-    rlTranslatef(card.rect.x, card.rect.y, 0.0f);
-    draw_card_content(card, face_up);
-    rlPopMatrix();
-  } else {
-    // Rotate around the center of the card.
-    float cx = card.rect.x + w / 2.0f;
-    float cy = card.rect.y + h / 2.0f;
-    rlPushMatrix();
-    rlTranslatef(cx, cy, 0.0f);
-    rlRotatef((float)card.rotation, 0.0f, 0.0f, 1.0f);
-    rlTranslatef(-w / 2.0f, -h / 2.0f, 0.0f);
-    draw_card_content(card, face_up);
-    rlPopMatrix();
-  }
-}
-
-// --- draw_stack ---
-
-void draw_stack(const Stack& stack, const Table_State& state) {
-  // Draw each card that belongs to this stack.
-  for (int card_id : stack.cards) {
-    draw_card(state.cards[card_id], stack.face_up);
-  }
-}
-
 // --- draw_stack_placeholder ---
 
-void draw_stack_placeholder(const Stack& stack) {
-  float w = (float)tt::CARD_WIDTH;
-  float h = (float)tt::CARD_HEIGHT;
-  float r = (float)tt::CARD_CORNER_RADIUS;
+void draw_stack_placeholder(int stack_id, const Table_State& state) {
+  // Drawn in world coords (overlay, not part of the DFS tree walk).
+  Rectangle r_world = world_rect(stack_id, state);
+  float     w       = (float)tt::CARD_WIDTH;
+  float     h       = (float)tt::CARD_HEIGHT;
+  float     r       = (float)tt::CARD_CORNER_RADIUS;
 
-  // Dashed outline placeholder.
   DrawRectangleRoundedLinesEx(
-    Rectangle{stack.rect.x, stack.rect.y, stack.rect.width, stack.rect.height},
-    r / std::min(w, h),
-    8,
-    1.0f,
-    Color{100, 100, 100, 100}
+    r_world, r / std::min(w, h), 8, 1.0f, Color{100, 100, 100, 100}
   );
 
-  // Label centered in the placeholder.
-  const std::string& label   = stack.name;
+  const std::string& label   = state.things[stack_id].name;
   int                label_w = text_width(label, 14);
-
   render_text(
     label,
-    (int)(stack.rect.x + (w - (float)label_w) / 2.0f),
-    (int)(stack.rect.y + h / 2.0f - 7.0f),
+    (int)(r_world.x + (w - (float)label_w) / 2.0f),
+    (int)(r_world.y + h / 2.0f - 7.0f),
     14,
     Color{100, 100, 100, 150}
   );
@@ -301,28 +263,85 @@ void draw_stack_placeholder(const Stack& stack) {
 
 // --- animate ---
 
-void animate(std::vector<KT_Card>& cards, const Table_State& state, float dt) {
-  int selected_card_id = state.drag_state.card_id;
-  int n                = (int)cards.size();
-  for (int i = 0; i < n; ++i) {
-    KT_Card&       acard  = cards[i];
-    const KT_Card& target = state.cards[i];
+void animate(std::vector<Thing>& things, const Table_State& state, float dt) {
+  // Resize mirror to match state.things; copy verbatim on first call so cards
+  // don't fly in from (0,0).
+  if (things.size() != state.things.size()) {
+    things = state.things;
+    return;
+  }
+  int selected = state.drag_state.card_id;
+  for (int i = 0; i < (int)state.things.size(); ++i) {
+    Thing&       a      = things[i];
+    const Thing& target = state.things[i];
 
-    float old_x    = acard.rect.x;
-    acard.rect.x   = acard.rect.x * (1.0f - dt) + target.rect.x * dt;
-    acard.rect.y   = acard.rect.y * (1.0f - dt) + target.rect.y * dt;
-    float vx       = acard.rect.x - old_x;
-    acard.rotation = acard.rotation * (1.0f - dt) + target.rotation * dt +
-                     vx * 0.1f;
+    // Preserve the smoothed pose, refresh everything else from target.
+    float ax   = a.rect.x;
+    float ay   = a.rect.y;
+    float arot = a.rotation;
+    a          = target;
+    a.rect.x   = ax;
+    a.rect.y   = ay;
+    a.rotation = arot;
+
+    if (i == selected) {
+      // Dragged card snaps to its current local position.
+      a.rect.x   = target.rect.x;
+      a.rect.y   = target.rect.y;
+      a.rotation = target.rotation;
+      continue;
+    }
+    float old_x = a.rect.x;
+    a.rect.x    = a.rect.x * (1.0f - dt) + target.rect.x * dt;
+    a.rect.y    = a.rect.y * (1.0f - dt) + target.rect.y * dt;
+    float vx    = a.rect.x - old_x;
+    a.rotation =
+      a.rotation * (1.0f - dt) + target.rotation * dt + vx * 0.1f;
+  }
+}
+
+// --- DFS render walker ---
+
+static void apply_local_transform(const Thing& t) {
+  if (t.rotation == 0.0f) {
+    rlTranslatef(t.rect.x, t.rect.y, 0.0f);
+    return;
+  }
+  // Rotate around the thing's center.
+  float w = is_card(t) ? (float)tt::CARD_WIDTH : t.rect.width;
+  float h = is_card(t) ? (float)tt::CARD_HEIGHT : t.rect.height;
+  float cx = t.rect.x + w / 2.0f;
+  float cy = t.rect.y + h / 2.0f;
+  rlTranslatef(cx, cy, 0.0f);
+  rlRotatef(t.rotation, 0.0f, 0.0f, 1.0f);
+  rlTranslatef(-w / 2.0f, -h / 2.0f, 0.0f);
+}
+
+static void draw_thing_recursive(
+  int                       thing_id,
+  const Table_State&        state,
+  const std::vector<Thing>& source,
+  bool                      parent_face_up
+) {
+  const Thing& t = source[thing_id];
+  rlPushMatrix();
+  apply_local_transform(t);
+
+  // Draw the card body (skip the dragged card — it's drawn on top later).
+  if (is_card(t) && thing_id != state.drag_state.card_id) {
+    draw_card_content(t, parent_face_up);
   }
 
-  // Dragged card snaps immediately to the target position.
-  if (selected_card_id >= 0 && selected_card_id < n) {
-    KT_Card&       acard  = cards[selected_card_id];
-    const KT_Card& target = state.cards[selected_card_id];
-    acard.rect.x          = target.rect.x;
-    acard.rect.y          = target.rect.y;
+  // Per-thing draw callback fires after self-draw, before children.
+  if (t.draw_callback) {
+    t.draw_callback(const_cast<Thing&>(t));
   }
+
+  // Children inherit this thing's face_up.
+  for (int child_id : t.children) {
+    draw_thing_recursive(child_id, state, source, t.face_up);
+  }
+  rlPopMatrix();
 }
 
 // --- draw_zoomed_card ---
@@ -358,65 +377,65 @@ void draw_zoomed_card(const Thing& card, bool face_up) {
 // --- draw_table ---
 
 void draw_table(Table_State& state) {
-  // Initialize animated_cards on first call (copy of cards list).
-  if (state.animated_cards.empty()) {
-    state.animated_cards = state.cards;
-  }
-
-  // Animate card positions toward their targets.
-  // dt is hardcoded to match the original Python behavior (frame-rate
-  // independent lerp was not intended).
+  // Smoothed mirror of state.things; lerps every frame toward target.
   animate(state.animated_cards, state, 0.1f);
 
-  // Draw stack placeholder when a drag is in progress.
-  if (state.drag_state.current_stack != -1) {
-    draw_stack_placeholder(state.stacks[state.drag_state.current_stack]);
+  // Highlight the hovered stack while dragging.
+  if (state.drag_state.current_stack != -1 &&
+      state.drag_state.current_stack != state.root) {
+    draw_stack_placeholder(state.drag_state.current_stack, state);
   }
 
-  // Collect stacks and sort by depth (ascending) before drawing.
-  std::vector<Stack> stacks_sorted = state.stacks;
+  // Render the scene tree DFS from root. Root's direct children are sorted by
+  // depth so existing layered draw order is preserved.
+  const Thing&     root_target = state.things[state.root];
+  const Thing&     root_anim   = state.animated_cards[state.root];
+  std::vector<int> draw_order  = root_target.children;
   std::sort(
-    stacks_sorted.begin(),
-    stacks_sorted.end(),
-    [](const Stack& a, const Stack& b) { return a.depth < b.depth; }
+    draw_order.begin(),
+    draw_order.end(),
+    [&state](int a, int b) {
+      return state.animated_cards[a].depth < state.animated_cards[b].depth;
+    }
   );
 
-  // Draw stacks (skip the card that is currently being dragged).
-  for (const Stack& stack : stacks_sorted) {
-    for (int card_id : stack.cards) {
-      if (state.drag_state.card_id == card_id) continue;
-      draw_card(state.animated_cards[card_id], stack.face_up);
-    }
+  rlPushMatrix();
+  apply_local_transform(root_anim);
+  for (int child_id : draw_order) {
+    draw_thing_recursive(child_id, state, state.animated_cards, root_anim.face_up);
+  }
+  rlPopMatrix();
+
+  // Draw the dragged card last so it sits above everything else.
+  int dragged = state.drag_state.card_id;
+  if (dragged >= 0) {
+    // Use the parent's world transform as the base; the card's own local
+    // transform is applied on top.
+    int     parent_id    = find_parent(dragged, state);
+    Vector2 parent_world = (parent_id >= 0) ? local_to_world(parent_id, state)
+                                            : Vector2{0.0f, 0.0f};
+    rlPushMatrix();
+    rlTranslatef(parent_world.x, parent_world.y, 0.0f);
+    const Thing& c = state.animated_cards[dragged];
+    apply_local_transform(c);
+    bool face_up = true;
+    int  orig    = state.drag_state.original_stack;
+    if (orig >= 0 && orig != state.root) face_up = state.things[orig].face_up;
+    draw_card_content(c, face_up);
+    if (c.draw_callback) c.draw_callback(const_cast<Thing&>(c));
+    rlPopMatrix();
   }
 
-  // Draw loose cards (always face up).
-  for (int card_id : state.loose_cards) {
-    draw_card(state.animated_cards[card_id], true);
-  }
-
-  // Draw the dragged card on top of everything else.
-  if (state.drag_state.card_id >= 0) {
-    const KT_Card& card = state.animated_cards[state.drag_state.card_id];
-    bool face_up        = state.stacks[state.drag_state.original_stack].face_up;
-    draw_card(card, face_up);
-  }
-
-  // Call the optional draw callback for custom overlays.
+  // Optional table-level draw callback (custom HUD overlays).
   if (state.draw_callback) {
     state.draw_callback(&state);
   }
 
-  // Draw zoomed card on top of everything.
+  // Zoomed card on top of everything.
   if (state.zoomed_card_id >= 0) {
-    // Determine face_up by checking which stack owns this card.
     bool face_up = true;
-    for (const Stack& stack : state.stacks) {
-      for (int cid : stack.cards) {
-        if (cid == state.zoomed_card_id) {
-          face_up = stack.face_up;
-        }
-      }
-    }
-    draw_zoomed_card(state.cards[state.zoomed_card_id], face_up);
+    int  owner   = find_stack_containing_card(state.zoomed_card_id, state);
+    if (owner >= 0) face_up = state.things[owner].face_up;
+    draw_zoomed_card(state.things[state.zoomed_card_id], face_up);
   }
 }
