@@ -13,7 +13,7 @@ struct Thing {
   int id = 0;
   std::string image_path;
   float x = 0.0f, y = 0.0f;
-  int rotation = 0;
+  float rotation = 0.0f;
   std::function<void(Thing&)> draw_callback;
 };
 

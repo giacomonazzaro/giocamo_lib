@@ -314,7 +314,7 @@ void animate(std::vector<KT_Card>& cards, const Table_State& state, float dt) {
     acard.y     = acard.y * (1.0f - dt) + target.y * dt;
     float vx    = acard.x - old_x;
     acard.rotation =
-      (int)(acard.rotation * (1.0f - dt) + target.rotation * dt + vx * 0.1f);
+      acard.rotation * (1.0f - dt) + target.rotation * dt + vx * 0.1f;
   }
 
   // Dragged card snaps immediately to the target position.
