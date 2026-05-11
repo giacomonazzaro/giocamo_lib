@@ -32,6 +32,7 @@ nanobind_add_module(_kt_cpp NB_STATIC
     code/game_state.cpp
     code/input.cpp
     code/rendering.cpp
+    code/ui.cpp
     code/bindings.cpp
 )
 target_include_directories(_kt_cpp PRIVATE include "${RAYLIB_INCLUDE_DIR}")

@@ -5,6 +5,7 @@
 #include "input.h"
 #include "models.h"
 #include "rendering.h"
+#include "ui.h"
 
 namespace nb = nanobind;
 
@@ -14,4 +15,5 @@ NB_MODULE(_kt_cpp, m) {
   bind_game_state(m);
   bind_input(m);
   bind_rendering(m);
+  bind_ui(m);
 }
