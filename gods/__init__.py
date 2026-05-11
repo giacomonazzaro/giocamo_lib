@@ -1,1 +1,0 @@
-# Gods card game package

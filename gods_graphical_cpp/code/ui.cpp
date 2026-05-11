@@ -14,7 +14,7 @@ namespace fs = std::filesystem;
 
 static const std::string IMAGES_DIR = []() {
   // gods_graphical_cpp/code/../.. is the gods-app root.
-  fs::path p = fs::current_path() / "gods" / "cards" / "fronts";
+  fs::path p = fs::current_path() / "gods_cpp" / "card-images";
   return p.string();
 }();
 

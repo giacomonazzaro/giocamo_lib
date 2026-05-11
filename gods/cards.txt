@@ -1,248 +1,0 @@
-Play another event, it gets +ª.
-
-red
-event
-
-Miracle
-
-Add ª +1 counters on a people.
-
-red
-event
-
-Forgive
-
-Add ª +1 counters on a wonder.
-
-red
-event
-
-blessing
-
-Add ª +1 counters on a people.
-
-green
-event
-
-spring
-
-Destroy all peoples with power ª or less.
-
-green
-event
-
-earthquake
-
-Put ª -1 counters on all people.
-
-green
-event
-
-flood
-
-Take ª extra turns.
-
-blue(event
-
-prophecy
-
-Return ª event cards from your discard pile to your hand.
-
-blue(event
-
-Flashback
-
-The opponent discards ª cards from their hand.
-
-red
-event
-
-Darkness
-
-Destroy a wonder with power ª or less. 
-
-red
-event
-
-unmaking
-
-Destroy a people with power ª or less.
-
-red
-event
-
-Revolt
-
-Restore a people with power ª or less.
-
-green
-event
-
-regrowth
-
-Shuffle up to ª blue wonders into theirs ownersˇ decks.
-
-green
-event
-
-eruption
-
-Return up to ª wonders from play to theirs ownersˇ hands.
-
-blue(event
-
-time warp
-
-Draw ª cards.
-
-blue(event
-
-aurora
-
-Destroy all opponent peoples with power ª or less.
-
-blue(event
-
-Meteorite
-
-Your red events get +ª.
-
-red
-wonder
-
-Fire
-
-When you pass, you may play a card with power ª or less.
-
-red
-wonder
-
-wisdom
-
-You can score tied peoples with power ª or less.
-
-green
-wonder
-
-Rivers
-
-When you pass, you may restore a people with power ª or less.
-
-green
-wonder
-
-Forests
-
-You can score destroyed peoples with power ª or less.
-
-green
-wonder
-
-Deserts
-
-Your other blue wonders get +ª
-
-blue
-wonder
-
-sky
-
-Your green wonders get  +ª.
-
-blue
-wonder
-
-sun
-
-When you end the game, you may play a card with power ª or less.
-
-blue
-wonder
-
-light
-
-When you pass, you may destroy a people with power ª or less.
-
-red
-wonder
-
-war
-
-Your peoples are worth ª points extra.
-
-red
-wonder
-
-love
-
-Opponent events get -ª, down to a minimum of 1 power.
-
-red
-wonder
-
-knowledge
-
-Your peoples with power ª or less are indestructible.
-
-green
-wonder
-
-Mountains
-
-This is worth ª points at the end of the game.
-
-green
-wonder
-
-animals
-
-Your alive peoples with power ª or less are worth +1 points.
-
-green
-wonder
-
-seas
-
-Whenever you have less than ª cards in hand, draw back to ª.
-
-blue
-wonder
-
-moon
-
-When you draw cards, you may do from the shared deck. They have power ª.
-
-blue
-wonder
-
-stars
-
-You have twice or more cards in hand than the opponent.
-
-greeks
-
-You have the most total power among green wonders.
-
-Egyptians
-
-You have the most total power among red wonders.
-
-Romans
-
-You have the most total power among blue wonders.
-
-judeans
-
-You have the most cards in your deck.
-
-vikings
-
-You have the most total power among wonders.
-
-babylonians
-
-You have the most wonders.
-
-minoans
-
-
