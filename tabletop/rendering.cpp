@@ -245,13 +245,13 @@ void draw_card(const Thing& card, bool face_up) {
   if (card.rotation == 0) {
     // No rotation: translate to card position and draw at origin.
     rlPushMatrix();
-    rlTranslatef(card.x, card.y, 0.0f);
+    rlTranslatef(card.rect.x, card.rect.y, 0.0f);
     draw_card_content(card, face_up);
     rlPopMatrix();
   } else {
     // Rotate around the center of the card.
-    float cx = card.x + w / 2.0f;
-    float cy = card.y + h / 2.0f;
+    float cx = card.rect.x + w / 2.0f;
+    float cy = card.rect.y + h / 2.0f;
     rlPushMatrix();
     rlTranslatef(cx, cy, 0.0f);
     rlRotatef((float)card.rotation, 0.0f, 0.0f, 1.0f);
@@ -308,10 +308,10 @@ void animate(std::vector<KT_Card>& cards, const Table_State& state, float dt) {
     KT_Card&       acard  = cards[i];
     const KT_Card& target = state.cards[i];
 
-    float old_x    = acard.x;
-    acard.x        = acard.x * (1.0f - dt) + target.x * dt;
-    acard.y        = acard.y * (1.0f - dt) + target.y * dt;
-    float vx       = acard.x - old_x;
+    float old_x    = acard.rect.x;
+    acard.rect.x   = acard.rect.x * (1.0f - dt) + target.rect.x * dt;
+    acard.rect.y   = acard.rect.y * (1.0f - dt) + target.rect.y * dt;
+    float vx       = acard.rect.x - old_x;
     acard.rotation = acard.rotation * (1.0f - dt) + target.rotation * dt +
                      vx * 0.1f;
   }
@@ -320,8 +320,8 @@ void animate(std::vector<KT_Card>& cards, const Table_State& state, float dt) {
   if (selected_card_id >= 0 && selected_card_id < n) {
     KT_Card&       acard  = cards[selected_card_id];
     const KT_Card& target = state.cards[selected_card_id];
-    acard.x               = target.x;
-    acard.y               = target.y;
+    acard.rect.x          = target.rect.x;
+    acard.rect.y          = target.rect.y;
   }
 }
 

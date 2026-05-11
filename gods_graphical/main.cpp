@@ -239,7 +239,7 @@ static void draw_hud(
     int            btn_w = 44, btn_h = 36, gap = 6;
     int            panel_w   = 10 * btn_w + 9 * gap + 16;
     Rectangle      card_rect = {
-      kt_card.x, kt_card.y, (float)tt::CARD_WIDTH, (float)tt::CARD_HEIGHT
+      kt_card.rect.x, kt_card.rect.y, (float)tt::CARD_WIDTH, (float)tt::CARD_HEIGHT
     };
     Rectangle panel =
       place_next(card_rect, panel_w, btn_h + 16, "center", "bottom", 8);

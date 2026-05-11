@@ -17,7 +17,7 @@ bool point_in_card(float px, float py, const Thing& card) {
   // Check if point (px, py) is inside the card bounds.
   float w = (float)tt::CARD_WIDTH;
   float h = (float)tt::CARD_HEIGHT;
-  return (card.x <= px && px <= card.x + w && card.y <= py && py <= card.y + h);
+  return (card.rect.x <= px && px <= card.rect.x + w && card.rect.y <= py && py <= card.rect.y + h);
 }
 
 bool card_pressed(const Thing& card) {
@@ -85,8 +85,8 @@ void handle_mouse_press(Table_State& state) {
   drag.card_id        = card_id;
   drag.current_stack  = stack_idx;
   drag.original_stack = stack_idx;
-  drag.offset_x       = mx - card.x;
-  drag.offset_y       = my - card.y;
+  drag.offset_x       = mx - card.rect.x;
+  drag.offset_y       = my - card.rect.y;
 }
 
 void handle_mouse_release(Table_State& state) {
@@ -128,8 +128,8 @@ void handle_mouse_move(Table_State& state) {
   float    mx   = (float)GetMouseX();
   float    my   = (float)GetMouseY();
   KT_Card& card = state.cards[drag.card_id];
-  card.x        = mx - drag.offset_x;
-  card.y        = my - drag.offset_y;
+  card.rect.x   = mx - drag.offset_x;
+  card.rect.y   = my - drag.offset_y;
 
   int hovered_stack = find_stack_at(mx, my, state);
   if (hovered_stack < 0) return;

@@ -33,7 +33,7 @@ void update_card_positions(Stack& stack, Table_State& state, bool sort) {
   if (sort && n > 0) {
     // Sort cards by their current x position.
     std::sort(stack.cards.begin(), stack.cards.end(), [&state](int a, int b) {
-      return state.cards[a].x < state.cards[b].x;
+      return state.cards[a].rect.x < state.cards[b].rect.x;
     });
   }
 
@@ -66,8 +66,8 @@ void update_card_positions(Stack& stack, Table_State& state, bool sort) {
     int card_id = stack.cards[i];
     if (card_id != drag_id) {
       KT_Card& card = state.cards[card_id];
-      card.x        = start_x + static_cast<float>(i) * spread_x;
-      card.y        = start_y + static_cast<float>(i) * spread_y;
+      card.rect.x   = start_x + static_cast<float>(i) * spread_x;
+      card.rect.y   = start_y + static_cast<float>(i) * spread_y;
     }
   }
 }
