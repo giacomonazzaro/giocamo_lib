@@ -1,0 +1,30 @@
+#pragma once
+#include <functional>
+#include <vector>
+
+#include <tabletop/models.h>
+#include <tabletop/ui.h>
+#include <tressette/models.h>
+
+// Stack offsets from num_cards (add num_cards to get thing_ids).
+constexpr int TRESSETTE_HAND_0    = 0;
+constexpr int TRESSETTE_HAND_1    = 1;
+constexpr int TRESSETTE_TRICKS_0  = 2;
+constexpr int TRESSETTE_TRICKS_1  = 3;
+constexpr int TRESSETTE_STOCK_IDX = 4;
+constexpr int TRESSETTE_TABLE_IDX = 5;
+
+// Build the 6 stack Things for a Tressette table layout.
+std::vector<Thing> make_tressette_stacks(bool both_hands_visible);
+
+// Draw callback that renders rank/suit text on each card face.
+std::function<void(Thing&)> make_card_draw_callback(
+  const tressette::Game_State& state, UI_State& ui_state
+);
+
+void draw_tressette_player_hud(
+  int player_index, int score, bool is_current, int hud_y
+);
+void draw_tressette_game_over_screen(
+  Table_State& table_state, const std::vector<int>& scores
+);
