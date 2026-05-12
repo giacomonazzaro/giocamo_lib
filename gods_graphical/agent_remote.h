@@ -1,9 +1,25 @@
 #pragma once
 
 #include <game/agent.h>
-#include <online/protocol.h>
 
 #include <utility>
+
+#ifdef __EMSCRIPTEN__
+#include "online_stub.h"
+
+// Stub agents for Emscripten builds; online play is disabled.
+struct Agent_Remote : Agent {
+  explicit Agent_Remote(UDP_Socket*) {}
+  int choose_action(Game& state, const Choice& choice) override { return 0; }
+};
+
+struct Agent_Local_Online : Agent {
+  Agent_Local_Online(Agent*, UDP_Socket*, std::pair<std::string, int>) {}
+  int choose_action(Game& state, const Choice& choice) override { return 0; }
+};
+
+#else
+#include <online/protocol.h>
 
 // Receives opponent's action indices from the server.
 struct Agent_Remote : Agent {
@@ -25,3 +41,4 @@ struct Agent_Local_Online : Agent {
 
   int choose_action(Game& state, const Choice& choice) override;
 };
+#endif

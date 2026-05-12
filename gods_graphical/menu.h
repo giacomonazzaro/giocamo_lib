@@ -1,6 +1,10 @@
 #pragma once
 
+#ifdef __EMSCRIPTEN__
+#include "online_stub.h"
+#else
 #include <online/setup.h>
+#endif
 
 #include <memory>
 #include <string>

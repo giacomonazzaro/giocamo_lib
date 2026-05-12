@@ -2,6 +2,36 @@
 
 #include <raylib.h>
 #include <tabletop/config.h>
+
+#ifdef __EMSCRIPTEN__
+#include <emscripten.h>
+#include <emscripten/html5.h>
+
+Menu_Result run_menu() {
+  InitWindow(tt::WINDOW_WIDTH, tt::WINDOW_HEIGHT, "Gods");
+  // FLAG_WINDOW_HIGHDPI is not implemented on PLATFORM_WEB (GetWindowScaleDPI
+  // returns {1,1}).  Resize the canvas pixel buffer to physical resolution and
+  // pin the CSS size to logical dimensions so the game fills the viewport at
+  // full Retina sharpness.  The per-frame projection fix in draw_background
+  // maps the logical 1700×1000 coordinate space to the physical canvas.
+  double dpr = emscripten_get_device_pixel_ratio();
+  if (dpr > 1.0) {
+    emscripten_set_canvas_element_size(
+        "#canvas",
+        (int)(tt::WINDOW_WIDTH  * dpr),
+        (int)(tt::WINDOW_HEIGHT * dpr));
+    EM_ASM({
+      var c = document.getElementById('canvas');
+      c.style.width  = $0 + 'px';
+      c.style.height = $1 + 'px';
+    }, tt::WINDOW_WIDTH, tt::WINDOW_HEIGHT);
+  }
+  SetTargetFPS(tt::TARGET_FPS);
+  return Menu_Result{};  // Default mode is VS_AI.
+}
+
+#else
+
 #include <tabletop/rendering.h>
 #include <tabletop/ui.h>
 
@@ -291,3 +321,5 @@ Menu_Result run_menu() {
   CloseWindow();
   std::exit(0);
 }
+
+#endif  // !__EMSCRIPTEN__

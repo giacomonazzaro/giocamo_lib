@@ -18,8 +18,12 @@
 #include <gods/gameplay.h>
 #include <gods/models.h>
 #include <gods/setup.h>
+#ifndef __EMSCRIPTEN__
 #include <online/protocol.h>
 #include <online/setup.h>
+#else
+#include "online_stub.h"
+#endif
 #include <tabletop/config.h>
 #include <tabletop/game_state.h>
 #include <tabletop/input.h>

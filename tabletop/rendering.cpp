@@ -10,6 +10,10 @@
 #include "raylib.h"
 #include "rlgl.h"  // for rlPushMatrix, rlPopMatrix, rlTranslatef, rlRotatef, rlScalef
 
+#ifdef __EMSCRIPTEN__
+#include <emscripten.h>
+#endif
+
 // --- Static globals (lazy initialized) ---
 
 static Shader s_background_shader = {0};
@@ -28,8 +32,19 @@ static std::unordered_map<std::string, Texture2D> s_rounded_texture_cache;
 
 static void load_background_shader() {
   // Load the fragment shader source from disk.
-  char* fs_code       = LoadFileText("tabletop/background.frag");
+  char* fs_code = LoadFileText("tabletop/background.frag");
+#ifdef __EMSCRIPTEN__
+  // WebGL2 needs "#version 300 es" with a precision qualifier instead of the
+  // desktop "#version 330".
+  std::string code = fs_code;
+  size_t      pos  = code.find("#version 330");
+  if (pos != std::string::npos) {
+    code.replace(pos, 12, "#version 300 es\nprecision mediump float;");
+  }
+  s_background_shader = LoadShaderFromMemory(nullptr, code.c_str());
+#else
   s_background_shader = LoadShaderFromMemory(nullptr, fs_code);
+#endif
   s_bg_time_loc       = GetShaderLocation(s_background_shader, "u_time");
   s_bg_resolution_loc = GetShaderLocation(s_background_shader, "u_resolution");
   s_bg_turn_loc       = GetShaderLocation(s_background_shader, "u_turn");
@@ -140,6 +155,27 @@ void draw_background(float turn) {
     load_background_shader();
   }
 
+#ifdef __EMSCRIPTEN__
+  // PLATFORM_WEB does not implement GetWindowScaleDPI (returns {1,1}).  After
+  // we resize the canvas pixel buffer to dpr × logical in menu.cpp, raylib's
+  // viewport is still clamped to the logical 1700×1000 window, leaving the
+  // rest of the physical canvas black.  Override the GL viewport and projection
+  // every frame to cover the full physical canvas.
+  {
+    double dpr = emscripten_get_device_pixel_ratio();
+    if (dpr > 1.0) {
+      int pw = (int)(tt::WINDOW_WIDTH * dpr);
+      int ph = (int)(tt::WINDOW_HEIGHT * dpr);
+      rlViewport(0, 0, pw, ph);
+      rlMatrixMode(RL_PROJECTION);
+      rlLoadIdentity();
+      rlOrtho(0, tt::WINDOW_WIDTH, tt::WINDOW_HEIGHT, 0, 0, 1);
+      rlMatrixMode(RL_MODELVIEW);
+      rlLoadIdentity();
+    }
+  }
+#endif
+
   // Smoothly interpolate toward the target turn value.
   float dt    = GetFrameTime();
   float speed = 3.0f;
@@ -148,7 +184,17 @@ void draw_background(float turn) {
   float t = (float)GetTime();
   SetShaderValue(s_background_shader, s_bg_time_loc, &t, SHADER_UNIFORM_FLOAT);
 
+  // Pass physical pixel dimensions so the shader's UV (fragCoord/resolution)
+  // stays in [0,1] on HiDPI displays.
+#ifdef __EMSCRIPTEN__
+  double dpr     = emscripten_get_device_pixel_ratio();
+  float  res[2]  = {
+    (float)(tt::WINDOW_WIDTH  * dpr),
+    (float)(tt::WINDOW_HEIGHT * dpr)
+  };
+#else
   float res[2] = {(float)GetScreenWidth(), (float)GetScreenHeight()};
+#endif
   SetShaderValue(
     s_background_shader, s_bg_resolution_loc, res, SHADER_UNIFORM_VEC2
   );
@@ -158,7 +204,7 @@ void draw_background(float turn) {
   );
 
   BeginShaderMode(s_background_shader);
-  DrawRectangle(0, 0, GetScreenWidth(), GetScreenHeight(), WHITE);
+  DrawRectangle(0, 0, tt::WINDOW_WIDTH, tt::WINDOW_HEIGHT, WHITE);
   EndShaderMode();
 }
 

@@ -170,8 +170,8 @@ void draw_game_over_screen(
   const std::vector<int>&         scores
 ) {
   (void)names;
-  int w_width  = GetScreenWidth();
-  int w_height = GetScreenHeight();
+  int w_width  = tt::WINDOW_WIDTH;
+  int w_height = tt::WINDOW_HEIGHT;
 
   while (!WindowShouldClose()) {
     BeginDrawing();

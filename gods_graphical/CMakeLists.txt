@@ -12,6 +12,11 @@ FetchContent_Declare(
 )
 set(BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
 set(BUILD_GAMES    OFF CACHE BOOL "" FORCE)
+# Tell raylib to build for Web + WebGL2 when cross-compiling with Emscripten.
+if(EMSCRIPTEN)
+    set(PLATFORM "Web" CACHE STRING "" FORCE)
+    set(GRAPHICS "GRAPHICS_API_OPENGL_ES3" CACHE STRING "" FORCE)
+endif()
 FetchContent_MakeAvailable(raylib)
 
 # nlohmann_json for online_lib.
@@ -30,15 +35,20 @@ set(STANDALONE_CPP_ONLY ON CACHE BOOL "" FORCE)
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/../game           ${CMAKE_BINARY_DIR}/game_build)
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/../tabletop  ${CMAKE_BINARY_DIR}/kt_build)
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/../gods           ${CMAKE_BINARY_DIR}/gods_build)
-add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/../online         ${CMAKE_BINARY_DIR}/online_build)
 
-add_executable(gods_graphical
-    main.cpp
-    ui.cpp
-    agent_ui.cpp
-    menu.cpp
-    agent_remote.cpp
-)
+if(NOT EMSCRIPTEN)
+    add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/../online ${CMAKE_BINARY_DIR}/online_build)
+endif()
+
+# agent_remote.cpp uses the online module which is unavailable in Emscripten
+# builds; stubs in agent_remote.h cover that path instead.
+if(EMSCRIPTEN)
+    set(GODS_GRAPHICAL_SOURCES main.cpp ui.cpp agent_ui.cpp menu.cpp)
+else()
+    set(GODS_GRAPHICAL_SOURCES main.cpp ui.cpp agent_ui.cpp menu.cpp agent_remote.cpp)
+endif()
+
+add_executable(gods_graphical ${GODS_GRAPHICAL_SOURCES})
 target_include_directories(gods_graphical PRIVATE
     .
     "${CMAKE_CURRENT_SOURCE_DIR}/.."  # so headers can use <game/x.h>
@@ -47,7 +57,28 @@ target_link_libraries(gods_graphical PRIVATE
     game
     gods_lib
     tabletop_lib
-    online_lib
     raylib
     nlohmann_json::nlohmann_json
 )
+if(NOT EMSCRIPTEN)
+    target_link_libraries(gods_graphical PRIVATE online_lib)
+endif()
+
+if(EMSCRIPTEN)
+    # Flags from the raylib Working-for-Web guide.
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -s USE_GLFW=3 -s ASSERTIONS=1 -s WASM=1 -s ASYNCIFY -s GL_ENABLE_GET_PROC_ADDRESS=1")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -s USE_GLFW=3 -s ASSERTIONS=1 -s WASM=1 -s ASYNCIFY -s GL_ENABLE_GET_PROC_ADDRESS=1")
+    set(CMAKE_EXECUTABLE_SUFFIX ".html")
+
+    # Bundle all game assets into the .data file for the browser.
+    set(ASSETS_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/..")
+    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} \
+        -s TOTAL_MEMORY=268435456 \
+        -s MAX_WEBGL_VERSION=2 \
+        -s MIN_WEBGL_VERSION=2 \
+        --shell-file ${raylib_SOURCE_DIR}/src/minshell.html \
+        --preload-file ${ASSETS_ROOT}/gods/cards.json@/gods/cards.json \
+        --preload-file ${ASSETS_ROOT}/gods/card-images@/gods/card-images \
+        --preload-file ${ASSETS_ROOT}/fonts@/fonts \
+        --preload-file ${ASSETS_ROOT}/tabletop/background.frag@/tabletop/background.frag")
+endif()
