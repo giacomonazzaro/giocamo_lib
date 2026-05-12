@@ -2,11 +2,8 @@
 
 #include <game/agent.h>
 #include <game/minimax.h>
-#include <nanobind/nanobind.h>
 
 #include "models.h"
-
-namespace nb = nanobind;
 
 namespace tressette {
 
@@ -19,5 +16,3 @@ Game_State sample_state(
 using Tressette_Agent = Agent_Minimax_Stochastic<Game_State>;
 
 }  // namespace tressette
-
-void bind_agent(nb::module_& m);

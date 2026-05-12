@@ -1,8 +1,8 @@
 #pragma once
 
 namespace tt {
-constexpr int         WINDOW_WIDTH       = 1700;
-constexpr int         WINDOW_HEIGHT      = 1000;
+constexpr int         WINDOW_WIDTH       = 1700;  // 1300;
+constexpr int         WINDOW_HEIGHT      = 1000;  // 800;
 constexpr int         TARGET_FPS         = 60;
 constexpr int         CARD_WIDTH         = 150;
 constexpr int         CARD_HEIGHT        = 211;

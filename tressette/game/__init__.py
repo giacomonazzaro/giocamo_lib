@@ -1,1 +1,0 @@
-# Tressette game logic shim.

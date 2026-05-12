@@ -1,18 +1,10 @@
 #pragma once
 
 #include <game/game.h>
-#include <nanobind/nanobind.h>
 
 #include <functional>
 #include <string>
 #include <vector>
-
-namespace nb = nanobind;
-
-// Make std::vector<int> opaque so Python list operations (.append, .pop)
-// mutate the underlying C++ vector in place. Must come before any STL header
-// that defines a caster for it.
-NB_MAKE_OPAQUE(std::vector<int>)
 
 namespace tressette {
 
@@ -86,5 +78,3 @@ struct Game_State : Game {
 };
 
 }  // namespace tressette
-
-void bind_models(nb::module_& m);

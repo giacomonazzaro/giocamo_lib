@@ -2,16 +2,12 @@
 
 #include <game/game.h>
 #include <game/minimax.h>
-#include <nanobind/nanobind.h>
 
 #include <algorithm>
 #include <random>
 
 #include "gameplay.h"
 #include "models.h"
-
-namespace nb = nanobind;
-using namespace nb::literals;
 
 namespace tressette {
 
@@ -47,22 +43,3 @@ Game_State sample_state(
 }
 
 }  // namespace tressette
-
-using namespace tressette;
-
-void bind_agent(nb::module_& m) {
-  nb::class_<Tressette_Agent>(m, "Tressette_Agent")
-    .def(nb::init<>())
-    .def(nb::init<int, int>(), "max_depth"_a = 6, "num_samples"_a = 12)
-    .def_rw("max_depth", &Tressette_Agent::max_depth)
-    .def_rw("num_samples", &Tressette_Agent::num_samples)
-    .def("message", [](Tressette_Agent&, const std::string&) {})
-    .def(
-      "choose_action",
-      [](Tressette_Agent& self, Game_State& g, const Choice& c) {
-        return self.choose_action(g, c);
-      },
-      "state"_a,
-      "choice"_a
-    );
-}

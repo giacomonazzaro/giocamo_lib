@@ -1,1 +1,0 @@
-# Tressette card game package.

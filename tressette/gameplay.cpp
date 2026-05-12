@@ -1,15 +1,10 @@
 #include "gameplay.h"
 
 #include <game/game.h>
-#include <nanobind/nanobind.h>
-#include <nanobind/stl/optional.h>
 
 #include <algorithm>
 
 #include "models.h"
-
-namespace nb = nanobind;
-using namespace nb::literals;
 
 namespace tressette {
 
@@ -64,12 +59,6 @@ void play_card(Game_State& state, int card_id) {
   Player& player = state.players[state.current_player];
   erase_card(player.hand, card_id);
   state.trick.push_back(card_id);
-  // printf(
-  //   "Player %d plays card rank %d suit %d\n",
-  //   state.current_player,
-  //   state.all_cards[card_id].rank,
-  //   state.all_cards[card_id].suit
-  // );
 
   if (state.trick.size() < 2) {
     // First card of the trick: the responder plays next.
@@ -106,6 +95,11 @@ void play_card(Game_State& state, int card_id) {
   state.notify_cards_changed();
 }
 
+void resolve_pending_trick(Game_State& state) {
+  // Stub: pending_trick_resolve is not currently used by the game loop.
+  (void)state;
+}
+
 std::optional<Choice> Game_State::next_choice() {
   if (game_over) return std::nullopt;
 
@@ -132,15 +126,3 @@ std::optional<Choice> Game_State::next_choice() {
 }
 
 }  // namespace tressette
-
-using namespace tressette;
-
-void bind_gameplay(nb::module_& m) {
-  m.def(
-    "compute_player_score", &compute_player_score, "state"_a, "player_index"_a
-  );
-  m.def("play_card", &play_card, "state"_a, "card_id"_a);
-  m.def("trick_winner", &trick_winner, "state"_a);
-  m.def("strength", &strength, "rank"_a);
-  m.def("card_thirds", &card_thirds, "rank"_a);
-}
