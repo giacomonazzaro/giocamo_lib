@@ -1,9 +1,9 @@
 #pragma once
 
+#include <game/game.h>
+
 #include <algorithm>
 #include <optional>
-
-#include <game/game.h>
 
 #include "models.h"
 
@@ -33,21 +33,21 @@ inline int compute_player_score(const Game_State& state, int player_index) {
   for (int cid : state.players[player_index].tricks_won) {
     thirds += card_thirds(state.all_cards[cid].rank);
   }
-  int score = thirds / 3;                                   // floor.
-  if (state.last_trick_winner == player_index) score += 1;  // ultima bonus.
+  int score = thirds / 3;  // floor.
+  if (state.stock.empty() && state.players[player_index].hand.empty() &&
+      state.last_trick_winner == player_index)
+    score += 1;  // ultima bonus.
   return score;
 }
 
 // Returns the legal cards in the current player's hand for the next play.
-// During the draw phase (stock non-empty) any card is legal. After the stock
-// is empty, the responder must follow suit if possible.
+// The responder must follow suit if possible.
 inline static std::vector<int> legal_cards(const Game_State& state) {
-  const Player& player        = state.players[state.current_player];
-  const bool must_follow_suit = state.stock.empty() && state.trick.size() == 1;
-  if (!must_follow_suit) return player.hand;
+  const Player& player = state.players[state.current_player];
+  if (state.trick.empty()) return player.hand;  // Leader can play any card.
 
-  const Suit       led_suit = state.all_cards[state.trick[0]].suit;
-  std::vector<int> matches;
+  const Suit led_suit = state.all_cards[state.trick[0]].suit;
+  auto       matches  = std::vector<int>();
   for (int cid : player.hand) {
     if (state.all_cards[cid].suit == led_suit) matches.push_back(cid);
   }
@@ -59,6 +59,16 @@ inline static std::vector<int> legal_cards(const Game_State& state) {
 inline static void erase_card(std::vector<int>& v, int card_id) {
   auto it = std::find(v.begin(), v.end(), card_id);
   if (it != v.end()) v.erase(it);
+}
+
+inline void sort_hand(Game_State& state, int player_index) {
+  auto& hand = state.players[player_index].hand;
+  std::sort(hand.begin(), hand.end(), [&state](int a, int b) {
+    const Card& ca = state.all_cards[a];
+    const Card& cb = state.all_cards[b];
+    if (ca.suit != cb.suit) return ca.suit < cb.suit;
+    return ca.rank < cb.rank;
+  });
 }
 
 // Apply the play of card_id by the current player.
@@ -88,16 +98,18 @@ inline void play_card(Game_State& state, int card_id) {
   state.trick_leader   = winner;
   state.current_player = winner;
 
-  // Draw phase: winner draws first, loser second (if cards remain).
+  // Draw phase: winner draws first, loser second
   if (!state.stock.empty()) {
     int top = state.stock.back();
     state.stock.pop_back();
     state.players[winner].hand.push_back(top);
-  }
-  if (!state.stock.empty()) {
-    int top = state.stock.back();
+
+    top = state.stock.back();
     state.stock.pop_back();
     state.players[1 - winner].hand.push_back(top);
+
+    sort_hand(state, winner);
+    sort_hand(state, 1 - winner);
   }
 
   // Game ends when both hands are empty.
@@ -117,14 +129,14 @@ inline void resolve_pending_trick(Game_State& state) {
 inline std::optional<Choice> Game_State::next_choice() {
   if (game_over) return std::nullopt;
 
-  Choice choice;
+  auto choice             = Choice();
   choice.player_index     = current_player;
   choice.description      = "play";
   choice.text_description = "Play a card";
 
   choice.actions = [](Game& g) -> Choose {
-    auto&       s = static_cast<Game_State&>(g);
-    Choose_Card c;
+    auto& s   = static_cast<Game_State&>(g);
+    auto  c   = Choose_Card();
     c.targets = legal_cards(s);
     return c;
   };
@@ -137,6 +149,43 @@ inline std::optional<Choice> Game_State::next_choice() {
   };
 
   return choice;
+}
+
+// Deal a fresh hand: 10 cards each, 20 in the stock, player 0 leads.
+inline Game_State quick_setup(std::optional<int> seed = std::nullopt) {
+  auto rng = std::mt19937(seed ? (unsigned)*seed : std::random_device{}());
+
+  auto game = Game_State();
+
+  // Card id encoding: id / 10 = suit index (0..3), id % 10 = rank - 1.
+  const Suit suits[4] = {Suit::COPPE, Suit::DENARI, Suit::SPADE, Suit::BASTONI};
+  game.all_cards.reserve(40);
+  for (int i = 0; i < 40; ++i) {
+    auto c = Card();
+    c.id   = i;
+    c.rank = (i % 10) + 1;
+    c.suit = suits[i / 10];
+    game.all_cards.push_back(c);
+  }
+
+  auto deck = std::vector<int>(40);
+  for (int i = 0; i < 40; ++i) deck[i] = i;
+  std::shuffle(deck.begin(), deck.end(), rng);
+
+  auto p0 = Player();
+  auto p1 = Player();
+  p0.name = "Player 1";
+  p1.name = "Player 2";
+  p0.hand.assign(deck.begin(), deck.begin() + 10);
+  p1.hand.assign(deck.begin() + 10, deck.begin() + 20);
+  game.players = {p0, p1};
+  game.stock.assign(deck.begin() + 20, deck.end());
+  game.current_player = 0;
+  game.trick_leader   = 0;
+
+  sort_hand(game, 0);
+  sort_hand(game, 1);
+  return game;
 }
 
 }  // namespace tressette

@@ -8,6 +8,10 @@
 #include "agent.h"
 #include "game.h"
 
+#ifndef __EMSCRIPTEN__
+#include <thread>
+#endif
+
 template <typename T>
 inline size_t argmax(const std::vector<T>& v) {
   return static_cast<size_t>(
@@ -121,6 +125,7 @@ struct Agent_Minimax_Stochastic : Agent_Minimax<Game_T> {
     std::vector<int>                 votes(num_actions, 0);
     // std::vector<float>               total_scores(num_actions, 0.0f);
 
+#ifdef __EMSCRIPTEN__
     for (int s = 0; s < num_samples; ++s) {
       Game_T sampled = sample_state(concrete, choice.player_index, rng);
       std::vector<float> scores = minimax_scores<Game_T>(
@@ -129,6 +134,28 @@ struct Agent_Minimax_Stochastic : Agent_Minimax<Game_T> {
       votes[argmax(scores)] += 1;
       // for (int i = 0; i < num_actions; ++i) total_scores[i] += scores[i];
     }
+#else
+    // Parallelize over samples: each is independent, so threads never share
+    // state. scoress[s] is written by exactly one thread (index s), so no
+    // synchronisation is needed when reading the results after joining.
+    auto scoress = std::vector<std::vector<float>>(num_samples);
+    auto threads = std::vector<std::thread>(num_samples);
+    for (int s = 0; s < num_samples; ++s) {
+      threads[s] = std::thread([&, s] {
+        // Local rng per thread: avoids contention and gives distinct sequences.
+        std::mt19937 local_rng{std::random_device{}()};
+        Game_T sampled = sample_state(concrete, choice.player_index, local_rng);
+        scoress[s]     = minimax_scores<Game_T>(
+          sampled, choice, num_actions, choice.player_index, this->max_depth
+        );
+      });
+    }
+    for (auto& t : threads) t.join();
+    for (const auto& scores : scoress) {
+      votes[argmax(scores)] += 1;
+      // for (int i = 0; i < num_actions; ++i) total_scores[i] += scores[i];
+    }
+#endif
 
     return argmax(votes);
     // return argmax(total_scores);
