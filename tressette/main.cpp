@@ -21,6 +21,7 @@
 #include <vector>
 
 #include "agent_ui.h"
+#include "neural_agent.h"
 #include "ui.h"
 
 static Table_State init_table_state(
@@ -164,7 +165,13 @@ int main(int argc, char** argv) {
   Agent* agent_opponent = nullptr;
 
   if (vs_ai) {
-    agent_opponent = new tressette::Tressette_Agent(12, 10);
+#ifdef TORCH_AVAILABLE
+    agent_opponent = new tressette::Agent_Minimax_Neural(
+      "tressette/tressette_value_traced.pt", 3, 20
+    );
+#else
+    agent_opponent = new tressette::Tressette_Agent(11, 10);
+#endif
   } else {
     agent_opponent = &agent_ui;  // hot-seat.
   }

@@ -41,6 +41,19 @@ target_link_libraries(tressette_graphical PRIVATE
     raylib
 )
 
+# Optional: neural value-network inference via LibTorch.
+# Build with:  cmake .. -DCMAKE_PREFIX_PATH=/path/to/libtorch
+# Download LibTorch from https://pytorch.org (select C++/Java, your OS, CPU or CUDA).
+find_package(Torch QUIET)
+if(Torch_FOUND)
+    message(STATUS "LibTorch found — building with Value_Net / Agent_Minimax_Neural support")
+    target_link_libraries(tressette_lib INTERFACE ${TORCH_LIBRARIES})
+    target_include_directories(tressette_lib INTERFACE ${TORCH_INCLUDE_DIRS})
+    target_compile_definitions(tressette_lib INTERFACE TORCH_AVAILABLE)
+else()
+    message(STATUS "LibTorch not found — value_net.h / neural_agent.h disabled (set CMAKE_PREFIX_PATH to enable)")
+endif()
+
 # Headless self-play data generator: no raylib, no tabletop. See selfplay.cpp.
 add_executable(tressette_selfplay selfplay.cpp)
 target_include_directories(tressette_selfplay PRIVATE
