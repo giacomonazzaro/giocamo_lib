@@ -21,7 +21,7 @@ add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/../../game     ${CMAKE_BINARY_DIR}/
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/../../tabletop ${CMAKE_BINARY_DIR}/kt_build)
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/..             ${CMAKE_BINARY_DIR}/tressette_build)
 
-add_executable(tressette_graphical main.cpp ui.cpp agent_ui.cpp)
+add_executable(tressette_graphical main.cpp)
 target_include_directories(tressette_graphical PRIVATE
     .
     "${CMAKE_CURRENT_SOURCE_DIR}/../.."  # so headers can use <game/x.h>, <tressette/x.h>, etc.

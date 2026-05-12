@@ -11,14 +11,33 @@ namespace tressette {
 // Tressette strength order, from highest to lowest:
 //   3 > 2 > 1(Asso) > 10(Re) > 9(Cavallo) > 8(Donna) > 7 > 6 > 5 > 4.
 // Returns 0..9 (higher = stronger).
-int strength(int rank);
+inline int strength(int rank) {
+  // Tressette ordering: 3 > 2 > 1 > 10 > 9 > 8 > 7 > 6 > 5 > 4.
+  switch (rank) {
+    case 3: return 9;
+    case 2: return 8;
+    case 1: return 7;
+    case 10: return 6;
+    case 9: return 5;
+    case 8: return 4;
+    case 7: return 3;
+    case 6: return 2;
+    case 5: return 1;
+    case 4: return 0;
+  }
+  return 0;
+}
 
 // Card value in thirds-of-a-point (so the score function can sum integers
 // then floor-divide by 3 at the end):
 //   Asso        -> 3 thirds (= 1 point)
 //   2,3,8,9,10  -> 1 third  (= 1/3 point)
 //   4,5,6,7     -> 0 thirds.
-int card_thirds(int rank);
+inline int card_thirds(int rank) {
+  if (rank == 1) return 3;
+  if (rank == 2 || rank == 3 || rank == 8 || rank == 9 || rank == 10) return 1;
+  return 0;
+}
 
 // Carte napoletane suits.
 enum class Suit {
