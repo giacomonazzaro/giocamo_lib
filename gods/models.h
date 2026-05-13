@@ -2,7 +2,6 @@
 
 #include <game/game.h>
 
-#include <functional>
 #include <memory>
 #include <string>
 #include <vector>
@@ -103,7 +102,6 @@ struct Card {
 };
 
 // Player state — owns lists of card ids referencing Game_State.all_cards.
-// Mirrors gods/models.py:Player.
 struct Player {
   std::string      name;
   std::vector<int> deck;
@@ -112,21 +110,27 @@ struct Player {
   std::vector<int> wonders;
 };
 
-// Full game state. Subclasses game's abstract Game so that
-// game_loop / minimax templates work directly on it.
-// Mirrors gods/models.py:Game_State.
+enum class Game_Phase {
+  START,
+  MAIN,
+  POST_PLAY,
+  POST_PASS_EFFECTS,
+  POST_PASS_DRAW,
+  CLAIM,
+  END,
+};
+
 struct Game_State : Game {
   std::vector<Card>   all_cards;
   std::vector<Player> players;
   std::vector<int>    peoples;
-  int                 current_player = 0;
-  std::string         current_phase =
-    "main";  // "start","main","post-play","post-pass-effects","post-pass-draw","claim","end"
-  std::vector<int>      shared_deck;
-  bool                  game_over = false;
-  std::function<void()> on_cards_changed;  // Fired when any card mutates.
+  std::vector<int>    shared_deck;
 
-  Game_State() : on_cards_changed([] {}) {}
+  int        current_player = 0;
+  Game_Phase current_phase  = Game_Phase::MAIN;
+  bool       game_over      = false;
+
+  Game_State() = default;
 
   // Game interface.
   bool                  is_game_over() const override { return game_over; }
@@ -146,10 +150,6 @@ struct Game_State : Game {
   int                  effective_power(int card_id) const;
   int owner(int card_id) const { return all_cards[card_id].owner; }
 
-  // Fire the on_cards_changed callback (no-op if not set).
-  void notify_cards_changed() {
-    if (on_cards_changed) on_cards_changed();
-  }
 };
 
 // ---- Card_Design base class ----

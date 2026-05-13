@@ -207,7 +207,8 @@ static void draw_hud(
   Game_State&                  gods_state,
   const std::optional<Choice>& current_choice,
   UI_State&                    ui_state,
-  int                          bottom_player
+  int                          bottom_player,
+  std::function<void()>        on_cards_changed = nullptr
 ) {
   int       H      = tt::WINDOW_HEIGHT;
   int       h      = tt::CARD_HEIGHT;
@@ -285,7 +286,7 @@ static void draw_hud(
       if (immediate_button(btn, std::to_string(v), col)) {
         gods_state.all_cards[card_id].power = v;
         ui_state.power_edit_card_id         = -1;
-        gods_state.notify_cards_changed();
+        if (on_cards_changed) on_cards_changed();
       }
       btn.x += (float)(btn_w + gap);
     }
@@ -328,28 +329,27 @@ static void play_gods(
   std::optional<Choice> current_choice;
   bool                  prev_playground = ui_state.playground;
 
-  table_state.draw_callback = [&](Table_State* ts) {
-    draw_hud(ts, gods_state, current_choice, ui_state, player_index);
+  // Helper: broadcast all card state to the remote player.
+  auto broadcast_cards = [&]() {
+    nlohmann::json cards = nlohmann::json::array();
+    for (const Card& c : gods_state.all_cards) {
+      nlohmann::json j;
+      j["power"]     = c.power;
+      j["counters"]  = c.counters;
+      j["destroyed"] = c.destroyed;
+      j["owner"]     = c.owner;
+      cards.push_back(j);
+    }
+    nlohmann::json msg;
+    msg["type"]      = "all_cards";
+    msg["all_cards"] = cards;
+    send_message(*sock, msg, friend_addr);
   };
 
-  // Online: broadcast card state on every notify_cards_changed.
-  if (sock) {
-    gods_state.on_cards_changed = [&]() {
-      nlohmann::json cards = nlohmann::json::array();
-      for (const Card& c : gods_state.all_cards) {
-        nlohmann::json j;
-        j["power"]     = c.power;
-        j["counters"]  = c.counters;
-        j["destroyed"] = c.destroyed;
-        j["owner"]     = c.owner;
-        cards.push_back(j);
-      }
-      nlohmann::json msg;
-      msg["type"]      = "all_cards";
-      msg["all_cards"] = cards;
-      send_message(*sock, msg, friend_addr);
-    };
-  }
+  table_state.draw_callback = [&](Table_State* ts) {
+    std::function<void()> on_cards_changed = sock ? broadcast_cards : std::function<void()>{};
+    draw_hud(ts, gods_state, current_choice, ui_state, player_index, on_cards_changed);
+  };
 
   while (!WindowShouldClose()) {
     if (gods_state.game_over) break;
@@ -398,7 +398,7 @@ static void play_gods(
           gods_state.all_cards[ui_state.power_edit_card_id].power =
             (i < 9) ? (i + 1) : 10;
           ui_state.power_edit_card_id = -1;
-          gods_state.notify_cards_changed();
+          if (sock) broadcast_cards();
           break;
         }
       }
@@ -531,7 +531,10 @@ static void play_gods(
     draw_table(table_state);
 
     if (agent && !ui_state.playground) {
-      current_choice = game_frame(gods_state, *agent, current_choice);
+      bool had_choice = current_choice.has_value();
+      current_choice  = game_frame(gods_state, *agent, current_choice);
+      // Broadcast card mutations to the remote player after a choice resolves.
+      if (sock && had_choice && !current_choice.has_value()) broadcast_cards();
       update_stacks(table_state, gods_state);
     }
     EndDrawing();

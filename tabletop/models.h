@@ -40,14 +40,21 @@ struct Drag_State {
   float offset_x = 0.0f, offset_y = 0.0f;
 };
 
-// Full table state passed to every render and input function.
-struct Table_State {
+struct Table_Layout {
   std::vector<Thing> things;
-  int                root      = -1;  // Thing id of the scene-tree root.
-  int                num_cards = 0;   // Cards occupy ids [0, num_cards).
+  int                root = -1;  // Thing id of the scene-tree root.
+};
+
+// Full table state passed to every render and input function.
+struct Table_State : Table_Layout {
+  // TODO: Remove, here we don't have assumptions about the fact that there are
+  // cards.
+  int num_cards = 0;  // Cards occupy ids [0, num_cards).
+
+  //
   Drag_State         drag_state;
-  // Smoothed mirror of `things`, used for animation. Same indexing.
-  std::vector<Thing>                 animated_cards;
+  std::vector<Thing> animated_cards;  // Smoothed mirror of `things`, used for
+                                      // animation. Same indexing.
   std::function<void(Table_State*)>  draw_callback;
   int                                zoomed_card_id = -1;
   std::function<bool(int, int, int)> is_drop_card_allowed;

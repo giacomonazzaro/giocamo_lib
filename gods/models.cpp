@@ -150,17 +150,17 @@ std::optional<Choice> Game_State::next_choice() {
       return c;
     }
 
-    if (current_phase == "start") {
+    if (current_phase == Game_Phase::START) {
       for (int wid : active_player().wonders) {
         auto extra = all_cards[wid].on_turn_start(*this);
         for (auto& ch : extra) choices.push_back(std::move(ch));
       }
-      current_phase = "main";
-    } else if (current_phase == "main") {
+      current_phase = Game_Phase::MAIN;
+    } else if (current_phase == Game_Phase::MAIN) {
       choices.push_back(make_main_choice(*this));
-    } else if (current_phase == "post-play") {
-      current_phase = "claim";
-    } else if (current_phase == "post-pass-effects") {
+    } else if (current_phase == Game_Phase::POST_PLAY) {
+      current_phase = Game_Phase::CLAIM;
+    } else if (current_phase == Game_Phase::POST_PASS_EFFECTS) {
       Player& player = active_player();
       if (player.deck.empty()) {
         game_over = true;
@@ -168,20 +168,20 @@ std::optional<Choice> Game_State::next_choice() {
       }
       auto extra = draw_card(*this, current_player);
       for (auto& ch : extra) choices.push_back(std::move(ch));
-      current_phase = "post-pass-draw";
-    } else if (current_phase == "post-pass-draw") {
-      current_phase = "claim";
-    } else if (current_phase == "claim") {
+      current_phase = Game_Phase::POST_PASS_DRAW;
+    } else if (current_phase == Game_Phase::POST_PASS_DRAW) {
+      current_phase = Game_Phase::CLAIM;
+    } else if (current_phase == Game_Phase::CLAIM) {
       auto claim = make_claim_choice(*this);
       if (claim) choices.push_back(std::move(*claim));
-      current_phase = "end";
-    } else if (current_phase == "end") {
+      current_phase = Game_Phase::END;
+    } else if (current_phase == Game_Phase::END) {
       for (int wid : active_player().wonders) {
         auto extra = all_cards[wid].on_turn_end(*this);
         for (auto& ch : extra) choices.push_back(std::move(ch));
       }
       switch_turn();
-      current_phase = "start";
+      current_phase = Game_Phase::START;
     }
   }
   return std::nullopt;

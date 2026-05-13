@@ -272,7 +272,6 @@ std::vector<Choice> play_card(Game_State& game, const Card_Id& card_id) {
   for (int wid : wonders_by_priority(game)) {
     game.all_cards[wid].on_play(game, card);
   }
-  game.notify_cards_changed();
   return choices;
 }
 
@@ -286,7 +285,6 @@ void destroy_people(Game_State& game, const Card_Id& card_id) {
   for (int wid : wonders_by_priority(game)) {
     game.all_cards[wid].on_destroy(game, people);
   }
-  game.notify_cards_changed();
 }
 
 void destroy_wonder(Game_State& game, const Card_Id& card_id) {
@@ -307,7 +305,6 @@ void destroy_wonder(Game_State& game, const Card_Id& card_id) {
 
 void restore_people(Game_State& game, const Card_Id& card_id) {
   game.all_cards[card_id.card_index].destroyed = false;
-  game.notify_cards_changed();
 }
 
 void shuffle_card_into_deck(Game_State& game, const Card_Id& card_id) {
@@ -369,7 +366,6 @@ std::optional<Choice> make_claim_choice(Game_State& game) {
     if (!Card_Id::is_null(chosen)) {
       Card& people = gs.get_card(chosen);
       people.owner = player_index;
-      gs.notify_cards_changed();
     }
     return {};
   };
@@ -426,7 +422,7 @@ Choice make_main_choice(Game_State& game) {
     Card_Id chosen  = actions[option_index];
     if (!Card_Id::is_null(chosen)) {
       auto choices     = play_card(gs, chosen);
-      gs.current_phase = "post-play";
+      gs.current_phase = Game_Phase::POST_PLAY;
       return choices;
     }
     std::vector<Choice> result;
@@ -435,7 +431,7 @@ Choice make_main_choice(Game_State& game) {
       auto extra = gs.all_cards[wid].on_pass(gs);
       for (auto& ch : extra) result.push_back(std::move(ch));
     }
-    gs.current_phase = "post-pass-effects";
+    gs.current_phase = Game_Phase::POST_PASS_EFFECTS;
     return result;
   };
   return c;
