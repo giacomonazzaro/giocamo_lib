@@ -25,12 +25,12 @@ namespace tressette {
 // Alpha-beta minimax with neural leaf evaluation.
 // Terminal states use the true score; depth-0 states use the value network.
 inline float minimax_neural(
-  Game_State&      state,
-  int              depth,
-  float            alpha,
-  float            beta,
-  int              player_index,
-  Value_Net& net
+  Game_State& state,
+  int         depth,
+  float       alpha,
+  float       beta,
+  int         player_index,
+  Value_Net&  net
 ) {
   if (state.is_game_over())
     return static_cast<float>(compute_player_score(state, player_index));

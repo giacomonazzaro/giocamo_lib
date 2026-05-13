@@ -9,6 +9,7 @@ See ../../.claude/plans/create-a-c-program-tranquil-thacker.md for the design.
 
 import argparse
 import math
+import os
 import struct
 import sys
 
@@ -302,6 +303,12 @@ def train(args):
         num_layers=args.num_layers,
         dropout=args.dropout,
     ).to(device)
+
+    if args.init_checkpoint and os.path.exists(args.init_checkpoint):
+        ckpt = torch.load(args.init_checkpoint, map_location=device)
+        model.load_state_dict(ckpt["model_state_dict"])
+        print(f"resumed from {args.init_checkpoint}")
+
     param_count = count_parameters(model)
     print(f"model parameters: {param_count}  (~{param_count * 4 / 1e6:.2f} MB at fp32)")
 
@@ -394,7 +401,9 @@ def train(args):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--data", type=str, default="selfplay_data.bin")
-    parser.add_argument("--out", type=str, default="tressette_value.pt")
+    parser.add_argument("--out",             type=str, default="tressette_value.pt")
+    parser.add_argument("--init-checkpoint", type=str, default="",
+                        help="warm-start from this checkpoint before training")
     parser.add_argument(
         "--export",
         action="store_true",
