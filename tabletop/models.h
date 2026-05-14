@@ -7,6 +7,7 @@
 #include <vector>
 
 #include "raylib.h"
+#include "../struct/visit.hpp"
 
 // Base visual entity with optional draw callback.
 struct Thing {
@@ -25,6 +26,20 @@ struct Thing {
   float            spread_x = 0.0f;
   float            spread_y = 0.0f;
 };
+VISITABLE_STRUCT(
+  Thing,
+  name,
+  id,
+  image_path,
+  rect,
+  rotation,
+  face_up,
+  depth,
+  capacity,
+  children,
+  spread_x,
+  spread_y
+);
 
 // A visual card — inherits all Thing fields.
 struct KT_Card : Thing {
@@ -44,6 +59,7 @@ struct Table_Layout {
   std::vector<Thing> things;
   int                root = -1;  // Thing id of the scene-tree root.
 };
+VISITABLE_STRUCT(Table_Layout, things, root);
 
 // Full table state passed to every render and input function.
 struct Table_State : Table_Layout {

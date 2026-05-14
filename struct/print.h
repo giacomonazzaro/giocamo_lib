@@ -112,6 +112,12 @@ inline std::string to_string(const T& t, bool print_type, int indent) {
     });
     result += std::string(indent - 2, ' ') + "}\n";
     return result;
+  } else if constexpr (std::is_enum_v<T>) {
+    result += std::to_string(static_cast<std::underlying_type_t<T>>(t));
+    std::string type_name = get_type_name(t);
+    if (print_type) result += " (" + type_name + ")";
+    result += "\n";
+    return result;
   } else if constexpr (is_printable_v<T>) {
     if constexpr (struct_is_string(t)) {
       result += "\"" + t + "\"";
@@ -127,6 +133,7 @@ inline std::string to_string(const T& t, bool print_type, int indent) {
     std::string type_name = get_type_name(t);
     if (print_type) result += " (" + type_name + ")";
     result += "\n";
+    return result;
   }
 }
 

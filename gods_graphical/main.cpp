@@ -33,6 +33,7 @@
 
 #include <nlohmann/json.hpp>
 
+#include "../struct/json.h"
 #include "agent_remote.h"
 #include "agent_ui.h"
 #include "menu.h"
@@ -41,6 +42,13 @@
 // raylib last; its color-name macros (RED/GREEN/BLUE/...) would otherwise
 // expand inside Card_Color and break the enum.
 #include <raylib.h>
+
+// Rectangle is a raylib C struct — provide JSON serialization for it.
+inline std::string to_json(const Rectangle& r, int = 0, bool = true) {
+  return "{\"x\":" + std::to_string(r.x) + ",\"y\":" + std::to_string(r.y) +
+         ",\"width\":" + std::to_string(r.width) +
+         ",\"height\":" + std::to_string(r.height) + "}";
+}
 
 namespace fs_helpers {
 
@@ -114,7 +122,7 @@ static Game_State quick_setup(std::optional<int> seed) {
       p.hand.push_back(cid);
     }
   }
-  print(game);
+
   return game;
 }
 
@@ -604,10 +612,16 @@ int main(int argc, char** argv) {
     seed        = menu_result.seed;
   }
 
-  Game_State  gods_state = quick_setup(seed);
+  Game_State gods_state = quick_setup(seed);
+  save_to_json(gods_state, "debug_gods_state.json");
+
   UI_State    ui_state;
   Table_State table_state =
     init_table_state(gods_state, ui_state, player_index);
+  save_to_json(*(Table_Layout*)&table_state, "debug_table_state.json");
+  // Table_Layout table_layout =
+  // load_from_json<Table_Layout>("debug_table_state.json");
+  // Table_State table_state(table_layout);
 
   Agent_UI                      agent_ui(&table_state, &ui_state, player_index);
   std::unique_ptr<Agent>        ai_opponent;

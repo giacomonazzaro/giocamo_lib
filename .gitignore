@@ -13,3 +13,4 @@ gods/cards/card-images/
 **/build-debug/
 **/build_wasm/
 raylib/
+.cache*/
