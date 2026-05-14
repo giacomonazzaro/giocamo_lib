@@ -6,6 +6,8 @@
 #include <string>
 #include <vector>
 
+#include "../struct/print.h"
+
 // Card kind (matches Python Card_Type enum string values).
 enum class Card_Type {
   WONDER,
@@ -100,6 +102,7 @@ struct Card {
   int  on_scoring_people(Game_State& g, const Card& people, int points);
   bool wins_tie(Game_State& g, const Card& people);
 };
+VISITABLE_STRUCT(Card, id, card_type, color, power, counters, destroyed, owner);
 
 // Player state — owns lists of card ids referencing Game_State.all_cards.
 struct Player {
@@ -109,6 +112,7 @@ struct Player {
   std::vector<int> discard;
   std::vector<int> wonders;
 };
+VISITABLE_STRUCT(Player, name, deck, hand, discard, wonders);
 
 enum class Game_Phase {
   START,
@@ -149,8 +153,17 @@ struct Game_State : Game {
   std::vector<Card_Id> card_list(int player_id, const std::string& area) const;
   int                  effective_power(int card_id) const;
   int owner(int card_id) const { return all_cards[card_id].owner; }
-
 };
+VISITABLE_STRUCT(
+  Game_State,
+  all_cards,
+  players,
+  peoples,
+  shared_deck,
+  current_player,
+  current_phase,
+  game_over
+);
 
 // ---- Card_Design base class ----
 // All cards derive from this; subclasses override the hooks they implement.
@@ -186,6 +199,7 @@ struct Card_Design {
   }
   virtual bool wins_tie(Game_State&, const Card&) { return false; }
 };
+VISITABLE_STRUCT(Card_Design, id, name, card_type, color, effect);
 
 // Global registry of card designs — populated once by setup, read by Card
 // hooks. Not deep-copied (designs are stateless); Cards just look up by id.

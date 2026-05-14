@@ -114,6 +114,7 @@ static Game_State quick_setup(std::optional<int> seed) {
       p.hand.push_back(cid);
     }
   }
+  print(game);
   return game;
 }
 
@@ -127,8 +128,8 @@ static Table_State init_table_state(
   Table_State table_state;
 
   auto draw_power = [&gods_state, &ui_state](Thing& thing) {
-    const auto&    gcard = gods_state.all_cards[thing.id];
-    std::string    power = std::to_string(gods_state.effective_power(thing.id));
+    const auto& gcard = gods_state.all_cards[thing.id];
+    std::string power = std::to_string(gods_state.effective_power(thing.id));
     draw_card_power_badge(power, gcard.destroyed);
 
     // Highlight ring for cards the agent is asking us to choose from.
@@ -164,7 +165,7 @@ static Table_State init_table_state(
   std::map<std::string, int> name_to_id;
   std::vector<int>           stack_ids_in_order;
   for (Thing& s : stacks) {
-    s.id = (int)table_state.things.size();
+    s.id               = (int)table_state.things.size();
     name_to_id[s.name] = s.id;
     stack_ids_in_order.push_back(s.id);
     table_state.things.push_back(std::move(s));
@@ -173,23 +174,29 @@ static Table_State init_table_state(
   // Populate stack children from the gods state.
   for (int i = 0; i < 2; ++i) {
     const Player& p = gods_state.players[i];
-    table_state.things[name_to_id["p" + std::to_string(i) + "_deck"]].children = p.deck;
-    table_state.things[name_to_id["p" + std::to_string(i) + "_hand"]].children = p.hand;
-    table_state.things[name_to_id["p" + std::to_string(i) + "_discard"]].children = p.discard;
-    table_state.things[name_to_id["p" + std::to_string(i) + "_wonders"]].children = p.wonders;
+    table_state.things[name_to_id["p" + std::to_string(i) + "_deck"]].children =
+      p.deck;
+    table_state.things[name_to_id["p" + std::to_string(i) + "_hand"]].children =
+      p.hand;
+    table_state.things[name_to_id["p" + std::to_string(i) + "_discard"]]
+      .children = p.discard;
+    table_state.things[name_to_id["p" + std::to_string(i) + "_wonders"]]
+      .children = p.wonders;
     std::vector<int> peoples;
     for (int pid : gods_state.peoples) {
       if (gods_state.owner(pid) == i) peoples.push_back(pid);
     }
-    table_state.things[name_to_id["p" + std::to_string(i) + "_peoples"]].children = peoples;
+    table_state.things[name_to_id["p" + std::to_string(i) + "_peoples"]]
+      .children = peoples;
   }
-  table_state.things[name_to_id["shared_deck"]].children = gods_state.shared_deck;
+  table_state.things[name_to_id["shared_deck"]].children =
+    gods_state.shared_deck;
 
   // Root: sits at the end of `things`, owns all stacks as direct children.
   Thing root;
-  root.name     = "root";
-  root.rect     = {0.0f, 0.0f, (float)tt::WINDOW_WIDTH, (float)tt::WINDOW_HEIGHT};
-  root.id       = (int)table_state.things.size();
+  root.name = "root";
+  root.rect = {0.0f, 0.0f, (float)tt::WINDOW_WIDTH, (float)tt::WINDOW_HEIGHT};
+  root.id   = (int)table_state.things.size();
   root.children = stack_ids_in_order;
   table_state.things.push_back(root);
   table_state.root = root.id;
@@ -259,8 +266,8 @@ static void draw_hud(
   // Power editor overlay.
   int card_id = ui_state.power_edit_card_id;
   if (card_id != -1 && ui_state.playground) {
-    int       btn_w = 44, btn_h = 36, gap = 6;
-    int       panel_w   = 10 * btn_w + 9 * gap + 16;
+    int btn_w = 44, btn_h = 36, gap = 6;
+    int panel_w = 10 * btn_w + 9 * gap + 16;
     // Place panel relative to the card's WORLD position (rect is local).
     Rectangle card_rect = world_rect(card_id, *table_state);
     card_rect.width     = (float)tt::CARD_WIDTH;
@@ -347,8 +354,11 @@ static void play_gods(
   };
 
   table_state.draw_callback = [&](Table_State* ts) {
-    std::function<void()> on_cards_changed = sock ? broadcast_cards : std::function<void()>{};
-    draw_hud(ts, gods_state, current_choice, ui_state, player_index, on_cards_changed);
+    std::function<void()> on_cards_changed = sock ? broadcast_cards
+                                                  : std::function<void()>{};
+    draw_hud(
+      ts, gods_state, current_choice, ui_state, player_index, on_cards_changed
+    );
   };
 
   while (!WindowShouldClose()) {
@@ -405,10 +415,12 @@ static void play_gods(
     }
 
     // Click-to-expand for discard stacks.
-    int discard_you      = -1;
-    int discard_opponent = -1;
-    std::string discard_you_name      = "p" + std::to_string(player_index) + "_discard";
-    std::string discard_opponent_name = "p" + std::to_string(1 - player_index) + "_discard";
+    int         discard_you      = -1;
+    int         discard_opponent = -1;
+    std::string discard_you_name = "p" + std::to_string(player_index) +
+                                   "_discard";
+    std::string discard_opponent_name = "p" + std::to_string(1 - player_index) +
+                                        "_discard";
     for (int child_id : table_state.things[table_state.root].children) {
       const Thing& s = table_state.things[child_id];
       if (s.name == discard_you_name) discard_you = child_id;
@@ -419,7 +431,7 @@ static void play_gods(
         if (stack_id < 0) continue;
         Thing& s           = table_state.things[stack_id];
         bool   is_expanded = s.spread_x > 0.0f;
-        bool   inside      =
+        bool   inside =
           point_in_stack_area((float)mx, (float)my, stack_id, table_state);
         if (inside && !is_expanded) {
           s.rect = ui_state.place(
@@ -439,15 +451,16 @@ static void play_gods(
               break;
             }
           }
-          s.spread_x        = 0.0f;
-          s.depth           = 0.0f;
+          s.spread_x = 0.0f;
+          s.depth    = 0.0f;
           update_card_positions(stack_id, table_state, false);
         }
       }
     }
 
     // Helper: serialize each stack's children to a JSON array, in the order
-    // stacks were appended to state.things (so indices stay stable across peers).
+    // stacks were appended to state.things (so indices stay stable across
+    // peers).
     auto serialize_stacks = [&]() {
       nlohmann::json out = nlohmann::json::array();
       for (int i = table_state.num_cards; i < table_state.root; ++i) {
