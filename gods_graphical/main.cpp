@@ -43,13 +43,6 @@
 // expand inside Card_Color and break the enum.
 #include <raylib.h>
 
-// Rectangle is a raylib C struct — provide JSON serialization for it.
-inline std::string to_json(const Rectangle& r, int = 0, bool = true) {
-  return "{\"x\":" + std::to_string(r.x) + ",\"y\":" + std::to_string(r.y) +
-         ",\"width\":" + std::to_string(r.width) +
-         ",\"height\":" + std::to_string(r.height) + "}";
-}
-
 namespace fs_helpers {
 
 // Load and apply cards.json → C++ card_designs registry.

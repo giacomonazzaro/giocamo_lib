@@ -6,8 +6,10 @@
 #include <tuple>
 #include <vector>
 
-#include "raylib.h"
 #include "../struct/visit.hpp"
+#include "raylib.h"
+
+VISITABLE_STRUCT(Rectangle, x, y, width, height);
 
 // Base visual entity with optional draw callback.
 struct Thing {
