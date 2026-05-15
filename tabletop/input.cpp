@@ -13,13 +13,18 @@ bool stack_is_full(const Thing& stack) {
   return stack.capacity >= 0 && (int)stack.children.size() >= stack.capacity;
 }
 
+bool point_in_thing(float px, float py, int thing_id, const Table_State& state) {
+  // Cards store only x/y in rect (size implicit via CARD_WIDTH/HEIGHT);
+  // other things use their rect's width/height.
+  Rectangle    r = world_rect(thing_id, state);
+  const Thing& t = state.things[thing_id];
+  float        w = is_card(t) ? (float)tt::CARD_WIDTH : r.width;
+  float        h = is_card(t) ? (float)tt::CARD_HEIGHT : r.height;
+  return (r.x <= px && px <= r.x + w && r.y <= py && py <= r.y + h);
+}
+
 bool point_in_card(float px, float py, int card_id, const Table_State& state) {
-  // Resolve world rect: card.rect is local; CARD_WIDTH/HEIGHT defines bounds.
-  Vector2 world = local_to_world(card_id, state);
-  float   w     = (float)tt::CARD_WIDTH;
-  float   h     = (float)tt::CARD_HEIGHT;
-  return (world.x <= px && px <= world.x + w && world.y <= py &&
-          py <= world.y + h);
+  return point_in_thing(px, py, card_id, state);
 }
 
 bool card_pressed(int card_id, const Table_State& state) {
@@ -40,29 +45,47 @@ bool point_in_stack_area(
   return (r.x <= px && px <= r.x + r.width && r.y <= py && py <= r.y + h);
 }
 
-std::optional<std::pair<int, int>> find_card_at(
-  float px, float py, Table_State& state
+// Reverse-DFS so the visually topmost (last-drawn) thing under (px, py) wins.
+// (px, py) is in the parent's local space at entry; we subtract the thing's
+// own rect.x/y to obtain its local space before recursing into children.
+// On success, `path` ends with the hit thing; root is included as path[0].
+static bool find_thing_at_rec(
+  float px, float py, int thing_id, const Table_State& state,
+  std::vector<int>& path
 ) {
-  // Topmost card under (px, py). Iterate root's children in reverse so the
-  // last-drawn (visually topmost) hits first.
-  const auto& root_children = state.things[state.root].children;
-  for (int i = (int)root_children.size() - 1; i >= 0; i--) {
-    int          child_id = root_children[i];
-    const Thing& child    = state.things[child_id];
-    if (is_container(child)) {
-      // Stack: walk its cards in reverse for top-of-pile hit testing.
-      for (int j = (int)child.children.size() - 1; j >= 0; j--) {
-        int card_id = child.children[j];
-        if (point_in_card(px, py, card_id, state))
-          return std::make_pair(card_id, child_id);
-      }
-    } else {
-      // Loose card directly under root.
-      if (point_in_card(px, py, child_id, state))
-        return std::make_pair(child_id, state.root);
-    }
+  const Thing& t = state.things[thing_id];
+  path.push_back(thing_id);
+
+  // Descend with the point expressed in this thing's local space.
+  float child_px = px - t.rect.x;
+  float child_py = py - t.rect.y;
+  const auto& children = t.children;
+  for (int i = (int)children.size() - 1; i >= 0; --i) {
+    if (find_thing_at_rec(child_px, child_py, children[i], state, path))
+      return true;
   }
-  return std::nullopt;
+
+  // No descendant matched. Test self in parent-local space — except root,
+  // which spans the whole window and isn't a meaningful hit target on its own.
+  if (thing_id != state.root) {
+    float w = is_card(t) ? (float)tt::CARD_WIDTH : t.rect.width;
+    float h = is_card(t) ? (float)tt::CARD_HEIGHT : t.rect.height;
+    if (px >= t.rect.x && px <= t.rect.x + w && py >= t.rect.y &&
+        py <= t.rect.y + h)
+      return true;
+  }
+
+  path.pop_back();
+  return false;
+}
+
+std::vector<int> find_thing_at(
+  float px, float py, const Table_State& state
+) {
+  std::vector<int> path;
+  // Root's local space coincides with world space (rect at origin).
+  find_thing_at_rec(px, py, state.root, state, path);
+  return path;
 }
 
 int find_stack_at(float px, float py, const Table_State& state) {
@@ -82,11 +105,11 @@ void handle_mouse_press(Table_State& state) {
   float       my   = (float)GetMouseY();
   Drag_State& drag = state.drag_state;
 
-  auto result = find_card_at(mx, my, state);
-  if (!result) return;
+  auto path = find_thing_at(mx, my, state);
+  if (path.size() < 2 || !is_card(state.things[path.back()])) return;
 
-  int card_id  = result->first;
-  int stack_id = result->second;
+  int card_id  = path.back();
+  int stack_id = path[path.size() - 2];
 
   drag.card_id        = card_id;
   drag.current_stack  = stack_id;
@@ -194,10 +217,10 @@ void handle_rotate_card(Table_State& state, bool clockwise) {
   float mx = (float)GetMouseX();
   float my = (float)GetMouseY();
 
-  auto result = find_card_at(mx, my, state);
-  if (!result) return;
+  auto path = find_thing_at(mx, my, state);
+  if (path.empty() || !is_card(state.things[path.back()])) return;
 
-  int    card_id = result->first;
+  int    card_id = path.back();
   Thing& card    = state.things[card_id];
   if (clockwise)
     card.rotation = card.rotation + 90;
@@ -235,10 +258,12 @@ void update_input(Table_State& state) {
   float my = (float)GetMouseY();
 
   if (IsKeyDown(KEY_SPACE)) {
-    auto result          = find_card_at(mx, my, state);
-    state.zoomed_card_id = result ? result->first : -1;
+    auto path = find_thing_at(mx, my, state);
+    state.zoomed_card_id =
+      (!path.empty() && is_card(state.things[path.back()])) ? std::move(path)
+                                                            : Thing_Location{};
   } else {
-    state.zoomed_card_id = -1;
+    state.zoomed_card_id.clear();
   }
 
   if (IsKeyPressed(KEY_S)) {

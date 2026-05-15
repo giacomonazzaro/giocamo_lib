@@ -73,9 +73,7 @@ void update_card_positions(int stack_id, Table_State& state, bool sort) {
   if (sort && n > 0) {
     // Sort children by their current local x position.
     std::sort(
-      stack.children.begin(),
-      stack.children.end(),
-      [&state](int a, int b) {
+      stack.children.begin(), stack.children.end(), [&state](int a, int b) {
         return state.things[a].rect.x < state.things[b].rect.x;
       }
     );
@@ -99,8 +97,8 @@ void update_card_positions(int stack_id, Table_State& state, bool sort) {
   float total_spread_y = (n > 1) ? static_cast<float>(n - 1) * spread_y : 0.0f;
 
   // In local space: center horizontally inside the stack's rect.
-  float mid_x_local =
-    (stack.rect.width > 0.0f) ? stack.rect.width / 2.0f : 0.0f;
+  float mid_x_local   = (stack.rect.width > 0.0f) ? stack.rect.width / 2.0f
+                                                  : 0.0f;
   float start_x_local = mid_x_local - (total_spread_x + card_width) / 2.0f;
   // Vertical: cards float around the stack's top edge as in the original.
   float start_y_local = -total_spread_y / 2.0f;

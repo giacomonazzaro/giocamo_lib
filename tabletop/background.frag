@@ -163,13 +163,13 @@ void main() {
   // zxy
   // zyx
 
-  vec3  a   = value0 * blue;
-  vec3  b   = value1 * orange;
-  float vor = (1.0 - voronoi(uv * 10.0 + t));
-  vor       = remap(vor, 0.0, 1.0, 0.5, 1.0);
+  vec3 a = value0 * blue;
+  vec3 b = value1 * orange;
+  //   float vor = (1.0 - voronoi(uv * 10.0 + t));
+  //   vor       = remap(vor, 0.0, 1.0, 0.5, 1.0);
   // b *= vor;
 
-  float noise = fbm(uv + t * 0.5);
+  //   float noise = fbm(uv + t * 0.5);
   // a *= noise;
 
   vec3 col = combine(a, b);

@@ -477,11 +477,15 @@ void draw_table(Table_State& state) {
     hud_it->second(&state);
   }
 
-  // Zoomed card on top of everything.
-  if (state.zoomed_card_id >= 0) {
+  // Zoomed card on top of everything. zoomed_card_id is a path [root, ..., card]
+  // when set; its direct parent (path[size-2]) is the owning stack.
+  if (!state.zoomed_card_id.empty()) {
+    int  card_id = state.zoomed_card_id.back();
     bool face_up = true;
-    int  owner   = find_stack_containing_card(state.zoomed_card_id, state);
-    if (owner >= 0) face_up = state.things[owner].face_up;
-    draw_zoomed_card(state.things[state.zoomed_card_id], face_up);
+    if (state.zoomed_card_id.size() >= 2) {
+      int owner = state.zoomed_card_id[state.zoomed_card_id.size() - 2];
+      face_up   = state.things[owner].face_up;
+    }
+    draw_zoomed_card(state.things[card_id], face_up);
   }
 }

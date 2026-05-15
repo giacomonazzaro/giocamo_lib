@@ -63,6 +63,9 @@ struct Table_Layout {
 };
 VISITABLE_STRUCT(Table_Layout, things, root);
 
+// Path of thing IDs from root to the thing.
+using Thing_Location = std::vector<int>;
+
 // Full table state passed to every render and input function.
 struct Table_State : Table_Layout {
   // TODO: Remove, here we don't have assumptions about the fact that there are
@@ -74,15 +77,15 @@ struct Table_State : Table_Layout {
   std::vector<Thing> animated_cards;  // Smoothed mirror of `things`, used for
                                       // animation. Same indexing.
   std::unordered_map<int, std::function<void(Table_State*)>> draw_callbacks;
-  int                                zoomed_card_id = -1;
+  Thing_Location                     zoomed_card_id;
   std::function<bool(int, int, int)> is_drop_card_allowed;
   std::optional<std::tuple<int, int, int>>
     dropped_card;  // (src_stack, dst_stack, card_id) after a drop.
 
   Table_State();
   Table_State(const Table_Layout& layout)
-      : Table_Layout(layout),
-        is_drop_card_allowed([](int, int, int) { return true; }) {}
+      : Table_Layout(layout)
+      , is_drop_card_allowed([](int, int, int) { return true; }) {}
   // Returns dropped_card and resets it to nullopt (consume-once event poll).
   std::optional<std::tuple<int, int, int>> poll_dropped_card();
 };

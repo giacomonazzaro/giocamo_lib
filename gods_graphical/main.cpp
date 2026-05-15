@@ -386,11 +386,14 @@ static void play_gods(
     // SPACE-to-zoom: handled by tabletop's update_input, but our outer
     // loop also peeks SPACE for the same gesture.
     if (IsKeyDown(KEY_SPACE)) {
-      auto r =
-        find_card_at((float)GetMouseX(), (float)GetMouseY(), table_state);
-      table_state.zoomed_card_id = r ? r->first : -1;
+      auto path =
+        find_thing_at((float)GetMouseX(), (float)GetMouseY(), table_state);
+      table_state.zoomed_card_id =
+        (!path.empty() && is_card(table_state.things[path.back()]))
+          ? std::move(path)
+          : Thing_Location{};
     } else {
-      table_state.zoomed_card_id = -1;
+      table_state.zoomed_card_id.clear();
     }
 
     update_input(table_state);
@@ -398,9 +401,9 @@ static void play_gods(
 
     // Playground: P opens the power editor for the hovered card.
     if (ui_state.playground && IsKeyPressed(KEY_P)) {
-      auto r = find_card_at((float)mx, (float)my, table_state);
-      if (r) {
-        int hovered = r->first;
+      auto path = find_thing_at((float)mx, (float)my, table_state);
+      if (!path.empty() && is_card(table_state.things[path.back()])) {
+        int hovered = path.back();
         ui_state.power_edit_card_id =
           (ui_state.power_edit_card_id == hovered) ? -1 : hovered;
       } else {
