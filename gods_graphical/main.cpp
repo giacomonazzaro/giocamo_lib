@@ -123,11 +123,12 @@ static Game_State quick_setup(std::optional<int> seed) {
 //   [0, num_cards)            cards aligned 1:1 with gods_state.all_cards
 //   [num_cards, num_cards+11) the 11 stacks from make_gods_stacks
 //   num_cards + 11            the root, whose children are all stacks
-static Table_State init_table_state(
-  Game_State& gods_state, UI_State& ui_state, int bottom_player = 0
+void init_table_state(
+  Table_State& table_state,
+  Game_State&  gods_state,
+  UI_State&    ui_state,
+  int          bottom_player = 0
 ) {
-  Table_State table_state;
-
   // Cards aligned with all_cards so card.id is the shared key.
   for (const auto& gc : gods_state.all_cards) {
     Thing kc;
@@ -135,22 +136,26 @@ static Table_State init_table_state(
     kc.image_path = get_image_path(card_designs[gc.id]->name);
     table_state.things.push_back(kc);
     int id = gc.id;
-    table_state.draw_callbacks[id] = [id, &gods_state, &ui_state](Table_State*) {
-      const auto& gcard = gods_state.all_cards[id];
-      std::string power = std::to_string(gods_state.effective_power(id));
-      draw_card_power_badge(power, gcard.destroyed);
-      int w = tt::CARD_WIDTH;
-      int h = tt::CARD_HEIGHT;
-      for (const auto& [k, kt_card_id] : ui_state.highlighted_cards) {
-        if (kt_card_id == id) {
-          DrawRectangleRoundedLinesEx(
-            Rectangle{0.0f, 0.0f, (float)w, (float)h},
-            0.25f, 8, 4.0f, ::Color{255, 215, 0, 200}
-          );
-          break;
+    table_state.draw_callbacks[id] =
+      [id, &gods_state, &ui_state](Table_State*) {
+        const auto& gcard = gods_state.all_cards[id];
+        std::string power = std::to_string(gods_state.effective_power(id));
+        draw_card_power_badge(power, gcard.destroyed);
+        int w = tt::CARD_WIDTH;
+        int h = tt::CARD_HEIGHT;
+        for (const auto& [k, kt_card_id] : ui_state.highlighted_cards) {
+          if (kt_card_id == id) {
+            DrawRectangleRoundedLinesEx(
+              Rectangle{0.0f, 0.0f, (float)w, (float)h},
+              0.25f,
+              8,
+              4.0f,
+              ::Color{255, 215, 0, 200}
+            );
+            break;
+          }
         }
-      }
-    };
+      };
   }
   table_state.num_cards = (int)table_state.things.size();
 
@@ -200,7 +205,6 @@ static Table_State init_table_state(
   for (int stack_id : table_state.things[table_state.root].children) {
     update_card_positions(stack_id, table_state, /*sort=*/false);
   }
-  return table_state;
 }
 
 // Per-frame HUD overlay drawn by draw_table via Table_State::draw_callback.
@@ -602,13 +606,14 @@ int main(int argc, char** argv) {
   Game_State gods_state = quick_setup(seed);
   save_to_json(gods_state, "debug_gods_state.json");
 
-  UI_State    ui_state;
-  Table_State table_state =
-    init_table_state(gods_state, ui_state, player_index);
+  UI_State ui_state;
+  auto     table_state = Table_State();
+  init_table_state(table_state, gods_state, ui_state, player_index);
   save_to_json(*(Table_Layout*)&table_state, "debug_table_state.json");
-  // Table_Layout table_layout =
-  // load_from_json<Table_Layout>("debug_table_state.json");
-  // Table_State table_state(table_layout);
+
+  // auto table_layout = load_from_json<Table_Layout>("debug_table_state.json");
+  // auto table_state  = Table_State(table_layout);
+  // init_table_state(table_state, gods_state, ui_state, player_index);
 
   Agent_UI                      agent_ui(&table_state, &ui_state, player_index);
   std::unique_ptr<Agent>        ai_opponent;

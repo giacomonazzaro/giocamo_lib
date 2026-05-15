@@ -80,6 +80,7 @@ struct Table_State : Table_Layout {
     dropped_card;  // (src_stack, dst_stack, card_id) after a drop.
 
   Table_State();
+  Table_State(const Table_Layout& layout) : Table_Layout(layout) {}
   // Returns dropped_card and resets it to nullopt (consume-once event poll).
   std::optional<std::tuple<int, int, int>> poll_dropped_card();
 };
