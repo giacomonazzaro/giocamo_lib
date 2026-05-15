@@ -119,34 +119,19 @@ static Game_State quick_setup(std::optional<int> seed) {
   return game;
 }
 
-// Build the initial Table_Layout. Things are laid out:
-//   [0, num_cards)            cards aligned 1:1 with gods_state.all_cards
-//   [num_cards, num_cards+11) the 11 stacks from make_gods_stacks
-//   num_cards + 11            the root, whose children are all stacks
-void init_table_layout(
-  Table_State& table_state, Game_State& gods_state, int bottom_player = 0
+// Push gods_state's deck/hand/discard/peoples/wonders/shared_deck into the
+// matching stacks (looked up by name), then refresh each stack's card
+// positions. Reused after both fresh layout init and JSON load to keep the
+// scene tree consistent with the current Game_State.
+void populate_stacks_from_gods_state(
+  Table_State& table_state, Game_State& gods_state
 ) {
-  // Cards aligned with all_cards so card.id is the shared key.
-  for (const auto& gc : gods_state.all_cards) {
-    Thing kc;
-    kc.id         = gc.id;
-    kc.image_path = get_image_path(card_designs[gc.id]->name);
-    table_state.things.push_back(kc);
-  }
-
-  // Stack things: assign ids by append order, build name → id map. Track the
-  // insertion order so root.children matches the original stack ordering.
-  std::vector<Thing>         stacks = make_gods_stacks(bottom_player);
   std::map<std::string, int> name_to_id;
-  std::vector<int>           stack_ids_in_order;
-  for (Thing& s : stacks) {
-    s.id               = (int)table_state.things.size();
-    name_to_id[s.name] = s.id;
-    stack_ids_in_order.push_back(s.id);
-    table_state.things.push_back(std::move(s));
+  for (int i = 0; i < (int)table_state.things.size(); ++i) {
+    const std::string& n = table_state.things[i].name;
+    if (!n.empty()) name_to_id[n] = i;
   }
 
-  // Populate stack children from the gods state.
   for (int i = 0; i < 2; ++i) {
     const Player& p = gods_state.players[i];
     table_state.things[name_to_id["p" + std::to_string(i) + "_deck"]].children =
@@ -167,6 +152,37 @@ void init_table_layout(
   table_state.things[name_to_id["shared_deck"]].children =
     gods_state.shared_deck;
 
+  // Lay out cards inside each stack.
+  for (int stack_id : table_state.things[table_state.root].children) {
+    update_card_positions(stack_id, table_state, /*sort=*/false);
+  }
+}
+
+// Build the initial Table_Layout. Things are laid out:
+//   [0, num_cards)            cards aligned 1:1 with gods_state.all_cards
+//   [num_cards, num_cards+11) the 11 stacks from make_gods_stacks
+//   num_cards + 11            the root, whose children are all stacks
+void init_table_layout(
+  Table_State& table_state, Game_State& gods_state, int bottom_player = 0
+) {
+  // Cards aligned with all_cards so card.id is the shared key.
+  for (const auto& gc : gods_state.all_cards) {
+    Thing kc;
+    kc.id         = gc.id;
+    kc.image_path = get_image_path(card_designs[gc.id]->name);
+    table_state.things.push_back(kc);
+  }
+
+  // Stack things: assign ids by append order. Track the insertion order so
+  // root.children matches the original stack ordering.
+  std::vector<Thing> stacks = make_gods_stacks(bottom_player);
+  std::vector<int>   stack_ids_in_order;
+  for (Thing& s : stacks) {
+    s.id = (int)table_state.things.size();
+    stack_ids_in_order.push_back(s.id);
+    table_state.things.push_back(std::move(s));
+  }
+
   // Root: sits at the end of `things`, owns all stacks as direct children.
   Thing root;
   root.name = "root";
@@ -176,10 +192,7 @@ void init_table_layout(
   table_state.things.push_back(root);
   table_state.root = root.id;
 
-  // Lay out cards inside each stack.
-  for (int stack_id : table_state.things[table_state.root].children) {
-    update_card_positions(stack_id, table_state, /*sort=*/false);
-  }
+  populate_stacks_from_gods_state(table_state, gods_state);
 }
 
 // Initialize the non-layout state on top of an already-built Table_Layout:
@@ -610,18 +623,23 @@ int main(int argc, char** argv) {
     seed        = menu_result.seed;
   }
 
+#if 0
   Game_State gods_state = quick_setup(seed);
   save_to_json(gods_state, "debug_gods_state.json");
+#else
+  Game_State gods_state = load_from_json<Game_State>("debug_gods_state.json");
+#endif
 
   UI_State ui_state;
 #if 0
-  auto     table_state = Table_State();
+  auto table_state = Table_State();
   init_table_layout(table_state, gods_state, player_index);
   init_table_state(table_state, gods_state, ui_state);
   save_to_json(*(Table_Layout*)&table_state, "debug_table_state.json");
 #else
   auto table_layout = load_from_json<Table_Layout>("debug_table_state.json");
   auto table_state  = Table_State(table_layout);
+  populate_stacks_from_gods_state(table_state, gods_state);
   init_table_state(table_state, gods_state, ui_state);
 #endif
 

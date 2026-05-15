@@ -441,6 +441,16 @@ inline bool from_json_impl(JsonParser& p, long double& out) {
   return true;
 }
 
+// Enum (scoped or unscoped) — parse as underlying integer.
+template <typename T>
+inline auto from_json_impl(JsonParser& p, T& out)
+  -> std::enable_if_t<std::is_enum_v<T>, bool> {
+  std::underlying_type_t<T> n;
+  if (!from_json_impl(p, n)) return false;
+  out = static_cast<T>(n);
+  return true;
+}
+
 // std::vector
 template <typename T, typename Alloc>
 inline bool from_json_impl(JsonParser& p, std::vector<T, Alloc>& out) {
