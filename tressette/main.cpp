@@ -29,15 +29,13 @@ static Table_State init_table_state(
 ) {
   auto table = Table_State();
 
-  auto draw = make_card_draw_callback(state, ui_state);
-
   // One Thing per card; ids 0..39 match all_cards indices.
   for (const auto& c : state.all_cards) {
     auto t       = Thing();
     t.id         = c.id;
     t.image_path = "tressette_card";  // Non-existent path → white bg fallback.
-    t.draw_callback = draw;
     table.things.push_back(t);
+    table.draw_callbacks[c.id] = make_card_draw_callback(state, ui_state, c.id);
   }
   table.num_cards = (int)table.things.size();
 
@@ -111,7 +109,7 @@ static void play_tressette(
   // stacks.
   state.on_cards_changed = [&]() { update_stacks(table, state); };
 
-  table.draw_callback = [&](Table_State*) {
+  table.draw_callbacks[-1] = [&](Table_State*) {
     for (int i = 0; i < 2; ++i) {
       int  score      = tressette::compute_player_score(state, i);
       bool is_current = (i == state.current_player);

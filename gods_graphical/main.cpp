@@ -128,35 +128,29 @@ static Table_State init_table_state(
 ) {
   Table_State table_state;
 
-  auto draw_power = [&gods_state, &ui_state](Thing& thing) {
-    const auto& gcard = gods_state.all_cards[thing.id];
-    std::string power = std::to_string(gods_state.effective_power(thing.id));
-    draw_card_power_badge(power, gcard.destroyed);
-
-    // Highlight ring for cards the agent is asking us to choose from.
-    int w = tt::CARD_WIDTH;
-    int h = tt::CARD_HEIGHT;
-    for (const auto& [k, kt_card_id] : ui_state.highlighted_cards) {
-      if (kt_card_id == thing.id) {
-        DrawRectangleRoundedLinesEx(
-          Rectangle{0.0f, 0.0f, (float)w, (float)h},
-          0.25f,
-          8,
-          4.0f,
-          ::Color{255, 215, 0, 200}
-        );
-        break;
-      }
-    }
-  };
-
   // Cards aligned with all_cards so card.id is the shared key.
   for (const auto& gc : gods_state.all_cards) {
     Thing kc;
-    kc.id            = gc.id;
-    kc.image_path    = get_image_path(card_designs[gc.id]->name);
-    kc.draw_callback = draw_power;
+    kc.id         = gc.id;
+    kc.image_path = get_image_path(card_designs[gc.id]->name);
     table_state.things.push_back(kc);
+    int id = gc.id;
+    table_state.draw_callbacks[id] = [id, &gods_state, &ui_state](Table_State*) {
+      const auto& gcard = gods_state.all_cards[id];
+      std::string power = std::to_string(gods_state.effective_power(id));
+      draw_card_power_badge(power, gcard.destroyed);
+      int w = tt::CARD_WIDTH;
+      int h = tt::CARD_HEIGHT;
+      for (const auto& [k, kt_card_id] : ui_state.highlighted_cards) {
+        if (kt_card_id == id) {
+          DrawRectangleRoundedLinesEx(
+            Rectangle{0.0f, 0.0f, (float)w, (float)h},
+            0.25f, 8, 4.0f, ::Color{255, 215, 0, 200}
+          );
+          break;
+        }
+      }
+    };
   }
   table_state.num_cards = (int)table_state.things.size();
 
@@ -354,7 +348,7 @@ static void play_gods(
     send_message(*sock, msg, friend_addr);
   };
 
-  table_state.draw_callback = [&](Table_State* ts) {
+  table_state.draw_callbacks[-1] = [&](Table_State* ts) {
     std::function<void()> on_cards_changed = sock ? broadcast_cards
                                                   : std::function<void()>{};
     draw_hud(

@@ -277,10 +277,6 @@ void draw_card_content(const Thing& card, bool face_up) {
     DrawRectangleRounded(Rectangle{x, y, w, h}, r / std::min(w, h), 8, bg);
   }
 
-  // Invoke the draw callback if set.
-  if (card.draw_callback) {
-    card.draw_callback(const_cast<Thing&>(card));
-  }
 }
 
 // --- draw_stack_placeholder ---
@@ -379,8 +375,9 @@ static void draw_thing_recursive(
   }
 
   // Per-thing draw callback fires after self-draw, before children.
-  if (t.draw_callback) {
-    t.draw_callback(const_cast<Thing&>(t));
+  auto cb_it = state.draw_callbacks.find(thing_id);
+  if (cb_it != state.draw_callbacks.end()) {
+    cb_it->second(const_cast<Table_State*>(&state));
   }
 
   // Children inherit this thing's face_up.
@@ -468,13 +465,15 @@ void draw_table(Table_State& state) {
     int  orig    = state.drag_state.original_stack;
     if (orig >= 0 && orig != state.root) face_up = state.things[orig].face_up;
     draw_card_content(c, face_up);
-    if (c.draw_callback) c.draw_callback(const_cast<Thing&>(c));
+    auto dc_it = state.draw_callbacks.find(dragged);
+    if (dc_it != state.draw_callbacks.end()) dc_it->second(&state);
     rlPopMatrix();
   }
 
-  // Optional table-level draw callback (custom HUD overlays).
-  if (state.draw_callback) {
-    state.draw_callback(&state);
+  // Optional table-level draw callback (custom HUD overlays), keyed by -1.
+  auto hud_it = state.draw_callbacks.find(-1);
+  if (hud_it != state.draw_callbacks.end()) {
+    hud_it->second(&state);
   }
 
   // Zoomed card on top of everything.

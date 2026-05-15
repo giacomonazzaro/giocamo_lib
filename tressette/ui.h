@@ -99,11 +99,11 @@ inline std::vector<Thing> make_tressette_stacks(bool both_hands_visible) {
 }
 
 // Draw callback that renders rank/suit text on each card face.
-inline std::function<void(Thing&)> make_card_draw_callback(
-  const tressette::Game_State& state, UI_State& ui_state
+inline std::function<void(Table_State*)> make_card_draw_callback(
+  const tressette::Game_State& state, UI_State& ui_state, int id
 ) {
-  return [&state, &ui_state](Thing& thing) {
-    const tressette::Card& c    = state.all_cards[thing.id];
+  return [&state, &ui_state, id](Table_State*) {
+    const tressette::Card& c    = state.all_cards[id];
     const char*            rlbl = rank_label(c.rank);
     const char*            slbl = suit_name(c.suit);
     Color                  col  = suit_color(c.suit);
@@ -126,7 +126,7 @@ inline std::function<void(Thing&)> make_card_draw_callback(
     render_text(rlbl, (float)(w - rw - 10), (float)(h - small_size - 10), small_size, col);
 
     // Highlight border for legal cards.
-    if (ui_state.highlighted_cards.count(thing.id) > 0) {
+    if (ui_state.highlighted_cards.count(id) > 0) {
       DrawRectangleRoundedLinesEx(
         Rectangle{0.0f, 0.0f, (float)w, (float)h},
         0.18f, 8, 4.0f,

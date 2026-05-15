@@ -13,14 +13,14 @@ VISITABLE_STRUCT(Rectangle, x, y, width, height);
 
 // Base visual entity with optional draw callback.
 struct Thing {
-  std::string                 name;
-  int                         id = 0;
-  std::string                 image_path;
-  Rectangle                   rect     = {0.0f, 0.0f, 0.0f, 0.0f};
-  float                       rotation = 0.0f;
-  std::function<void(Thing&)> draw_callback;
-  bool                        face_up = true;
-  float                       depth   = 0.0f;
+  std::string name;
+  int         id = 0;
+  std::string image_path;
+  Rectangle   rect     = {0.0f, 0.0f, 0.0f, 0.0f};
+  float       rotation = 0.0f;
+  // std::function<void(Thing&)> draw_callback;
+  bool  face_up = true;
+  float depth   = 0.0f;
 
   // Container
   int              capacity = -1;  // -1 = unlimited.
@@ -73,7 +73,7 @@ struct Table_State : Table_Layout {
   Drag_State         drag_state;
   std::vector<Thing> animated_cards;  // Smoothed mirror of `things`, used for
                                       // animation. Same indexing.
-  std::function<void(Table_State*)>  draw_callback;
+  std::unordered_map<int, std::function<void(Table_State*)>> draw_callbacks;
   int                                zoomed_card_id = -1;
   std::function<bool(int, int, int)> is_drop_card_allowed;
   std::optional<std::tuple<int, int, int>>
