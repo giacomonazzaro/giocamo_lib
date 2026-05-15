@@ -20,6 +20,7 @@ static Shader s_background_shader = {0};
 static int    s_bg_time_loc       = -1;
 static int    s_bg_resolution_loc = -1;
 static int    s_bg_turn_loc       = -1;
+static int    s_bg_mouse_loc      = -1;
 static float  s_bg_turn_value     = 0.0f;
 
 static Font s_font        = {0};
@@ -48,6 +49,7 @@ static void load_background_shader() {
   s_bg_time_loc       = GetShaderLocation(s_background_shader, "u_time");
   s_bg_resolution_loc = GetShaderLocation(s_background_shader, "u_resolution");
   s_bg_turn_loc       = GetShaderLocation(s_background_shader, "u_turn");
+  s_bg_mouse_loc      = GetShaderLocation(s_background_shader, "u_mouse");
   UnloadFileText(fs_code);
 }
 
@@ -187,10 +189,9 @@ void draw_background(float turn) {
   // Pass physical pixel dimensions so the shader's UV (fragCoord/resolution)
   // stays in [0,1] on HiDPI displays.
 #ifdef __EMSCRIPTEN__
-  double dpr     = emscripten_get_device_pixel_ratio();
-  float  res[2]  = {
-    (float)(tt::WINDOW_WIDTH  * dpr),
-    (float)(tt::WINDOW_HEIGHT * dpr)
+  double dpr    = emscripten_get_device_pixel_ratio();
+  float  res[2] = {
+    (float)(tt::WINDOW_WIDTH * dpr), (float)(tt::WINDOW_HEIGHT * dpr)
   };
 #else
   float res[2] = {(float)GetScreenWidth(), (float)GetScreenHeight()};
@@ -202,7 +203,11 @@ void draw_background(float turn) {
   SetShaderValue(
     s_background_shader, s_bg_turn_loc, &s_bg_turn_value, SHADER_UNIFORM_FLOAT
   );
+  float mouse[2] = {(float)GetMouseX(), (float)GetMouseY()};
 
+  SetShaderValue(
+    s_background_shader, s_bg_mouse_loc, mouse, SHADER_UNIFORM_VEC2
+  );
   BeginShaderMode(s_background_shader);
   DrawRectangle(0, 0, tt::WINDOW_WIDTH, tt::WINDOW_HEIGHT, WHITE);
   EndShaderMode();
@@ -276,7 +281,6 @@ void draw_card_content(const Thing& card, bool face_up) {
     Color bg = {255, 255, 255, 255};
     DrawRectangleRounded(Rectangle{x, y, w, h}, r / std::min(w, h), 8, bg);
   }
-
 }
 
 // --- draw_stack_placeholder ---
@@ -337,8 +341,7 @@ void animate(std::vector<Thing>& things, const Table_State& state, float dt) {
     a.rect.x    = a.rect.x * (1.0f - dt) + target.rect.x * dt;
     a.rect.y    = a.rect.y * (1.0f - dt) + target.rect.y * dt;
     float vx    = a.rect.x - old_x;
-    a.rotation =
-      a.rotation * (1.0f - dt) + target.rotation * dt + vx * 0.1f;
+    a.rotation  = a.rotation * (1.0f - dt) + target.rotation * dt + vx * 0.1f;
   }
 }
 
@@ -350,8 +353,8 @@ static void apply_local_transform(const Thing& t) {
     return;
   }
   // Rotate around the thing's center.
-  float w = is_card(t) ? (float)tt::CARD_WIDTH : t.rect.width;
-  float h = is_card(t) ? (float)tt::CARD_HEIGHT : t.rect.height;
+  float w  = is_card(t) ? (float)tt::CARD_WIDTH : t.rect.width;
+  float h  = is_card(t) ? (float)tt::CARD_HEIGHT : t.rect.height;
   float cx = t.rect.x + w / 2.0f;
   float cy = t.rect.y + h / 2.0f;
   rlTranslatef(cx, cy, 0.0f);
@@ -434,18 +437,16 @@ void draw_table(Table_State& state) {
   const Thing&     root_target = state.things[state.root];
   const Thing&     root_anim   = state.animated_cards[state.root];
   std::vector<int> draw_order  = root_target.children;
-  std::sort(
-    draw_order.begin(),
-    draw_order.end(),
-    [&state](int a, int b) {
-      return state.animated_cards[a].depth < state.animated_cards[b].depth;
-    }
-  );
+  std::sort(draw_order.begin(), draw_order.end(), [&state](int a, int b) {
+    return state.animated_cards[a].depth < state.animated_cards[b].depth;
+  });
 
   rlPushMatrix();
   apply_local_transform(root_anim);
   for (int child_id : draw_order) {
-    draw_thing_recursive(child_id, state, state.animated_cards, root_anim.face_up);
+    draw_thing_recursive(
+      child_id, state, state.animated_cards, root_anim.face_up
+    );
   }
   rlPopMatrix();
 
