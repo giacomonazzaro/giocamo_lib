@@ -235,8 +235,7 @@ static void draw_hud(
   const std::optional<Choice>& current_choice,
   UI_State&                    ui_state,
   int                          bottom_player,
-  const Input&                 input,
-  std::function<void()>        on_cards_changed = nullptr
+  const Input&                 input
 ) {
   int       H      = tt::WINDOW_HEIGHT;
   int       h      = tt::CARD_HEIGHT;
@@ -314,7 +313,6 @@ static void draw_hud(
       if (immediate_button(btn, std::to_string(v), input, col)) {
         gods_state.all_cards[card_id].power = v;
         ui_state.power_edit_card_id         = -1;
-        if (on_cards_changed) on_cards_changed();
       }
       btn.x += (float)(btn_w + gap);
     }
@@ -377,17 +375,7 @@ static void play_gods(
   };
 
   table_state.draw_callbacks[-1] = [&](Table_State* ts, const Input& input) {
-    std::function<void()> on_cards_changed = sock ? broadcast_cards
-                                                  : std::function<void()>{};
-    draw_hud(
-      ts,
-      gods_state,
-      current_choice,
-      ui_state,
-      player_index,
-      input,
-      on_cards_changed
-    );
+    draw_hud(ts, gods_state, current_choice, ui_state, player_index, input);
   };
 
   // The per-frame input. Populated at the top of each frame from the recorder
