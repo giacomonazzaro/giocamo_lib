@@ -16,8 +16,28 @@ Input capture_input() {
   in.left_released  = IsMouseButtonReleased(MOUSE_BUTTON_LEFT);
   in.key_r_pressed  = IsKeyPressed(KEY_R);
   in.key_s_pressed  = IsKeyPressed(KEY_S);
+  in.key_p_pressed  = IsKeyPressed(KEY_P);
   in.key_space_down = IsKeyDown(KEY_SPACE);
   in.shift_down     = IsKeyDown(KEY_LEFT_SHIFT) || IsKeyDown(KEY_RIGHT_SHIFT);
+  // Digit keys: 0..8 → KEY_ONE..KEY_NINE, 9 → KEY_ZERO. First match wins.
+  const int digit_keys[10] = {
+    KEY_ONE,
+    KEY_TWO,
+    KEY_THREE,
+    KEY_FOUR,
+    KEY_FIVE,
+    KEY_SIX,
+    KEY_SEVEN,
+    KEY_EIGHT,
+    KEY_NINE,
+    KEY_ZERO,
+  };
+  for (int i = 0; i < 10; ++i) {
+    if (IsKeyPressed(digit_keys[i])) {
+      in.digit_pressed = i;
+      break;
+    }
+  }
   return in;
 }
 

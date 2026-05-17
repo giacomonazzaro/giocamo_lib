@@ -16,8 +16,12 @@ struct Input {
   bool left_released  = false;  // IsMouseButtonReleased(MOUSE_BUTTON_LEFT).
   bool key_r_pressed  = false;
   bool key_s_pressed  = false;
+  bool key_p_pressed  = false;
   bool key_space_down = false;
   bool shift_down     = false;  // Either LEFT_SHIFT or RIGHT_SHIFT.
+  // Index of the digit key pressed this frame: 0..8 for KEY_ONE..KEY_NINE,
+  // 9 for KEY_ZERO. -1 if no digit was pressed.
+  int digit_pressed = -1;
 };
 VISITABLE_STRUCT(
   Input,
@@ -27,8 +31,10 @@ VISITABLE_STRUCT(
   left_released,
   key_r_pressed,
   key_s_pressed,
+  key_p_pressed,
   key_space_down,
-  shift_down
+  shift_down,
+  digit_pressed
 );
 
 // Reads the current frame's input from raylib. This is the ONLY place in

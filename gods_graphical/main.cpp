@@ -411,7 +411,7 @@ static void play_gods(
     int mx = frame_input.mouse_x, my = frame_input.mouse_y;
 
     // Playground: P opens the power editor for the hovered card.
-    if (ui_state.playground && IsKeyPressed(KEY_P)) {
+    if (ui_state.playground && frame_input.key_p_pressed) {
       auto path = find_thing_at((float)mx, (float)my, table_state);
       if (!path.empty() && is_card(table_state.things[path.back()])) {
         int hovered = path.back();
@@ -423,28 +423,13 @@ static void play_gods(
     }
 
     // While power editor is open, 1-9 / 0 set the power directly.
-    if (ui_state.power_edit_card_id != -1) {
-      int keys[10] = {
-        KEY_ONE,
-        KEY_TWO,
-        KEY_THREE,
-        KEY_FOUR,
-        KEY_FIVE,
-        KEY_SIX,
-        KEY_SEVEN,
-        KEY_EIGHT,
-        KEY_NINE,
-        KEY_ZERO
-      };
-      for (int i = 0; i < 10; ++i) {
-        if (IsKeyPressed(keys[i])) {
-          gods_state.all_cards[ui_state.power_edit_card_id].power =
-            (i < 9) ? (i + 1) : 10;
-          ui_state.power_edit_card_id = -1;
-          if (sock) broadcast_cards();
-          break;
-        }
-      }
+    // digit_pressed is 0..8 for keys 1..9, 9 for key 0 (maps to power 10).
+    if (ui_state.power_edit_card_id != -1 && frame_input.digit_pressed >= 0) {
+      int i = frame_input.digit_pressed;
+      gods_state.all_cards[ui_state.power_edit_card_id].power =
+        (i < 9) ? (i + 1) : 10;
+      ui_state.power_edit_card_id = -1;
+      if (sock) broadcast_cards();
     }
 
     // Click-to-expand for discard stacks.
@@ -459,7 +444,7 @@ static void play_gods(
       if (s.name == discard_you_name) discard_you = child_id;
       if (s.name == discard_opponent_name) discard_opponent = child_id;
     }
-    if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
+    if (frame_input.left_pressed) {
       for (int stack_id : {discard_opponent, discard_you}) {
         if (stack_id < 0) continue;
         Thing& s           = table_state.things[stack_id];
@@ -520,8 +505,8 @@ static void play_gods(
     // Send stacks if in playground/no-logic mode and something changed.
     if ((!agent || ui_state.playground) && sock) {
       auto dropped     = table_state.poll_dropped_card();
-      bool should_send = dropped.has_value() || IsKeyPressed(KEY_R) ||
-                         IsKeyPressed(KEY_S);
+      bool should_send = dropped.has_value() || frame_input.key_r_pressed ||
+                         frame_input.key_s_pressed;
       if (should_send) {
         nlohmann::json sm;
         sm["type"]   = "stacks";
