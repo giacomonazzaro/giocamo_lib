@@ -8,35 +8,37 @@
 #include "game_state.h"
 #include "raylib.h"
 
+// Keys we sample once per frame. Adding a new key here is all it takes to
+// make a hotkey recordable/replayable.
+static const int s_watched_pressed[] = {
+  KEY_R,         KEY_S,    KEY_P,    KEY_V,    KEY_C,
+  KEY_ENTER,     KEY_BACKSPACE,
+  KEY_ONE,       KEY_TWO,  KEY_THREE,KEY_FOUR, KEY_FIVE,
+  KEY_SIX,       KEY_SEVEN,KEY_EIGHT,KEY_NINE, KEY_ZERO,
+};
+static const int s_watched_down[] = {
+  KEY_SPACE,
+  KEY_LEFT_SHIFT, KEY_RIGHT_SHIFT,
+  KEY_LEFT_SUPER, KEY_RIGHT_SUPER,
+  KEY_LEFT_CONTROL, KEY_RIGHT_CONTROL,
+};
+
 Input capture_input() {
   Input in;
-  in.mouse_x        = GetMouseX();
-  in.mouse_y        = GetMouseY();
-  in.left_pressed   = IsMouseButtonPressed(MOUSE_BUTTON_LEFT);
-  in.left_released  = IsMouseButtonReleased(MOUSE_BUTTON_LEFT);
-  in.key_r_pressed  = IsKeyPressed(KEY_R);
-  in.key_s_pressed  = IsKeyPressed(KEY_S);
-  in.key_p_pressed  = IsKeyPressed(KEY_P);
-  in.key_space_down = IsKeyDown(KEY_SPACE);
-  in.shift_down     = IsKeyDown(KEY_LEFT_SHIFT) || IsKeyDown(KEY_RIGHT_SHIFT);
-  // Digit keys: 0..8 → KEY_ONE..KEY_NINE, 9 → KEY_ZERO. First match wins.
-  const int digit_keys[10] = {
-    KEY_ONE,
-    KEY_TWO,
-    KEY_THREE,
-    KEY_FOUR,
-    KEY_FIVE,
-    KEY_SIX,
-    KEY_SEVEN,
-    KEY_EIGHT,
-    KEY_NINE,
-    KEY_ZERO,
-  };
-  for (int i = 0; i < 10; ++i) {
-    if (IsKeyPressed(digit_keys[i])) {
-      in.digit_pressed = i;
-      break;
-    }
+  in.mouse_x       = GetMouseX();
+  in.mouse_y       = GetMouseY();
+  in.left_pressed  = IsMouseButtonPressed(MOUSE_BUTTON_LEFT);
+  in.left_released = IsMouseButtonReleased(MOUSE_BUTTON_LEFT);
+  for (int k : s_watched_pressed) {
+    if (IsKeyPressed(k)) in.keys_pressed.push_back(k);
+  }
+  for (int k : s_watched_down) {
+    if (IsKeyDown(k)) in.keys_down.push_back(k);
+  }
+  // Drain the typed-character queue. Menus need this for room-code input.
+  int c;
+  while ((c = GetCharPressed()) != 0) {
+    if (c >= 32 && c < 127) in.chars_typed.push_back((char)c);
   }
   return in;
 }
@@ -287,14 +289,16 @@ void process_input(Table_State& state, const Input& input) {
 
   handle_mouse_move(state, input);
 
-  if (input.key_r_pressed) {
-    handle_rotate_card(state, input, /*clockwise=*/!input.shift_down);
+  bool shift = key_down(input, KEY_LEFT_SHIFT) ||
+               key_down(input, KEY_RIGHT_SHIFT);
+  if (key_pressed(input, KEY_R)) {
+    handle_rotate_card(state, input, /*clockwise=*/!shift);
   }
 
   float mx = (float)input.mouse_x;
   float my = (float)input.mouse_y;
 
-  if (input.key_space_down) {
+  if (key_down(input, KEY_SPACE)) {
     auto path            = find_thing_at(mx, my, state);
     state.zoomed_card_id = (!path.empty() && is_card(state.things[path.back()]))
                              ? std::move(path)
@@ -303,7 +307,7 @@ void process_input(Table_State& state, const Input& input) {
     state.zoomed_card_id.clear();
   }
 
-  if (input.key_s_pressed) {
+  if (key_pressed(input, KEY_S)) {
     int stack_id = find_stack_at(mx, my, state);
     shuffle_stack(state, stack_id);
   }

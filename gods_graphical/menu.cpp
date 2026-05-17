@@ -7,7 +7,7 @@
 #include <emscripten.h>
 #include <emscripten/html5.h>
 
-Menu_Result run_menu() {
+Menu_Result run_menu(Input_Recorder&) {
   InitWindow(tt::WINDOW_WIDTH, tt::WINDOW_HEIGHT, "Gods");
   // FLAG_WINDOW_HIGHDPI is not implemented on PLATFORM_WEB (GetWindowScaleDPI
   // returns {1,1}).  Resize the canvas pixel buffer to physical resolution and
@@ -57,11 +57,15 @@ static void draw_centered_text(
 }
 
 static bool draw_button(
-  const std::string& text, int y, int width = 320, int height = 58
+  const Input&       input,
+  const std::string& text,
+  int                y,
+  int                width  = 320,
+  int                height = 58
 ) {
-  int  mx      = GetMouseX();
-  int  my      = GetMouseY();
-  int  x       = centered_x(width);
+  int  mx = input.mouse_x;
+  int  my = input.mouse_y;
+  int  x  = centered_x(width);
   bool hovered = (x <= mx && mx <= x + width && y <= my && my <= y + height);
 
   if (hovered) {
@@ -83,7 +87,7 @@ static bool draw_button(
     Color{255, 255, 255, 255}
   );
 
-  return hovered && IsMouseButtonPressed(MOUSE_BUTTON_LEFT);
+  return hovered && input.left_pressed;
 }
 
 static void draw_text_input(
@@ -126,15 +130,13 @@ static void draw_text_input(
   );
 }
 
-static void update_text_input(std::string& text, size_t max_length = 16) {
-  int c = GetCharPressed();
-  while (c) {
-    if (text.size() < max_length && c >= 32 && c < 127) {
-      text += (char)c;
-    }
-    c = GetCharPressed();
+static void update_text_input(
+  const Input& input, std::string& text, size_t max_length = 16
+) {
+  for (char c : input.chars_typed) {
+    if (text.size() < max_length) text.push_back(c);
   }
-  if (IsKeyPressed(KEY_BACKSPACE) && !text.empty()) text.pop_back();
+  if (key_pressed(input, KEY_BACKSPACE) && !text.empty()) text.pop_back();
 }
 
 static std::string dots() {
@@ -142,15 +144,16 @@ static std::string dots() {
   return std::string(n, '.');
 }
 
-static bool is_super_down() {
+static bool is_super_down(const Input& input) {
 #ifdef __APPLE__
-  return IsKeyDown(KEY_LEFT_SUPER) || IsKeyDown(KEY_RIGHT_SUPER);
+  return key_down(input, KEY_LEFT_SUPER) || key_down(input, KEY_RIGHT_SUPER);
 #else
-  return IsKeyDown(KEY_LEFT_CONTROL) || IsKeyDown(KEY_RIGHT_CONTROL);
+  return key_down(input, KEY_LEFT_CONTROL) ||
+         key_down(input, KEY_RIGHT_CONTROL);
 #endif
 }
 
-Menu_Result run_menu() {
+Menu_Result run_menu(Input_Recorder& recorder) {
   int W = tt::WINDOW_WIDTH;
   int H = tt::WINDOW_HEIGHT;
 
@@ -162,15 +165,23 @@ Menu_Result run_menu() {
   int        center_y = H / 2;
 
   while (!WindowShouldClose()) {
+    Input input = next_input(recorder);
+    if (recorder.exhausted) {
+      // Playback ran out of frames before the user chose a mode; bail out so
+      // main() can act as if the menu was skipped (defaults to VS_AI).
+      EndDrawing();
+      return Menu_Result{};
+    }
+
     // Text input for the JOINING screen.
     if (state.screen == Screen::JOINING) {
-      if (is_super_down() && IsKeyPressed(KEY_V)) {
+      if (is_super_down(input) && key_pressed(input, KEY_V)) {
         const char* clip = GetClipboardText();
         if (clip) state.text_input = (state.text_input + clip).substr(0, 16);
       } else {
-        update_text_input(state.text_input);
+        update_text_input(input, state.text_input);
       }
-      if (IsKeyPressed(KEY_ENTER) && !state.text_input.empty()) {
+      if (key_pressed(input, KEY_ENTER) && !state.text_input.empty()) {
         state.connection = join_room(state.text_input);
         state.screen     = Screen::CONNECTING;
       }
@@ -182,7 +193,7 @@ Menu_Result run_menu() {
         std::lock_guard<std::mutex> lg(state.connection->state_lock);
         code = state.connection->room_code;
       }
-      if (!code.empty() && is_super_down() && IsKeyPressed(KEY_C)) {
+      if (!code.empty() && is_super_down(input) && key_pressed(input, KEY_C)) {
         SetClipboardText(code.c_str());
       }
     }
@@ -214,20 +225,18 @@ Menu_Result run_menu() {
     }
 
     BeginDrawing();
-    // Menu is out of scope for input recording; pass a zeroed Input to the
-    // background shader.
-    draw_background(Input{});
+    draw_background(input);
 
     if (state.screen == Screen::MAIN) {
       draw_centered_text("GODS", center_y - 180, 90, Color{255, 255, 255, 255});
-      if (draw_button("Play vs AI", center_y - 20)) {
+      if (draw_button(input, "Play vs AI", center_y - 20)) {
         Menu_Result r;
         r.mode = Menu_Result::VS_AI;
         // Note: window stays open; main() continues using it.
         EndDrawing();
         return r;
       }
-      if (draw_button("Play Online", center_y + 60))
+      if (draw_button(input, "Play Online", center_y + 60))
         state.screen = Screen::ONLINE;
 
     } else if (state.screen == Screen::ONLINE) {
@@ -237,17 +246,17 @@ Menu_Result run_menu() {
           state.error_message, center_y - 120, 18, Color{255, 100, 100, 255}
         );
       }
-      if (draw_button("Create Game", center_y - 60)) {
+      if (draw_button(input, "Create Game", center_y - 60)) {
         state.error_message.clear();
         state.connection = start_hosting();
         state.screen     = Screen::CREATING;
       }
-      if (draw_button("Join Game", center_y + 20)) {
+      if (draw_button(input, "Join Game", center_y + 20)) {
         state.error_message.clear();
         state.text_input.clear();
         state.screen = Screen::JOINING;
       }
-      if (draw_button("Back", center_y + 120, 180, 46)) {
+      if (draw_button(input, "Back", center_y + 120, 180, 46)) {
         state.error_message.clear();
         state.screen = Screen::MAIN;
       }
@@ -267,7 +276,7 @@ Menu_Result run_menu() {
           Color{200, 200, 200, 255}
         );
         draw_centered_text(code, center_y - 30, 50, Color{255, 215, 0, 255});
-        if (draw_button("Copy Code", center_y + 30, 200, 44)) {
+        if (draw_button(input, "Copy Code", center_y + 30, 200, 44)) {
           SetClipboardText(code.c_str());
         }
         draw_centered_text(
@@ -284,7 +293,7 @@ Menu_Result run_menu() {
           Color{200, 200, 200, 255}
         );
       }
-      if (draw_button("Back", center_y + 170, 180, 46)) {
+      if (draw_button(input, "Back", center_y + 170, 180, 46)) {
         state.connection.reset();
         state.screen = Screen::ONLINE;
       }
@@ -292,15 +301,16 @@ Menu_Result run_menu() {
     } else if (state.screen == Screen::JOINING) {
       draw_centered_text("JOIN GAME", 150, 54, Color{255, 255, 255, 255});
       draw_text_input("Enter room code:", state.text_input, center_y - 40);
-      if (draw_button("Paste", center_y + 30, 160, 44)) {
+      if (draw_button(input, "Paste", center_y + 30, 160, 44)) {
         const char* clip = GetClipboardText();
         if (clip) state.text_input = (state.text_input + clip).substr(0, 16);
       }
-      if (draw_button("Connect", center_y + 90) && !state.text_input.empty()) {
+      if (draw_button(input, "Connect", center_y + 90) &&
+          !state.text_input.empty()) {
         state.connection = join_room(state.text_input);
         state.screen     = Screen::CONNECTING;
       }
-      if (draw_button("Back", center_y + 160, 180, 46)) {
+      if (draw_button(input, "Back", center_y + 160, 180, 46)) {
         state.text_input.clear();
         state.screen = Screen::ONLINE;
       }
@@ -310,7 +320,7 @@ Menu_Result run_menu() {
       draw_centered_text(
         "Connecting" + dots(), center_y - 20, 30, Color{200, 200, 200, 255}
       );
-      if (draw_button("Back", center_y + 100, 180, 46)) {
+      if (draw_button(input, "Back", center_y + 100, 180, 46)) {
         state.connection.reset();
         state.screen = Screen::JOINING;
       }

@@ -395,7 +395,7 @@ static void play_gods(
 
     // SPACE-to-zoom: handled by tabletop's update_input, but our outer
     // loop also peeks SPACE for the same gesture.
-    if (frame_input.key_space_down) {
+    if (key_down(frame_input, KEY_SPACE)) {
       auto path = find_thing_at(
         (float)frame_input.mouse_x, (float)frame_input.mouse_y, table_state
       );
@@ -411,7 +411,7 @@ static void play_gods(
     int mx = frame_input.mouse_x, my = frame_input.mouse_y;
 
     // Playground: P opens the power editor for the hovered card.
-    if (ui_state.playground && frame_input.key_p_pressed) {
+    if (ui_state.playground && key_pressed(frame_input, KEY_P)) {
       auto path = find_thing_at((float)mx, (float)my, table_state);
       if (!path.empty() && is_card(table_state.things[path.back()])) {
         int hovered = path.back();
@@ -423,13 +423,21 @@ static void play_gods(
     }
 
     // While power editor is open, 1-9 / 0 set the power directly.
-    // digit_pressed is 0..8 for keys 1..9, 9 for key 0 (maps to power 10).
-    if (ui_state.power_edit_card_id != -1 && frame_input.digit_pressed >= 0) {
-      int i = frame_input.digit_pressed;
-      gods_state.all_cards[ui_state.power_edit_card_id].power =
-        (i < 9) ? (i + 1) : 10;
-      ui_state.power_edit_card_id = -1;
-      if (sock) broadcast_cards();
+    // KEY_ONE..KEY_NINE map to powers 1..9; KEY_ZERO maps to 10.
+    if (ui_state.power_edit_card_id != -1) {
+      const int digit_keys[10] = {
+        KEY_ONE,  KEY_TWO, KEY_THREE, KEY_FOUR, KEY_FIVE,
+        KEY_SIX,  KEY_SEVEN, KEY_EIGHT, KEY_NINE, KEY_ZERO,
+      };
+      for (int i = 0; i < 10; ++i) {
+        if (key_pressed(frame_input, digit_keys[i])) {
+          gods_state.all_cards[ui_state.power_edit_card_id].power =
+            (i < 9) ? (i + 1) : 10;
+          ui_state.power_edit_card_id = -1;
+          if (sock) broadcast_cards();
+          break;
+        }
+      }
     }
 
     // Click-to-expand for discard stacks.
@@ -505,8 +513,9 @@ static void play_gods(
     // Send stacks if in playground/no-logic mode and something changed.
     if ((!agent || ui_state.playground) && sock) {
       auto dropped     = table_state.poll_dropped_card();
-      bool should_send = dropped.has_value() || frame_input.key_r_pressed ||
-                         frame_input.key_s_pressed;
+      bool should_send = dropped.has_value() ||
+                         key_pressed(frame_input, KEY_R) ||
+                         key_pressed(frame_input, KEY_S);
       if (should_send) {
         nlohmann::json sm;
         sm["type"]   = "stacks";
@@ -590,105 +599,129 @@ static void play_gods(
   CloseWindow();
 }
 
-int main(int argc, char** argv) {
-  // CLI: default is to show the menu. `agent` flag plays vs AI as player 0
-  // without showing the menu.
-  bool               skip_menu_vs_ai = false;
-  std::optional<int> seed;
-  Input_Mode         input_mode = Input_Mode::Live;
-  std::string        input_file_path;
+// All CLI options understood by the binary.
+struct Cli_Args {
+  bool        skip_menu_vs_ai = false;
+  Input_Mode  input_mode      = Input_Mode::Live;
+  std::string input_file_path;  // For Record/Playback.
+};
+
+static Cli_Args parse_cli_args(int argc, char** argv) {
+  Cli_Args args;
   for (int i = 1; i < argc; ++i) {
     std::string a = argv[i];
-    if (a == "agent")
-      skip_menu_vs_ai = true;
-    else if (a.rfind("--seed=", 0) == 0)
-      seed = std::atoi(a.c_str() + 7);
-    else if (a.rfind("--record=", 0) == 0) {
-      input_mode      = Input_Mode::Record;
-      input_file_path = a.substr(9);
+    if (a == "agent") {
+      args.skip_menu_vs_ai = true;
+    } else if (a.rfind("--record=", 0) == 0) {
+      args.input_mode      = Input_Mode::Record;
+      args.input_file_path = a.substr(9);
     } else if (a.rfind("--playback=", 0) == 0) {
-      input_mode      = Input_Mode::Playback;
-      input_file_path = a.substr(11);
+      args.input_mode      = Input_Mode::Playback;
+      args.input_file_path = a.substr(11);
     }
   }
+  return args;
+}
 
-  Menu_Result menu_result;
-  if (skip_menu_vs_ai) {
-    menu_result.mode = Menu_Result::VS_AI;
+// Owns every agent the duel may reference. Lifetime tied to play_gods.
+struct Agents {
+  std::unique_ptr<Agent_UI>                       agent_ui;
+  std::unique_ptr<Agent_Minimax_Stochastic_Gods>  ai_opponent;
+  std::unique_ptr<Agent_Remote>                   remote_opponent;
+  std::unique_ptr<Agent_Local_Online>             local_wrap;
+  std::unique_ptr<Agent_Duel>                     duel;
+};
+
+// Build the duel for the menu's chosen mode. UI agent is always present;
+// the opponent + local wrapping depend on whether we're online, vs AI, or
+// hot-seat. Ownership stays on the returned struct.
+static Agents make_agents(
+  Table_State&       table_state,
+  UI_State&          ui_state,
+  const Menu_Result& menu_result,
+  UDP_Socket*        sock,
+  std::pair<std::string, int> friend_addr
+) {
+  Agents a;
+  a.agent_ui = std::make_unique<Agent_UI>(
+    &table_state, &ui_state, menu_result.player_index
+  );
+
+  Agent* local_agent = a.agent_ui.get();
+  Agent* opponent    = nullptr;
+
+  if (sock) {
+    a.local_wrap = std::make_unique<Agent_Local_Online>(
+      a.agent_ui.get(), sock, friend_addr
+    );
+    a.remote_opponent = std::make_unique<Agent_Remote>(sock);
+    local_agent       = a.local_wrap.get();
+    opponent          = a.remote_opponent.get();
+  } else if (menu_result.mode == Menu_Result::VS_AI) {
+    a.ai_opponent = std::make_unique<Agent_Minimax_Stochastic_Gods>(6, 20);
+    opponent      = a.ai_opponent.get();
   } else {
-    menu_result = run_menu();
+    opponent = a.agent_ui.get();  // hot-seat.
   }
 
-  int                         player_index = menu_result.player_index;
-  UDP_Socket*                 sock         = nullptr;
+  a.duel = std::make_unique<Agent_Duel>(
+    local_agent, opponent, /*swap=*/menu_result.player_index != 0
+  );
+  return a;
+}
+
+// Loads the persisted game + table snapshots from data/. The #if-0 branches
+// in the implementation are dev-only seeds: flip them locally when a new
+// snapshot is needed, then flip back.
+static void load_snapshots(
+  Game_State& gods_state, Table_State& table_state, UI_State& ui_state
+) {
+#if 0
+  // Dev path: build a fresh game + layout and save snapshots to disk.
+  gods_state = quick_setup(std::nullopt);
+  save_to_json(gods_state, "data/debug_gods_state.json");
+  init_table_layout(table_state, gods_state, 0);
+  init_table_state(table_state, gods_state, ui_state);
+  save_to_json(*(Table_Layout*)&table_state, "data/debug_table_state.json");
+#else
+  gods_state = load_from_json<Game_State>("data/debug_gods_state.json");
+  auto layout = load_from_json<Table_Layout>("data/debug_table_state.json");
+  table_state = Table_State(layout);
+  populate_stacks_from_gods_state(table_state, gods_state);
+  init_table_state(table_state, gods_state, ui_state);
+#endif
+}
+
+int main(int argc, char** argv) {
+  Cli_Args args = parse_cli_args(argc, argv);
+
+  Input_Recorder recorder;
+  init_recorder(recorder, args.input_mode, args.input_file_path);
+
+  Menu_Result menu_result;
+  if (!args.skip_menu_vs_ai) menu_result = run_menu(recorder);
+
+  UDP_Socket*                 sock = nullptr;
   std::pair<std::string, int> friend_addr;
   std::shared_ptr<UDP_Socket> sock_holder;
-
   if (menu_result.mode == Menu_Result::ONLINE) {
     sock_holder = menu_result.sock;
     sock        = sock_holder.get();
     friend_addr = menu_result.friend_addr;
-    seed        = menu_result.seed;
   }
 
-#if 0
-  Game_State gods_state = quick_setup(seed);
-  save_to_json(gods_state, "data/debug_gods_state.json");
-#else
-  Game_State gods_state =
-    load_from_json<Game_State>("data/debug_gods_state.json");
-#endif
+  Game_State  gods_state;
+  Table_State table_state;
+  UI_State    ui_state;
+  load_snapshots(gods_state, table_state, ui_state);
 
-  UI_State ui_state;
-#if 0
-  auto table_state = Table_State();
-  init_table_layout(table_state, gods_state, player_index);
-  init_table_state(table_state, gods_state, ui_state);
-  save_to_json(*(Table_Layout*)&table_state, "data/debug_table_state.json");
-#else
-  auto table_layout =
-    load_from_json<Table_Layout>("data/debug_table_state.json");
-  auto table_state = Table_State(table_layout);
-  populate_stacks_from_gods_state(table_state, gods_state);
-  init_table_state(table_state, gods_state, ui_state);
-#endif
-
-  Agent_UI                      agent_ui(&table_state, &ui_state, player_index);
-  std::unique_ptr<Agent>        ai_opponent;
-  std::unique_ptr<Agent_Remote> remote_opponent;
-  std::unique_ptr<Agent_Local_Online> wrap_local;
-
-  Agent* agent_local    = &agent_ui;
-  Agent* agent_opponent = nullptr;
-
-  if (sock) {
-    wrap_local =
-      std::make_unique<Agent_Local_Online>(&agent_ui, sock, friend_addr);
-    remote_opponent = std::make_unique<Agent_Remote>(sock);
-    agent_local     = wrap_local.get();
-    agent_opponent  = remote_opponent.get();
-  } else if (menu_result.mode == Menu_Result::VS_AI) {
-    ai_opponent    = std::make_unique<Agent_Minimax_Stochastic_Gods>(6, 20);
-    agent_opponent = ai_opponent.get();
-  } else {
-    agent_opponent = &agent_ui;  // hot-seat
-  }
-
-  Agent_Duel duel(agent_local, agent_opponent, /*swap=*/player_index != 0);
-
-  Input_Recorder recorder;
-  init_recorder(recorder, input_mode, input_file_path);
+  Agents agents = make_agents(
+    table_state, ui_state, menu_result, sock, friend_addr
+  );
 
   play_gods(
-    gods_state,
-    table_state,
-    ui_state,
-    &duel,
-    player_index,
-    sock,
-    friend_addr,
-    recorder,
-    &agent_ui
+    gods_state, table_state, ui_state, agents.duel.get(),
+    menu_result.player_index, sock, friend_addr, recorder, agents.agent_ui.get()
   );
 
   finalize_recorder(recorder);

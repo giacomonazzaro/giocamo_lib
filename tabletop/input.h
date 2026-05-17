@@ -1,4 +1,6 @@
 #pragma once
+#include <algorithm>
+#include <string>
 #include <vector>
 
 #include "../struct/visit.hpp"
@@ -9,19 +11,22 @@
 // or pulled from a recorded array (playback mode). Every tabletop function
 // that needs to know about input takes a `const Input&` instead of calling
 // raylib directly, so the entire interaction stream can be recorded/replayed.
+//
+// Keys are stored as raylib KEY_* codes. capture_input() only watches a fixed
+// set of keys (see input.cpp). To make a new key recordable, add it to the
+// watched lists in capture_input() — call sites then just use key_pressed()
+// or key_down() with the new code.
 struct Input {
-  int  mouse_x        = 0;
-  int  mouse_y        = 0;
-  bool left_pressed   = false;  // IsMouseButtonPressed(MOUSE_BUTTON_LEFT).
-  bool left_released  = false;  // IsMouseButtonReleased(MOUSE_BUTTON_LEFT).
-  bool key_r_pressed  = false;
-  bool key_s_pressed  = false;
-  bool key_p_pressed  = false;
-  bool key_space_down = false;
-  bool shift_down     = false;  // Either LEFT_SHIFT or RIGHT_SHIFT.
-  // Index of the digit key pressed this frame: 0..8 for KEY_ONE..KEY_NINE,
-  // 9 for KEY_ZERO. -1 if no digit was pressed.
-  int digit_pressed = -1;
+  int  mouse_x       = 0;
+  int  mouse_y       = 0;
+  bool left_pressed  = false;  // IsMouseButtonPressed(MOUSE_BUTTON_LEFT).
+  bool left_released = false;  // IsMouseButtonReleased(MOUSE_BUTTON_LEFT).
+  // Raylib KEY_* codes triggered this frame (IsKeyPressed).
+  std::vector<int> keys_pressed;
+  // Raylib KEY_* codes held this frame (IsKeyDown).
+  std::vector<int> keys_down;
+  // Characters produced this frame (GetCharPressed loop result).
+  std::string chars_typed;
 };
 VISITABLE_STRUCT(
   Input,
@@ -29,17 +34,23 @@ VISITABLE_STRUCT(
   mouse_y,
   left_pressed,
   left_released,
-  key_r_pressed,
-  key_s_pressed,
-  key_p_pressed,
-  key_space_down,
-  shift_down,
-  digit_pressed
+  keys_pressed,
+  keys_down,
+  chars_typed
 );
 
 // Reads the current frame's input from raylib. This is the ONLY place in
 // `tabletop/` that calls raylib input functions directly.
 Input capture_input();
+
+inline bool key_pressed(const Input& input, int key) {
+  return std::find(input.keys_pressed.begin(), input.keys_pressed.end(), key) !=
+         input.keys_pressed.end();
+}
+inline bool key_down(const Input& input, int key) {
+  return std::find(input.keys_down.begin(), input.keys_down.end(), key) !=
+         input.keys_down.end();
+}
 
 bool stack_is_full(const Thing& stack);
 // Hit-tests `thing` against world point (px, py) using its accumulated world

@@ -10,6 +10,8 @@
 #include <string>
 #include <utility>
 
+#include <tabletop/input_recorder.h>
+
 struct Menu_Result {
   enum Mode { VS_AI, ONLINE } mode = VS_AI;
   // ONLINE-only fields, valid when mode == ONLINE.
@@ -21,5 +23,6 @@ struct Menu_Result {
 
 // Opens a raylib window for the menu and returns the user's choice.
 // The window stays open after this returns so main can render the game inside
-// it.
-Menu_Result run_menu();
+// it. `recorder` drives the menu's per-frame input — Live captures from raylib,
+// Record also stores frames, Playback replays them.
+Menu_Result run_menu(Input_Recorder& recorder);
