@@ -344,8 +344,7 @@ static void play_gods(
   Agent*          agent,
   int             player_index,
   const Online*   online,
-  Input_Recorder& recorder,
-  Agent_UI*       agent_ui_for_input = nullptr
+  Input_Recorder& recorder
 ) {
   if (!IsWindowReady()) {
     SetConfigFlags(FLAG_WINDOW_HIGHDPI);
@@ -394,7 +393,7 @@ static void play_gods(
       fprintf(stderr, "[input_recorder] playback exhausted, exiting\n");
       break;
     }
-    if (agent_ui_for_input) agent_ui_for_input->current_input = &frame_input;
+    ui_state.input = &frame_input;
 
     // SPACE-to-zoom: handled by tabletop's update_input, but our outer
     // loop also peeks SPACE for the same gesture.
@@ -638,15 +637,15 @@ static Cli_Args parse_cli_args(int argc, char** argv) {
 // Other intermediates (AI, remote, local wrap) live on the heap and are
 // referenced only via the duel; the process exits when play ends, so they
 // leak by design rather than need explicit cleanup.
-struct Agents {
-  Agent_UI*   agent_ui;
-  Agent_Duel* duel;
-};
+// struct Agents {
+//   Agent_UI*   agent_ui;
+//   Agent_Duel* duel;
+// };
 
 // Build the duel for the menu's chosen mode. UI agent is always present;
 // the opponent + local wrapping depend on whether `online` is set (peer
 // play), or the menu chose VS_AI vs hot-seat.
-static Agents make_agents(
+static Agent* make_agent(
   Table_State&       table_state,
   UI_State&          ui_state,
   const Menu_Result& menu_result,
@@ -670,7 +669,7 @@ static Agents make_agents(
   Agent_Duel* duel = new Agent_Duel(
     local_agent, opponent, /*swap=*/menu_result.player_index != 0
   );
-  return {agent_ui, duel};
+  return duel;
 }
 
 // Loads the persisted game + table snapshots from data/. The #if-0 branches
@@ -710,17 +709,16 @@ int main(int argc, char** argv) {
   UI_State ui_state;
   init_card_draw_callbacks(table_state, gods_state, ui_state);
 
-  Agents agents = make_agents(table_state, ui_state, menu_result, online);
+  Agent* agent = make_agent(table_state, ui_state, menu_result, online);
 
   play_gods(
     gods_state,
     table_state,
     ui_state,
-    agents.duel,
+    agent,
     menu_result.player_index,
     online,
-    recorder,
-    agents.agent_ui
+    recorder
   );
 
   finalize_recorder(recorder);

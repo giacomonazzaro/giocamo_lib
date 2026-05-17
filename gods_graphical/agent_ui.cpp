@@ -1,9 +1,9 @@
 #include "agent_ui.h"
 
+#include <raylib.h>
 #include <tabletop/config.h>
 #include <tabletop/game_state.h>
 #include <tabletop/input.h>
-#include <raylib.h>
 
 #include <variant>
 
@@ -52,7 +52,7 @@ int Agent_UI::choose_action(Game& state, const Choice& choice) {
   int total_options = action_options_count(action_type);
   if (total_options == 1 && choice.description != "main") return 0;
 
-  Stack_Indices my_zones = stack_indices(choice.player_index, *table_state);
+  Stack_Indices my_zones   = stack_indices(choice.player_index, *table_state);
   int           hand_stack = my_zones.hand;
   int           play_stack = my_zones.wonders;
 
@@ -107,8 +107,7 @@ int Agent_UI::choose_action(Game& state, const Choice& choice) {
     all_buttons.x, all_buttons.y, (float)button_width, (float)button_height
   };
 
-  // current_input is set by main.cpp each frame before game_frame() runs.
-  const Input& input         = *current_input;
+  const Input& input         = *(this->ui_state->input);
   bool         mouse_clicked = input.left_pressed;
 
   if (auto* opt = std::get_if<Choose_Option>(&action_type)) {
