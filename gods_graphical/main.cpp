@@ -198,11 +198,11 @@ void init_table_layout(
 
 // Initialize the non-layout state on top of an already-built Table_Layout:
 // num_cards and the per-card draw callbacks.
-void init_table_state(
-  Table_State& table_state, Game_State& gods_state, UI_State& ui_state
+void init_card_draw_callbacks(
+  Table_State&      table_state,
+  const Game_State& gods_state,
+  const UI_State&   ui_state
 ) {
-  table_state.num_cards = (int)gods_state.all_cards.size();
-
   for (const auto& gc : gods_state.all_cards) {
     int id = gc.id;
     table_state.draw_callbacks[id] =
@@ -426,8 +426,16 @@ static void play_gods(
     // KEY_ONE..KEY_NINE map to powers 1..9; KEY_ZERO maps to 10.
     if (ui_state.power_edit_card_id != -1) {
       const int digit_keys[10] = {
-        KEY_ONE,  KEY_TWO, KEY_THREE, KEY_FOUR, KEY_FIVE,
-        KEY_SIX,  KEY_SEVEN, KEY_EIGHT, KEY_NINE, KEY_ZERO,
+        KEY_ONE,
+        KEY_TWO,
+        KEY_THREE,
+        KEY_FOUR,
+        KEY_FIVE,
+        KEY_SIX,
+        KEY_SEVEN,
+        KEY_EIGHT,
+        KEY_NINE,
+        KEY_ZERO,
       };
       for (int i = 0; i < 10; ++i) {
         if (key_pressed(frame_input, digit_keys[i])) {
@@ -623,73 +631,62 @@ static Cli_Args parse_cli_args(int argc, char** argv) {
   return args;
 }
 
-// Owns every agent the duel may reference. Lifetime tied to play_gods.
+// The two agents main() needs to keep hold of: the UI agent (its
+// current_input is set every frame) and the duel (passed to play_gods).
+// Other intermediates (AI, remote, local wrap) live on the heap and are
+// referenced only via the duel; the process exits when play ends, so they
+// leak by design rather than need explicit cleanup.
 struct Agents {
-  std::unique_ptr<Agent_UI>                       agent_ui;
-  std::unique_ptr<Agent_Minimax_Stochastic_Gods>  ai_opponent;
-  std::unique_ptr<Agent_Remote>                   remote_opponent;
-  std::unique_ptr<Agent_Local_Online>             local_wrap;
-  std::unique_ptr<Agent_Duel>                     duel;
+  Agent_UI*   agent_ui;
+  Agent_Duel* duel;
 };
 
 // Build the duel for the menu's chosen mode. UI agent is always present;
 // the opponent + local wrapping depend on whether we're online, vs AI, or
-// hot-seat. Ownership stays on the returned struct.
+// hot-seat.
 static Agents make_agents(
-  Table_State&       table_state,
-  UI_State&          ui_state,
-  const Menu_Result& menu_result,
-  UDP_Socket*        sock,
+  Table_State&                table_state,
+  UI_State&                   ui_state,
+  const Menu_Result&          menu_result,
+  UDP_Socket*                 sock,
   std::pair<std::string, int> friend_addr
 ) {
-  Agents a;
-  a.agent_ui = std::make_unique<Agent_UI>(
-    &table_state, &ui_state, menu_result.player_index
-  );
+  Agent_UI* agent_ui =
+    new Agent_UI(&table_state, &ui_state, menu_result.player_index);
 
-  Agent* local_agent = a.agent_ui.get();
+  Agent* local_agent = agent_ui;
   Agent* opponent    = nullptr;
 
   if (sock) {
-    a.local_wrap = std::make_unique<Agent_Local_Online>(
-      a.agent_ui.get(), sock, friend_addr
-    );
-    a.remote_opponent = std::make_unique<Agent_Remote>(sock);
-    local_agent       = a.local_wrap.get();
-    opponent          = a.remote_opponent.get();
+    local_agent = new Agent_Local_Online(agent_ui, sock, friend_addr);
+    opponent    = new Agent_Remote(sock);
   } else if (menu_result.mode == Menu_Result::VS_AI) {
-    a.ai_opponent = std::make_unique<Agent_Minimax_Stochastic_Gods>(6, 20);
-    opponent      = a.ai_opponent.get();
+    opponent = new Agent_Minimax_Stochastic_Gods(6, 20);
   } else {
-    opponent = a.agent_ui.get();  // hot-seat.
+    opponent = agent_ui;  // hot-seat.
   }
 
-  a.duel = std::make_unique<Agent_Duel>(
+  Agent_Duel* duel = new Agent_Duel(
     local_agent, opponent, /*swap=*/menu_result.player_index != 0
   );
-  return a;
+  return {agent_ui, duel};
 }
 
 // Loads the persisted game + table snapshots from data/. The #if-0 branches
 // in the implementation are dev-only seeds: flip them locally when a new
 // snapshot is needed, then flip back.
-static void load_snapshots(
-  Game_State& gods_state, Table_State& table_state, UI_State& ui_state
-) {
+static void load_snapshots(Game_State& gods_state, Table_State& table_state) {
 #if 0
   // Dev path: build a fresh game + layout and save snapshots to disk.
   gods_state = quick_setup(std::nullopt);
-  save_to_json(gods_state, "data/debug_gods_state.json");
   init_table_layout(table_state, gods_state, 0);
-  init_table_state(table_state, gods_state, ui_state);
-  save_to_json(*(Table_Layout*)&table_state, "data/debug_table_state.json");
 #else
-  gods_state = load_from_json<Game_State>("data/debug_gods_state.json");
+  gods_state  = load_from_json<Game_State>("data/debug_gods_state.json");
   auto layout = load_from_json<Table_Layout>("data/debug_table_state.json");
   table_state = Table_State(layout);
   populate_stacks_from_gods_state(table_state, gods_state);
-  init_table_state(table_state, gods_state, ui_state);
 #endif
+  table_state.num_cards = (int)gods_state.all_cards.size();
 }
 
 int main(int argc, char** argv) {
@@ -703,25 +700,33 @@ int main(int argc, char** argv) {
 
   UDP_Socket*                 sock = nullptr;
   std::pair<std::string, int> friend_addr;
-  std::shared_ptr<UDP_Socket> sock_holder;
   if (menu_result.mode == Menu_Result::ONLINE) {
-    sock_holder = menu_result.sock;
-    sock        = sock_holder.get();
+    // menu_result owns the shared_ptr and outlives this scope, so the raw
+    // pointer is safe to use until the end of main.
+    sock        = menu_result.sock.get();
     friend_addr = menu_result.friend_addr;
   }
 
   Game_State  gods_state;
   Table_State table_state;
-  UI_State    ui_state;
-  load_snapshots(gods_state, table_state, ui_state);
+  load_snapshots(gods_state, table_state);
 
-  Agents agents = make_agents(
-    table_state, ui_state, menu_result, sock, friend_addr
-  );
+  UI_State ui_state;
+  init_card_draw_callbacks(table_state, gods_state, ui_state);
+
+  Agents agents =
+    make_agents(table_state, ui_state, menu_result, sock, friend_addr);
 
   play_gods(
-    gods_state, table_state, ui_state, agents.duel.get(),
-    menu_result.player_index, sock, friend_addr, recorder, agents.agent_ui.get()
+    gods_state,
+    table_state,
+    ui_state,
+    agents.duel,
+    menu_result.player_index,
+    sock,
+    friend_addr,
+    recorder,
+    agents.agent_ui
   );
 
   finalize_recorder(recorder);
