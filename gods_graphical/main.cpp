@@ -338,21 +338,24 @@ static void draw_hud(
 }
 
 static void play_gods(
-  Game_State&                 gods_state,
-  Table_State&                table_state,
-  UI_State&                   ui_state,
-  Agent*                      agent,
-  int                         player_index,
-  UDP_Socket*                 sock,
-  std::pair<std::string, int> friend_addr,
-  Input_Recorder&             recorder,
-  Agent_UI*                   agent_ui_for_input = nullptr
+  Game_State&     gods_state,
+  Table_State&    table_state,
+  UI_State&       ui_state,
+  Agent*          agent,
+  int             player_index,
+  const Online*   online,
+  Input_Recorder& recorder,
+  Agent_UI*       agent_ui_for_input = nullptr
 ) {
   if (!IsWindowReady()) {
     SetConfigFlags(FLAG_WINDOW_HIGHDPI);
     InitWindow(tt::WINDOW_WIDTH, tt::WINDOW_HEIGHT, "Gods Online");
     SetTargetFPS(tt::TARGET_FPS);
   }
+
+  // Alias the network handles so the body reads cleanly. `sock == nullptr`
+  // is the local-only signal — every `if (sock)` block below is a no-op then.
+  UDP_Socket* sock = online ? online->sock : nullptr;
 
   std::optional<Choice> current_choice;
   bool                  prev_playground = ui_state.playground;
@@ -371,7 +374,7 @@ static void play_gods(
     nlohmann::json msg;
     msg["type"]      = "all_cards";
     msg["all_cards"] = cards;
-    send_message(*sock, msg, friend_addr);
+    send_message(*sock, msg, online->friend_addr);
   };
 
   table_state.draw_callbacks[-1] = [&](Table_State* ts, const Input& input) {
@@ -508,12 +511,12 @@ static void play_gods(
       nlohmann::json msg;
       msg["type"] = "playground";
       msg["on"]   = ui_state.playground;
-      send_message(*sock, msg, friend_addr);
+      send_message(*sock, msg, online->friend_addr);
       if (ui_state.playground) {
         nlohmann::json sm;
         sm["type"]   = "stacks";
         sm["stacks"] = serialize_stacks();
-        send_message(*sock, sm, friend_addr);
+        send_message(*sock, sm, online->friend_addr);
       }
     }
     prev_playground = ui_state.playground;
@@ -528,7 +531,7 @@ static void play_gods(
         nlohmann::json sm;
         sm["type"]   = "stacks";
         sm["stacks"] = serialize_stacks();
-        send_message(*sock, sm, friend_addr);
+        send_message(*sock, sm, online->friend_addr);
       }
     }
 
@@ -573,7 +576,6 @@ static void play_gods(
     }
 
     BeginDrawing();
-
     float turn = (gods_state.current_player != player_index) ? 1.0f : 0.0f;
     draw_background(frame_input, turn);
     draw_table(table_state, frame_input);
@@ -642,14 +644,13 @@ struct Agents {
 };
 
 // Build the duel for the menu's chosen mode. UI agent is always present;
-// the opponent + local wrapping depend on whether we're online, vs AI, or
-// hot-seat.
+// the opponent + local wrapping depend on whether `online` is set (peer
+// play), or the menu chose VS_AI vs hot-seat.
 static Agents make_agents(
-  Table_State&                table_state,
-  UI_State&                   ui_state,
-  const Menu_Result&          menu_result,
-  UDP_Socket*                 sock,
-  std::pair<std::string, int> friend_addr
+  Table_State&       table_state,
+  UI_State&          ui_state,
+  const Menu_Result& menu_result,
+  const Online*      online
 ) {
   Agent_UI* agent_ui =
     new Agent_UI(&table_state, &ui_state, menu_result.player_index);
@@ -657,9 +658,9 @@ static Agents make_agents(
   Agent* local_agent = agent_ui;
   Agent* opponent    = nullptr;
 
-  if (sock) {
-    local_agent = new Agent_Local_Online(agent_ui, sock, friend_addr);
-    opponent    = new Agent_Remote(sock);
+  if (online) {
+    local_agent = new Agent_Local_Online(agent_ui, *online);
+    opponent    = new Agent_Remote(*online);
   } else if (menu_result.mode == Menu_Result::VS_AI) {
     opponent = new Agent_Minimax_Stochastic_Gods(6, 20);
   } else {
@@ -698,14 +699,9 @@ int main(int argc, char** argv) {
   Menu_Result menu_result;
   if (!args.skip_menu_vs_ai) menu_result = run_menu(recorder);
 
-  UDP_Socket*                 sock = nullptr;
-  std::pair<std::string, int> friend_addr;
-  if (menu_result.mode == Menu_Result::ONLINE) {
-    // menu_result owns the shared_ptr and outlives this scope, so the raw
-    // pointer is safe to use until the end of main.
-    sock        = menu_result.sock.get();
-    friend_addr = menu_result.friend_addr;
-  }
+  // nullptr means local-only; otherwise borrow the bundle from menu_result.
+  const Online* online =
+    (menu_result.mode == Menu_Result::ONLINE) ? &menu_result.online : nullptr;
 
   Game_State  gods_state;
   Table_State table_state;
@@ -714,8 +710,7 @@ int main(int argc, char** argv) {
   UI_State ui_state;
   init_card_draw_callbacks(table_state, gods_state, ui_state);
 
-  Agents agents =
-    make_agents(table_state, ui_state, menu_result, sock, friend_addr);
+  Agents agents = make_agents(table_state, ui_state, menu_result, online);
 
   play_gods(
     gods_state,
@@ -723,8 +718,7 @@ int main(int argc, char** argv) {
     ui_state,
     agents.duel,
     menu_result.player_index,
-    sock,
-    friend_addr,
+    online,
     recorder,
     agents.agent_ui
   );

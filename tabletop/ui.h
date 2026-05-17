@@ -50,6 +50,7 @@ struct UI_State {
   bool                         playground    = false;
   int                          power_edit_card_id =
     -1;  // KT_Card whose power is being edited; -1 = none.
+  const Input* input = nullptr;
 
   UI_State();
   Rectangle place(

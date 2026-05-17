@@ -6,19 +6,16 @@
 #include <online/setup.h>
 #endif
 
-#include <memory>
-#include <string>
-#include <utility>
-
 #include <tabletop/input_recorder.h>
+
+#include "agent_remote.h"  // for Online.
 
 struct Menu_Result {
   enum Mode { VS_AI, ONLINE } mode = VS_AI;
   // ONLINE-only fields, valid when mode == ONLINE.
-  int                         player_index = 0;
-  int                         seed         = 0;
-  std::shared_ptr<UDP_Socket> sock;
-  std::pair<std::string, int> friend_addr;
+  int    player_index = 0;
+  int    seed         = 0;
+  Online online;
 };
 
 // Opens a raylib window for the menu and returns the user's choice.

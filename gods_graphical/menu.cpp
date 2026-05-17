@@ -37,6 +37,13 @@ Menu_Result run_menu(Input_Recorder&) {
 
 #include <algorithm>
 #include <cstdlib>
+#include <memory>
+
+// Keeps the UDP socket alive for the process lifetime. online_lib hands us a
+// shared_ptr; we park one copy here so main()/Online can hold a raw pointer
+// without worrying about ownership. Confined to this file so the rest of
+// gods_graphical only sees raw pointers.
+static std::shared_ptr<UDP_Socket> s_socket_keep_alive;
 
 enum class Screen { MAIN, ONLINE, CREATING, JOINING, CONNECTING };
 
@@ -206,9 +213,10 @@ Menu_Result run_menu(Input_Recorder& recorder) {
         std::lock_guard<std::mutex> lg(state.connection->state_lock);
         r.player_index = state.connection->player_index;
         r.seed         = state.connection->seed;
-        r.sock         = state.connection->sock;
-        r.friend_addr  = {
-          state.connection->friend_ip, state.connection->friend_port
+        s_socket_keep_alive = state.connection->sock;
+        r.online            = {
+          s_socket_keep_alive.get(),
+          {state.connection->friend_ip, state.connection->friend_port},
         };
         return r;
       }
