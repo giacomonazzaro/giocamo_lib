@@ -22,4 +22,4 @@ struct Menu_Result {
 // The window stays open after this returns so main can render the game inside
 // it. `recorder` drives the menu's per-frame input — Live captures from raylib,
 // Record also stores frames, Playback replays them.
-Menu_Result run_menu(Input_Recorder& recorder);
+Menu_Result run_menu(Input_Feed& recorder);

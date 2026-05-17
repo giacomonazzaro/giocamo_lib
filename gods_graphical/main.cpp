@@ -344,7 +344,7 @@ static void play_gods(
   Agent*          agent,
   int             player_index,
   const Online*   online,
-  Input_Recorder& recorder
+  Input_Feed& inputs
 ) {
   if (!IsWindowReady()) {
     SetConfigFlags(FLAG_WINDOW_HIGHDPI);
@@ -380,7 +380,7 @@ static void play_gods(
     draw_hud(ts, gods_state, current_choice, ui_state, player_index, input);
   };
 
-  // The per-frame input. Populated at the top of each frame from the recorder
+  // The per-frame input. Populated at the top of each frame from the inputs
   // (live capture, recording capture, or playback). Stored in an outer scope
   // so the agent (set via current_input) and HUD callback can both see it.
   Input frame_input;
@@ -388,8 +388,8 @@ static void play_gods(
   while (!WindowShouldClose()) {
     if (gods_state.game_over) break;
 
-    frame_input = next_input(recorder);
-    if (recorder.exhausted) {
+    frame_input = next_input(inputs);
+    if (inputs.exhausted) {
       fprintf(stderr, "[input_recorder] playback exhausted, exiting\n");
       break;
     }
@@ -676,6 +676,10 @@ static Agent* make_agent(
 // in the implementation are dev-only seeds: flip them locally when a new
 // snapshot is needed, then flip back.
 static void load_snapshots(Game_State& gods_state, Table_State& table_state) {
+  // Card hooks (Card::on_played etc.) dispatch through the global card_designs
+  // registry, so it must be populated before any gameplay runs — regardless of
+  // whether the game state comes from quick_setup or from a JSON snapshot.
+  fs_helpers::load_card_designs();
 #if 0
   // Dev path: build a fresh game + layout and save snapshots to disk.
   gods_state = quick_setup(std::nullopt);
@@ -692,11 +696,11 @@ static void load_snapshots(Game_State& gods_state, Table_State& table_state) {
 int main(int argc, char** argv) {
   Cli_Args args = parse_cli_args(argc, argv);
 
-  Input_Recorder recorder;
-  init_recorder(recorder, args.input_mode, args.input_file_path);
+  Input_Feed inputs;
+  init_input_recorder(inputs, args.input_mode, args.input_file_path);
 
   Menu_Result menu_result;
-  if (!args.skip_menu_vs_ai) menu_result = run_menu(recorder);
+  if (!args.skip_menu_vs_ai) menu_result = run_menu(inputs);
 
   // nullptr means local-only; otherwise borrow the bundle from menu_result.
   const Online* online =
@@ -718,9 +722,9 @@ int main(int argc, char** argv) {
     agent,
     menu_result.player_index,
     online,
-    recorder
+    inputs
   );
 
-  finalize_recorder(recorder);
+  finalize_input_recorder(inputs);
   return 0;
 }

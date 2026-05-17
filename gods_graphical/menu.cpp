@@ -7,7 +7,7 @@
 #include <emscripten.h>
 #include <emscripten/html5.h>
 
-Menu_Result run_menu(Input_Recorder&) {
+Menu_Result run_menu(Input_Feed&) {
   InitWindow(tt::WINDOW_WIDTH, tt::WINDOW_HEIGHT, "Gods");
   // FLAG_WINDOW_HIGHDPI is not implemented on PLATFORM_WEB (GetWindowScaleDPI
   // returns {1,1}).  Resize the canvas pixel buffer to physical resolution and
@@ -17,14 +17,17 @@ Menu_Result run_menu(Input_Recorder&) {
   double dpr = emscripten_get_device_pixel_ratio();
   if (dpr > 1.0) {
     emscripten_set_canvas_element_size(
-        "#canvas",
-        (int)(tt::WINDOW_WIDTH  * dpr),
-        (int)(tt::WINDOW_HEIGHT * dpr));
-    EM_ASM({
-      var c = document.getElementById('canvas');
-      c.style.width  = $0 + 'px';
-      c.style.height = $1 + 'px';
-    }, tt::WINDOW_WIDTH, tt::WINDOW_HEIGHT);
+      "#canvas", (int)(tt::WINDOW_WIDTH * dpr), (int)(tt::WINDOW_HEIGHT * dpr)
+    );
+    EM_ASM(
+      {
+        var c          = document.getElementById('canvas');
+        c.style.width  = $0 + 'px';
+        c.style.height = $1 + 'px';
+      },
+      tt::WINDOW_WIDTH,
+      tt::WINDOW_HEIGHT
+    );
   }
   SetTargetFPS(tt::TARGET_FPS);
   return Menu_Result{};  // Default mode is VS_AI.
@@ -70,9 +73,9 @@ static bool draw_button(
   int                width  = 320,
   int                height = 58
 ) {
-  int  mx = input.mouse_x;
-  int  my = input.mouse_y;
-  int  x  = centered_x(width);
+  int  mx      = input.mouse_x;
+  int  my      = input.mouse_y;
+  int  x       = centered_x(width);
   bool hovered = (x <= mx && mx <= x + width && y <= my && my <= y + height);
 
   if (hovered) {
@@ -160,7 +163,7 @@ static bool is_super_down(const Input& input) {
 #endif
 }
 
-Menu_Result run_menu(Input_Recorder& recorder) {
+Menu_Result run_menu(Input_Feed& inputs) {
   int W = tt::WINDOW_WIDTH;
   int H = tt::WINDOW_HEIGHT;
 
@@ -172,8 +175,8 @@ Menu_Result run_menu(Input_Recorder& recorder) {
   int        center_y = H / 2;
 
   while (!WindowShouldClose()) {
-    Input input = next_input(recorder);
-    if (recorder.exhausted) {
+    Input input = next_input(inputs);
+    if (inputs.exhausted) {
       // Playback ran out of frames before the user chose a mode; bail out so
       // main() can act as if the menu was skipped (defaults to VS_AI).
       EndDrawing();
@@ -211,8 +214,8 @@ Menu_Result run_menu(Input_Recorder& recorder) {
         Menu_Result r;
         r.mode = Menu_Result::ONLINE;
         std::lock_guard<std::mutex> lg(state.connection->state_lock);
-        r.player_index = state.connection->player_index;
-        r.seed         = state.connection->seed;
+        r.player_index      = state.connection->player_index;
+        r.seed              = state.connection->seed;
         s_socket_keep_alive = state.connection->sock;
         r.online            = {
           s_socket_keep_alive.get(),

@@ -9,7 +9,7 @@
 // Playback = ignore raylib and feed frames from a previously recorded file.
 enum class Input_Mode { Live, Record, Playback };
 
-struct Input_Recorder {
+struct Input_Feed {
   Input_Mode         mode = Input_Mode::Live;
   std::string        path;  // Output path (Record) or input path (Playback).
   std::vector<Input> frames;
@@ -21,16 +21,16 @@ struct Input_Recorder {
 
 // Populates `rec` for the requested mode. In Playback mode, loads the JSON
 // file into `frames` immediately so the loop can stream from memory.
-void init_recorder(
-  Input_Recorder& rec, Input_Mode mode, const std::string& path
+void init_input_recorder(
+  Input_Feed& rec, Input_Mode mode, const std::string& path
 );
 
 // Returns the input for this frame:
 //   Live     → capture_input() pass-through.
 //   Record   → capture_input(), pushed onto frames.
 //   Playback → next entry from frames; flips `exhausted` after the last one.
-Input next_input(Input_Recorder& rec);
+Input next_input(Input_Feed& rec);
 
 // Record mode: writes the accumulated frames to `rec.path` via save_to_json.
 // No-op in other modes.
-void finalize_recorder(const Input_Recorder& rec);
+void finalize_input_recorder(const Input_Feed& rec);

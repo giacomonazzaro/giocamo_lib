@@ -5,8 +5,8 @@
 
 #include "../struct/serialize.h"
 
-void init_recorder(
-  Input_Recorder& rec, Input_Mode mode, const std::string& path
+void init_input_recorder(
+  Input_Feed& rec, Input_Mode mode, const std::string& path
 ) {
   rec.mode = mode;
   rec.path = path;
@@ -27,12 +27,13 @@ void init_recorder(
   }
 }
 
-Input next_input(Input_Recorder& rec) {
+Input next_input(Input_Feed& rec) {
   switch (rec.mode) {
     case Input_Mode::Live: return capture_input();
     case Input_Mode::Record: {
       Input in = capture_input();
       rec.frames.push_back(in);
+      save_struct(rec.frames, rec.path);
       return in;
     }
     case Input_Mode::Playback: {
@@ -47,7 +48,7 @@ Input next_input(Input_Recorder& rec) {
   return Input{};
 }
 
-void finalize_recorder(const Input_Recorder& rec) {
+void finalize_input_recorder(const Input_Feed& rec) {
   if (rec.mode != Input_Mode::Record) return;
   save_struct(rec.frames, rec.path);
   fprintf(
