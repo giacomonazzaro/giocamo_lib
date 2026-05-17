@@ -66,6 +66,8 @@ VISITABLE_STRUCT(Table_Layout, things, root);
 // Path of thing IDs from root to the thing.
 using Thing_Location = std::vector<int>;
 
+struct Input;
+
 // Full table state passed to every render and input function.
 struct Table_State : Table_Layout {
   // TODO: Remove, here we don't have assumptions about the fact that there are
@@ -76,7 +78,10 @@ struct Table_State : Table_Layout {
   Drag_State         drag_state;
   std::vector<Thing> animated_cards;  // Smoothed mirror of `things`, used for
                                       // animation. Same indexing.
-  std::unordered_map<int, std::function<void(Table_State*)>> draw_callbacks;
+  // HUD/per-thing draw callbacks. Receive Input so they can run immediate-mode
+  // buttons against the recorded/replayed input stream.
+  std::unordered_map<int, std::function<void(Table_State*, const Input&)>>
+    draw_callbacks;
   Thing_Location                     zoomed_card_id;
   std::function<bool(int, int, int)> is_drop_card_allowed;
   std::optional<std::tuple<int, int, int>>

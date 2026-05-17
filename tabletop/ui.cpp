@@ -69,16 +69,17 @@ Rectangle place_inside(
   return Rectangle{nx, ny, (float)width, (float)height};
 }
 
-bool Button::pressed() const {
-  if (!IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) return false;
-  float mx = (float)GetMouseX();
-  float my = (float)GetMouseY();
-  return point_in_rect(mx, my, (float)x, (float)y, (float)width, (float)height);
+bool Button::pressed(const Input& input) const {
+  if (!input.left_pressed) return false;
+  return point_in_rect(
+    (float)input.mouse_x, (float)input.mouse_y, (float)x, (float)y, (float)width, (float)height
+  );
 }
 
 bool immediate_button(
   Rectangle            rect,
   const std::string&   label,
+  const Input&         input,
   std::optional<Color> color,
   std::optional<Color> text_color
 ) {
@@ -86,8 +87,8 @@ bool immediate_button(
   int tw     = text_width(label, 20);
   rect.width = std::max(rect.width, (float)(tw + 20));
 
-  float mx     = (float)GetMouseX();
-  float my     = (float)GetMouseY();
+  float mx     = (float)input.mouse_x;
+  float my     = (float)input.mouse_y;
   bool hovered = point_in_rect(mx, my, rect.x, rect.y, rect.width, rect.height);
 
   // Resolve button background color: hover always wins.
@@ -107,7 +108,7 @@ bool immediate_button(
   Rectangle tr = place_inside(rect, tw, 20, "center", "center");
   render_text(label, tr.x, tr.y, 20, tc);
 
-  if (!IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) return false;
+  if (!input.left_pressed) return false;
   return hovered;
 }
 
@@ -121,12 +122,14 @@ Rectangle UI_State::place(
   return place_inside(window, width, height, x, y, padding);
 }
 
-std::optional<int> UI_State::clicked(float mouse_x, float mouse_y) const {
-  if (!IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) return std::nullopt;
+std::optional<int> UI_State::clicked(const Input& input) const {
+  if (!input.left_pressed) return std::nullopt;
+  float mx = (float)input.mouse_x;
+  float my = (float)input.mouse_y;
   for (const auto& [key, btn] : buttons) {
     if (point_in_rect(
-          mouse_x,
-          mouse_y,
+          mx,
+          my,
           (float)btn.x,
           (float)btn.y,
           (float)btn.width,
@@ -137,9 +140,9 @@ std::optional<int> UI_State::clicked(float mouse_x, float mouse_y) const {
   return std::nullopt;
 }
 
-void UI_State::draw_buttons() const {
-  float mx = (float)GetMouseX();
-  float my = (float)GetMouseY();
+void UI_State::draw_buttons(const Input& input) const {
+  float mx = (float)input.mouse_x;
+  float my = (float)input.mouse_y;
 
   for (const auto& [key, btn] : buttons) {
     bool hovered = point_in_rect(

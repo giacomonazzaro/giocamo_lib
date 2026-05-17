@@ -173,10 +173,13 @@ void draw_game_over_screen(
   int w_width  = tt::WINDOW_WIDTH;
   int w_height = tt::WINDOW_HEIGHT;
 
+  // Game-over screen has no interactive input; feed a zeroed Input to the
+  // background shader and (no-op) table redraw.
+  Input idle_input;
   while (!WindowShouldClose()) {
     BeginDrawing();
-    draw_background();
-    draw_table(table_state);
+    draw_background(idle_input);
+    draw_table(table_state, idle_input);
 
     // Semi-transparent overlay (matches tweak["modal_overlay"]: 0,0,0,180).
     DrawRectangle(0, 0, w_width, w_height, ::Color{0, 0, 0, 180});

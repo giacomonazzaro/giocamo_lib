@@ -3,6 +3,7 @@
 #include <string>
 #include <unordered_map>
 
+#include "input.h"
 #include "models.h"
 
 bool      point_in_rect(float px, float py, float x, float y, float w, float h);
@@ -26,7 +27,7 @@ Rectangle place_inside(
 struct Button {
   int         x = 0, y = 0, width = 0, height = 0;
   std::string text;
-  bool        pressed() const;
+  bool        pressed(const Input& input) const;
 };
 
 // Draws an immediate-mode button. Returns true if it was clicked this frame.
@@ -34,6 +35,7 @@ struct Button {
 bool immediate_button(
   Rectangle            rect,
   const std::string&   label,
+  const Input&         input,
   std::optional<Color> color      = std::nullopt,
   std::optional<Color> text_color = std::nullopt
 );
@@ -57,6 +59,6 @@ struct UI_State {
     const std::string& y       = "top",
     int                padding = 0
   ) const;
-  std::optional<int> clicked(float mouse_x, float mouse_y) const;
-  void               draw_buttons() const;
+  std::optional<int> clicked(const Input& input) const;
+  void               draw_buttons(const Input& input) const;
 };

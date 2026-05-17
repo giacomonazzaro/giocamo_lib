@@ -27,6 +27,7 @@
 #include <tabletop/config.h>
 #include <tabletop/game_state.h>
 #include <tabletop/input.h>
+#include <tabletop/input_recorder.h>
 #include <tabletop/models.h>
 #include <tabletop/rendering.h>
 #include <tabletop/ui.h>
@@ -205,7 +206,7 @@ void init_table_state(
   for (const auto& gc : gods_state.all_cards) {
     int id = gc.id;
     table_state.draw_callbacks[id] =
-      [id, &gods_state, &ui_state](Table_State*) {
+      [id, &gods_state, &ui_state](Table_State*, const Input&) {
         const auto& gcard = gods_state.all_cards[id];
         std::string power = std::to_string(gods_state.effective_power(id));
         draw_card_power_badge(power, gcard.destroyed);
@@ -234,6 +235,7 @@ static void draw_hud(
   const std::optional<Choice>& current_choice,
   UI_State&                    ui_state,
   int                          bottom_player,
+  const Input&                 input,
   std::function<void()>        on_cards_changed = nullptr
 ) {
   int       H      = tt::WINDOW_HEIGHT;
@@ -255,7 +257,7 @@ static void draw_hud(
     );
   }
 
-  ui_state.draw_buttons();
+  ui_state.draw_buttons(input);
 
   if (current_choice && !ui_state.playground) {
     const std::string& text = current_choice->text_description;
@@ -271,7 +273,7 @@ static void draw_hud(
   std::string label  = ui_state.playground ? "Playground: ON"
                                            : "Playground: OFF";
   Rectangle   button = ui_state.place(160, 32, "right", "top", 20);
-  if (immediate_button(button, label, Color{20, 20, 20, 100})) {
+  if (immediate_button(button, label, input, Color{20, 20, 20, 100})) {
     ui_state.playground = !ui_state.playground;
     if (!ui_state.playground) {
       sync_game_state_from_table(*table_state, gods_state);
@@ -309,7 +311,7 @@ static void draw_hud(
     for (int v = 1; v <= 10; ++v) {
       std::optional<Color> col = std::nullopt;
       if (v == current_power) col = Color{80, 160, 80, 255};
-      if (immediate_button(btn, std::to_string(v), col)) {
+      if (immediate_button(btn, std::to_string(v), input, col)) {
         gods_state.all_cards[card_id].power = v;
         ui_state.power_edit_card_id         = -1;
         if (on_cards_changed) on_cards_changed();
@@ -344,7 +346,9 @@ static void play_gods(
   Agent*                      agent,
   int                         player_index,
   UDP_Socket*                 sock,
-  std::pair<std::string, int> friend_addr
+  std::pair<std::string, int> friend_addr,
+  Input_Recorder&             recorder,
+  Agent_UI*                   agent_ui_for_input = nullptr
 ) {
   if (!IsWindowReady()) {
     SetConfigFlags(FLAG_WINDOW_HIGHDPI);
@@ -372,22 +376,41 @@ static void play_gods(
     send_message(*sock, msg, friend_addr);
   };
 
-  table_state.draw_callbacks[-1] = [&](Table_State* ts) {
+  table_state.draw_callbacks[-1] = [&](Table_State* ts, const Input& input) {
     std::function<void()> on_cards_changed = sock ? broadcast_cards
                                                   : std::function<void()>{};
     draw_hud(
-      ts, gods_state, current_choice, ui_state, player_index, on_cards_changed
+      ts,
+      gods_state,
+      current_choice,
+      ui_state,
+      player_index,
+      input,
+      on_cards_changed
     );
   };
+
+  // The per-frame input. Populated at the top of each frame from the recorder
+  // (live capture, recording capture, or playback). Stored in an outer scope
+  // so the agent (set via current_input) and HUD callback can both see it.
+  Input frame_input;
 
   while (!WindowShouldClose()) {
     if (gods_state.game_over) break;
 
+    frame_input = next_input(recorder);
+    if (recorder.exhausted) {
+      fprintf(stderr, "[input_recorder] playback exhausted, exiting\n");
+      break;
+    }
+    if (agent_ui_for_input) agent_ui_for_input->current_input = &frame_input;
+
     // SPACE-to-zoom: handled by tabletop's update_input, but our outer
     // loop also peeks SPACE for the same gesture.
-    if (IsKeyDown(KEY_SPACE)) {
-      auto path =
-        find_thing_at((float)GetMouseX(), (float)GetMouseY(), table_state);
+    if (frame_input.key_space_down) {
+      auto path = find_thing_at(
+        (float)frame_input.mouse_x, (float)frame_input.mouse_y, table_state
+      );
       table_state.zoomed_card_id =
         (!path.empty() && is_card(table_state.things[path.back()]))
           ? std::move(path)
@@ -396,8 +419,8 @@ static void play_gods(
       table_state.zoomed_card_id.clear();
     }
 
-    update_input(table_state);
-    int mx = GetMouseX(), my = GetMouseY();
+    process_input(table_state, frame_input);
+    int mx = frame_input.mouse_x, my = frame_input.mouse_y;
 
     // Playground: P opens the power editor for the hovered card.
     if (ui_state.playground && IsKeyPressed(KEY_P)) {
@@ -562,8 +585,8 @@ static void play_gods(
     BeginDrawing();
 
     float turn = (gods_state.current_player != player_index) ? 1.0f : 0.0f;
-    draw_background(turn);
-    draw_table(table_state);
+    draw_background(frame_input, turn);
+    draw_table(table_state, frame_input);
 
     if (agent && !ui_state.playground) {
       bool had_choice = current_choice.has_value();
@@ -599,12 +622,21 @@ int main(int argc, char** argv) {
   // without showing the menu.
   bool               skip_menu_vs_ai = false;
   std::optional<int> seed;
+  Input_Mode         input_mode = Input_Mode::Live;
+  std::string        input_file_path;
   for (int i = 1; i < argc; ++i) {
     std::string a = argv[i];
     if (a == "agent")
       skip_menu_vs_ai = true;
     else if (a.rfind("--seed=", 0) == 0)
       seed = std::atoi(a.c_str() + 7);
+    else if (a.rfind("--record=", 0) == 0) {
+      input_mode      = Input_Mode::Record;
+      input_file_path = a.substr(9);
+    } else if (a.rfind("--playback=", 0) == 0) {
+      input_mode      = Input_Mode::Playback;
+      input_file_path = a.substr(11);
+    }
   }
 
   Menu_Result menu_result;
@@ -628,9 +660,10 @@ int main(int argc, char** argv) {
 
 #if 0
   Game_State gods_state = quick_setup(seed);
-  save_to_json(gods_state, "debug_gods_state.json");
+  save_to_json(gods_state, "data/debug_gods_state.json");
 #else
-  Game_State gods_state = load_from_json<Game_State>("debug_gods_state.json");
+  Game_State gods_state =
+    load_from_json<Game_State>("data/debug_gods_state.json");
 #endif
 
   UI_State ui_state;
@@ -638,10 +671,11 @@ int main(int argc, char** argv) {
   auto table_state = Table_State();
   init_table_layout(table_state, gods_state, player_index);
   init_table_state(table_state, gods_state, ui_state);
-  save_to_json(*(Table_Layout*)&table_state, "debug_table_state.json");
+  save_to_json(*(Table_Layout*)&table_state, "data/debug_table_state.json");
 #else
-  auto table_layout = load_from_json<Table_Layout>("debug_table_state.json");
-  auto table_state  = Table_State(table_layout);
+  auto table_layout =
+    load_from_json<Table_Layout>("data/debug_table_state.json");
+  auto table_state = Table_State(table_layout);
   populate_stacks_from_gods_state(table_state, gods_state);
   init_table_state(table_state, gods_state, ui_state);
 #endif
@@ -668,9 +702,22 @@ int main(int argc, char** argv) {
   }
 
   Agent_Duel duel(agent_local, agent_opponent, /*swap=*/player_index != 0);
+
+  Input_Recorder recorder;
+  init_recorder(recorder, input_mode, input_file_path);
+
   play_gods(
-    gods_state, table_state, ui_state, &duel, player_index, sock, friend_addr
+    gods_state,
+    table_state,
+    ui_state,
+    &duel,
+    player_index,
+    sock,
+    friend_addr,
+    recorder,
+    &agent_ui
   );
 
+  finalize_recorder(recorder);
   return 0;
 }

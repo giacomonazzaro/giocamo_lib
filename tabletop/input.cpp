@@ -8,12 +8,27 @@
 #include "game_state.h"
 #include "raylib.h"
 
+Input capture_input() {
+  Input in;
+  in.mouse_x        = GetMouseX();
+  in.mouse_y        = GetMouseY();
+  in.left_pressed   = IsMouseButtonPressed(MOUSE_BUTTON_LEFT);
+  in.left_released  = IsMouseButtonReleased(MOUSE_BUTTON_LEFT);
+  in.key_r_pressed  = IsKeyPressed(KEY_R);
+  in.key_s_pressed  = IsKeyPressed(KEY_S);
+  in.key_space_down = IsKeyDown(KEY_SPACE);
+  in.shift_down     = IsKeyDown(KEY_LEFT_SHIFT) || IsKeyDown(KEY_RIGHT_SHIFT);
+  return in;
+}
+
 bool stack_is_full(const Thing& stack) {
   // True if the container has a capacity limit and has reached it.
   return stack.capacity >= 0 && (int)stack.children.size() >= stack.capacity;
 }
 
-bool point_in_thing(float px, float py, int thing_id, const Table_State& state) {
+bool point_in_thing(
+  float px, float py, int thing_id, const Table_State& state
+) {
   // Cards store only x/y in rect (size implicit via CARD_WIDTH/HEIGHT);
   // other things use their rect's width/height.
   Rectangle    r = world_rect(thing_id, state);
@@ -27,11 +42,11 @@ bool point_in_card(float px, float py, int card_id, const Table_State& state) {
   return point_in_thing(px, py, card_id, state);
 }
 
-bool card_pressed(int card_id, const Table_State& state) {
-  if (!IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) return false;
-  float mx = (float)GetMouseX();
-  float my = (float)GetMouseY();
-  return point_in_card(mx, my, card_id, state);
+bool card_pressed(int card_id, const Table_State& state, const Input& input) {
+  if (!input.left_pressed) return false;
+  return point_in_card(
+    (float)input.mouse_x, (float)input.mouse_y, card_id, state
+  );
 }
 
 bool point_in_stack_area(
@@ -50,15 +65,18 @@ bool point_in_stack_area(
 // own rect.x/y to obtain its local space before recursing into children.
 // On success, `path` ends with the hit thing; root is included as path[0].
 static bool find_thing_at_rec(
-  float px, float py, int thing_id, const Table_State& state,
-  std::vector<int>& path
+  float              px,
+  float              py,
+  int                thing_id,
+  const Table_State& state,
+  std::vector<int>&  path
 ) {
   const Thing& t = state.things[thing_id];
   path.push_back(thing_id);
 
   // Descend with the point expressed in this thing's local space.
-  float child_px = px - t.rect.x;
-  float child_py = py - t.rect.y;
+  float       child_px = px - t.rect.x;
+  float       child_py = py - t.rect.y;
   const auto& children = t.children;
   for (int i = (int)children.size() - 1; i >= 0; --i) {
     if (find_thing_at_rec(child_px, child_py, children[i], state, path))
@@ -79,9 +97,7 @@ static bool find_thing_at_rec(
   return false;
 }
 
-std::vector<int> find_thing_at(
-  float px, float py, const Table_State& state
-) {
+std::vector<int> find_thing_at(float px, float py, const Table_State& state) {
   std::vector<int> path;
   // Root's local space coincides with world space (rect at origin).
   find_thing_at_rec(px, py, state.root, state, path);
@@ -99,10 +115,10 @@ int find_stack_at(float px, float py, const Table_State& state) {
   return -1;
 }
 
-void handle_mouse_press(Table_State& state) {
+void handle_mouse_press(Table_State& state, const Input& input) {
   // Mouse pressed — begin drag if a card is under the cursor.
-  float       mx   = (float)GetMouseX();
-  float       my   = (float)GetMouseY();
+  float       mx   = (float)input.mouse_x;
+  float       my   = (float)input.mouse_y;
   Drag_State& drag = state.drag_state;
 
   auto path = find_thing_at(mx, my, state);
@@ -150,13 +166,13 @@ void handle_mouse_release(Table_State& state) {
     update_card_positions(current_stack, state, /*sort=*/true);
 }
 
-void handle_mouse_move(Table_State& state) {
+void handle_mouse_move(Table_State& state, const Input& input) {
   // Continuously update dragged card position.
   Drag_State& drag = state.drag_state;
   if (drag.card_id < 0) return;
 
-  float mx = (float)GetMouseX();
-  float my = (float)GetMouseY();
+  float mx = (float)input.mouse_x;
+  float my = (float)input.mouse_y;
 
   // Target world position for the dragged card.
   float target_world_x = mx - drag.offset_x;
@@ -205,17 +221,19 @@ void handle_mouse_move(Table_State& state) {
   }
 
   // Now position the card under the cursor — convert world → local of parent.
-  Thing&  card = state.things[drag.card_id];
-  int     parent_id = (drag.current_stack >= 0) ? drag.current_stack : state.root;
+  Thing& card   = state.things[drag.card_id];
+  int parent_id = (drag.current_stack >= 0) ? drag.current_stack : state.root;
   Vector2 parent_world = local_to_world(parent_id, state);
   card.rect.x          = target_world_x - parent_world.x;
   card.rect.y          = target_world_y - parent_world.y;
 }
 
-void handle_rotate_card(Table_State& state, bool clockwise) {
+void handle_rotate_card(
+  Table_State& state, const Input& input, bool clockwise
+) {
   // Rotate the card under the cursor by 90 degrees.
-  float mx = (float)GetMouseX();
-  float my = (float)GetMouseY();
+  float mx = (float)input.mouse_x;
+  float my = (float)input.mouse_y;
 
   auto path = find_thing_at(mx, my, state);
   if (path.empty() || !is_card(state.things[path.back()])) return;
@@ -237,36 +255,35 @@ void shuffle_stack(Table_State& state, int stack_id) {
   update_card_positions(stack_id, state, /*sort=*/false);
 }
 
-void update_input(Table_State& state) {
+void process_input(Table_State& state, const Input& input) {
   // Per-frame input processing.
   state.dropped_card = std::nullopt;
 
-  if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
-    handle_mouse_press(state);
-  } else if (IsMouseButtonReleased(MOUSE_BUTTON_LEFT)) {
+  if (input.left_pressed) {
+    handle_mouse_press(state, input);
+  } else if (input.left_released) {
     handle_mouse_release(state);
   }
 
-  handle_mouse_move(state);
+  handle_mouse_move(state, input);
 
-  if (IsKeyPressed(KEY_R)) {
-    bool shift = IsKeyDown(KEY_LEFT_SHIFT) || IsKeyDown(KEY_RIGHT_SHIFT);
-    handle_rotate_card(state, /*clockwise=*/!shift);
+  if (input.key_r_pressed) {
+    handle_rotate_card(state, input, /*clockwise=*/!input.shift_down);
   }
 
-  float mx = (float)GetMouseX();
-  float my = (float)GetMouseY();
+  float mx = (float)input.mouse_x;
+  float my = (float)input.mouse_y;
 
-  if (IsKeyDown(KEY_SPACE)) {
-    auto path = find_thing_at(mx, my, state);
-    state.zoomed_card_id =
-      (!path.empty() && is_card(state.things[path.back()])) ? std::move(path)
-                                                            : Thing_Location{};
+  if (input.key_space_down) {
+    auto path            = find_thing_at(mx, my, state);
+    state.zoomed_card_id = (!path.empty() && is_card(state.things[path.back()]))
+                             ? std::move(path)
+                             : Thing_Location{};
   } else {
     state.zoomed_card_id.clear();
   }
 
-  if (IsKeyPressed(KEY_S)) {
+  if (input.key_s_pressed) {
     int stack_id = find_stack_at(mx, my, state);
     shuffle_stack(state, stack_id);
   }

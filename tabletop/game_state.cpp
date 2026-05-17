@@ -6,12 +6,14 @@
 #include "raylib.h"
 
 bool is_card(const Thing& t) {
-  // Cards have an image path; containers (stacks, root) do not.
+  // @claude: This is wrong.
   return !t.image_path.empty();
 }
 
+// @claude: This is wrong too, don't use this functions.
 bool is_container(const Thing& t) { return t.image_path.empty(); }
 
+// @claude: This is expensive, don't use this function.
 int find_parent(int thing_id, const Table_State& state) {
   // Linear scan: tree depth is small (2) and total things is in the hundreds.
   for (int i = 0; i < (int)state.things.size(); ++i) {
@@ -22,6 +24,7 @@ int find_parent(int thing_id, const Table_State& state) {
   return -1;
 }
 
+// @claude: This is expenisve, don't use this function.
 Vector2 local_to_world(int thing_id, const Table_State& state) {
   // Walk up the parent chain summing local rects; stop at root or detached.
   float x = 0.0f, y = 0.0f;
@@ -36,6 +39,7 @@ Vector2 local_to_world(int thing_id, const Table_State& state) {
   return Vector2{x, y};
 }
 
+// @claude: This is expensive, don't use this function.
 Rectangle world_rect(int thing_id, const Table_State& state) {
   Vector2      p = local_to_world(thing_id, state);
   const Thing& t = state.things[thing_id];

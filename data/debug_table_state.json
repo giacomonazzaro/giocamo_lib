@@ -1,0 +1,977 @@
+{
+  "things": [
+    {
+      "name": "",
+      "id": 0,
+      "image_path": "/Users/giacomonazzaro/Documents/vault/games/gods/gods-app/gods/card-images/00.png",
+      "rect": {
+        "x": 43,
+        "y": 0,
+        "width": 0,
+        "height": 0
+      },
+      "rotation": 0,
+      "face_up": true,
+      "depth": 0,
+      "capacity": -1,
+      "children": [],
+      "spread_x": 0,
+      "spread_y": 0
+    },
+    {
+      "name": "",
+      "id": 1,
+      "image_path": "/Users/giacomonazzaro/Documents/vault/games/gods/gods-app/gods/card-images/01.png",
+      "rect": {
+        "x": 0,
+        "y": 18,
+        "width": 0,
+        "height": 0
+      },
+      "rotation": 0,
+      "face_up": true,
+      "depth": 0,
+      "capacity": -1,
+      "children": [],
+      "spread_x": 0,
+      "spread_y": 0
+    },
+    {
+      "name": "",
+      "id": 2,
+      "image_path": "/Users/giacomonazzaro/Documents/vault/games/gods/gods-app/gods/card-images/02.png",
+      "rect": {
+        "x": 0,
+        "y": 12,
+        "width": 0,
+        "height": 0
+      },
+      "rotation": 0,
+      "face_up": true,
+      "depth": 0,
+      "capacity": -1,
+      "children": [],
+      "spread_x": 0,
+      "spread_y": 0
+    },
+    {
+      "name": "",
+      "id": 3,
+      "image_path": "/Users/giacomonazzaro/Documents/vault/games/gods/gods-app/gods/card-images/03.png",
+      "rect": {
+        "x": 683,
+        "y": 0,
+        "width": 0,
+        "height": 0
+      },
+      "rotation": 0,
+      "face_up": true,
+      "depth": 0,
+      "capacity": -1,
+      "children": [],
+      "spread_x": 0,
+      "spread_y": 0
+    },
+    {
+      "name": "",
+      "id": 4,
+      "image_path": "/Users/giacomonazzaro/Documents/vault/games/gods/gods-app/gods/card-images/04.png",
+      "rect": {
+        "x": 0,
+        "y": -24,
+        "width": 0,
+        "height": 0
+      },
+      "rotation": 0,
+      "face_up": true,
+      "depth": 0,
+      "capacity": -1,
+      "children": [],
+      "spread_x": 0,
+      "spread_y": 0
+    },
+    {
+      "name": "",
+      "id": 5,
+      "image_path": "/Users/giacomonazzaro/Documents/vault/games/gods/gods-app/gods/card-images/05.png",
+      "rect": {
+        "x": 0,
+        "y": 39,
+        "width": 0,
+        "height": 0
+      },
+      "rotation": 0,
+      "face_up": true,
+      "depth": 0,
+      "capacity": -1,
+      "children": [],
+      "spread_x": 0,
+      "spread_y": 0
+    },
+    {
+      "name": "",
+      "id": 6,
+      "image_path": "/Users/giacomonazzaro/Documents/vault/games/gods/gods-app/gods/card-images/06.png",
+      "rect": {
+        "x": 0,
+        "y": -42,
+        "width": 0,
+        "height": 0
+      },
+      "rotation": 0,
+      "face_up": true,
+      "depth": 0,
+      "capacity": -1,
+      "children": [],
+      "spread_x": 0,
+      "spread_y": 0
+    },
+    {
+      "name": "",
+      "id": 7,
+      "image_path": "/Users/giacomonazzaro/Documents/vault/games/gods/gods-app/gods/card-images/07.png",
+      "rect": {
+        "x": 363,
+        "y": 0,
+        "width": 0,
+        "height": 0
+      },
+      "rotation": 0,
+      "face_up": true,
+      "depth": 0,
+      "capacity": -1,
+      "children": [],
+      "spread_x": 0,
+      "spread_y": 0
+    },
+    {
+      "name": "",
+      "id": 8,
+      "image_path": "/Users/giacomonazzaro/Documents/vault/games/gods/gods-app/gods/card-images/08.png",
+      "rect": {
+        "x": 0,
+        "y": 33,
+        "width": 0,
+        "height": 0
+      },
+      "rotation": 0,
+      "face_up": true,
+      "depth": 0,
+      "capacity": -1,
+      "children": [],
+      "spread_x": 0,
+      "spread_y": 0
+    },
+    {
+      "name": "",
+      "id": 9,
+      "image_path": "/Users/giacomonazzaro/Documents/vault/games/gods/gods-app/gods/card-images/09.png",
+      "rect": {
+        "x": 683,
+        "y": 0,
+        "width": 0,
+        "height": 0
+      },
+      "rotation": 0,
+      "face_up": true,
+      "depth": 0,
+      "capacity": -1,
+      "children": [],
+      "spread_x": 0,
+      "spread_y": 0
+    },
+    {
+      "name": "",
+      "id": 10,
+      "image_path": "/Users/giacomonazzaro/Documents/vault/games/gods/gods-app/gods/card-images/10.png",
+      "rect": {
+        "x": 203,
+        "y": 0,
+        "width": 0,
+        "height": 0
+      },
+      "rotation": 0,
+      "face_up": true,
+      "depth": 0,
+      "capacity": -1,
+      "children": [],
+      "spread_x": 0,
+      "spread_y": 0
+    },
+    {
+      "name": "",
+      "id": 11,
+      "image_path": "/Users/giacomonazzaro/Documents/vault/games/gods/gods-app/gods/card-images/11.png",
+      "rect": {
+        "x": 0,
+        "y": 3,
+        "width": 0,
+        "height": 0
+      },
+      "rotation": 0,
+      "face_up": true,
+      "depth": 0,
+      "capacity": -1,
+      "children": [],
+      "spread_x": 0,
+      "spread_y": 0
+    },
+    {
+      "name": "",
+      "id": 12,
+      "image_path": "/Users/giacomonazzaro/Documents/vault/games/gods/gods-app/gods/card-images/12.png",
+      "rect": {
+        "x": 0,
+        "y": -36,
+        "width": 0,
+        "height": 0
+      },
+      "rotation": 0,
+      "face_up": true,
+      "depth": 0,
+      "capacity": -1,
+      "children": [],
+      "spread_x": 0,
+      "spread_y": 0
+    },
+    {
+      "name": "",
+      "id": 13,
+      "image_path": "/Users/giacomonazzaro/Documents/vault/games/gods/gods-app/gods/card-images/13.png",
+      "rect": {
+        "x": 523,
+        "y": 0,
+        "width": 0,
+        "height": 0
+      },
+      "rotation": 0,
+      "face_up": true,
+      "depth": 0,
+      "capacity": -1,
+      "children": [],
+      "spread_x": 0,
+      "spread_y": 0
+    },
+    {
+      "name": "",
+      "id": 14,
+      "image_path": "/Users/giacomonazzaro/Documents/vault/games/gods/gods-app/gods/card-images/14.png",
+      "rect": {
+        "x": 523,
+        "y": 0,
+        "width": 0,
+        "height": 0
+      },
+      "rotation": 0,
+      "face_up": true,
+      "depth": 0,
+      "capacity": -1,
+      "children": [],
+      "spread_x": 0,
+      "spread_y": 0
+    },
+    {
+      "name": "",
+      "id": 15,
+      "image_path": "/Users/giacomonazzaro/Documents/vault/games/gods/gods-app/gods/card-images/15.png",
+      "rect": {
+        "x": 0,
+        "y": 24,
+        "width": 0,
+        "height": 0
+      },
+      "rotation": 0,
+      "face_up": true,
+      "depth": 0,
+      "capacity": -1,
+      "children": [],
+      "spread_x": 0,
+      "spread_y": 0
+    },
+    {
+      "name": "",
+      "id": 16,
+      "image_path": "/Users/giacomonazzaro/Documents/vault/games/gods/gods-app/gods/card-images/16.png",
+      "rect": {
+        "x": 0,
+        "y": -27,
+        "width": 0,
+        "height": 0
+      },
+      "rotation": 0,
+      "face_up": true,
+      "depth": 0,
+      "capacity": -1,
+      "children": [],
+      "spread_x": 0,
+      "spread_y": 0
+    },
+    {
+      "name": "",
+      "id": 17,
+      "image_path": "/Users/giacomonazzaro/Documents/vault/games/gods/gods-app/gods/card-images/17.png",
+      "rect": {
+        "x": 0,
+        "y": -15,
+        "width": 0,
+        "height": 0
+      },
+      "rotation": 0,
+      "face_up": true,
+      "depth": 0,
+      "capacity": -1,
+      "children": [],
+      "spread_x": 0,
+      "spread_y": 0
+    },
+    {
+      "name": "",
+      "id": 18,
+      "image_path": "/Users/giacomonazzaro/Documents/vault/games/gods/gods-app/gods/card-images/18.png",
+      "rect": {
+        "x": 0,
+        "y": 36,
+        "width": 0,
+        "height": 0
+      },
+      "rotation": 0,
+      "face_up": true,
+      "depth": 0,
+      "capacity": -1,
+      "children": [],
+      "spread_x": 0,
+      "spread_y": 0
+    },
+    {
+      "name": "",
+      "id": 19,
+      "image_path": "/Users/giacomonazzaro/Documents/vault/games/gods/gods-app/gods/card-images/19.png",
+      "rect": {
+        "x": 0,
+        "y": -18,
+        "width": 0,
+        "height": 0
+      },
+      "rotation": 0,
+      "face_up": true,
+      "depth": 0,
+      "capacity": -1,
+      "children": [],
+      "spread_x": 0,
+      "spread_y": 0
+    },
+    {
+      "name": "",
+      "id": 20,
+      "image_path": "/Users/giacomonazzaro/Documents/vault/games/gods/gods-app/gods/card-images/20.png",
+      "rect": {
+        "x": 0,
+        "y": 42,
+        "width": 0,
+        "height": 0
+      },
+      "rotation": 0,
+      "face_up": true,
+      "depth": 0,
+      "capacity": -1,
+      "children": [],
+      "spread_x": 0,
+      "spread_y": 0
+    },
+    {
+      "name": "",
+      "id": 21,
+      "image_path": "/Users/giacomonazzaro/Documents/vault/games/gods/gods-app/gods/card-images/21.png",
+      "rect": {
+        "x": 0,
+        "y": 9,
+        "width": 0,
+        "height": 0
+      },
+      "rotation": 0,
+      "face_up": true,
+      "depth": 0,
+      "capacity": -1,
+      "children": [],
+      "spread_x": 0,
+      "spread_y": 0
+    },
+    {
+      "name": "",
+      "id": 22,
+      "image_path": "/Users/giacomonazzaro/Documents/vault/games/gods/gods-app/gods/card-images/22.png",
+      "rect": {
+        "x": 0,
+        "y": 15,
+        "width": 0,
+        "height": 0
+      },
+      "rotation": 0,
+      "face_up": true,
+      "depth": 0,
+      "capacity": -1,
+      "children": [],
+      "spread_x": 0,
+      "spread_y": 0
+    },
+    {
+      "name": "",
+      "id": 23,
+      "image_path": "/Users/giacomonazzaro/Documents/vault/games/gods/gods-app/gods/card-images/23.png",
+      "rect": {
+        "x": 0,
+        "y": 21,
+        "width": 0,
+        "height": 0
+      },
+      "rotation": 0,
+      "face_up": true,
+      "depth": 0,
+      "capacity": -1,
+      "children": [],
+      "spread_x": 0,
+      "spread_y": 0
+    },
+    {
+      "name": "",
+      "id": 24,
+      "image_path": "/Users/giacomonazzaro/Documents/vault/games/gods/gods-app/gods/card-images/24.png",
+      "rect": {
+        "x": 0,
+        "y": -33,
+        "width": 0,
+        "height": 0
+      },
+      "rotation": 0,
+      "face_up": true,
+      "depth": 0,
+      "capacity": -1,
+      "children": [],
+      "spread_x": 0,
+      "spread_y": 0
+    },
+    {
+      "name": "",
+      "id": 25,
+      "image_path": "/Users/giacomonazzaro/Documents/vault/games/gods/gods-app/gods/card-images/25.png",
+      "rect": {
+        "x": 0,
+        "y": 27,
+        "width": 0,
+        "height": 0
+      },
+      "rotation": 0,
+      "face_up": true,
+      "depth": 0,
+      "capacity": -1,
+      "children": [],
+      "spread_x": 0,
+      "spread_y": 0
+    },
+    {
+      "name": "",
+      "id": 26,
+      "image_path": "/Users/giacomonazzaro/Documents/vault/games/gods/gods-app/gods/card-images/26.png",
+      "rect": {
+        "x": 363,
+        "y": 0,
+        "width": 0,
+        "height": 0
+      },
+      "rotation": 0,
+      "face_up": true,
+      "depth": 0,
+      "capacity": -1,
+      "children": [],
+      "spread_x": 0,
+      "spread_y": 0
+    },
+    {
+      "name": "",
+      "id": 27,
+      "image_path": "/Users/giacomonazzaro/Documents/vault/games/gods/gods-app/gods/card-images/27.png",
+      "rect": {
+        "x": 0,
+        "y": 0,
+        "width": 0,
+        "height": 0
+      },
+      "rotation": 0,
+      "face_up": true,
+      "depth": 0,
+      "capacity": -1,
+      "children": [],
+      "spread_x": 0,
+      "spread_y": 0
+    },
+    {
+      "name": "",
+      "id": 28,
+      "image_path": "/Users/giacomonazzaro/Documents/vault/games/gods/gods-app/gods/card-images/28.png",
+      "rect": {
+        "x": 0,
+        "y": -39,
+        "width": 0,
+        "height": 0
+      },
+      "rotation": 0,
+      "face_up": true,
+      "depth": 0,
+      "capacity": -1,
+      "children": [],
+      "spread_x": 0,
+      "spread_y": 0
+    },
+    {
+      "name": "",
+      "id": 29,
+      "image_path": "/Users/giacomonazzaro/Documents/vault/games/gods/gods-app/gods/card-images/29.png",
+      "rect": {
+        "x": 0,
+        "y": 6,
+        "width": 0,
+        "height": 0
+      },
+      "rotation": 0,
+      "face_up": true,
+      "depth": 0,
+      "capacity": -1,
+      "children": [],
+      "spread_x": 0,
+      "spread_y": 0
+    },
+    {
+      "name": "",
+      "id": 30,
+      "image_path": "/Users/giacomonazzaro/Documents/vault/games/gods/gods-app/gods/card-images/30.png",
+      "rect": {
+        "x": 0,
+        "y": -6,
+        "width": 0,
+        "height": 0
+      },
+      "rotation": 0,
+      "face_up": true,
+      "depth": 0,
+      "capacity": -1,
+      "children": [],
+      "spread_x": 0,
+      "spread_y": 0
+    },
+    {
+      "name": "",
+      "id": 31,
+      "image_path": "/Users/giacomonazzaro/Documents/vault/games/gods/gods-app/gods/card-images/31.png",
+      "rect": {
+        "x": 0,
+        "y": -12,
+        "width": 0,
+        "height": 0
+      },
+      "rotation": 0,
+      "face_up": true,
+      "depth": 0,
+      "capacity": -1,
+      "children": [],
+      "spread_x": 0,
+      "spread_y": 0
+    },
+    {
+      "name": "",
+      "id": 32,
+      "image_path": "/Users/giacomonazzaro/Documents/vault/games/gods/gods-app/gods/card-images/32.png",
+      "rect": {
+        "x": 0,
+        "y": -30,
+        "width": 0,
+        "height": 0
+      },
+      "rotation": 0,
+      "face_up": true,
+      "depth": 0,
+      "capacity": -1,
+      "children": [],
+      "spread_x": 0,
+      "spread_y": 0
+    },
+    {
+      "name": "",
+      "id": 33,
+      "image_path": "/Users/giacomonazzaro/Documents/vault/games/gods/gods-app/gods/card-images/33.png",
+      "rect": {
+        "x": 0,
+        "y": 30,
+        "width": 0,
+        "height": 0
+      },
+      "rotation": 0,
+      "face_up": true,
+      "depth": 0,
+      "capacity": -1,
+      "children": [],
+      "spread_x": 0,
+      "spread_y": 0
+    },
+    {
+      "name": "",
+      "id": 34,
+      "image_path": "/Users/giacomonazzaro/Documents/vault/games/gods/gods-app/gods/card-images/34.png",
+      "rect": {
+        "x": 0,
+        "y": -9,
+        "width": 0,
+        "height": 0
+      },
+      "rotation": 0,
+      "face_up": true,
+      "depth": 0,
+      "capacity": -1,
+      "children": [],
+      "spread_x": 0,
+      "spread_y": 0
+    },
+    {
+      "name": "",
+      "id": 35,
+      "image_path": "/Users/giacomonazzaro/Documents/vault/games/gods/gods-app/gods/card-images/35.png",
+      "rect": {
+        "x": 0,
+        "y": -3,
+        "width": 0,
+        "height": 0
+      },
+      "rotation": 0,
+      "face_up": true,
+      "depth": 0,
+      "capacity": -1,
+      "children": [],
+      "spread_x": 0,
+      "spread_y": 0
+    },
+    {
+      "name": "",
+      "id": 36,
+      "image_path": "/Users/giacomonazzaro/Documents/vault/games/gods/gods-app/gods/card-images/36.png",
+      "rect": {
+        "x": 0,
+        "y": -21,
+        "width": 0,
+        "height": 0
+      },
+      "rotation": 0,
+      "face_up": true,
+      "depth": 0,
+      "capacity": -1,
+      "children": [],
+      "spread_x": 0,
+      "spread_y": 0
+    },
+    {
+      "name": "",
+      "id": 37,
+      "image_path": "/Users/giacomonazzaro/Documents/vault/games/gods/gods-app/gods/card-images/37.png",
+      "rect": {
+        "x": 203,
+        "y": 0,
+        "width": 0,
+        "height": 0
+      },
+      "rotation": 0,
+      "face_up": true,
+      "depth": 0,
+      "capacity": -1,
+      "children": [],
+      "spread_x": 0,
+      "spread_y": 0
+    },
+    {
+      "name": "",
+      "id": 38,
+      "image_path": "/Users/giacomonazzaro/Documents/vault/games/gods/gods-app/gods/card-images/38.png",
+      "rect": {
+        "x": 43,
+        "y": 0,
+        "width": 0,
+        "height": 0
+      },
+      "rotation": 0,
+      "face_up": true,
+      "depth": 0,
+      "capacity": -1,
+      "children": [],
+      "spread_x": 0,
+      "spread_y": 0
+    },
+    {
+      "name": "p0_deck",
+      "id": 39,
+      "image_path": "",
+      "rect": {
+        "x": 342,
+        "y": 769,
+        "width": 150,
+        "height": 211
+      },
+      "rotation": 0,
+      "face_up": false,
+      "depth": 0,
+      "capacity": -1,
+      "children": [],
+      "spread_x": 0,
+      "spread_y": -3
+    },
+    {
+      "name": "p0_hand",
+      "id": 40,
+      "image_path": "",
+      "rect": {
+        "x": 512,
+        "y": 769,
+        "width": 876,
+        "height": 211
+      },
+      "rotation": 0,
+      "face_up": true,
+      "depth": 0,
+      "capacity": -1,
+      "children": [
+        0,
+        10,
+        26,
+        13,
+        3
+      ],
+      "spread_x": 160,
+      "spread_y": 0
+    },
+    {
+      "name": "p0_discard",
+      "id": 41,
+      "image_path": "",
+      "rect": {
+        "x": 172,
+        "y": 769,
+        "width": 150,
+        "height": 211
+      },
+      "rotation": 0,
+      "face_up": true,
+      "depth": 0,
+      "capacity": -1,
+      "children": [],
+      "spread_x": 0,
+      "spread_y": -3
+    },
+    {
+      "name": "p0_peoples",
+      "id": 42,
+      "image_path": "",
+      "rect": {
+        "x": 32,
+        "y": 538,
+        "width": 460,
+        "height": 211
+      },
+      "rotation": 0,
+      "face_up": true,
+      "depth": 0,
+      "capacity": -1,
+      "children": [],
+      "spread_x": 160,
+      "spread_y": 0
+    },
+    {
+      "name": "p0_wonders",
+      "id": 43,
+      "image_path": "",
+      "rect": {
+        "x": 512,
+        "y": 538,
+        "width": 876,
+        "height": 211
+      },
+      "rotation": 0,
+      "face_up": true,
+      "depth": 0,
+      "capacity": -1,
+      "children": [],
+      "spread_x": 160,
+      "spread_y": 0
+    },
+    {
+      "name": "p1_deck",
+      "id": 44,
+      "image_path": "",
+      "rect": {
+        "x": 342,
+        "y": -117,
+        "width": 150,
+        "height": 211
+      },
+      "rotation": 0,
+      "face_up": false,
+      "depth": 0,
+      "capacity": -1,
+      "children": [],
+      "spread_x": 0,
+      "spread_y": -3
+    },
+    {
+      "name": "p1_hand",
+      "id": 45,
+      "image_path": "",
+      "rect": {
+        "x": 512,
+        "y": -117,
+        "width": 876,
+        "height": 211
+      },
+      "rotation": 0,
+      "face_up": true,
+      "depth": 0,
+      "capacity": -1,
+      "children": [
+        38,
+        37,
+        7,
+        14,
+        9
+      ],
+      "spread_x": 160,
+      "spread_y": 0
+    },
+    {
+      "name": "p1_discard",
+      "id": 46,
+      "image_path": "",
+      "rect": {
+        "x": 172,
+        "y": -117,
+        "width": 150,
+        "height": 211
+      },
+      "rotation": 0,
+      "face_up": true,
+      "depth": 0,
+      "capacity": -1,
+      "children": [],
+      "spread_x": 0,
+      "spread_y": -3
+    },
+    {
+      "name": "p1_peoples",
+      "id": 47,
+      "image_path": "",
+      "rect": {
+        "x": 32,
+        "y": 114,
+        "width": 460,
+        "height": 211
+      },
+      "rotation": 0,
+      "face_up": true,
+      "depth": 0,
+      "capacity": -1,
+      "children": [],
+      "spread_x": 160,
+      "spread_y": 0
+    },
+    {
+      "name": "p1_wonders",
+      "id": 48,
+      "image_path": "",
+      "rect": {
+        "x": 512,
+        "y": 114,
+        "width": 876,
+        "height": 211
+      },
+      "rotation": 0,
+      "face_up": true,
+      "depth": 0,
+      "capacity": -1,
+      "children": [],
+      "spread_x": 160,
+      "spread_y": 0
+    },
+    {
+      "name": "shared_deck",
+      "id": 49,
+      "image_path": "",
+      "rect": {
+        "x": 1710,
+        "y": 394.5,
+        "width": 150,
+        "height": 211
+      },
+      "rotation": 0,
+      "face_up": false,
+      "depth": 0,
+      "capacity": -1,
+      "children": [
+        20,
+        5,
+        18,
+        8,
+        33,
+        25,
+        15,
+        23,
+        1,
+        22,
+        2,
+        21,
+        29,
+        11,
+        27,
+        35,
+        30,
+        34,
+        31,
+        17,
+        19,
+        36,
+        4,
+        16,
+        32,
+        24,
+        12,
+        28,
+        6
+      ],
+      "spread_x": 0,
+      "spread_y": -3
+    },
+    {
+      "name": "root",
+      "id": 50,
+      "image_path": "",
+      "rect": {
+        "x": 0,
+        "y": 0,
+        "width": 1700,
+        "height": 1000
+      },
+      "rotation": 0,
+      "face_up": true,
+      "depth": 0,
+      "capacity": -1,
+      "children": [
+        39,
+        40,
+        41,
+        42,
+        43,
+        44,
+        45,
+        46,
+        47,
+        48,
+        49
+      ],
+      "spread_x": 0,
+      "spread_y": 0
+    }
+  ],
+  "root": 50
+}

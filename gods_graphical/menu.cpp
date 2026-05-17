@@ -214,7 +214,9 @@ Menu_Result run_menu() {
     }
 
     BeginDrawing();
-    draw_background();
+    // Menu is out of scope for input recording; pass a zeroed Input to the
+    // background shader.
+    draw_background(Input{});
 
     if (state.screen == Screen::MAIN) {
       draw_centered_text("GODS", center_y - 180, 90, Color{255, 255, 255, 255});

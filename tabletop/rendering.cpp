@@ -7,6 +7,7 @@
 
 #include "config.h"
 #include "game_state.h"
+#include "input.h"
 #include "raylib.h"
 #include "rlgl.h"  // for rlPushMatrix, rlPopMatrix, rlTranslatef, rlRotatef, rlScalef
 
@@ -152,7 +153,7 @@ int text_width(const std::string& text, int size) {
 
 // --- draw_background ---
 
-void draw_background(float turn) {
+void draw_background(const Input& input, float turn) {
   if (s_bg_time_loc == -1) {
     load_background_shader();
   }
@@ -203,7 +204,7 @@ void draw_background(float turn) {
   SetShaderValue(
     s_background_shader, s_bg_turn_loc, &s_bg_turn_value, SHADER_UNIFORM_FLOAT
   );
-  float mouse[2] = {(float)GetMouseX(), (float)GetMouseY()};
+  float mouse[2] = {(float)input.mouse_x, (float)input.mouse_y};
 
   SetShaderValue(
     s_background_shader, s_bg_mouse_loc, mouse, SHADER_UNIFORM_VEC2
@@ -366,7 +367,8 @@ static void draw_thing_recursive(
   int                       thing_id,
   const Table_State&        state,
   const std::vector<Thing>& source,
-  bool                      parent_face_up
+  bool                      parent_face_up,
+  const Input&              input
 ) {
   const Thing& t = source[thing_id];
   rlPushMatrix();
@@ -380,12 +382,12 @@ static void draw_thing_recursive(
   // Per-thing draw callback fires after self-draw, before children.
   auto cb_it = state.draw_callbacks.find(thing_id);
   if (cb_it != state.draw_callbacks.end()) {
-    cb_it->second(const_cast<Table_State*>(&state));
+    cb_it->second(const_cast<Table_State*>(&state), input);
   }
 
   // Children inherit this thing's face_up.
   for (int child_id : t.children) {
-    draw_thing_recursive(child_id, state, source, t.face_up);
+    draw_thing_recursive(child_id, state, source, t.face_up, input);
   }
   rlPopMatrix();
 }
@@ -422,7 +424,7 @@ void draw_zoomed_card(const Thing& card, bool face_up) {
 
 // --- draw_table ---
 
-void draw_table(Table_State& state) {
+void draw_table(Table_State& state, const Input& input) {
   // Smoothed mirror of state.things; lerps every frame toward target.
   animate(state.animated_cards, state, 0.1f);
 
@@ -445,7 +447,7 @@ void draw_table(Table_State& state) {
   apply_local_transform(root_anim);
   for (int child_id : draw_order) {
     draw_thing_recursive(
-      child_id, state, state.animated_cards, root_anim.face_up
+      child_id, state, state.animated_cards, root_anim.face_up, input
     );
   }
   rlPopMatrix();
@@ -467,14 +469,14 @@ void draw_table(Table_State& state) {
     if (orig >= 0 && orig != state.root) face_up = state.things[orig].face_up;
     draw_card_content(c, face_up);
     auto dc_it = state.draw_callbacks.find(dragged);
-    if (dc_it != state.draw_callbacks.end()) dc_it->second(&state);
+    if (dc_it != state.draw_callbacks.end()) dc_it->second(&state, input);
     rlPopMatrix();
   }
 
   // Optional table-level draw callback (custom HUD overlays), keyed by -1.
   auto hud_it = state.draw_callbacks.find(-1);
   if (hud_it != state.draw_callbacks.end()) {
-    hud_it->second(&state);
+    hud_it->second(&state, input);
   }
 
   // Zoomed card on top of everything. zoomed_card_id is a path [root, ..., card]

@@ -121,7 +121,7 @@ static void play_tressette(
   while (!WindowShouldClose()) {
     if (state.game_over) break;
 
-    update_input(table);
+    process_input(table);
 
     BeginDrawing();
     draw_background(0.0f);

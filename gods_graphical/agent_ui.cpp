@@ -107,11 +107,13 @@ int Agent_UI::choose_action(Game& state, const Choice& choice) {
     all_buttons.x, all_buttons.y, (float)button_width, (float)button_height
   };
 
-  bool mouse_clicked = IsMouseButtonPressed(MOUSE_BUTTON_LEFT);
+  // current_input is set by main.cpp each frame before game_frame() runs.
+  const Input& input         = *current_input;
+  bool         mouse_clicked = input.left_pressed;
 
   if (auto* opt = std::get_if<Choose_Option>(&action_type)) {
     for (int i = 0; i < (int)opt->targets.size(); ++i) {
-      if (immediate_button(button, opt->targets[i])) return i;
+      if (immediate_button(button, opt->targets[i], input)) return i;
       button.x += button.width + (float)gap;
     }
     return -1;
@@ -123,7 +125,7 @@ int Agent_UI::choose_action(Game& state, const Choice& choice) {
     for (int i = 0; i < (int)cc->targets.size(); ++i) {
       Card_Id cid = unpack_card_id(cc->targets[i]);
       if (Card_Id::is_null(cid)) {
-        if (immediate_button(button, done_label)) {
+        if (immediate_button(button, done_label, input)) {
           ui_state->highlighted_cards.clear();
           return i;
         }
@@ -132,7 +134,7 @@ int Agent_UI::choose_action(Game& state, const Choice& choice) {
         int kt_card_id                 = gods_state.get_card(cid).id;
         ui_state->highlighted_cards[i] = kt_card_id;
         if (mouse_clicked && choice.description != "main") {
-          if (card_pressed(kt_card_id, *table_state)) {
+          if (card_pressed(kt_card_id, *table_state, input)) {
             ui_state->highlighted_cards.clear();
             return i;
           }
@@ -168,7 +170,7 @@ int Agent_UI::choose_action(Game& state, const Choice& choice) {
       if (card_multiselection.find(cid) == card_multiselection.end()) {
         ui_state->highlighted_cards[kt_card_id] = kt_card_id;
         if (frame_mouse_clicked) {
-          if (card_pressed(kt_card_id, *table_state)) {
+          if (card_pressed(kt_card_id, *table_state, input)) {
             card_multiselection.insert(cid);
             frame_mouse_clicked = 0;
           }
@@ -181,7 +183,7 @@ int Agent_UI::choose_action(Game& state, const Choice& choice) {
     // For now we expose a "Done" button so the player can confirm any
     // selection.
     if (!card_multiselection.empty()) {
-      if (immediate_button(button, "Done")) {
+      if (immediate_button(button, "Done", input)) {
         // Linear scan over total_options indices to find a matching
         // combination. game's resolve_choice picks via index; we don't have
         // direct visibility of which index corresponds to which combination

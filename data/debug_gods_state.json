@@ -1,0 +1,418 @@
+{
+  "all_cards": [
+    {
+      "id": 0,
+      "card_type": 1,
+      "color": 2,
+      "power": 2,
+      "counters": 0,
+      "destroyed": false,
+      "owner": -1
+    },
+    {
+      "id": 1,
+      "card_type": 1,
+      "color": 2,
+      "power": 1,
+      "counters": 0,
+      "destroyed": false,
+      "owner": -1
+    },
+    {
+      "id": 2,
+      "card_type": 1,
+      "color": 2,
+      "power": 2,
+      "counters": 0,
+      "destroyed": false,
+      "owner": -1
+    },
+    {
+      "id": 3,
+      "card_type": 1,
+      "color": 0,
+      "power": 2,
+      "counters": 0,
+      "destroyed": false,
+      "owner": -1
+    },
+    {
+      "id": 4,
+      "card_type": 1,
+      "color": 0,
+      "power": 4,
+      "counters": 0,
+      "destroyed": false,
+      "owner": -1
+    },
+    {
+      "id": 5,
+      "card_type": 1,
+      "color": 0,
+      "power": 2,
+      "counters": 0,
+      "destroyed": false,
+      "owner": -1
+    },
+    {
+      "id": 6,
+      "card_type": 1,
+      "color": 1,
+      "power": 3,
+      "counters": 0,
+      "destroyed": false,
+      "owner": -1
+    },
+    {
+      "id": 7,
+      "card_type": 1,
+      "color": 1,
+      "power": 5,
+      "counters": 0,
+      "destroyed": false,
+      "owner": -1
+    },
+    {
+      "id": 8,
+      "card_type": 1,
+      "color": 2,
+      "power": 4,
+      "counters": 0,
+      "destroyed": false,
+      "owner": -1
+    },
+    {
+      "id": 9,
+      "card_type": 1,
+      "color": 2,
+      "power": 5,
+      "counters": 0,
+      "destroyed": false,
+      "owner": -1
+    },
+    {
+      "id": 10,
+      "card_type": 1,
+      "color": 2,
+      "power": 1,
+      "counters": 0,
+      "destroyed": false,
+      "owner": -1
+    },
+    {
+      "id": 11,
+      "card_type": 1,
+      "color": 0,
+      "power": 4,
+      "counters": 0,
+      "destroyed": false,
+      "owner": -1
+    },
+    {
+      "id": 12,
+      "card_type": 1,
+      "color": 0,
+      "power": 3,
+      "counters": 0,
+      "destroyed": false,
+      "owner": -1
+    },
+    {
+      "id": 13,
+      "card_type": 1,
+      "color": 1,
+      "power": 3,
+      "counters": 0,
+      "destroyed": false,
+      "owner": -1
+    },
+    {
+      "id": 14,
+      "card_type": 1,
+      "color": 1,
+      "power": 4,
+      "counters": 0,
+      "destroyed": false,
+      "owner": -1
+    },
+    {
+      "id": 15,
+      "card_type": 1,
+      "color": 1,
+      "power": 5,
+      "counters": 0,
+      "destroyed": false,
+      "owner": -1
+    },
+    {
+      "id": 16,
+      "card_type": 0,
+      "color": 2,
+      "power": 3,
+      "counters": 0,
+      "destroyed": false,
+      "owner": -1
+    },
+    {
+      "id": 17,
+      "card_type": 0,
+      "color": 2,
+      "power": 5,
+      "counters": 0,
+      "destroyed": false,
+      "owner": -1
+    },
+    {
+      "id": 18,
+      "card_type": 0,
+      "color": 0,
+      "power": 5,
+      "counters": 0,
+      "destroyed": false,
+      "owner": -1
+    },
+    {
+      "id": 19,
+      "card_type": 0,
+      "color": 0,
+      "power": 4,
+      "counters": 0,
+      "destroyed": false,
+      "owner": -1
+    },
+    {
+      "id": 20,
+      "card_type": 0,
+      "color": 0,
+      "power": 5,
+      "counters": 0,
+      "destroyed": false,
+      "owner": -1
+    },
+    {
+      "id": 21,
+      "card_type": 0,
+      "color": 1,
+      "power": 3,
+      "counters": 0,
+      "destroyed": false,
+      "owner": -1
+    },
+    {
+      "id": 22,
+      "card_type": 0,
+      "color": 1,
+      "power": 1,
+      "counters": 0,
+      "destroyed": false,
+      "owner": -1
+    },
+    {
+      "id": 23,
+      "card_type": 0,
+      "color": 1,
+      "power": 1,
+      "counters": 0,
+      "destroyed": false,
+      "owner": -1
+    },
+    {
+      "id": 24,
+      "card_type": 0,
+      "color": 2,
+      "power": 5,
+      "counters": 0,
+      "destroyed": false,
+      "owner": -1
+    },
+    {
+      "id": 25,
+      "card_type": 0,
+      "color": 2,
+      "power": 2,
+      "counters": 0,
+      "destroyed": false,
+      "owner": -1
+    },
+    {
+      "id": 26,
+      "card_type": 0,
+      "color": 2,
+      "power": 2,
+      "counters": 0,
+      "destroyed": false,
+      "owner": -1
+    },
+    {
+      "id": 27,
+      "card_type": 0,
+      "color": 0,
+      "power": 1,
+      "counters": 0,
+      "destroyed": false,
+      "owner": -1
+    },
+    {
+      "id": 28,
+      "card_type": 0,
+      "color": 0,
+      "power": 5,
+      "counters": 0,
+      "destroyed": false,
+      "owner": -1
+    },
+    {
+      "id": 29,
+      "card_type": 0,
+      "color": 0,
+      "power": 3,
+      "counters": 0,
+      "destroyed": false,
+      "owner": -1
+    },
+    {
+      "id": 30,
+      "card_type": 0,
+      "color": 1,
+      "power": 5,
+      "counters": 0,
+      "destroyed": false,
+      "owner": -1
+    },
+    {
+      "id": 31,
+      "card_type": 0,
+      "color": 1,
+      "power": 1,
+      "counters": 0,
+      "destroyed": false,
+      "owner": -1
+    },
+    {
+      "id": 32,
+      "card_type": 2,
+      "color": 3,
+      "power": 3,
+      "counters": 0,
+      "destroyed": false,
+      "owner": -1
+    },
+    {
+      "id": 33,
+      "card_type": 2,
+      "color": 3,
+      "power": 5,
+      "counters": 0,
+      "destroyed": false,
+      "owner": -1
+    },
+    {
+      "id": 34,
+      "card_type": 2,
+      "color": 3,
+      "power": 3,
+      "counters": 0,
+      "destroyed": false,
+      "owner": -1
+    },
+    {
+      "id": 35,
+      "card_type": 2,
+      "color": 3,
+      "power": 1,
+      "counters": 0,
+      "destroyed": false,
+      "owner": -1
+    },
+    {
+      "id": 36,
+      "card_type": 2,
+      "color": 3,
+      "power": 2,
+      "counters": 0,
+      "destroyed": false,
+      "owner": -1
+    },
+    {
+      "id": 37,
+      "card_type": 2,
+      "color": 3,
+      "power": 3,
+      "counters": 0,
+      "destroyed": false,
+      "owner": -1
+    },
+    {
+      "id": 38,
+      "card_type": 2,
+      "color": 3,
+      "power": 5,
+      "counters": 0,
+      "destroyed": false,
+      "owner": -1
+    }
+  ],
+  "players": [
+    {
+      "name": "Player 1",
+      "deck": [],
+      "hand": [
+        0,
+        10,
+        26,
+        13,
+        3
+      ],
+      "discard": [],
+      "wonders": []
+    },
+    {
+      "name": "Player 2",
+      "deck": [],
+      "hand": [
+        38,
+        37,
+        7,
+        14,
+        9
+      ],
+      "discard": [],
+      "wonders": []
+    }
+  ],
+  "peoples": [],
+  "shared_deck": [
+    20,
+    5,
+    18,
+    8,
+    33,
+    25,
+    15,
+    23,
+    1,
+    22,
+    2,
+    21,
+    29,
+    11,
+    27,
+    35,
+    30,
+    34,
+    31,
+    17,
+    19,
+    36,
+    4,
+    16,
+    32,
+    24,
+    12,
+    28,
+    6
+  ],
+  "current_player": 0,
+  "current_phase": 1,
+  "game_over": false
+}

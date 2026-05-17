@@ -3,8 +3,9 @@
 
 #include "models.h"
 
-void draw_background(float turn = 0.0f);
-void draw_table(Table_State& state);
+struct Input;
+void draw_background(const Input& input, float turn = 0.0f);
+void draw_table(Table_State& state, const Input& input);
 void draw_card_back();
 void draw_card_content(const Thing& card, bool face_up);
 void draw_zoomed_card(const Thing& card, bool face_up);

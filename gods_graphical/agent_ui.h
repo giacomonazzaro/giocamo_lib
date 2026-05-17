@@ -2,6 +2,7 @@
 
 #include <game/agent.h>
 #include <gods/models.h>
+#include <tabletop/input.h>
 #include <tabletop/models.h>
 #include <tabletop/ui.h>
 
@@ -49,6 +50,10 @@ struct Agent_UI : Agent {
   UI_State*                       ui_state;
   int                             bottom_player;
   std::set<Card_Id, Card_Id_Less> card_multiselection;
+  // Set every frame by the main loop before game_frame() runs, so
+  // choose_action can read the recorded/live input. The pointer's lifetime is
+  // the frame; never dereferenced outside choose_action.
+  const Input* current_input = nullptr;
 
   Agent_UI(Table_State* t, UI_State* u, int bp)
       : table_state(t), ui_state(u), bottom_player(bp) {}
