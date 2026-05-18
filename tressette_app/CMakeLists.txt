@@ -17,6 +17,12 @@ add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/../game      ${CMAKE_BINARY_DIR}/ga
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/../tabletop  ${CMAKE_BINARY_DIR}/tabletop_build)
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/../tressette ${CMAKE_BINARY_DIR}/tressette_build)
 
+# online_lib is a prerequisite of giocamo on native builds.
+if(NOT EMSCRIPTEN)
+    add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/../online ${CMAKE_BINARY_DIR}/online_build)
+endif()
+add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/../giocamo ${CMAKE_BINARY_DIR}/giocamo_build)
+
 add_executable(tressette_app
     main.cpp
     ui.cpp
@@ -31,4 +37,5 @@ target_link_libraries(tressette_app PRIVATE
     tressette_lib
     tabletop_lib
     raylib
+    giocamo
 )

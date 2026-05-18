@@ -1,8 +1,10 @@
 #include <game/agent.h>
 #include <game/game.h>
+#include <giocamo/menu.h>
 #include <tabletop/config.h>
 #include <tabletop/game_state.h>
 #include <tabletop/input.h>
+#include <tabletop/input_recorder.h>
 #include <tabletop/models.h>
 #include <tabletop/rendering.h>
 #include <tabletop/ui.h>
@@ -144,14 +146,28 @@ static void play_tressette(
 }
 
 int main(int argc, char** argv) {
-  bool vs_ai = true;
-  auto seed  = std::optional<int>();
+  bool vs_ai     = true;
+  bool skip_menu = false;
+  auto seed      = std::optional<int>();
   for (int i = 1; i < argc; ++i) {
     auto a = std::string(argv[i]);
-    if (a == "--hot-seat")
-      vs_ai = false;
-    else if (a.rfind("--seed=", 0) == 0)
+    if (a == "--hot-seat") {
+      vs_ai     = false;
+      skip_menu = true;
+    } else if (a == "--skip-menu") {
+      skip_menu = true;
+    } else if (a.rfind("--seed=", 0) == 0) {
       seed = std::atoi(a.c_str() + 7);
+    }
+  }
+
+  // Menu opens its own window; play_tressette reuses it (its InitWindow guard
+  // skips when IsWindowReady() returns true). Online mode falls back to VS_AI
+  // since tressette has no online support yet.
+  Input_Feed inputs;
+  init_input_recorder(inputs, Input_Mode::Live, "");
+  if (!skip_menu) {
+    run_menu("Tressette", tt::WINDOW_WIDTH, tt::WINDOW_HEIGHT, inputs);
   }
 
   tressette::Game_State state    = tressette::quick_setup(seed);

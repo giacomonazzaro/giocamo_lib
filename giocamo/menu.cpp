@@ -133,13 +133,16 @@ inline bool menu_button(
 }
 
 Menu_Result run_menu(
-  const char* title, int window_width, int window_height, Input_Feed& inputs
+  const std::string& title,
+  int                window_width,
+  int                window_height,
+  Input_Feed&        inputs
 ) {
   int W = window_width;
   int H = window_height;
 
   SetConfigFlags(FLAG_WINDOW_HIGHDPI);
-  InitWindow(W, H, title);
+  InitWindow(W, H, title.c_str());
   SetTargetFPS(tt::TARGET_FPS);
 
   Menu_State state;
@@ -214,9 +217,8 @@ Menu_Result run_menu(
         place_inside(window_rect, 600, 400, "center", "center", 0);
 
       // Title.
-      std::string title       = "GODS";
-      int         title_width = text_width(title, 90);
-      auto        title_rect =
+      int  title_width = text_width(title, 90);
+      auto title_rect =
         place_inside(container, title_width, 100, "center", "top", 40);
       render_text(
         title, title_rect.x, title_rect.y, 90, Color{255, 255, 255, 255}
