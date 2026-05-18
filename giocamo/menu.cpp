@@ -109,11 +109,6 @@ static void update_text_input(
   if (key_pressed(input, KEY_BACKSPACE) && !text.empty()) text.pop_back();
 }
 
-static std::string dots() {
-  int n = (int)(GetTime() * 2) % 4;
-  return std::string(n, '.');
-}
-
 static bool is_super_down(const Input& input) {
 #ifdef __APPLE__
   return key_down(input, KEY_LEFT_SUPER) || key_down(input, KEY_RIGHT_SUPER);
@@ -148,7 +143,6 @@ Menu_Result run_menu(
   SetTargetFPS(tt::TARGET_FPS);
 
   Menu_State state;
-  int        center_y = H / 2;
 
   while (!WindowShouldClose()) {
     Input input = next_input(inputs);

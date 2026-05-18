@@ -43,11 +43,6 @@ VISITABLE_STRUCT(
   spread_y
 );
 
-// A visual card — inherits all Thing fields.
-struct KT_Card : Thing {
-  using Thing::Thing;
-};
-
 // Drag operation in progress.
 struct Drag_State {
   int   card_id            = -1;

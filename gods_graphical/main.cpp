@@ -28,7 +28,6 @@
 // agent_remote.h provides Emscripten stubs internally, so it's safe to include
 // unconditionally — needed because make_agent() references the classes even in
 // the web build (the online code path is just never reached at runtime).
-#include "agent_remote.h"
 #include <tabletop/config.h>
 #include <tabletop/game_state.h>
 #include <tabletop/input.h>
@@ -40,6 +39,7 @@
 #include <nlohmann/json.hpp>
 
 #include "../struct/json.h"
+#include "agent_remote.h"
 #include "agent_ui.h"
 #include "menu.h"
 #include "ui.h"
@@ -131,31 +131,26 @@ static Game_State quick_setup(std::optional<int> seed) {
 void populate_stacks_from_gods_state(
   Table_State& table_state, Game_State& gods_state
 ) {
-  std::map<std::string, int> name_to_id;
+  auto thing_id = std::map<std::string, int>();
   for (int i = 0; i < (int)table_state.things.size(); ++i) {
     const std::string& n = table_state.things[i].name;
-    if (!n.empty()) name_to_id[n] = i;
+    if (!n.empty()) thing_id[n] = i;
   }
 
   for (int i = 0; i < 2; ++i) {
-    const Player& p = gods_state.players[i];
-    table_state.things[name_to_id["p" + std::to_string(i) + "_deck"]].children =
-      p.deck;
-    table_state.things[name_to_id["p" + std::to_string(i) + "_hand"]].children =
-      p.hand;
-    table_state.things[name_to_id["p" + std::to_string(i) + "_discard"]]
-      .children = p.discard;
-    table_state.things[name_to_id["p" + std::to_string(i) + "_wonders"]]
-      .children = p.wonders;
+    const Player& p  = gods_state.players[i];
+    auto          pp = "p" + std::to_string(i);
+    table_state.things[thing_id[pp + "_deck"]].children    = p.deck;
+    table_state.things[thing_id[pp + "_hand"]].children    = p.hand;
+    table_state.things[thing_id[pp + "_discard"]].children = p.discard;
+    table_state.things[thing_id[pp + "_wonders"]].children = p.wonders;
     std::vector<int> peoples;
     for (int pid : gods_state.peoples) {
       if (gods_state.owner(pid) == i) peoples.push_back(pid);
     }
-    table_state.things[name_to_id["p" + std::to_string(i) + "_peoples"]]
-      .children = peoples;
+    table_state.things[thing_id[pp + "_peoples"]].children = peoples;
   }
-  table_state.things[name_to_id["shared_deck"]].children =
-    gods_state.shared_deck;
+  table_state.things[thing_id["shared_deck"]].children = gods_state.shared_deck;
 
   // Lay out cards inside each stack.
   for (int stack_id : table_state.things[table_state.root].children) {

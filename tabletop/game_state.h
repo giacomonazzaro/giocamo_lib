@@ -12,12 +12,12 @@ Vector2   local_to_world(int thing_id, const Table_State& state);
 Rectangle world_rect(int thing_id, const Table_State& state);
 
 // Stack/card operations. stack_id and card_id are both thing-ids.
-KT_Card create_card_design(int id);
-void    add_card_to_stack(int card_id, int stack_id, Table_State& state);
-int     remove_card_from_stack(int card_id, int stack_id, Table_State& state);
-void    move_card_to_stack(
-     int card_id, int from_stack_id, int to_stack_id, Table_State& state
-   );
+Thing create_card_design(int id);
+void  add_card_to_stack(int card_id, int stack_id, Table_State& state);
+int   remove_card_from_stack(int card_id, int stack_id, Table_State& state);
+void  move_card_to_stack(
+   int card_id, int from_stack_id, int to_stack_id, Table_State& state
+ );
 void update_card_positions(int stack_id, Table_State& state, bool sort);
 int  find_stack_containing_card(int card_id, const Table_State& state);
 // Loose cards live as direct children of the root thing.

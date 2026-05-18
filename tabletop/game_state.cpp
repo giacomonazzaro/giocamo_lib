@@ -46,8 +46,8 @@ Rectangle world_rect(int thing_id, const Table_State& state) {
   return Rectangle{p.x, p.y, t.rect.width, t.rect.height};
 }
 
-KT_Card create_card_design(int id) {
-  KT_Card card;
+Thing create_card_design(int id) {
+  Thing card;
   card.id = id;
   return card;
 }
@@ -158,9 +158,9 @@ std::vector<int> create_sample_cards(Table_State& state) {
   // Create a sample set of cards for testing. Returns list of card indices.
   std::vector<int> card_ids;
   for (int i = 0; i < 10; i++) {
-    KT_Card card    = create_card_design(i);
-    int     card_id = static_cast<int>(state.things.size());
-    card.id         = card_id;
+    Thing card    = create_card_design(i);
+    int   card_id = static_cast<int>(state.things.size());
+    card.id       = card_id;
     state.things.push_back(card);
     card_ids.push_back(card_id);
   }

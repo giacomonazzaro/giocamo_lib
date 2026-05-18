@@ -21,7 +21,7 @@ set(STANDALONE_CPP_ONLY ON CACHE BOOL "" FORCE)
 # Pull in the sibling libraries. Each one exposes a *_lib static target when
 # raylib (or nlohmann_json) is already defined by this parent project.
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/../game           ${CMAKE_BINARY_DIR}/game_build)
-add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/../tabletop  ${CMAKE_BINARY_DIR}/kt_build)
+add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/../tabletop  ${CMAKE_BINARY_DIR}/tabletop_build)
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/../gods           ${CMAKE_BINARY_DIR}/gods_build)
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/../giocamo           ${CMAKE_BINARY_DIR}/giocamo_build)
 

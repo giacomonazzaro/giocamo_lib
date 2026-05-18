@@ -11,10 +11,10 @@ mkdir -p $TEMP_DIR
 
 # 2. Copy and rename files
 # We rename gods_graphical.html to index.html so the server finds it automatically
-cp gods_graphical/build_wasm/gods_graphical.html "$TEMP_DIR/index.html"
-cp gods_graphical/build_wasm/gods_graphical.js "$TEMP_DIR/"
-cp gods_graphical/build_wasm/gods_graphical.wasm "$TEMP_DIR/"
-cp gods_graphical/build_wasm/gods_graphical.data "$TEMP_DIR/"
+cp build/gods_graphical_wasm/gods_graphical.html "$TEMP_DIR/index.html"
+cp build/gods_graphical_wasm/gods_graphical.js "$TEMP_DIR/"
+cp build/gods_graphical_wasm/gods_graphical.wasm "$TEMP_DIR/"
+cp build/gods_graphical_wasm/gods_graphical.data "$TEMP_DIR/"
 
 # 3. Create the 'run_app.sh' launcher inside the package
 cat << 'EOF' > "$TEMP_DIR/run_app.sh"

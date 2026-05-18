@@ -15,7 +15,7 @@ fi
 # shellcheck disable=SC1090
 source "$EMSDK_ENV"
 
-BUILD_DIR="gods_graphical/build_wasm"
+BUILD_DIR="build/gods_graphical_wasm"
 
 emcmake cmake -S gods_graphical -B "$BUILD_DIR" -DCMAKE_BUILD_TYPE=Release
 cmake --build "$BUILD_DIR" --parallel 8

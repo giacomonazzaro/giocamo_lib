@@ -217,12 +217,12 @@ void draw_card_back() {
   float h = (float)tt::CARD_HEIGHT;
   float r = (float)tt::CARD_CORNER_RADIUS;
 
-  // KT_Card colors from kt namespace (matching config.py defaults).
+  // Thing colors from kt namespace (matching config.py defaults).
   Color back_color    = {60, 80, 120, 255};
   Color pattern_color = {80, 100, 140, 255};
   Color border_color  = {80, 80, 80, 255};
 
-  // KT_Card background.
+  // Thing background.
   DrawRectangleRounded(
     Rectangle{x, y, w, h}, r / std::min(w, h), 8, back_color
   );
@@ -256,7 +256,7 @@ void draw_card_content(const Thing& card, bool face_up) {
   float h = (float)tt::CARD_HEIGHT;
   float r = (float)tt::CARD_CORNER_RADIUS;
 
-  // KT_Card background: image with rounded corners, or solid color fallback.
+  // Thing background: image with rounded corners, or solid color fallback.
   Texture2D* texture = nullptr;
   if (!card.image_path.empty()) {
     texture = get_rounded_texture(card.image_path);
@@ -473,8 +473,8 @@ void draw_table(Table_State& state, const Input& input) {
     hud_it->second(&state, input);
   }
 
-  // Zoomed card on top of everything. zoomed_card_id is a path [root, ..., card]
-  // when set; its direct parent (path[size-2]) is the owning stack.
+  // Zoomed card on top of everything. zoomed_card_id is a path [root, ...,
+  // card] when set; its direct parent (path[size-2]) is the owning stack.
   if (!state.zoomed_card_id.empty()) {
     int  card_id = state.zoomed_card_id.back();
     bool face_up = true;
