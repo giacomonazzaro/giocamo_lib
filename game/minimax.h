@@ -18,6 +18,16 @@ inline size_t argmax(const std::vector<T>& v) {
     std::distance(v.begin(), std::max_element(v.begin(), v.end()))
   );
 }
+template <typename T>
+inline size_t argmax_randomized(const std::vector<T>& v) {
+  float            max = *std::max_element(v.begin(), v.end());
+  std::vector<int> argmaxes;
+  for (int i = 0; i < v.size(); ++i) {
+    if (v[i] == max) argmaxes.push_back(i);
+  }
+  if (argmaxes.size() == 1) return argmaxes[0];
+  return argmaxes[rand() % argmaxes.size()];
+}
 
 namespace minimax_detail {
 
@@ -98,7 +108,7 @@ struct Agent_Minimax : Agent {
     std::vector<float> scores = minimax_scores<Game_T>(
       concrete, choice, num_actions, choice.player_index, max_depth
     );
-    return argmax(scores);
+    return argmax_randomized(scores);
   }
 };
 
