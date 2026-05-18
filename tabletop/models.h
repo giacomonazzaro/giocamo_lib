@@ -86,8 +86,10 @@ struct Table_State : Table_Layout {
   std::vector<Thing> animated_cards;  // Smoothed mirror of `things`, used for
                                       // animation. Same indexing.
   // HUD/per-thing draw callbacks. Receive Input so they can run immediate-mode
-  // buttons against the recorded/replayed input stream.
-  std::unordered_map<int, std::function<void(Table_State*, const Input&)>>
+  // buttons against the recorded/replayed input stream. The bool argument is
+  // the face_up flag of the thing being decorated (true for the HUD slot).
+  std::unordered_map<
+    int, std::function<void(const Table_State&, const Input&, bool)>>
                                      draw_callbacks;
   Thing_Location                     zoomed_card_id;
   std::function<bool(int, int, int)> is_drop_card_allowed;

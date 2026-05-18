@@ -213,10 +213,12 @@ void init_card_draw_callbacks(
   for (const auto& gc : gods_state.all_cards) {
     int id = gc.id;
     table_state.draw_callbacks[id] =
-      [id, &gods_state, &ui_state](Table_State* table, const Input&) {
+      [id, &gods_state, &ui_state](
+        const Table_State&, const Input&, bool face_up
+      ) {
         const auto& gcard = gods_state.all_cards[id];
         std::string power = std::to_string(gods_state.effective_power(id));
-        if (table->things[id].face_up) {
+        if (face_up) {
           draw_card_power_badge(power, gcard.destroyed);
         }
         int w = tt::CARD_WIDTH;
@@ -385,9 +387,14 @@ static void play_gods(
     send_message(*sock, msg, online->friend_addr);
   };
 
-  table_state.draw_callbacks[-1] = [&](Table_State* ts, const Input& input) {
-    draw_hud(ts, gods_state, current_choice, ui_state, player_index, input);
-  };
+  table_state.draw_callbacks[-1] =
+    [&](const Table_State&, const Input& input, bool) {
+      // draw_hud needs the mutable table_state; use the captured reference
+      // rather than the const callback parameter.
+      draw_hud(
+        &table_state, gods_state, current_choice, ui_state, player_index, input
+      );
+    };
 
   // The per-frame input. Populated at the top of each frame from the inputs
   // (live capture, recording capture, or playback). Stored in an outer scope

@@ -109,7 +109,7 @@ static void play_tressette(
   // stacks.
   state.on_cards_changed = [&]() { update_stacks(table, state); };
 
-  table.draw_callbacks[-1] = [&](Table_State*) {
+  table.draw_callbacks[-1] = [&](const Table_State&, const Input&, bool) {
     for (int i = 0; i < 2; ++i) {
       int  score      = tressette::compute_player_score(state, i);
       bool is_current = (i == state.current_player);

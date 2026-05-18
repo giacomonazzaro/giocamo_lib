@@ -370,16 +370,17 @@ static void draw_thing_recursive(
   const Thing& t = source[thing_id];
   rlPushMatrix();
   apply_local_transform(t);
+  auto face_up = parent_face_up && state.things[thing_id].face_up;
 
   // Draw the card body (skip the dragged card — it's drawn on top later).
   if (thing_id != dragged_thing_id(state.drag_state)) {
-    draw_thing(t, parent_face_up);
+    draw_thing(t, face_up);
   }
 
   // Per-thing draw callback fires after self-draw, before children.
   auto cb_it = state.draw_callbacks.find(thing_id);
   if (cb_it != state.draw_callbacks.end()) {
-    cb_it->second(const_cast<Table_State*>(&state), input);
+    cb_it->second(state, input, face_up);
   }
 
   // Children inherit this thing's face_up.
@@ -468,14 +469,16 @@ void draw_table(Table_State& state, const Input& input) {
     if (orig >= 0 && orig != state.root) face_up = state.things[orig].face_up;
     draw_thing(c, face_up);
     auto dc_it = state.draw_callbacks.find(dragged);
-    if (dc_it != state.draw_callbacks.end()) dc_it->second(&state, input);
+    if (dc_it != state.draw_callbacks.end())
+      dc_it->second(state, input, face_up);
     rlPopMatrix();
   }
 
   // Optional table-level draw callback (custom HUD overlays), keyed by -1.
+  // No specific thing here, so face_up is reported as true.
   auto hud_it = state.draw_callbacks.find(-1);
   if (hud_it != state.draw_callbacks.end()) {
-    hud_it->second(&state, input);
+    hud_it->second(state, input, true);
   }
 
   // Zoomed card on top of everything. zoomed_card_id is a path [root, ...,

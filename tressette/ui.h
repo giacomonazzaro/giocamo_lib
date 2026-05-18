@@ -4,6 +4,7 @@
 #include <vector>
 
 #include <tabletop/config.h>
+#include <tabletop/input.h>
 #include <tabletop/models.h>
 #include <tabletop/rendering.h>
 #include <tabletop/ui.h>
@@ -99,10 +100,11 @@ inline std::vector<Thing> make_tressette_stacks(bool both_hands_visible) {
 }
 
 // Draw callback that renders rank/suit text on each card face.
-inline std::function<void(Table_State*)> make_card_draw_callback(
+inline std::function<void(const Table_State&, const Input&, bool)>
+make_card_draw_callback(
   const tressette::Game_State& state, UI_State& ui_state, int id
 ) {
-  return [&state, &ui_state, id](Table_State*) {
+  return [&state, &ui_state, id](const Table_State&, const Input&, bool) {
     const tressette::Card& c    = state.all_cards[id];
     const char*            rlbl = rank_label(c.rank);
     const char*            slbl = suit_name(c.suit);
