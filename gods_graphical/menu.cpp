@@ -7,8 +7,8 @@
 #include <emscripten.h>
 #include <emscripten/html5.h>
 
-Menu_Result run_menu(Input_Feed&) {
-  InitWindow(tt::WINDOW_WIDTH, tt::WINDOW_HEIGHT, "Gods");
+Menu_Result run_menu(int window_width, int window_height, Input_Feed&) {
+  InitWindow(window_width, window_height, "Gods");
   // FLAG_WINDOW_HIGHDPI is not implemented on PLATFORM_WEB (GetWindowScaleDPI
   // returns {1,1}).  Resize the canvas pixel buffer to physical resolution and
   // pin the CSS size to logical dimensions so the game fills the viewport at

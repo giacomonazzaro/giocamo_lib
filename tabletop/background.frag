@@ -132,7 +132,7 @@ vec2 turbulence(vec2 pos, float time, float amplitude) {
 void main() {
   vec2  uv   = gl_FragCoord.xy / u_resolution.x;
   float t    = u_time * 0.1;
-  vec2 mouse = 2 * vec2(u_mouse.x, u_resolution.y - u_mouse.y) / u_resolution.x;
+  vec2 mouse = 2.0 * vec2(u_mouse.x, u_resolution.y - u_mouse.y) / u_resolution.x;
   // uv *= 2.0;
   float dist = length(uv - mouse);
   // dist = -dist;
@@ -141,7 +141,7 @@ void main() {
   // dist *= dist;
 
   dist *= 2.0;
-  dist = 1 / (1 + dist * dist);
+  dist = 1.0 / (1.0 + dist * dist);
   //   fragColor = vec4(vec3(dist), 1.0);
   //   return;
   uv = turbulence(uv, u_time, TURB_AMP * dist);

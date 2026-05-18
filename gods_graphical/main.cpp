@@ -722,6 +722,12 @@ static void load_snapshots(
     gods_state  = load_from_json<Game_State>("data/debug_gods_state.json");
     auto layout = load_from_json<Table_Layout>("data/debug_table_state.json");
     table_state = Table_State(window_width, window_height, layout);
+    // The snapshot may have been saved on another machine, so stored image
+    // paths can be stale; re-derive from card_designs on the current host.
+    for (const auto& gc : gods_state.all_cards) {
+      table_state.things[gc.id].image_path =
+        get_image_path(card_designs[gc.id]->name);
+    }
     populate_stacks_from_gods_state(table_state, gods_state);
   }
   table_state.num_cards = (int)gods_state.all_cards.size();

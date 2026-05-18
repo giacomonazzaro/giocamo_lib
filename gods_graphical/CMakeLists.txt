@@ -80,5 +80,7 @@ if(EMSCRIPTEN)
         --preload-file ${ASSETS_ROOT}/gods/cards.json@/gods/cards.json \
         --preload-file ${ASSETS_ROOT}/gods/card-images@/gods/card-images \
         --preload-file ${ASSETS_ROOT}/fonts@/fonts \
-        --preload-file ${ASSETS_ROOT}/tabletop/background.frag@/tabletop/background.frag")
+        --preload-file ${ASSETS_ROOT}/tabletop/background.frag@/tabletop/background.frag \
+        --preload-file ${ASSETS_ROOT}/data/debug_gods_state.json@/data/debug_gods_state.json \
+        --preload-file ${ASSETS_ROOT}/data/debug_table_state.json@/data/debug_table_state.json")
 endif()

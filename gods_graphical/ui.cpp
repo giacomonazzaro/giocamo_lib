@@ -7,15 +7,10 @@
 
 #include <algorithm>
 #include <cctype>
-#include <filesystem>
 
-namespace fs = std::filesystem;
-
-static const std::string IMAGES_DIR = []() {
-  // gods_graphical/../.. is the gods-app root.
-  fs::path p = fs::current_path() / "gods" / "card-images";
-  return p.string();
-}();
+// Relative to the working directory (gods-app root on desktop, "/" on web
+// where assets are preloaded into MEMFS).
+static const std::string IMAGES_DIR = "gods/card-images";
 
 std::vector<Thing> make_gods_stacks(
   int bottom_player, int window_width, int window_height
@@ -103,8 +98,8 @@ std::string get_image_path(const std::string& card_name) {
     return (char)std::tolower(c);
   });
   std::replace(name.begin(), name.end(), ' ', '_');
-  fs::path path = fs::path(IMAGES_DIR) / (name + ".png");
-  if (fs::exists(path)) return path.string();
+  std::string path = IMAGES_DIR + "/" + name + ".png";
+  if (FileExists(path.c_str())) return path;
   return "";
 }
 

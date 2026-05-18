@@ -187,16 +187,10 @@ void draw_background(const Input& input, float turn) {
   float t = (float)GetTime();
   SetShaderValue(s_background_shader, s_bg_time_loc, &t, SHADER_UNIFORM_FLOAT);
 
-  // Pass physical pixel dimensions so the shader's UV (fragCoord/resolution)
-  // stays in [0,1] on HiDPI displays.
-#ifdef __EMSCRIPTEN__
-  double dpr    = emscripten_get_device_pixel_ratio();
-  float  res[2] = {
-    (float)(tt::WINDOW_WIDTH * dpr), (float)(tt::WINDOW_HEIGHT * dpr)
-  };
-#else
+  // Pass logical pixel dimensions to match desktop behavior: on retina
+  // displays gl_FragCoord is in physical pixels so uv = fragCoord/resolution
+  // naturally ranges 0..dpr, which the shader is tuned for.
   float res[2] = {(float)GetScreenWidth(), (float)GetScreenHeight()};
-#endif
   SetShaderValue(
     s_background_shader, s_bg_resolution_loc, res, SHADER_UNIFORM_VEC2
   );
