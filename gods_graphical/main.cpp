@@ -213,10 +213,12 @@ void init_card_draw_callbacks(
   for (const auto& gc : gods_state.all_cards) {
     int id = gc.id;
     table_state.draw_callbacks[id] =
-      [id, &gods_state, &ui_state](Table_State*, const Input&) {
+      [id, &gods_state, &ui_state](Table_State* table, const Input&) {
         const auto& gcard = gods_state.all_cards[id];
         std::string power = std::to_string(gods_state.effective_power(id));
-        draw_card_power_badge(power, gcard.destroyed);
+        if (table->things[id].face_up) {
+          draw_card_power_badge(power, gcard.destroyed);
+        }
         int w = tt::CARD_WIDTH;
         int h = tt::CARD_HEIGHT;
         for (const auto& [k, kt_card_id] : ui_state.highlighted_cards) {

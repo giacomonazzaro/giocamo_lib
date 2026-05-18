@@ -242,18 +242,20 @@ void draw_card_back() {
   );
 }
 
-// --- draw_card_content ---
+// --- draw_thing ---
 
-void draw_card_content(const Thing& card, bool face_up) {
+void draw_thing(const Thing& card, bool face_up) {
   if (!face_up) {
     draw_card_back();
     return;
   }
 
+  // Cards store only x/y in rect (size implicit via CARD_WIDTH/HEIGHT);
+  // other things use their rect's width/height.
   float x = 0.0f;
   float y = 0.0f;
-  float w = (float)tt::CARD_WIDTH;
-  float h = (float)tt::CARD_HEIGHT;
+  float w = is_card(card) ? (float)tt::CARD_WIDTH : card.rect.width;
+  float h = is_card(card) ? (float)tt::CARD_HEIGHT : card.rect.height;
   float r = (float)tt::CARD_CORNER_RADIUS;
 
   // Thing background: image with rounded corners, or solid color fallback.
@@ -271,10 +273,11 @@ void draw_card_content(const Thing& card, bool face_up) {
     DrawTexturePro(
       *texture, source_rect, dest_rect, Vector2{0.0f, 0.0f}, 0.0f, WHITE
     );
-  } else {
-    // Fallback: solid color background.
-    Color bg = {255, 255, 255, 255};
-    DrawRectangleRounded(Rectangle{x, y, w, h}, r / std::min(w, h), 8, bg);
+  } else if (w > 0.0f && h > 0.0f) {
+    // Fallback: solid color background sized to the thing's own rect.
+    DrawRectangleRounded(
+      Rectangle{x, y, w, h}, r / std::min(w, h), 8, card.color
+    );
   }
 }
 
@@ -311,7 +314,7 @@ void animate(std::vector<Thing>& things, const Table_State& state, float dt) {
     things = state.things;
     return;
   }
-  int selected = state.drag_state.card_id;
+  int selected = dragged_thing_id(state.drag_state);
   for (int i = 0; i < (int)state.things.size(); ++i) {
     Thing&       a      = things[i];
     const Thing& target = state.things[i];
@@ -369,8 +372,8 @@ static void draw_thing_recursive(
   apply_local_transform(t);
 
   // Draw the card body (skip the dragged card — it's drawn on top later).
-  if (is_card(t) && thing_id != state.drag_state.card_id) {
-    draw_card_content(t, parent_face_up);
+  if (thing_id != dragged_thing_id(state.drag_state)) {
+    draw_thing(t, parent_face_up);
   }
 
   // Per-thing draw callback fires after self-draw, before children.
@@ -412,7 +415,7 @@ void draw_zoomed_card(const Thing& card, bool face_up) {
   rlPushMatrix();
   rlTranslatef(cx, cy, 0.0f);
   rlScalef(scale, scale, 1.0f);
-  draw_card_content(card, face_up);
+  draw_thing(card, face_up);
   rlPopMatrix();
 }
 
@@ -446,9 +449,11 @@ void draw_table(Table_State& state, const Input& input) {
   }
   rlPopMatrix();
 
-  // Draw the dragged card last so it sits above everything else.
-  int dragged = state.drag_state.card_id;
-  if (dragged >= 0) {
+  // Draw the dragged card last so it sits above everything else. Only cards
+  // get this overlay pass — stacks render through the normal recursive walk
+  // at their updated position.
+  int dragged = dragged_thing_id(state.drag_state);
+  if (dragged >= 0 && is_card(state.things[dragged])) {
     // Use the parent's world transform as the base; the card's own local
     // transform is applied on top.
     int     parent_id    = find_parent(dragged, state);
@@ -461,7 +466,7 @@ void draw_table(Table_State& state, const Input& input) {
     bool face_up = true;
     int  orig    = state.drag_state.original_stack;
     if (orig >= 0 && orig != state.root) face_up = state.things[orig].face_up;
-    draw_card_content(c, face_up);
+    draw_thing(c, face_up);
     auto dc_it = state.draw_callbacks.find(dragged);
     if (dc_it != state.draw_callbacks.end()) dc_it->second(&state, input);
     rlPopMatrix();

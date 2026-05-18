@@ -68,7 +68,7 @@ bool point_in_stack_area(
 // empty when nothing under root matches. Works for any thing — cards,
 // containers, loose things — callers decide what kind of hit they want by
 // inspecting path.back().
-std::vector<int> find_thing_at(float px, float py, const Table_State& state);
+Thing_Location find_thing_at(float px, float py, const Table_State& state);
 // Returns the thing-id of the topmost container under (px, py), or -1.
 int  find_stack_at(float px, float py, const Table_State& state);
 void handle_mouse_press(Table_State& state, const Input& input);

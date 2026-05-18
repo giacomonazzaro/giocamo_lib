@@ -107,7 +107,7 @@ void update_card_positions(int stack_id, Table_State& state, bool sort) {
   // Vertical: cards float around the stack's top edge as in the original.
   float start_y_local = -total_spread_y / 2.0f;
 
-  int drag_id = state.drag_state.card_id;
+  int drag_id = dragged_thing_id(state.drag_state);
   for (int i = 0; i < (int)n; i++) {
     int card_id = stack.children[i];
     if (card_id != drag_id) {

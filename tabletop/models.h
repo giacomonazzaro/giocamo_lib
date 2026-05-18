@@ -10,17 +10,18 @@
 #include "raylib.h"
 
 VISITABLE_STRUCT(Rectangle, x, y, width, height);
+VISITABLE_STRUCT(Color, r, g, b, a);
 
 // Base visual entity with optional draw callback.
 struct Thing {
   std::string name;
   int         id = 0;
   std::string image_path;
-  Rectangle   rect     = {0.0f, 0.0f, 0.0f, 0.0f};
+  Color       color;
+  Rectangle   rect     = {255.0f, 255.0f, 255.0f, 100.0f};
   float       rotation = 0.0f;
-  // std::function<void(Thing&)> draw_callback;
-  bool  face_up = true;
-  float depth   = 0.0f;
+  bool        face_up  = true;
+  float       depth    = 0.0f;
 
   // Container
   int              capacity = -1;  // -1 = unlimited.
@@ -33,6 +34,7 @@ VISITABLE_STRUCT(
   name,
   id,
   image_path,
+  color,
   rect,
   rotation,
   face_up,
@@ -43,23 +45,30 @@ VISITABLE_STRUCT(
   spread_y
 );
 
+// Path of thing IDs from root to the thing.
+using Thing_Location = std::vector<int>;
+
 // Drag operation in progress.
 struct Drag_State {
-  int   card_id            = -1;
-  int   current_stack      = -1;
-  int   last_hovered_stack = -1;
-  int   original_stack     = -1;
-  float offset_x = 0.0f, offset_y = 0.0f;
+  // Root-to-thing path captured when the drag started. Empty when no drag
+  // is in progress.
+  Thing_Location location;
+  int            current_stack      = -1;
+  int            last_hovered_stack = -1;
+  int            original_stack     = -1;
+  float          offset_x = 0.0f, offset_y = 0.0f;
 };
+
+// Id of the thing currently being dragged, or -1 when no drag is active.
+inline int dragged_thing_id(const Drag_State& drag) {
+  return drag.location.empty() ? -1 : drag.location.back();
+}
 
 struct Table_Layout {
   std::vector<Thing> things;
   int                root = -1;  // Thing id of the scene-tree root.
 };
 VISITABLE_STRUCT(Table_Layout, things, root);
-
-// Path of thing IDs from root to the thing.
-using Thing_Location = std::vector<int>;
 
 struct Input;
 

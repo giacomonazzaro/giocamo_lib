@@ -73,6 +73,7 @@ std::vector<Thing> make_gods_stacks(
     t.spread_y = (float)sy;
     t.face_up  = face_up;
     t.name     = std::move(name);
+    t.color    = {255, 255, 255, 100};
     return t;
   };
 
