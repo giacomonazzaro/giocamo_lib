@@ -212,7 +212,7 @@ Menu_Result run_menu(int window_width, int window_height, Input_Feed& inputs) {
 
       // Play vs AI button.
       auto play_vs_ai_rect =
-        place_next(title_rect, 280, 50, "center", "bottom", 20);
+        place_next(title_rect, 280, 50, "center", "bottom", 50);
       if (immediate_button(
             play_vs_ai_rect,
             "Play vs AI",
