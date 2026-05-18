@@ -22,8 +22,13 @@
 #include <online/protocol.h>
 #include <online/setup.h>
 #else
-#include "online_stub.h"
+#include <online/online_stub.h>
 #endif
+
+// agent_remote.h provides Emscripten stubs internally, so it's safe to include
+// unconditionally — needed because make_agent() references the classes even in
+// the web build (the online code path is just never reached at runtime).
+#include "agent_remote.h"
 #include <tabletop/config.h>
 #include <tabletop/game_state.h>
 #include <tabletop/input.h>
@@ -35,7 +40,6 @@
 #include <nlohmann/json.hpp>
 
 #include "../struct/json.h"
-#include "agent_remote.h"
 #include "agent_ui.h"
 #include "menu.h"
 #include "ui.h"
@@ -741,7 +745,8 @@ int main(int argc, char** argv) {
 
   Menu_Result menu_result;
   if (!args.skip_menu_vs_ai)
-    menu_result = run_menu(args.window_width, args.window_height, inputs);
+    menu_result =
+      run_menu("Gods", args.window_width, args.window_height, inputs);
 
   // nullptr means local-only; otherwise borrow the bundle from menu_result.
   const Online* online =

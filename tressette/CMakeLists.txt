@@ -3,16 +3,10 @@ project(tressette_graphical CXX)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-# Fetch raylib so tabletop_lib can link against it.
-include(FetchContent)
-FetchContent_Declare(
-    raylib
-    GIT_REPOSITORY https://github.com/raysan5/raylib.git
-    GIT_TAG 5.5
-)
+# raylib is vendored as a sibling clone at the project root.
 set(BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
 set(BUILD_GAMES    OFF CACHE BOOL "" FORCE)
-FetchContent_MakeAvailable(raylib)
+add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/../raylib ${CMAKE_BINARY_DIR}/raylib_build)
 
 # Tell sibling libraries to skip their nanobind targets.
 set(STANDALONE_CPP_ONLY ON CACHE BOOL "" FORCE)

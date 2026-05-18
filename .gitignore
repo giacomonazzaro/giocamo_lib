@@ -5,7 +5,7 @@
 gods/.mypy_cache/
 .mypy_cache/
 .vscode/
-fonts/
+# data/fonts/
 .python-version
 gods/.pytest_cache/
 gods/cards/card-images/

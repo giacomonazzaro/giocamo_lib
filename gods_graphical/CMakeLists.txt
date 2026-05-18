@@ -3,13 +3,7 @@ project(gods_graphical CXX)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-# Fetch raylib so tabletop_lib can link against it.
-include(FetchContent)
-FetchContent_Declare(
-    raylib
-    GIT_REPOSITORY https://github.com/raysan5/raylib.git
-    GIT_TAG 5.5
-)
+# Third-party dependencies are vendored as sibling clones at the project root.
 set(BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
 set(BUILD_GAMES    OFF CACHE BOOL "" FORCE)
 # Tell raylib to build for Web + WebGL2 when cross-compiling with Emscripten.
@@ -17,14 +11,8 @@ if(EMSCRIPTEN)
     set(PLATFORM "Web" CACHE STRING "" FORCE)
     set(GRAPHICS "GRAPHICS_API_OPENGL_ES3" CACHE STRING "" FORCE)
 endif()
-FetchContent_MakeAvailable(raylib)
-
-# nlohmann_json for online_lib.
-FetchContent_Declare(
-    nlohmann_json
-    URL https://github.com/nlohmann/json/releases/download/v3.11.3/json.tar.xz
-)
-FetchContent_MakeAvailable(nlohmann_json)
+add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/../raylib         ${CMAKE_BINARY_DIR}/raylib_build)
+add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/../nlohmann_json  ${CMAKE_BINARY_DIR}/nlohmann_json_build)
 
 # Tell sibling libraries to skip their nanobind Python module targets when
 # pulled in from here — we only need the pure C++ static libraries.
@@ -35,6 +23,7 @@ set(STANDALONE_CPP_ONLY ON CACHE BOOL "" FORCE)
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/../game           ${CMAKE_BINARY_DIR}/game_build)
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/../tabletop  ${CMAKE_BINARY_DIR}/kt_build)
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/../gods           ${CMAKE_BINARY_DIR}/gods_build)
+add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/../giocamo           ${CMAKE_BINARY_DIR}/giocamo_build)
 
 if(NOT EMSCRIPTEN)
     add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/../online ${CMAKE_BINARY_DIR}/online_build)
@@ -43,9 +32,9 @@ endif()
 # agent_remote.cpp uses the online module which is unavailable in Emscripten
 # builds; stubs in agent_remote.h cover that path instead.
 if(EMSCRIPTEN)
-    set(GODS_GRAPHICAL_SOURCES main.cpp ui.cpp agent_ui.cpp menu.cpp)
+    set(GODS_GRAPHICAL_SOURCES main.cpp ui.cpp agent_ui.cpp)
 else()
-    set(GODS_GRAPHICAL_SOURCES main.cpp ui.cpp agent_ui.cpp menu.cpp agent_remote.cpp)
+    set(GODS_GRAPHICAL_SOURCES main.cpp ui.cpp agent_ui.cpp agent_remote.cpp)
 endif()
 
 add_executable(gods_graphical ${GODS_GRAPHICAL_SOURCES})
@@ -58,6 +47,7 @@ target_link_libraries(gods_graphical PRIVATE
     gods_lib
     tabletop_lib
     raylib
+    giocamo
     nlohmann_json::nlohmann_json
 )
 if(NOT EMSCRIPTEN)
@@ -76,7 +66,7 @@ if(EMSCRIPTEN)
         -s TOTAL_MEMORY=268435456 \
         -s MAX_WEBGL_VERSION=2 \
         -s MIN_WEBGL_VERSION=2 \
-        --shell-file ${raylib_SOURCE_DIR}/src/minshell.html \
+        --shell-file ${CMAKE_CURRENT_SOURCE_DIR}/../raylib/src/minshell.html \
         --preload-file ${ASSETS_ROOT}/gods/cards.json@/gods/cards.json \
         --preload-file ${ASSETS_ROOT}/gods/card-images@/gods/card-images \
         --preload-file ${ASSETS_ROOT}/data/fonts@/data/fonts \

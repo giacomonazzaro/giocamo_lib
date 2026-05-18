@@ -10,15 +10,10 @@ set(ONLINE_SOURCES
     setup.cpp
 )
 
-# nlohmann_json is required for both builds. If the parent project hasn't
-# provided it, fetch it here.
+# nlohmann_json is vendored as a sibling clone at the project root. Guard so we
+# don't re-add it when a parent project has already done so.
 if(NOT TARGET nlohmann_json::nlohmann_json)
-    include(FetchContent)
-    FetchContent_Declare(
-        nlohmann_json
-        URL https://github.com/nlohmann/json/releases/download/v3.11.3/json.tar.xz
-    )
-    FetchContent_MakeAvailable(nlohmann_json)
+    add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/../nlohmann_json ${CMAKE_BINARY_DIR}/nlohmann_json_build)
 endif()
 
 # ----- Standalone C++ static library -----

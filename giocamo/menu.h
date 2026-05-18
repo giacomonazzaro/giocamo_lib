@@ -1,14 +1,13 @@
 #pragma once
 
 #ifdef __EMSCRIPTEN__
-#include "online_stub.h"
+#include <online/online_stub.h>
 #else
+#include <online/protocol.h>
 #include <online/setup.h>
 #endif
 
 #include <tabletop/input_recorder.h>
-
-#include "agent_remote.h"  // for Online.
 
 struct Menu_Result {
   enum Mode { VS_AI, ONLINE } mode = VS_AI;
@@ -22,4 +21,6 @@ struct Menu_Result {
 // The window stays open after this returns so main can render the game inside
 // it. `recorder` drives the menu's per-frame input — Live captures from raylib,
 // Record also stores frames, Playback replays them.
-Menu_Result run_menu(int window_width, int window_height, Input_Feed& recorder);
+Menu_Result run_menu(
+  const char* title, int window_width, int window_height, Input_Feed& recorder
+);

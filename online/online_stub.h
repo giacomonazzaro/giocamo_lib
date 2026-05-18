@@ -7,6 +7,11 @@
 
 struct UDP_Socket {};
 
+struct Online {
+  UDP_Socket*                 sock = nullptr;
+  std::pair<std::string, int> friend_addr;
+};
+
 inline void send_message(
   UDP_Socket&, const nlohmann::json&, const std::pair<std::string, int>&
 ) {}
