@@ -15,12 +15,12 @@ fi
 # shellcheck disable=SC1090
 source "$EMSDK_ENV"
 
-BUILD_DIR="build/gods_graphical_wasm"
+BUILD_DIR="build/gods_app_wasm"
 
-emcmake cmake -S gods_graphical -B "$BUILD_DIR" -DCMAKE_BUILD_TYPE=Release
+emcmake cmake -S gods_app -B "$BUILD_DIR" -DCMAKE_BUILD_TYPE=Release
 cmake --build "$BUILD_DIR" --parallel 8
 
-URL="http://localhost:8080/gods_graphical.html"
+URL="http://localhost:8080/gods_app.html"
 echo ""
 echo "Starting server at $URL"
 

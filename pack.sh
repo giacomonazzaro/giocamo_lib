@@ -10,11 +10,11 @@ echo "Preparing distribution package..."
 mkdir -p $TEMP_DIR
 
 # 2. Copy and rename files
-# We rename gods_graphical.html to index.html so the server finds it automatically
-cp build/gods_graphical_wasm/gods_graphical.html "$TEMP_DIR/index.html"
-cp build/gods_graphical_wasm/gods_graphical.js "$TEMP_DIR/"
-cp build/gods_graphical_wasm/gods_graphical.wasm "$TEMP_DIR/"
-cp build/gods_graphical_wasm/gods_graphical.data "$TEMP_DIR/"
+# We rename gods_app.html to index.html so the server finds it automatically
+cp build/gods_app_wasm/gods_app.html "$TEMP_DIR/index.html"
+cp build/gods_app_wasm/gods_app.js "$TEMP_DIR/"
+cp build/gods_app_wasm/gods_app.wasm "$TEMP_DIR/"
+cp build/gods_app_wasm/gods_app.data "$TEMP_DIR/"
 
 # 3. Create the 'run_app.sh' launcher inside the package
 cat << 'EOF' > "$TEMP_DIR/run_app.sh"

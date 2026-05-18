@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.21)
-project(tressette_graphical CXX)
+project(tressette_app CXX)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
@@ -17,16 +17,16 @@ add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/../game      ${CMAKE_BINARY_DIR}/ga
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/../tabletop  ${CMAKE_BINARY_DIR}/tabletop_build)
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/../tressette ${CMAKE_BINARY_DIR}/tressette_build)
 
-add_executable(tressette_graphical
+add_executable(tressette_app
     main.cpp
     ui.cpp
     agent_ui.cpp
 )
-target_include_directories(tressette_graphical PRIVATE
+target_include_directories(tressette_app PRIVATE
     .
     "${CMAKE_CURRENT_SOURCE_DIR}/.."  # so headers can use <game/x.h>, <tressette/x.h>.
 )
-target_link_libraries(tressette_graphical PRIVATE
+target_link_libraries(tressette_app PRIVATE
     game
     tressette_lib
     tabletop_lib

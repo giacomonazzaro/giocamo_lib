@@ -5,11 +5,11 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 
 TORCH_CMAKE=$(python3 -c "import torch; print(torch.utils.cmake_prefix_path)" 2>/dev/null || true)
 
-BUILD_DIR="$SCRIPT_DIR/build/tressette_graphical"
+BUILD_DIR="$SCRIPT_DIR/build/tressette_app"
 
-cmake -S "$SCRIPT_DIR/tressette_graphical" -B "$BUILD_DIR" \
+cmake -S "$SCRIPT_DIR/tressette_app" -B "$BUILD_DIR" \
   -DCMAKE_BUILD_TYPE=Release \
   ${TORCH_CMAKE:+-DCMAKE_PREFIX_PATH="$TORCH_CMAKE"}
 cmake --build "$BUILD_DIR" --parallel 8
 
-exec "$BUILD_DIR/tressette_graphical" "$@"
+exec "$BUILD_DIR/tressette_app" "$@"

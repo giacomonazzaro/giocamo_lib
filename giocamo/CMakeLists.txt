@@ -28,7 +28,7 @@ add_library(giocamo STATIC
     menu.cpp
 )
 
-# PUBLIC so consumers (e.g. gods_graphical) can include "giocamo/menu.h" and
+# PUBLIC so consumers (e.g. gods_app) can include "giocamo/menu.h" and
 # also resolve sibling headers like <online/protocol.h>, <tabletop/config.h>.
 target_include_directories(giocamo PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}

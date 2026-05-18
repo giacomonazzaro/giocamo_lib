@@ -7,10 +7,8 @@
 #include <emscripten.h>
 #include <emscripten/html5.h>
 
-Menu_Result run_menu(
-  const char* title, int window_width, int window_height, Input_Feed&
-) {
-  InitWindow(window_width, window_height, title);
+Menu_Result run_menu(int window_width, int window_height, Input_Feed&) {
+  InitWindow(window_width, window_height, "Gods");
   // FLAG_WINDOW_HIGHDPI is not implemented on PLATFORM_WEB (GetWindowScaleDPI
   // returns {1,1}).  Resize the canvas pixel buffer to physical resolution and
   // pin the CSS size to logical dimensions so the game fills the viewport at
@@ -109,6 +107,11 @@ static void update_text_input(
   if (key_pressed(input, KEY_BACKSPACE) && !text.empty()) text.pop_back();
 }
 
+static std::string dots() {
+  int n = (int)(GetTime() * 2) % 4;
+  return std::string(n, '.');
+}
+
 static bool is_super_down(const Input& input) {
 #ifdef __APPLE__
   return key_down(input, KEY_LEFT_SUPER) || key_down(input, KEY_RIGHT_SUPER);
@@ -143,6 +146,7 @@ Menu_Result run_menu(
   SetTargetFPS(tt::TARGET_FPS);
 
   Menu_State state;
+  int        center_y = H / 2;
 
   while (!WindowShouldClose()) {
     Input input = next_input(inputs);

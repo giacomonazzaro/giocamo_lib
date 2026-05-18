@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.21)
-project(gods_graphical CXX)
+project(gods_app CXX)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
@@ -37,12 +37,12 @@ else()
     set(GODS_GRAPHICAL_SOURCES main.cpp ui.cpp agent_ui.cpp agent_remote.cpp)
 endif()
 
-add_executable(gods_graphical ${GODS_GRAPHICAL_SOURCES})
-target_include_directories(gods_graphical PRIVATE
+add_executable(gods_app ${GODS_GRAPHICAL_SOURCES})
+target_include_directories(gods_app PRIVATE
     .
     "${CMAKE_CURRENT_SOURCE_DIR}/.."  # so headers can use <game/x.h>
 )
-target_link_libraries(gods_graphical PRIVATE
+target_link_libraries(gods_app PRIVATE
     game
     gods_lib
     tabletop_lib
@@ -51,7 +51,7 @@ target_link_libraries(gods_graphical PRIVATE
     nlohmann_json::nlohmann_json
 )
 if(NOT EMSCRIPTEN)
-    target_link_libraries(gods_graphical PRIVATE online_lib)
+    target_link_libraries(gods_app PRIVATE online_lib)
 endif()
 
 if(EMSCRIPTEN)
