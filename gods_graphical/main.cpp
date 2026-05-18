@@ -20,7 +20,6 @@
 #include <gods/setup.h>
 #ifndef __EMSCRIPTEN__
 #include <online/protocol.h>
-#include <online/setup.h>
 #else
 #include <online/online_stub.h>
 #endif
@@ -363,10 +362,6 @@ static void play_gods(
     SetTargetFPS(tt::TARGET_FPS);
   }
 
-  // Alias the network handles so the body reads cleanly. `sock == nullptr`
-  // is the local-only signal — every `if (sock)` block below is a no-op then.
-  UDP_Socket* sock = online ? online->sock : nullptr;
-
   std::optional<Choice> current_choice;
   bool                  prev_playground = ui_state.playground;
 
@@ -384,7 +379,7 @@ static void play_gods(
     nlohmann::json msg;
     msg["type"]      = "all_cards";
     msg["all_cards"] = cards;
-    send_message(*sock, msg, online->friend_addr);
+    send_message(*online, msg);
   };
 
   table_state.draw_callbacks[-1] =
@@ -460,7 +455,7 @@ static void play_gods(
           gods_state.all_cards[ui_state.power_edit_card_id].power =
             (i < 9) ? (i + 1) : 10;
           ui_state.power_edit_card_id = -1;
-          if (sock) broadcast_cards();
+          if (online) broadcast_cards();
           break;
         }
       }
@@ -524,22 +519,22 @@ static void play_gods(
     };
 
     // Sync playground mode with remote player.
-    if (sock && ui_state.playground != prev_playground) {
+    if (online && ui_state.playground != prev_playground) {
       nlohmann::json msg;
       msg["type"] = "playground";
       msg["on"]   = ui_state.playground;
-      send_message(*sock, msg, online->friend_addr);
+      send_message(*online, msg);
       if (ui_state.playground) {
         nlohmann::json sm;
         sm["type"]   = "stacks";
         sm["stacks"] = serialize_stacks();
-        send_message(*sock, sm, online->friend_addr);
+        send_message(*online, sm);
       }
     }
     prev_playground = ui_state.playground;
 
     // Send stacks if in playground/no-logic mode and something changed.
-    if ((!agent || ui_state.playground) && sock) {
+    if ((!agent || ui_state.playground) && online) {
       auto dropped     = table_state.poll_dropped_card();
       bool should_send = dropped.has_value() ||
                          key_pressed(frame_input, KEY_R) ||
@@ -548,13 +543,13 @@ static void play_gods(
         nlohmann::json sm;
         sm["type"]   = "stacks";
         sm["stacks"] = serialize_stacks();
-        send_message(*sock, sm, online->friend_addr);
+        send_message(*online, sm);
       }
     }
 
     // Always receive messages from the remote player.
-    if (sock) {
-      auto msg_opt = try_recv_message(*sock);
+    if (online) {
+      auto msg_opt = try_recv_message(*online);
       if (msg_opt) {
         const auto& msg = *msg_opt;
         std::string t   = msg.value("type", "");
@@ -601,7 +596,7 @@ static void play_gods(
       bool had_choice = current_choice.has_value();
       current_choice  = game_frame(gods_state, *agent, current_choice);
       // Broadcast card mutations to the remote player after a choice resolves.
-      if (sock && had_choice && !current_choice.has_value()) broadcast_cards();
+      if (online && had_choice && !current_choice.has_value()) broadcast_cards();
       update_stacks(table_state, gods_state);
     }
     EndDrawing();

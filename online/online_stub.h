@@ -12,10 +12,12 @@ struct Online {
   std::pair<std::string, int> friend_addr;
 };
 
-inline void send_message(
-  UDP_Socket&, const nlohmann::json&, const std::pair<std::string, int>&
-) {}
+inline void send_message(const Online&, const nlohmann::json&) {}
 
-inline std::optional<nlohmann::json> try_recv_message(UDP_Socket&) {
+inline std::optional<nlohmann::json> try_recv_message(const Online&) {
   return std::nullopt;
+}
+
+inline nlohmann::json recv_message(const Online&) {
+  return {};
 }

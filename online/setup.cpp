@@ -18,7 +18,7 @@
 
 // ---- Utilities ----
 
-std::string generate_room_code(int length) {
+static std::string generate_room_code(int length = 4) {
   static const char   chars[] = "abcdefghijklmnopqrstuvwxyz0123456789";
   static std::mt19937 rng(std::random_device{}());
   std::uniform_int_distribution<int> dist(
@@ -30,7 +30,7 @@ std::string generate_room_code(int length) {
   return code;
 }
 
-std::string get_local_ip() {
+static std::string get_local_ip() {
   int fd = ::socket(AF_INET, SOCK_DGRAM, 0);
   if (fd < 0) return "127.0.0.1";
   sockaddr_in addr{};
@@ -55,7 +55,7 @@ std::string get_local_ip() {
 static const char* STUN_SERVER = "stun.l.google.com";
 static const int   STUN_PORT   = 19302;
 
-std::pair<std::string, int> get_ip_info(int fd) {
+static std::pair<std::string, int> get_ip_info(int fd) {
   addrinfo hints{}, *res = nullptr;
   hints.ai_family   = AF_INET;
   hints.ai_socktype = SOCK_DGRAM;
@@ -162,13 +162,13 @@ static std::string curl_get(const std::string& url) {
 
 static const char* NTFY_URL = "https://ntfy.sh";
 
-void publish_address(
+static void publish_address(
   const std::string& room_code,
   const std::string& ip,
   int                port,
   const std::string& local_ip,
   int                local_port,
-  const std::string& suffix
+  const std::string& suffix = ""
 ) {
   std::string topic = "gods-" + room_code + suffix;
   std::string url   = std::string(NTFY_URL) + "/" + topic;
@@ -196,8 +196,10 @@ static int json_int(const std::string& s, const std::string& key) {
   return std::stoi(s.substr(pos));
 }
 
-std::tuple<std::string, int, std::string, int> fetch_address(
-  const std::string& room_code, const std::string& suffix, int timeout_s
+static std::tuple<std::string, int, std::string, int> fetch_address(
+  const std::string& room_code,
+  const std::string& suffix    = "",
+  int                timeout_s = 120
 ) {
   std::string topic = "gods-" + room_code + suffix;
   std::string url   = std::string(NTFY_URL) + "/" + topic +
@@ -231,7 +233,7 @@ std::tuple<std::string, int, std::string, int> fetch_address(
 
 // ---- Seed exchange (hole-punching + player order) ----
 
-std::pair<int, int> exchange_seeds(
+static std::pair<int, int> exchange_seeds(
   int fd, bool skip_holepunch, const std::string& friend_ip, int friend_port
 ) {
   std::mt19937 rng(std::random_device{}());
@@ -309,168 +311,7 @@ std::pair<int, int> exchange_seeds(
   return {player_index, game_seed};
 }
 
-// ---- peer_to_peer_cpp (pure C++) ----
-
-P2P_Setup peer_to_peer_cpp(bool local) {
-  int fd = ::socket(AF_INET, SOCK_DGRAM, 0);
-  if (fd < 0) throw std::runtime_error("Failed to create UDP socket");
-
-  P2P_Setup out;
-
-  if (local) {
-    std::cout << "You're playing in local mode.\n";
-    out.local_ip = get_local_ip();
-    std::cout << "Enter the port to use for the game: ";
-    int port = 0;
-    std::cin >> port;
-    sockaddr_in bind_addr{};
-    bind_addr.sin_family      = AF_INET;
-    bind_addr.sin_port        = htons(static_cast<uint16_t>(port));
-    bind_addr.sin_addr.s_addr = INADDR_ANY;
-    ::bind(fd, reinterpret_cast<sockaddr*>(&bind_addr), sizeof(bind_addr));
-    out.public_ip   = out.local_ip;
-    out.public_port = port;
-    out.local_port  = port;
-  } else {
-    sockaddr_in bind_addr{};
-    bind_addr.sin_family      = AF_INET;
-    bind_addr.sin_port        = 0;
-    bind_addr.sin_addr.s_addr = INADDR_ANY;
-    ::bind(fd, reinterpret_cast<sockaddr*>(&bind_addr), sizeof(bind_addr));
-
-    sockaddr_in local_addr{};
-    socklen_t   len = sizeof(local_addr);
-    ::getsockname(fd, reinterpret_cast<sockaddr*>(&local_addr), &len);
-    out.local_port = ntohs(local_addr.sin_port);
-    out.local_ip   = get_local_ip();
-
-    auto [pip, pport] = get_ip_info(fd);
-    if (pip.empty()) {
-      ::close(fd);
-      throw std::runtime_error(
-        "Could not discover your public IP and port using STUN."
-      );
-    }
-    out.public_ip   = pip;
-    out.public_port = pport;
-    std::cout << "[*] Public address: " << out.public_ip << ":"
-              << out.public_port << "\n";
-    std::cout << "[*] Local address: " << out.local_ip << ":" << out.local_port
-              << "\n";
-  }
-
-  out.sock     = std::make_shared<UDP_Socket>();
-  out.sock->fd = fd;
-  return out;
-}
-
-// ---- setup_online_game (pure C++) ----
-
-Online_Game_Setup setup_online_game(
-  UDP_Socket&        sock,
-  bool               local,
-  const std::string& your_ip,
-  int                your_port,
-  const std::string& local_ip_arg,
-  int                local_port_arg,
-  const std::string& room_code_arg
-) {
-  std::atomic<bool> stop_keepalive{false};
-  if (!local) {
-    std::thread([&stop_keepalive, fd = sock.fd]() {
-      sockaddr_in stun{};
-      stun.sin_family = AF_INET;
-      stun.sin_port   = htons(STUN_PORT);
-      addrinfo hints{}, *res = nullptr;
-      hints.ai_family   = AF_INET;
-      hints.ai_socktype = SOCK_DGRAM;
-      if (::getaddrinfo(
-            STUN_SERVER, std::to_string(STUN_PORT).c_str(), &hints, &res
-          ) == 0) {
-        std::memcpy(&stun, res->ai_addr, sizeof(stun));
-        ::freeaddrinfo(res);
-      }
-      while (!stop_keepalive) {
-        ::sendto(
-          fd, "", 0, 0, reinterpret_cast<sockaddr*>(&stun), sizeof(stun)
-        );
-        std::this_thread::sleep_for(std::chrono::seconds(10));
-      }
-    }).detach();
-  }
-
-  std::string friend_ip;
-  int         friend_port  = 0;
-  bool        same_network = false;
-  std::string room_code    = room_code_arg;
-
-  if (local) {
-    std::cout << "What is your friend's IP address: ";
-    std::cin >> friend_ip;
-    std::cout << "What is your friend's port: ";
-    std::cin >> friend_port;
-  } else if (room_code.empty()) {
-    room_code = generate_room_code();
-    publish_address(
-      room_code, your_ip, your_port, local_ip_arg, local_port_arg
-    );
-    std::cout << "[*] Room code: " << room_code << "\n";
-    std::cout << "[*] Waiting for friend to join...\n";
-    auto [fip, fport, flip, flport] = fetch_address(room_code, "-join");
-    if (fip.empty()) {
-      stop_keepalive = true;
-      throw std::runtime_error("Timed out waiting for friend to join.");
-    }
-    if (fip == your_ip && !flip.empty()) {
-      std::cout << "[*] Same network detected, using LAN addresses.\n";
-      friend_ip    = flip;
-      friend_port  = flport;
-      same_network = true;
-    } else {
-      friend_ip   = fip;
-      friend_port = fport;
-    }
-    std::cout << "[*] Friend joined!\n";
-  } else {
-    std::cout << "[*] Joining room " << room_code << "...\n";
-    auto [fip, fport, flip, flport] = fetch_address(room_code);
-    if (fip.empty()) {
-      stop_keepalive = true;
-      throw std::runtime_error(
-        "Could not find room. Check the code and try again."
-      );
-    }
-    publish_address(
-      room_code, your_ip, your_port, local_ip_arg, local_port_arg, "-join"
-    );
-    if (fip == your_ip && !flip.empty()) {
-      std::cout << "[*] Same network detected, using LAN addresses.\n";
-      friend_ip    = flip;
-      friend_port  = flport;
-      same_network = true;
-    } else {
-      friend_ip   = fip;
-      friend_port = fport;
-    }
-    std::cout << "[*] Connected to host!\n";
-  }
-
-  stop_keepalive = true;
-
-  auto [player_index, seed] =
-    exchange_seeds(sock.fd, local || same_network, friend_ip, friend_port);
-
-  Online_Game_Setup out;
-  out.player_index = player_index;
-  out.seed         = seed;
-  out.sock         = std::make_shared<UDP_Socket>();
-  out.sock->fd     = sock.fd;
-  out.sock->state  = sock.state;
-  out.friend_addr  = std::make_pair(friend_ip, friend_port);
-  return out;
-}
-
-// ---- Async wrappers ----
+// ---- Async connection setup ----
 
 std::shared_ptr<Connection_State> start_hosting(bool local) {
   auto state = std::make_shared<Connection_State>();
@@ -638,4 +479,3 @@ std::shared_ptr<Connection_State> join_room(
   return state;
 }
 
-// ---- Nanobind bindings ----

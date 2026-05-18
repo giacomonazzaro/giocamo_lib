@@ -174,14 +174,14 @@ void Reliable_UDP_State::retry_loop() {
   }
 }
 
-// --- Pure C++ API ---
+// --- Internal helpers ---
 
-Reliable_UDP_State& get_state(UDP_Socket& sock) {
+static Reliable_UDP_State& get_state(UDP_Socket& sock) {
   if (!sock.state) sock.state = std::make_shared<Reliable_UDP_State>(sock.fd);
   return *sock.state;
 }
 
-void send_message(
+static void send_to_socket(
   UDP_Socket&                        sock,
   const nlohmann::json&              data,
   const std::pair<std::string, int>& addr
@@ -204,8 +204,14 @@ void send_message(
   st.pending_acks[msg_id] = std::move(pm);
 }
 
-nlohmann::json recv_message(UDP_Socket& sock) {
-  Reliable_UDP_State& st = get_state(sock);
+// --- Public API (Online-based) ---
+
+void send_message(const Online& online, const nlohmann::json& data) {
+  send_to_socket(*online.sock, data, online.friend_addr);
+}
+
+nlohmann::json recv_message(const Online& online) {
+  Reliable_UDP_State& st = get_state(*online.sock);
   std::string         payload;
   while (true) {
     {
@@ -221,8 +227,8 @@ nlohmann::json recv_message(UDP_Socket& sock) {
   return nlohmann::json::parse(payload);
 }
 
-std::optional<nlohmann::json> try_recv_message(UDP_Socket& sock) {
-  Reliable_UDP_State& st = get_state(sock);
+std::optional<nlohmann::json> try_recv_message(const Online& online) {
+  Reliable_UDP_State& st = get_state(*online.sock);
   std::string         payload;
   {
     std::lock_guard<std::mutex> lg(st.lock);
@@ -232,5 +238,3 @@ std::optional<nlohmann::json> try_recv_message(UDP_Socket& sock) {
   }
   return nlohmann::json::parse(payload);
 }
-
-// --- Python bindings (adapter layer) ---
