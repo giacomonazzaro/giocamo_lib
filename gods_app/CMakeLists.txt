@@ -29,15 +29,7 @@ if(NOT EMSCRIPTEN)
     add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/../online ${CMAKE_BINARY_DIR}/online_build)
 endif()
 
-# agent_remote.cpp uses the online module which is unavailable in Emscripten
-# builds; stubs in agent_remote.h cover that path instead.
-if(EMSCRIPTEN)
-    set(GODS_GRAPHICAL_SOURCES main.cpp ui.cpp agent_ui.cpp)
-else()
-    set(GODS_GRAPHICAL_SOURCES main.cpp ui.cpp agent_ui.cpp agent_remote.cpp)
-endif()
-
-add_executable(gods_app ${GODS_GRAPHICAL_SOURCES})
+add_executable(gods_app main.cpp ui.cpp agent_ui.cpp)
 target_include_directories(gods_app PRIVATE
     .
     "${CMAKE_CURRENT_SOURCE_DIR}/.."  # so headers can use <game/x.h>

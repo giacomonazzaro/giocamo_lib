@@ -24,9 +24,11 @@
 #include <online/online_stub.h>
 #endif
 
-// agent_remote.h provides Emscripten stubs internally, so it's safe to include
-// unconditionally — needed because make_agent() references the classes even in
+// online/agents.h provides Emscripten stubs internally, so it's safe to
+// include unconditionally — make_agent() references make_online_duel even in
 // the web build (the online code path is just never reached at runtime).
+#include <giocamo/menu.h>
+#include <online/agents.h>
 #include <tabletop/config.h>
 #include <tabletop/game_state.h>
 #include <tabletop/input.h>
@@ -38,9 +40,7 @@
 #include <nlohmann/json.hpp>
 
 #include "../struct/json.h"
-#include "agent_remote.h"
 #include "agent_ui.h"
-#include "menu.h"
 #include "ui.h"
 
 // raylib last; its color-name macros (RED/GREEN/BLUE/...) would otherwise
@@ -212,9 +212,9 @@ void init_card_draw_callbacks(
   for (const auto& gc : gods_state.all_cards) {
     int id = gc.id;
     table_state.draw_callbacks[id] =
-      [id, &gods_state, &ui_state](
-        const Table_State&, const Input&, bool face_up
-      ) {
+      [id,
+       &gods_state,
+       &ui_state](const Table_State&, const Input&, bool face_up) {
         const auto& gcard = gods_state.all_cards[id];
         std::string power = std::to_string(gods_state.effective_power(id));
         if (face_up) {
@@ -596,7 +596,8 @@ static void play_gods(
       bool had_choice = current_choice.has_value();
       current_choice  = game_frame(gods_state, *agent, current_choice);
       // Broadcast card mutations to the remote player after a choice resolves.
-      if (online && had_choice && !current_choice.has_value()) broadcast_cards();
+      if (online && had_choice && !current_choice.has_value())
+        broadcast_cards();
       update_stacks(table_state, gods_state);
     }
     EndDrawing();
@@ -682,28 +683,19 @@ static Agent* make_agent(
   Agent_UI* agent_ui =
     new Agent_UI(&table_state, &ui_state, menu_result.player_index);
 
-  Agent* local_agent = agent_ui;
-  Agent* opponent    = nullptr;
-
   if (online) {
-    local_agent = new Agent_Local_Online(agent_ui, *online);
-    opponent    = new Agent_Remote(*online);
-  } else if (menu_result.mode == Menu_Result::VS_AI) {
-    opponent = new Agent_Minimax_Stochastic_Gods(6, 20);
-  } else {
-    opponent = agent_ui;  // hot-seat.
+    return make_online_duel(agent_ui, *online, menu_result.player_index);
   }
 
-  Agent_Duel* duel = new Agent_Duel(
-    local_agent, opponent, /*swap=*/menu_result.player_index != 0
+  Agent* opponent = (menu_result.mode == Menu_Result::VS_AI)
+                      ? (Agent*)new Agent_Minimax_Stochastic_Gods(6, 20)
+                      : (Agent*)agent_ui;  // hot-seat.
+  return new Agent_Duel(
+    agent_ui, opponent, /*swap=*/menu_result.player_index != 0
   );
-  return duel;
 }
 
-// Loads the persisted game + table snapshots from data/. The #if-0 branches
-// in the implementation are dev-only seeds: flip them locally when a new
-// snapshot is needed, then flip back.
-static void load_snapshots(
+static void init_table_and_gods_states(
   Game_State&  gods_state,
   Table_State& table_state,
   int          bottom_player,
@@ -753,7 +745,7 @@ int main(int argc, char** argv) {
 
   Game_State  gods_state;
   Table_State table_state;
-  load_snapshots(
+  init_table_and_gods_states(
     gods_state,
     table_state,
     menu_result.player_index,

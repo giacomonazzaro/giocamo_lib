@@ -1,6 +1,7 @@
 #include <game/agent.h>
 #include <game/game.h>
 #include <giocamo/menu.h>
+#include <online/agents.h>
 #include <tabletop/config.h>
 #include <tabletop/game_state.h>
 #include <tabletop/input.h>
@@ -32,8 +33,13 @@ static Table_State init_table_state(
 
   // One Thing per card; ids 0..39 match all_cards indices.
   for (const auto& c : state.all_cards) {
-    auto t       = Thing();
-    t.id         = c.id;
+    auto t = Thing();
+    t.id   = c.id;
+    if (c.suit == tressette::Suit::COPPE) t.color = {50, 100, 50, 255};
+    if (c.suit == tressette::Suit::DENARI) t.color = {150, 120, 20, 255};
+    if (c.suit == tressette::Suit::BASTONI) t.color = {80, 50, 50, 255};
+    if (c.suit == tressette::Suit::SPADE) t.color = {70, 80, 150, 255};
+
     t.image_path = "tressette_card";  // Non-existent path → white bg fallback.
     table.things.push_back(t);
     table.draw_callbacks[c.id] = make_card_draw_callback(state, ui_state, c.id);
@@ -162,36 +168,52 @@ int main(int argc, char** argv) {
   }
 
   // Menu opens its own window; play_tressette reuses it (its InitWindow guard
-  // skips when IsWindowReady() returns true). Online mode falls back to VS_AI
-  // since tressette has no online support yet.
+  // skips when IsWindowReady() returns true).
   Input_Feed inputs;
   init_input_recorder(inputs, Input_Mode::Live, "");
+  Menu_Result menu_result;
   if (!skip_menu) {
-    run_menu("Tressette", tt::WINDOW_WIDTH, tt::WINDOW_HEIGHT, inputs);
+    menu_result =
+      run_menu("Tressette", tt::WINDOW_WIDTH, tt::WINDOW_HEIGHT, inputs);
   }
 
-  tressette::Game_State state    = tressette::quick_setup(seed);
-  auto                  ui_state = UI_State(tt::WINDOW_WIDTH, tt::WINDOW_HEIGHT);
-  Table_State           table    = init_table_state(state, ui_state, !vs_ai);
+  const bool    is_online    = (menu_result.mode == Menu_Result::ONLINE);
+  const Online* online       = is_online ? &menu_result.online : nullptr;
+  const int     player_index = is_online ? menu_result.player_index : 0;
+
+  // Online peers must deal the same hands — use the seed delivered by the
+  // matchmaker. CLI --seed wins for solo play.
+  if (is_online) seed = menu_result.seed;
+
+  tressette::Game_State state = tressette::quick_setup(seed);
+  auto ui_state               = UI_State(tt::WINDOW_WIDTH, tt::WINDOW_HEIGHT);
+  // Hide the opponent's hand in vs-AI and online matches; show both in
+  // hot-seat.
+  bool        both_hands_visible = !vs_ai && !is_online;
+  Table_State table = init_table_state(state, ui_state, both_hands_visible);
 
   auto agent_ui = Tressette_Agent_UI(&table, &ui_state);
 
-  Agent* agent_opponent = nullptr;
-
-  if (vs_ai) {
-#ifdef TORCH_AVAILABLE
-    agent_opponent = new tressette::Agent_Minimax_Neural(
-      "tressette/tressette_value_traced.pt", 3, 20
-    );
-#else
-    agent_opponent = new tressette::Tressette_Agent(11, 10);
-#endif
+  Agent* agent = nullptr;
+  if (online) {
+    agent = make_online_duel(&agent_ui, *online, player_index);
   } else {
-    agent_opponent = &agent_ui;  // hot-seat.
+    Agent* agent_opponent;
+    if (vs_ai) {
+#ifdef TORCH_AVAILABLE
+      agent_opponent = new tressette::Agent_Minimax_Neural(
+        "tressette/tressette_value_traced.pt", 3, 20
+      );
+#else
+      agent_opponent = new tressette::Tressette_Agent(11, 10);
+#endif
+    } else {
+      agent_opponent = &agent_ui;  // hot-seat.
+    }
+    agent = new Agent_Duel(&agent_ui, agent_opponent, /*swap=*/false);
   }
 
-  auto duel = Agent_Duel(&agent_ui, agent_opponent, /*swap=*/false);
-  play_tressette(state, table, ui_state, duel);
+  play_tressette(state, table, ui_state, *agent);
 
   return 0;
 }

@@ -187,7 +187,9 @@ void handle_mouse_press(Table_State& state, const Input& input) {
   Drag_State& drag = state.drag_state;
 
   Thing_Location path = find_thing_at(mx, my, state);
-  // if (path.size() < 2 || !is_card(state.things[path.back()])) return;
+  // Need at least two elements (parent + card); clicking empty space returns an
+  // empty path which would make path[size-2] undefined behavior.
+  if (path.size() < 2) return;
 
   int card_id  = path.back();
   int stack_id = path[path.size() - 2];

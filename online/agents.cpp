@@ -1,4 +1,7 @@
-#include "agent_remote.h"
+#ifndef __EMSCRIPTEN__
+#include "agents.h"
+
+#include <nlohmann/json.hpp>
 
 int Agent_Remote::choose_action(Game& state, const Choice& choice) {
   (void)state;
@@ -16,3 +19,13 @@ int Agent_Local_Online::choose_action(Game& state, const Choice& choice) {
   send_message(online, m);
   return index;
 }
+
+Agent* make_online_duel(
+  Agent* local_agent, const Online& online, int player_index
+) {
+  Agent* local_seat    = new Agent_Local_Online(local_agent, online);
+  Agent* opponent_seat = new Agent_Remote(online);
+  return new Agent_Duel(local_seat, opponent_seat, /*swap=*/player_index != 0);
+}
+
+#endif

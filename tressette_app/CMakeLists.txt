@@ -39,3 +39,6 @@ target_link_libraries(tressette_app PRIVATE
     raylib
     giocamo
 )
+if(NOT EMSCRIPTEN)
+    target_link_libraries(tressette_app PRIVATE online_lib)
+endif()
