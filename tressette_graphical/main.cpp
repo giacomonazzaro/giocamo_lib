@@ -9,19 +9,18 @@
 #include <tressette/ai.h>
 #include <tressette/gameplay.h>
 #include <tressette/models.h>
+#include <tressette/neural_agent.h>
 
 // raylib last: its color macros (RED/GREEN/BLUE) would expand inside enums
 // otherwise.
 #include <raylib.h>
 
 #include <cstdlib>
-#include <memory>
 #include <optional>
 #include <string>
 #include <vector>
 
 #include "agent_ui.h"
-#include "neural_agent.h"
 #include "ui.h"
 
 static Table_State init_table_state(
@@ -121,11 +120,12 @@ static void play_tressette(
   while (!WindowShouldClose()) {
     if (state.game_over) break;
 
-    process_input(table);
+    Input input = capture_input();
+    process_input(table, input);
 
     BeginDrawing();
-    draw_background(0.0f);
-    draw_table(table);
+    draw_background(input, 0.0f);
+    draw_table(table, input);
 
     current_choice = game_frame(state, agent, current_choice);
 
@@ -155,7 +155,7 @@ int main(int argc, char** argv) {
   }
 
   tressette::Game_State state    = tressette::quick_setup(seed);
-  auto                  ui_state = UI_State();
+  auto                  ui_state = UI_State(tt::WINDOW_WIDTH, tt::WINDOW_HEIGHT);
   Table_State           table    = init_table_state(state, ui_state, !vs_ai);
 
   auto agent_ui = Tressette_Agent_UI(&table, &ui_state);

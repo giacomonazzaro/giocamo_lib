@@ -1,26 +1,17 @@
-#pragma once
-#include <functional>
+#include "ui.h"
+
 #include <string>
-#include <vector>
 
 #include <tabletop/config.h>
 #include <tabletop/input.h>
-#include <tabletop/models.h>
 #include <tabletop/rendering.h>
-#include <tabletop/ui.h>
-#include <tressette/models.h>
 
-// Stack offsets from num_cards (add num_cards to get thing_ids).
-constexpr int TRESSETTE_HAND_0    = 0;
-constexpr int TRESSETTE_HAND_1    = 1;
-constexpr int TRESSETTE_TRICKS_0  = 2;
-constexpr int TRESSETTE_TRICKS_1  = 3;
-constexpr int TRESSETTE_STOCK_IDX = 4;
-constexpr int TRESSETTE_TABLE_IDX = 5;
+// raylib last: its color macros (RED/GREEN/BLUE) would expand inside enums
+// otherwise.
+#include <raylib.h>
 
-// Suit display helpers.
-
-inline static const char* suit_name(tressette::Suit s) {
+// Suit name in Italian.
+static const char* suit_name(tressette::Suit s) {
   switch (s) {
     case tressette::Suit::COPPE:   return "Coppe";
     case tressette::Suit::DENARI:  return "Denari";
@@ -30,7 +21,8 @@ inline static const char* suit_name(tressette::Suit s) {
   return "";
 }
 
-inline static Color suit_color(tressette::Suit s) {
+// Suit accent color used for the rank/suit text on the card face.
+static Color suit_color(tressette::Suit s) {
   switch (s) {
     case tressette::Suit::COPPE:   return Color{180, 50,  70,  255};
     case tressette::Suit::DENARI:  return Color{210, 170, 30,  255};
@@ -41,7 +33,7 @@ inline static Color suit_color(tressette::Suit s) {
 }
 
 // Rank labels: 1-7 numeric, 8-10 face-card names.
-inline static const char* rank_label(int rank) {
+static const char* rank_label(int rank) {
   switch (rank) {
     case 1:  return "1";
     case 2:  return "2";
@@ -57,16 +49,15 @@ inline static const char* rank_label(int rank) {
   return "?";
 }
 
-// Build the 6 stack Things for a Tressette table layout.
-inline std::vector<Thing> make_tressette_stacks(bool both_hands_visible) {
-  const int W          = tt::WINDOW_WIDTH;
-  const int H          = tt::WINDOW_HEIGHT;
-  const int w          = tt::CARD_WIDTH;
-  const int h          = tt::CARD_HEIGHT;
-  const int margin     = 30;
+std::vector<Thing> make_tressette_stacks(bool both_hands_visible) {
+  const int W           = tt::WINDOW_WIDTH;
+  const int H           = tt::WINDOW_HEIGHT;
+  const int w           = tt::CARD_WIDTH;
+  const int h           = tt::CARD_HEIGHT;
+  const int margin      = 30;
   const int spread_hand = w;
   const int spread_pile = -3;
-  const int hand_width = spread_hand * 9 + w;  // fits up to 10 cards.
+  const int hand_width  = spread_hand * 9 + w;  // fits up to 10 cards.
 
   auto window = Rectangle{0.0f, 0.0f, (float)W, (float)H};
 
@@ -90,17 +81,16 @@ inline std::vector<Thing> make_tressette_stacks(bool both_hands_visible) {
   };
 
   return {
-    make(p0_hand_r,   (float)spread_hand, 0.0f,            true,               "p0_hand"),
-    make(p1_hand_r,   (float)spread_hand, 0.0f,            both_hands_visible, "p1_hand"),
-    make(p0_tricks_r, 0.0f,               (float)spread_pile, false,           "p0_tricks"),
-    make(p1_tricks_r, 0.0f,               (float)spread_pile, false,           "p1_tricks"),
-    make(stock_r,     0.0f,               (float)spread_pile, false,           "stock"),
-    make(table_r,     (float)(w + 30),    0.0f,            true,               "table"),
+    make(p0_hand_r,   (float)spread_hand, 0.0f,               true,               "p0_hand"),
+    make(p1_hand_r,   (float)spread_hand, 0.0f,               both_hands_visible, "p1_hand"),
+    make(p0_tricks_r, 0.0f,               (float)spread_pile, false,              "p0_tricks"),
+    make(p1_tricks_r, 0.0f,               (float)spread_pile, false,              "p1_tricks"),
+    make(stock_r,     0.0f,               (float)spread_pile, false,              "stock"),
+    make(table_r,     (float)(w + 30),    0.0f,               true,               "table"),
   };
 }
 
-// Draw callback that renders rank/suit text on each card face.
-inline std::function<void(const Table_State&, const Input&, bool)>
+std::function<void(const Table_State&, const Input&, bool)>
 make_card_draw_callback(
   const tressette::Game_State& state, UI_State& ui_state, int id
 ) {
@@ -138,7 +128,7 @@ make_card_draw_callback(
   };
 }
 
-inline void draw_tressette_player_hud(
+void draw_tressette_player_hud(
   int player_index, int score, bool is_current, int hud_y
 ) {
   std::string label =
@@ -147,12 +137,12 @@ inline void draw_tressette_player_hud(
   render_text(label, 30.0f, (float)hud_y, 28, col);
 }
 
-inline void draw_tressette_game_over_screen(
+void draw_tressette_game_over_screen(
   Table_State& table_state, const std::vector<int>& scores
 ) {
-  const int   W          = tt::WINDOW_WIDTH;
-  const int   H          = tt::WINDOW_HEIGHT;
-  const char* title      = "GAME OVER";
+  const int   W     = tt::WINDOW_WIDTH;
+  const int   H     = tt::WINDOW_HEIGHT;
+  const char* title = "GAME OVER";
   const char* msg =
     (scores[0] > scores[1]) ? "Player 1 wins!" :
     (scores[1] > scores[0]) ? "Player 2 wins!" : "It's a tie.";
@@ -160,9 +150,10 @@ inline void draw_tressette_game_over_screen(
     std::to_string(scores[0]) + " - " + std::to_string(scores[1]);
 
   while (!WindowShouldClose()) {
+    Input input = capture_input();
     BeginDrawing();
-    draw_background(0.0f);
-    draw_table(table_state);
+    draw_background(input, 0.0f);
+    draw_table(table_state, input);
     DrawRectangle(0, 0, W, H, Color{0, 0, 0, 160});
     render_text(title,      (float)(W / 2 - text_width(title,      60) / 2), 320.0f, 60, Color{255, 255, 255, 255});
     render_text(msg,        (float)(W / 2 - text_width(msg,        36) / 2), 410.0f, 36, Color{255, 215, 0,   255});
