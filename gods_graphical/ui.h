@@ -1,6 +1,7 @@
 #pragma once
 
 #include <tabletop/models.h>
+#include <tabletop/ui.h>
 
 #include <string>
 #include <vector>
@@ -33,3 +34,8 @@ void draw_game_over_screen(
   const std::vector<std::string>& names,
   const std::vector<int>&         scores
 );
+
+struct Gods_UI : UI_State {
+  bool playground         = false;
+  int  power_edit_card_id = -1;  // Card whose power is being edited.
+};

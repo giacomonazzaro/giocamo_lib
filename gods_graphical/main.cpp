@@ -233,7 +233,7 @@ static void draw_hud(
   Table_State*                 table_state,
   Game_State&                  gods_state,
   const std::optional<Choice>& current_choice,
-  UI_State&                    ui_state,
+  Gods_UI&                     ui_state,
   int                          bottom_player,
   const Input&                 input
 ) {
@@ -308,7 +308,7 @@ static void draw_hud(
     Rectangle btn = place_inside(panel, btn_w, btn_h, "left", "center", 8);
     int       current_power = gods_state.all_cards[card_id].power;
     for (int v = 1; v <= 10; ++v) {
-      std::optional<Color> col = std::nullopt;
+      Color col = s_button_color;
       if (v == current_power) col = Color{80, 160, 80, 255};
       if (immediate_button(btn, std::to_string(v), input, col)) {
         gods_state.all_cards[card_id].power = v;
@@ -338,13 +338,13 @@ static void draw_hud(
 }
 
 static void play_gods(
-  Game_State&     gods_state,
-  Table_State&    table_state,
-  UI_State&       ui_state,
-  Agent*          agent,
-  int             player_index,
-  const Online*   online,
-  Input_Feed& inputs
+  Game_State&   gods_state,
+  Table_State&  table_state,
+  Gods_UI&      ui_state,
+  Agent*        agent,
+  int           player_index,
+  const Online* online,
+  Input_Feed&   inputs
 ) {
   if (!IsWindowReady()) {
     SetConfigFlags(FLAG_WINDOW_HIGHDPI);
@@ -386,7 +386,7 @@ static void play_gods(
   Input frame_input;
 
   while (!WindowShouldClose()) {
-    if (gods_state.game_over) break;
+    if (gods_state.is_game_over()) break;
 
     frame_input = next_input(inputs);
     if (inputs.exhausted) {
@@ -710,7 +710,7 @@ int main(int argc, char** argv) {
   Table_State table_state;
   load_snapshots(gods_state, table_state);
 
-  UI_State ui_state;
+  Gods_UI ui_state;
   init_card_draw_callbacks(table_state, gods_state, ui_state);
 
   Agent* agent = make_agent(table_state, ui_state, menu_result, online);

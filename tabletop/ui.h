@@ -6,7 +6,7 @@
 #include "input.h"
 #include "models.h"
 
-bool      point_in_rect(float px, float py, float x, float y, float w, float h);
+bool      point_in_rect(float px, float py, const Rectangle& rect);
 Rectangle place_next(
   const Rectangle&   rect,
   int                width,
@@ -25,19 +25,23 @@ Rectangle place_inside(
 );
 
 struct Button {
-  int         x = 0, y = 0, width = 0, height = 0;
+  Rectangle   rect;
   std::string text;
   bool        pressed(const Input& input) const;
 };
 
+static const Color s_button_color       = {70, 130, 180, 255};
+static const Color s_button_hover_color = {90, 150, 200, 255};
+static const Color s_button_text_color  = {255, 255, 255, 255};
+
 // Draws an immediate-mode button. Returns true if it was clicked this frame.
-// If color/text_color is empty, defaults to the styled button look.
 bool immediate_button(
-  Rectangle            rect,
-  const std::string&   label,
-  const Input&         input,
-  std::optional<Color> color      = std::nullopt,
-  std::optional<Color> text_color = std::nullopt
+  Rectangle          rect,
+  const std::string& label,
+  const Input&       input,
+  Color              color             = s_button_color,
+  Color              highlighted_color = s_button_hover_color,
+  Color              text_color        = s_button_text_color
 );
 
 struct UI_State {
@@ -47,9 +51,6 @@ struct UI_State {
   std::unordered_map<int, int> highlighted_cards;
   int                          window_width  = 0;
   int                          window_height = 0;
-  bool                         playground    = false;
-  int                          power_edit_card_id =
-    -1;  // KT_Card whose power is being edited; -1 = none.
   const Input* input = nullptr;
 
   UI_State();
