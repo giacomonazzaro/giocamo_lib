@@ -7,7 +7,8 @@
 #include "rendering.h"
 
 bool point_in_rect(float px, float py, const Rectangle& rect) {
-  return rect.x <= px && px <= rect.x + rect.width && rect.y <= py && py <= rect.y + rect.height;
+  return rect.x <= px && px <= rect.x + rect.width && rect.y <= py &&
+         py <= rect.y + rect.height;
 }
 
 Rectangle place_next(
@@ -75,15 +76,16 @@ bool immediate_button(
   const Input&       input,
   Color              color,
   Color              highlighted_color,
-  Color              text_color
+  Color              text_color,
+  int                text_size
 ) {
   // Expand width to fit label text if necessary.
-  int tw     = text_width(label, 20);
-  rect.width = std::max(rect.width, (float)(tw + 20));
+  int tw     = text_width(label, text_size);
+  rect.width = std::max(rect.width, (float)(tw + text_size));
 
-  float mx     = (float)input.mouse_x;
-  float my     = (float)input.mouse_y;
-  bool hovered = point_in_rect(mx, my, rect);
+  float mx      = (float)input.mouse_x;
+  float my      = (float)input.mouse_y;
+  bool  hovered = point_in_rect(mx, my, rect);
 
   // Resolve button background color: hover always wins.
   Color c = hovered ? highlighted_color : color;
@@ -91,14 +93,15 @@ bool immediate_button(
   Rectangle rl_rect = {rect.x, rect.y, rect.width, rect.height};
   DrawRectangleRounded(rl_rect, 0.3f, 8, c);
 
-  Rectangle tr = place_inside(rect, tw, 20, "center", "center");
-  render_text(label, tr.x, tr.y, 20, text_color);
+  Rectangle tr = place_inside(rect, tw, text_size, "center", "center");
+  render_text(label, tr.x, tr.y, text_size, text_color);
 
   if (!input.left_pressed) return false;
   return hovered;
 }
 
-UI_State::UI_State(int width, int height) : window_width(width), window_height(height) {}
+UI_State::UI_State(int width, int height)
+    : window_width(width), window_height(height) {}
 
 Rectangle UI_State::place(
   int width, int height, const std::string& x, const std::string& y, int padding
@@ -112,8 +115,7 @@ std::optional<int> UI_State::clicked(const Input& input) const {
   float mx = (float)input.mouse_x;
   float my = (float)input.mouse_y;
   for (const auto& [key, btn] : buttons) {
-    if (point_in_rect(mx, my, btn.rect))
-      return key;
+    if (point_in_rect(mx, my, btn.rect)) return key;
   }
   return std::nullopt;
 }
@@ -123,8 +125,8 @@ void UI_State::draw_buttons(const Input& input) const {
   float my = (float)input.mouse_y;
 
   for (const auto& [key, btn] : buttons) {
-    bool hovered = point_in_rect(mx, my, btn.rect);
-    Color c = hovered ? s_button_hover_color : s_button_color;
+    bool  hovered = point_in_rect(mx, my, btn.rect);
+    Color c       = hovered ? s_button_hover_color : s_button_color;
 
     Rectangle rl_rect = {
       btn.rect.x, btn.rect.y, btn.rect.width, btn.rect.height
@@ -132,9 +134,7 @@ void UI_State::draw_buttons(const Input& input) const {
     DrawRectangleRounded(rl_rect, 0.3f, 8, c);
 
     int       tw = text_width(btn.text, 20);
-    Rectangle br = {
-      btn.rect.x, btn.rect.y, btn.rect.width, btn.rect.height
-    };
+    Rectangle br = {btn.rect.x, btn.rect.y, btn.rect.width, btn.rect.height};
     Rectangle tr = place_inside(br, tw, 20, "center", "center");
     render_text(btn.text, tr.x, tr.y, 20, s_button_text_color);
   }

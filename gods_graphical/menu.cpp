@@ -57,61 +57,19 @@ struct Menu_State {
   std::string                       error_message;
 };
 
-static int centered_x(int width) { return (tt::WINDOW_WIDTH - width) / 2; }
-
-static void draw_centered_text(
-  const std::string& text, int y, int font_size, Color color
-) {
-  int w = text_width(text, font_size);
-  render_text(text, (float)centered_x(w), (float)y, font_size, color);
-}
-
-static bool draw_button(
-  const Input&       input,
-  const std::string& text,
-  int                y,
-  int                width  = 320,
-  int                height = 58
-) {
-  int  mx      = input.mouse_x;
-  int  my      = input.mouse_y;
-  int  x       = centered_x(width);
-  bool hovered = (x <= mx && mx <= x + width && y <= my && my <= y + height);
-
-  if (hovered) {
-    DrawRectangleRounded(
-      Rectangle{(float)x, (float)y, (float)width, (float)height},
-      0.3f,
-      8,
-      ::Color{20, 20, 20, 100}
-    );
-  }
-
-  int size = 30;
-  int tw   = text_width(text, size);
-  render_text(
-    text,
-    (float)(x + (width - tw) / 2),
-    (float)(y + (height - size) / 2),
-    size,
-    Color{255, 255, 255, 255}
-  );
-
-  return hovered && input.left_pressed;
-}
-
 static void draw_text_input(
   const std::string& label,
   const std::string& text,
   int                y,
-  int                width  = 380,
-  int                height = 52
+  int                window_width = 1700,
+  int                width        = 380,
+  int                height       = 52
 ) {
-  int x       = centered_x(width);
+  int x       = (window_width - width) / 2;
   int label_w = text_width(label, 18);
   render_text(
     label,
-    (float)centered_x(label_w),
+    (float)(window_width - label_w) / 2.0f,
     (float)(y - 30),
     18,
     Color{200, 200, 200, 255}
@@ -134,7 +92,7 @@ static void draw_text_input(
   render_text(
     display,
     (float)(x + 12),
-    (float)(y + (height - 24) / 2),
+    (float)y + (float)(height - 24) / 2.0f,
     24,
     Color{255, 255, 255, 255}
   );
@@ -235,103 +193,259 @@ Menu_Result run_menu(int window_width, int window_height, Input_Feed& inputs) {
       }
     }
 
+    auto window_rect = Rectangle{0.0f, 0.0f, (float)W, (float)H};
     BeginDrawing();
     draw_background(input);
 
     if (state.screen == Screen::MAIN) {
-      draw_centered_text("GODS", center_y - 180, 90, Color{255, 255, 255, 255});
-      if (draw_button(input, "Play vs AI", center_y - 20)) {
+      auto container =
+        place_inside(window_rect, 600, 400, "center", "center", 0);
+
+      // Title.
+      std::string title       = "GODS";
+      int         title_width = text_width(title, 90);
+      auto        title_rect =
+        place_inside(container, title_width, 100, "center", "top", 40);
+      render_text(
+        title, title_rect.x, title_rect.y, 90, Color{255, 255, 255, 255}
+      );
+
+      // Play vs AI button.
+      auto play_vs_ai_rect =
+        place_next(title_rect, 280, 50, "center", "bottom", 20);
+      if (immediate_button(
+            play_vs_ai_rect,
+            "Play vs AI",
+            input,
+            {0, 0, 0, 0},
+            {20, 20, 20, 100},
+            {255, 255, 255, 255},
+            30
+          )) {
         Menu_Result r;
         r.mode = Menu_Result::VS_AI;
         // Note: window stays open; main() continues using it.
         EndDrawing();
         return r;
       }
-      if (draw_button(input, "Play Online", center_y + 60))
-        state.screen = Screen::ONLINE;
 
+      // Play Online button.
+      auto play_online_rect =
+        place_next(play_vs_ai_rect, 280, 50, "center", "bottom", 20);
+      if (immediate_button(
+            play_online_rect,
+            "Play Online",
+            input,
+            {0, 0, 0, 0},
+            {20, 20, 20, 100},
+            {255, 255, 255, 255},
+            30
+          ))
+        state.screen = Screen::ONLINE;
     } else if (state.screen == Screen::ONLINE) {
-      draw_centered_text("PLAY ONLINE", 150, 54, Color{255, 255, 255, 255});
+      auto container =
+        place_inside(window_rect, 600, 500, "center", "center", 0);
+
+      // Title.
+      std::string title       = "PLAY ONLINE";
+      int         title_width = text_width(title, 54);
+      auto        title_rect =
+        place_inside(container, title_width, 60, "center", "top", 20);
+      render_text(
+        title, title_rect.x, title_rect.y, 54, Color{255, 255, 255, 255}
+      );
+
+      // Error message.
+      auto button_start_rect = title_rect;
       if (!state.error_message.empty()) {
-        draw_centered_text(
-          state.error_message, center_y - 120, 18, Color{255, 100, 100, 255}
+        int  error_width = text_width(state.error_message, 18);
+        auto error_rect =
+          place_next(title_rect, error_width, 24, "center", "top", 40);
+        render_text(
+          state.error_message,
+          error_rect.x,
+          error_rect.y,
+          18,
+          Color{255, 100, 100, 255}
         );
+        button_start_rect = error_rect;
       }
-      if (draw_button(input, "Create Game", center_y - 60)) {
+
+      // Create Game button.
+      auto create_game_rect =
+        place_next(button_start_rect, 280, 50, "center", "top", 60);
+      if (immediate_button(
+            create_game_rect,
+            "Create Game",
+            input,
+            {0, 0, 0, 0},
+            {20, 20, 20, 100}
+          )) {
         state.error_message.clear();
         state.connection = start_hosting();
         state.screen     = Screen::CREATING;
       }
-      if (draw_button(input, "Join Game", center_y + 20)) {
+
+      // Join Game button.
+      auto join_game_rect =
+        place_next(create_game_rect, 280, 50, "center", "top", 20);
+      if (immediate_button(join_game_rect, "Join Game", input)) {
         state.error_message.clear();
         state.text_input.clear();
         state.screen = Screen::JOINING;
       }
-      if (draw_button(input, "Back", center_y + 120, 180, 46)) {
+
+      // Back button.
+      auto back_rect = place_next(join_game_rect, 180, 46, "center", "top", 20);
+      if (immediate_button(back_rect, "Back", input)) {
         state.error_message.clear();
         state.screen = Screen::MAIN;
       }
-
     } else if (state.screen == Screen::CREATING) {
-      draw_centered_text("CREATE GAME", 150, 54, Color{255, 255, 255, 255});
+      auto container =
+        place_inside(window_rect, 700, 500, "center", "center", 0);
+
+      // Title.
+      std::string title       = "CREATE GAME";
+      int         title_width = text_width(title, 54);
+      auto        title_rect =
+        place_inside(container, title_width, 60, "center", "top", 20);
+      render_text(
+        title, title_rect.x, title_rect.y, 54, Color{255, 255, 255, 255}
+      );
+
       std::string code;
       if (state.connection) {
         std::lock_guard<std::mutex> lg(state.connection->state_lock);
         code = state.connection->room_code;
       }
+
+      auto button_start = title_rect;
       if (!code.empty()) {
-        draw_centered_text(
-          "Share this code with your friend:",
-          center_y - 80,
+        // Instruction text.
+        std::string instruction       = "Share this code with your friend:";
+        int         instruction_width = text_width(instruction, 20);
+        auto        instruction_rect =
+          place_next(title_rect, instruction_width, 24, "center", "top", 40);
+        render_text(
+          instruction,
+          instruction_rect.x,
+          instruction_rect.y,
           20,
           Color{200, 200, 200, 255}
         );
-        draw_centered_text(code, center_y - 30, 50, Color{255, 215, 0, 255});
-        if (draw_button(input, "Copy Code", center_y + 30, 200, 44)) {
+
+        // Room code.
+        int  code_width = text_width(code, 50);
+        auto code_rect =
+          place_next(instruction_rect, code_width, 60, "center", "top", 30);
+        render_text(
+          code, code_rect.x, code_rect.y, 50, Color{255, 215, 0, 255}
+        );
+
+        // Copy Code button.
+        auto copy_button_rect =
+          place_next(code_rect, 200, 44, "center", "top", 30);
+        if (immediate_button(copy_button_rect, "Copy Code", input)) {
           SetClipboardText(code.c_str());
         }
-        draw_centered_text(
-          "Waiting for opponent" + dots(),
-          center_y + 90,
-          22,
-          Color{180, 180, 180, 255}
+
+        // Waiting message.
+        std::string waiting       = "Waiting for opponent" + dots();
+        int         waiting_width = text_width(waiting, 22);
+        auto        waiting_rect =
+          place_next(copy_button_rect, waiting_width, 26, "center", "top", 30);
+        render_text(
+          waiting, waiting_rect.x, waiting_rect.y, 22, Color{180, 180, 180, 255}
         );
+        button_start = waiting_rect;
       } else {
-        draw_centered_text(
-          "Getting your room code" + dots(),
-          center_y,
-          26,
-          Color{200, 200, 200, 255}
+        // Getting code message.
+        std::string getting       = "Getting your room code" + dots();
+        int         getting_width = text_width(getting, 26);
+        auto        getting_rect =
+          place_next(title_rect, getting_width, 30, "center", "top", 80);
+        render_text(
+          getting, getting_rect.x, getting_rect.y, 26, Color{200, 200, 200, 255}
         );
+        button_start = getting_rect;
       }
-      if (draw_button(input, "Back", center_y + 170, 180, 46)) {
+
+      // Back button.
+      auto back_rect = place_next(button_start, 180, 46, "center", "top", 60);
+      if (immediate_button(back_rect, "Back", input)) {
         state.connection.reset();
         state.screen = Screen::ONLINE;
       }
-
     } else if (state.screen == Screen::JOINING) {
-      draw_centered_text("JOIN GAME", 150, 54, Color{255, 255, 255, 255});
-      draw_text_input("Enter room code:", state.text_input, center_y - 40);
-      if (draw_button(input, "Paste", center_y + 30, 160, 44)) {
+      auto container =
+        place_inside(window_rect, 600, 500, "center", "center", 0);
+
+      // Title.
+      std::string title       = "JOIN GAME";
+      int         title_width = text_width(title, 54);
+      auto        title_rect =
+        place_inside(container, title_width, 60, "center", "top", 20);
+      render_text(
+        title, title_rect.x, title_rect.y, 54, Color{255, 255, 255, 255}
+      );
+
+      // Text input for room code.
+      draw_text_input(
+        "Enter room code:", state.text_input, (int)(title_rect.y + 100), W
+      );
+
+      // Paste button.
+      auto paste_rect = place_next(title_rect, 160, 44, "center", "top", 130);
+      if (immediate_button(paste_rect, "Paste", input)) {
         const char* clip = GetClipboardText();
         if (clip) state.text_input = (state.text_input + clip).substr(0, 16);
       }
-      if (draw_button(input, "Connect", center_y + 90) &&
+
+      // Connect button.
+      auto connect_rect = place_next(paste_rect, 280, 50, "center", "top", 20);
+      if (immediate_button(connect_rect, "Connect", input) &&
           !state.text_input.empty()) {
         state.connection = join_room(state.text_input);
         state.screen     = Screen::CONNECTING;
       }
-      if (draw_button(input, "Back", center_y + 160, 180, 46)) {
+
+      // Back button.
+      auto back_rect = place_next(connect_rect, 180, 46, "center", "top", 20);
+      if (immediate_button(back_rect, "Back", input)) {
         state.text_input.clear();
         state.screen = Screen::ONLINE;
       }
-
     } else if (state.screen == Screen::CONNECTING) {
-      draw_centered_text("JOIN GAME", 150, 54, Color{255, 255, 255, 255});
-      draw_centered_text(
-        "Connecting" + dots(), center_y - 20, 30, Color{200, 200, 200, 255}
+      auto container =
+        place_inside(window_rect, 600, 400, "center", "center", 0);
+
+      // Title.
+      std::string title       = "JOIN GAME";
+      int         title_width = text_width(title, 54);
+      auto        title_rect =
+        place_inside(container, title_width, 60, "center", "top", 20);
+      render_text(
+        title, title_rect.x, title_rect.y, 54, Color{255, 255, 255, 255}
       );
-      if (draw_button(input, "Back", center_y + 100, 180, 46)) {
+
+      // Connecting message.
+      std::string connecting       = "Connecting" + dots();
+      int         connecting_width = text_width(connecting, 30);
+      auto        connecting_rect =
+        place_next(title_rect, connecting_width, 35, "center", "top", 80);
+      render_text(
+        connecting,
+        connecting_rect.x,
+        connecting_rect.y,
+        30,
+        Color{200, 200, 200, 255}
+      );
+
+      // Back button.
+      auto back_rect =
+        place_next(connecting_rect, 180, 46, "center", "top", 80);
+      if (immediate_button(back_rect, "Back", input)) {
         state.connection.reset();
         state.screen = Screen::JOINING;
       }

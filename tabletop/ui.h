@@ -41,7 +41,8 @@ bool immediate_button(
   const Input&       input,
   Color              color             = s_button_color,
   Color              highlighted_color = s_button_hover_color,
-  Color              text_color        = s_button_text_color
+  Color              text_color        = s_button_text_color,
+  int                text_size         = 20
 );
 
 struct UI_State {
@@ -51,7 +52,7 @@ struct UI_State {
   std::unordered_map<int, int> highlighted_cards;
   int                          window_width;
   int                          window_height;
-  const Input* input = nullptr;
+  const Input*                 input = nullptr;
 
   UI_State(int width, int height);
   Rectangle place(
