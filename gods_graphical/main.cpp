@@ -241,10 +241,10 @@ static void draw_hud(
   int                          bottom_player,
   const Input&                 input
 ) {
-  int       H      = tt::WINDOW_HEIGHT;
+  int       H      = table_state->height;
   int       h      = tt::CARD_HEIGHT;
   int       margin = 20;
-  Rectangle window = {0.0f, 0.0f, (float)tt::WINDOW_WIDTH, (float)H};
+  Rectangle window = {0.0f, 0.0f, (float)table_state->width, (float)H};
   int       bottom_wonders_y =
     (int)place_inside(window, 0, h, "left", "bottom", 2 * margin + h).y;
   int opponent_shift = (int)(h * 0.65f);
@@ -299,9 +299,9 @@ static void draw_hud(
     Rectangle panel =
       place_next(card_rect, panel_w, btn_h + 16, "center", "bottom", 8);
     panel.x =
-      std::max(0.0f, std::min(panel.x, (float)(tt::WINDOW_WIDTH - panel_w)));
+      std::max(0.0f, std::min(panel.x, (float)(table_state->width - panel_w)));
     panel.y = std::max(
-      0.0f, std::min(panel.y, (float)(tt::WINDOW_HEIGHT - (int)panel.height))
+      0.0f, std::min(panel.y, (float)(table_state->height - (int)panel.height))
     );
     DrawRectangleRounded(
       Rectangle{panel.x, panel.y, panel.width, panel.height},
@@ -352,7 +352,7 @@ static void play_gods(
 ) {
   if (!IsWindowReady()) {
     SetConfigFlags(FLAG_WINDOW_HIGHDPI);
-    InitWindow(tt::WINDOW_WIDTH, tt::WINDOW_HEIGHT, "Gods Online");
+    InitWindow(table_state.width, table_state.height, "Gods Online");
     SetTargetFPS(tt::TARGET_FPS);
   }
 
@@ -620,6 +620,14 @@ struct Cli_Args {
   int         window_width  = tt::WINDOW_WIDTH;
   int         window_height = tt::WINDOW_HEIGHT;
 };
+VISITABLE_STRUCT(
+  Cli_Args,
+  skip_menu_vs_ai,
+  input_mode,
+  input_file_path,
+  window_width,
+  window_height
+);
 
 static Cli_Args parse_cli_args(int argc, char** argv) {
   Cli_Args args;
@@ -639,6 +647,7 @@ static Cli_Args parse_cli_args(int argc, char** argv) {
       args.window_height = std::stoi(a.substr(9));
     }
   }
+  print(args);
   return args;
 }
 
@@ -719,7 +728,8 @@ int main(int argc, char** argv) {
   init_input_recorder(inputs, args.input_mode, args.input_file_path);
 
   Menu_Result menu_result;
-  if (!args.skip_menu_vs_ai) menu_result = run_menu(inputs);
+  if (!args.skip_menu_vs_ai)
+    menu_result = run_menu(args.window_width, args.window_height, inputs);
 
   // nullptr means local-only; otherwise borrow the bundle from menu_result.
   const Online* online =

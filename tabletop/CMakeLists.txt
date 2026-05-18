@@ -4,7 +4,6 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 set(KT_SOURCES
-    models.cpp
     config.cpp
     game_state.cpp
     input.cpp

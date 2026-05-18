@@ -163,9 +163,9 @@ static bool is_super_down(const Input& input) {
 #endif
 }
 
-Menu_Result run_menu(Input_Feed& inputs) {
-  int W = tt::WINDOW_WIDTH;
-  int H = tt::WINDOW_HEIGHT;
+Menu_Result run_menu(int window_width, int window_height, Input_Feed& inputs) {
+  int W = window_width;
+  int H = window_height;
 
   SetConfigFlags(FLAG_WINDOW_HIGHDPI);
   InitWindow(W, H, "Gods");
