@@ -1,9 +1,10 @@
 #include "agent_ui.h"
 
+#include <tressette/models.h>
+
 #include <set>
 #include <variant>
 
-#include <tressette/models.h>
 #include "ui.h"
 
 int Tressette_Agent_UI::choose_action(Game& game, const Choice& choice) {
@@ -20,10 +21,12 @@ int Tressette_Agent_UI::choose_action(Game& game, const Choice& choice) {
     base + (choice.player_index == 0 ? TRESSETTE_HAND_0 : TRESSETTE_HAND_1);
   int table_id = base + TRESSETTE_TABLE_IDX;
 
+  auto* state_ptr = static_cast<tressette::Game_State*>(&game);
   table_state->is_drop_card_allowed =
-    [hand_id, table_id, legal_set](int src, int dst, int cid) {
+    [hand_id, table_id, legal_set, this, state_ptr](int src, int dst, int cid) {
       if (src == dst) return true;
-      return src == hand_id && dst == table_id && legal_set.count(cid) > 0;
+      return state_ptr->current_player == this->player_index &&
+             src == hand_id && dst == table_id && legal_set.count(cid) > 0;
     };
 
   // Highlight legal cards so the draw callback can draw a border around them.

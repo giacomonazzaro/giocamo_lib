@@ -209,6 +209,11 @@ void handle_mouse_release(Table_State& state) {
   int         card_id = dragged_thing_id(drag);
   if (card_id < 0) return;
 
+  // Capture the card's current world position (where the user let go) so the
+  // animation can lerp from that point — not from a stale rect that's about to
+  // be reinterpreted in a different parent's coordinate space.
+  Vector2 card_world_at_release = local_to_world(card_id, state);
+
   bool allowed = state.is_drop_card_allowed(
     drag.original_stack, drag.current_stack, card_id
   );
@@ -236,6 +241,25 @@ void handle_mouse_release(Table_State& state) {
       update_card_positions(original_stack, state, /*sort=*/true);
     if (current_stack >= 0 && current_stack != original_stack)
       update_card_positions(current_stack, state, /*sort=*/true);
+  }
+
+  // Re-anchor the animated mirror. During the drag the card may have been
+  // orphaned to root (its local rect held world coords); now it's back inside
+  // a stack and the renderer would re-interpret those stale coords as local to
+  // the new parent, sending the card off-screen before lerping back. Rewrite
+  // the animated rect into the new parent's local frame so the slide-back
+  // starts from where the user actually released the mouse.
+  if (dragged_is_card &&
+      card_id >= 0 &&
+      card_id < (int)state.animated_cards.size()) {
+    int new_parent = find_stack_containing_card(card_id, state);
+    if (new_parent >= 0) {
+      Vector2 parent_world = local_to_world(new_parent, state);
+      state.animated_cards[card_id].rect.x =
+        card_world_at_release.x - parent_world.x;
+      state.animated_cards[card_id].rect.y =
+        card_world_at_release.y - parent_world.y;
+    }
   }
 }
 

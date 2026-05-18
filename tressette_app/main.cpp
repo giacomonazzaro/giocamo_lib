@@ -2,6 +2,7 @@
 #include <game/game.h>
 #include <giocamo/menu.h>
 #include <online/agents.h>
+#include <online/setup.h>
 #include <tabletop/config.h>
 #include <tabletop/game_state.h>
 #include <tabletop/input.h>
@@ -33,6 +34,7 @@ static Table_State init_table_state(
   bool                   show_opponent_hand
 ) {
   auto table = Table_State();
+  table.is_drop_card_allowed = [](int, int, int) { return false; };
 
   // One Thing per card; ids 0..39 match all_cards indices.
   for (const auto& c : state.all_cards) {
@@ -176,12 +178,22 @@ int main(int argc, char** argv) {
     }
   }
 
+  // Local-testing shortcut: `--local-host` / `--local-join` on the command
+  // line bypasses the menu and STUN/ntfy entirely. All parsing lives inside
+  // online_lib so main doesn't have to know about those flags.
+  auto local_conn = setup_local_from_argv(argc, argv);
+
   // Menu opens its own window; play_tressette reuses it (its InitWindow guard
   // skips when IsWindowReady() returns true).
   Input_Feed inputs;
   init_input_recorder(inputs, Input_Mode::Live, "");
   Menu_Result menu_result;
-  if (!skip_menu) {
+  if (local_conn) {
+    menu_result.mode         = Menu_Result::ONLINE;
+    menu_result.online       = local_conn->online;
+    menu_result.player_index = local_conn->player_index;
+    menu_result.seed         = local_conn->seed;
+  } else if (!skip_menu) {
     menu_result =
       run_menu("Tressette", tt::WINDOW_WIDTH, tt::WINDOW_HEIGHT, inputs);
   }
@@ -205,7 +217,7 @@ int main(int argc, char** argv) {
     state, ui_state, bottom_player, show_opponent_hand
   );
 
-  auto agent_ui = Tressette_Agent_UI(&table, &ui_state);
+  auto agent_ui = Tressette_Agent_UI(&table, &ui_state, player_index);
 
   Agent* agent = nullptr;
   if (online) {

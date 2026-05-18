@@ -13,8 +13,21 @@
 #include <random>
 #include <sstream>
 #include <thread>
+#include <vector>
 
 #include "protocol.h"
+
+// Keep-alive store for UDP_Sockets handed out via an Online. UDP_Socket owns
+// fd + reliability threads; storing the shared_ptr here pins it for the
+// process lifetime, so callers can pass Online by value with a raw socket
+// pointer without worrying about ownership.
+static std::vector<std::shared_ptr<UDP_Socket>> s_socket_keep_alive;
+static std::mutex                               s_socket_keep_alive_lock;
+
+void retain_socket(std::shared_ptr<UDP_Socket> sock) {
+  std::lock_guard<std::mutex> lg(s_socket_keep_alive_lock);
+  s_socket_keep_alive.push_back(std::move(sock));
+}
 
 // ---- Utilities ----
 
@@ -395,6 +408,8 @@ std::shared_ptr<Connection_State> start_hosting(bool local) {
   return state;
 }
 
+// (join_room follows below; local-loopback helpers appear at end of file.)
+
 std::shared_ptr<Connection_State> join_room(
   const std::string& room_code, bool local
 ) {
@@ -479,3 +494,149 @@ std::shared_ptr<Connection_State> join_room(
   return state;
 }
 
+
+// ---- Local-loopback setup (testing only — bypasses STUN, ntfy, holepunch) ----
+
+Online_Connection setup_local(bool host, int port) {
+  int fd = ::socket(AF_INET, SOCK_DGRAM, 0);
+  if (fd < 0) throw std::runtime_error("setup_local: socket() failed");
+
+  // Host pins to 127.0.0.1:port so the joiner can find it; joiner uses an
+  // ephemeral port. Binding strictly to 127.0.0.1 (not INADDR_ANY) keeps the
+  // socket invisible to the LAN.
+  sockaddr_in bind_addr{};
+  bind_addr.sin_family = AF_INET;
+  inet_pton(AF_INET, "127.0.0.1", &bind_addr.sin_addr);
+  bind_addr.sin_port = host ? htons(static_cast<uint16_t>(port)) : 0;
+  if (::bind(fd, reinterpret_cast<sockaddr*>(&bind_addr), sizeof(bind_addr)) <
+      0) {
+    ::close(fd);
+    throw std::runtime_error(
+      "setup_local: bind() failed (port already in use?)"
+    );
+  }
+
+  // Both peers generate a seed and exchange it; the smaller seed wins
+  // (player 0) and is the shared game seed. Same convention as
+  // exchange_seeds().
+  std::mt19937 rng(std::random_device{}());
+  int          my_seed = static_cast<int>(rng());
+  std::string  init_msg =
+    "{\"type\":\"init\",\"seed\":" + std::to_string(my_seed) + "}";
+
+  sockaddr_in friend_addr{};
+  friend_addr.sin_family = AF_INET;
+  inet_pton(AF_INET, "127.0.0.1", &friend_addr.sin_addr);
+
+  int friend_port = port;
+  int friend_seed = -1;
+
+  // 30 s safety net so we don't hang forever if the peer never shows up.
+  timeval tv{30, 0};
+  ::setsockopt(fd, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
+
+  if (host) {
+    std::cout << "[local] Hosting on 127.0.0.1:" << port
+              << " - waiting for joiner...\n";
+    // Host receives the joiner's init first (their source port is the friend
+    // address), then replies with its own init.
+    char        buf[1024];
+    sockaddr_in from{};
+    socklen_t   from_len = sizeof(from);
+    ssize_t     n        = ::recvfrom(
+      fd,
+      buf,
+      sizeof(buf) - 1,
+      0,
+      reinterpret_cast<sockaddr*>(&from),
+      &from_len
+    );
+    if (n <= 0) {
+      ::close(fd);
+      throw std::runtime_error("setup_local: timed out waiting for joiner");
+    }
+    friend_port = ntohs(from.sin_port);
+    friend_seed = json_int(std::string(buf, static_cast<size_t>(n)), "seed");
+    std::cout << "[local] Joiner detected on port " << friend_port << ".\n";
+
+    friend_addr.sin_port = htons(static_cast<uint16_t>(friend_port));
+    ::sendto(
+      fd,
+      init_msg.c_str(),
+      init_msg.size(),
+      0,
+      reinterpret_cast<sockaddr*>(&friend_addr),
+      sizeof(friend_addr)
+    );
+  } else {
+    std::cout << "[local] Joining 127.0.0.1:" << port << " ...\n";
+    friend_addr.sin_port = htons(static_cast<uint16_t>(port));
+    ::sendto(
+      fd,
+      init_msg.c_str(),
+      init_msg.size(),
+      0,
+      reinterpret_cast<sockaddr*>(&friend_addr),
+      sizeof(friend_addr)
+    );
+    char    buf[1024];
+    ssize_t n = ::recvfrom(fd, buf, sizeof(buf) - 1, 0, nullptr, nullptr);
+    if (n <= 0) {
+      ::close(fd);
+      throw std::runtime_error("setup_local: timed out waiting for host reply");
+    }
+    friend_seed = json_int(std::string(buf, static_cast<size_t>(n)), "seed");
+  }
+
+  // Clear the timeout so the gameplay protocol gets a normal blocking socket.
+  timeval zero{0, 0};
+  ::setsockopt(fd, SOL_SOCKET, SO_RCVTIMEO, &zero, sizeof(zero));
+
+  int player_index = (my_seed < friend_seed) ? 0 : 1;
+  int game_seed    = (my_seed < friend_seed) ? my_seed : friend_seed;
+  std::cout << "[local] You are Player " << (player_index + 1)
+            << ". Seed: " << game_seed << "\n";
+
+  auto sock = std::make_shared<UDP_Socket>();
+  sock->fd  = fd;
+  retain_socket(sock);
+
+  Online_Connection result;
+  result.online       = Online{sock.get(), {"127.0.0.1", friend_port}};
+  result.player_index = player_index;
+  result.seed         = game_seed;
+  return result;
+}
+
+std::optional<Online_Connection> setup_local_from_argv(
+  int argc, char** argv
+) {
+  // Defaults; can be overridden by `--local-port=NNNN` or `--local-host=PORT`.
+  bool host = false;
+  bool join = false;
+  int  port = 38800;
+  for (int i = 1; i < argc; ++i) {
+    std::string a = argv[i];
+    if (a == "--local-host") {
+      host = true;
+    } else if (a == "--local-join") {
+      join = true;
+    } else if (a.rfind("--local-host=", 0) == 0) {
+      host = true;
+      port = std::atoi(a.c_str() + 13);
+    } else if (a.rfind("--local-join=", 0) == 0) {
+      join = true;
+      port = std::atoi(a.c_str() + 13);
+    } else if (a.rfind("--local-port=", 0) == 0) {
+      port = std::atoi(a.c_str() + 13);
+    }
+  }
+  if (!host && !join) return std::nullopt;
+  if (host && join) {
+    throw std::runtime_error(
+      "setup_local_from_argv: pass either --local-host or --local-join, "
+      "not both"
+    );
+  }
+  return setup_local(host, port);
+}
