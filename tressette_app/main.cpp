@@ -33,7 +33,7 @@ static Table_State init_table_state(
   int                    bottom_player,
   bool                   show_opponent_hand
 ) {
-  auto table = Table_State();
+  auto table                 = Table_State();
   table.is_drop_card_allowed = [](int, int, int) { return false; };
 
   // One Thing per card; ids 0..39 match all_cards indices.
@@ -54,7 +54,7 @@ static Table_State init_table_state(
   // 6 stack Things appended after cards.
   std::vector<Thing> stacks =
     make_tressette_stacks(bottom_player, show_opponent_hand);
-  auto               stack_ids = std::vector<int>();
+  auto stack_ids = std::vector<int>();
   for (Thing& s : stacks) {
     s.id = (int)table.things.size();
     stack_ids.push_back(s.id);
@@ -102,6 +102,34 @@ static void update_stacks(Table_State& table, tressette::Game_State& state) {
   refresh(TRESSETTE_TABLE_IDX, state.trick);
 }
 
+// The opponent agent picked for solo (vs-AI) play. Hides the TORCH_AVAILABLE
+// fork so the caller doesn't have to know about it.
+static Agent* make_ai_opponent() {
+#ifdef TORCH_AVAILABLE
+  return new tressette::Agent_Minimax_Neural(
+    "tressette/tressette_value_traced.pt", 3, 20
+  );
+#else
+  return new tressette::Tressette_Agent(11, 10);
+#endif
+}
+
+// Build the duel for the chosen mode. Mirrors gods_app::make_agent — UI agent
+// is always the local seat; the opponent + duel wrapping depend on whether
+// `online` is set (peer play), or whether we're in vs-AI vs hot-seat.
+static Agent* make_agent(
+  Tressette_Agent_UI* agent_ui,
+  bool                vs_ai,
+  const Online*       online,
+  int                 player_index
+) {
+  if (online) {
+    return make_online_duel(agent_ui, *online, player_index);
+  }
+  Agent* opponent = vs_ai ? make_ai_opponent() : (Agent*)agent_ui;  // hot-seat.
+  return new Agent_Duel(agent_ui, opponent, /*swap=*/player_index != 0);
+}
+
 static void play_tressette(
   tressette::Game_State& state,
   Table_State&           table,
@@ -123,16 +151,15 @@ static void play_tressette(
   // stacks.
   // state.on_cards_changed = [&]() { update_stacks(table, state); };
 
-  table.draw_callbacks[-1] = [&, bottom_player](
-                               const Table_State&, const Input&, bool
-                             ) {
-    for (int i = 0; i < 2; ++i) {
-      int  score      = tressette::compute_player_score(state, i);
-      bool is_current = (i == state.current_player);
-      int  hud_y      = (i == bottom_player) ? (tt::WINDOW_HEIGHT - 56) : 16;
-      draw_tressette_player_hud(i, score, is_current, hud_y);
-    }
-  };
+  table.draw_callbacks[-1] =
+    [&, bottom_player](const Table_State&, const Input&, bool) {
+      for (int i = 0; i < 2; ++i) {
+        int  score      = tressette::compute_player_score(state, i);
+        bool is_current = (i == state.current_player);
+        int  hud_y      = (i == bottom_player) ? (tt::WINDOW_HEIGHT - 56) : 16;
+        draw_tressette_player_hud(i, score, is_current, hud_y);
+      }
+    };
 
   while (!WindowShouldClose()) {
     if (state.game_over) break;
@@ -211,32 +238,14 @@ int main(int argc, char** argv) {
   // The local player always sits at the bottom of the screen; in online play
   // that may be seat 1, in solo it's always seat 0. Show the opponent's hand
   // only in hot-seat (where one screen is shared).
-  const int  bottom_player      = player_index;
-  const bool show_opponent_hand = !vs_ai && !is_online;
-  Table_State table             = init_table_state(
-    state, ui_state, bottom_player, show_opponent_hand
-  );
+  const int   bottom_player      = player_index;
+  const bool  show_opponent_hand = !vs_ai && !is_online;
+  Table_State table =
+    init_table_state(state, ui_state, bottom_player, show_opponent_hand);
 
   auto agent_ui = Tressette_Agent_UI(&table, &ui_state, player_index);
 
-  Agent* agent = nullptr;
-  if (online) {
-    agent = make_online_duel(&agent_ui, *online, player_index);
-  } else {
-    Agent* agent_opponent;
-    if (vs_ai) {
-#ifdef TORCH_AVAILABLE
-      agent_opponent = new tressette::Agent_Minimax_Neural(
-        "tressette/tressette_value_traced.pt", 3, 20
-      );
-#else
-      agent_opponent = new tressette::Tressette_Agent(11, 10);
-#endif
-    } else {
-      agent_opponent = &agent_ui;  // hot-seat.
-    }
-    agent = new Agent_Duel(&agent_ui, agent_opponent, /*swap=*/false);
-  }
+  Agent* agent = make_agent(&agent_ui, vs_ai, online, player_index);
 
   play_tressette(state, table, ui_state, *agent, bottom_player);
 
