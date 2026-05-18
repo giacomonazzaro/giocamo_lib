@@ -1,6 +1,7 @@
 #include "input.h"
 
 #include <algorithm>
+#include <cmath>
 #include <cstdio>
 #include <random>
 
@@ -99,12 +100,12 @@ bool point_in_stack_area(
 }
 
 // Reverse-DFS so the visually topmost (last-drawn) thing under (px, py) wins.
-// (px, py) is in the parent's local space at entry; we subtract the thing's
-// own rect.x/y to obtain its local space before recursing into children.
-// Children are contained in their parent, so if the point misses the thing's
-// own rect we can skip its whole subtree. Root spans the whole window and is
-// only used as the recursion entry, never as a hit target.
-// On success, `path` ends with the hit thing; root is included as path[0].
+// (px, py) enters in the parent's local space; we invert this thing's render
+// transform to express the point in its own local space, then test
+// containment and recurse with that local point. Children are contained in
+// their parent so a containment miss prunes the whole subtree. Root spans
+// the whole window and is only used as the recursion entry, never as a hit
+// target. On success, `path` ends with the hit thing; root is path[0].
 static bool find_thing_at_rec(
   float              px,
   float              py,
@@ -114,24 +115,41 @@ static bool find_thing_at_rec(
 ) {
   const Thing& t = state.things[thing_id];
 
-  // Prune: containment in parent-local space. Root is exempt — it covers the
+  // Inverse of apply_local_transform: parent-local → thing-local.
+  float w = is_card(t) ? (float)tt::CARD_WIDTH : t.rect.width;
+  float h = is_card(t) ? (float)tt::CARD_HEIGHT : t.rect.height;
+  float local_px, local_py;
+  if (t.rotation == 0.0f) {
+    local_px = px - t.rect.x;
+    local_py = py - t.rect.y;
+  } else {
+    // Renderer rotates around (cx, cy) by t.rotation degrees. To go from
+    // parent-local back to thing-local: translate to center, rotate by
+    // -t.rotation, shift to top-left origin.
+    float cx       = t.rect.x + w / 2.0f;
+    float cy       = t.rect.y + h / 2.0f;
+    float dx       = px - cx;
+    float dy       = py - cy;
+    float angle_rad = t.rotation * (float)(M_PI / 180.0);
+    float cos_a    = std::cos(angle_rad);
+    float sin_a    = std::sin(angle_rad);
+    local_px       = cos_a * dx + sin_a * dy + w / 2.0f;
+    local_py       = -sin_a * dx + cos_a * dy + h / 2.0f;
+  }
+
+  // Prune: containment in thing-local space. Root is exempt — it covers the
   // entire window, so the check would always pass.
   if (thing_id != state.root) {
-    float w = is_card(t) ? (float)tt::CARD_WIDTH : t.rect.width;
-    float h = is_card(t) ? (float)tt::CARD_HEIGHT : t.rect.height;
-    if (px < t.rect.x || px > t.rect.x + w || py < t.rect.y ||
-        py > t.rect.y + h)
+    if (local_px < 0.0f || local_px > w || local_py < 0.0f || local_py > h)
       return false;
   }
 
   path.push_back(thing_id);
 
   // Descend with the point expressed in this thing's local space.
-  float       child_px = px - t.rect.x;
-  float       child_py = py - t.rect.y;
   const auto& children = t.children;
   for (int i = (int)children.size() - 1; i >= 0; --i) {
-    if (find_thing_at_rec(child_px, child_py, children[i], state, path))
+    if (find_thing_at_rec(local_px, local_py, children[i], state, path))
       return true;
   }
 
