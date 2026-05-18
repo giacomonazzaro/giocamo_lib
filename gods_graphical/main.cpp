@@ -180,8 +180,9 @@ void init_table_layout(
 
   // Stack things: assign ids by append order. Track the insertion order so
   // root.children matches the original stack ordering.
-  std::vector<Thing> stacks = make_gods_stacks(bottom_player);
-  std::vector<int>   stack_ids_in_order;
+  std::vector<Thing> stacks =
+    make_gods_stacks(bottom_player, window_width, window_height);
+  std::vector<int> stack_ids_in_order;
   for (Thing& s : stacks) {
     s.id = (int)table_state.things.size();
     stack_ids_in_order.push_back(s.id);
@@ -484,7 +485,9 @@ static void play_gods(
           // Restore original rect from a fresh layout. Match by name since
           // ordinal positions in make_gods_stacks aren't aligned with
           // table_state thing ids.
-          auto fresh = make_gods_stacks(player_index);
+          auto fresh = make_gods_stacks(
+            player_index, table_state.width, table_state.height
+          );
           for (const Thing& f : fresh) {
             if (f.name == s.name) {
               s.rect = f.rect;

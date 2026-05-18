@@ -17,9 +17,11 @@ static const std::string IMAGES_DIR = []() {
   return p.string();
 }();
 
-std::vector<Thing> make_gods_stacks(int bottom_player) {
-  int W      = tt::WINDOW_WIDTH;
-  int H      = tt::WINDOW_HEIGHT;
+std::vector<Thing> make_gods_stacks(
+  int bottom_player, int window_width, int window_height
+) {
+  int W      = window_width;
+  int H      = window_height;
   int w      = tt::CARD_WIDTH;
   int h      = tt::CARD_HEIGHT;
   int margin = 20;

@@ -121,6 +121,20 @@ static bool is_super_down(const Input& input) {
 #endif
 }
 
+inline bool menu_button(
+  Rectangle rect, const std::string& label, const Input& input
+) {
+  return immediate_button(
+    rect,
+    label,
+    input,
+    {0, 0, 0, 0},
+    {20, 20, 20, 200},
+    {255, 255, 255, 255},
+    30
+  );
+}
+
 Menu_Result run_menu(int window_width, int window_height, Input_Feed& inputs) {
   int W = window_width;
   int H = window_height;
@@ -213,15 +227,7 @@ Menu_Result run_menu(int window_width, int window_height, Input_Feed& inputs) {
       // Play vs AI button.
       auto play_vs_ai_rect =
         place_next(title_rect, 280, 50, "center", "bottom", 50);
-      if (immediate_button(
-            play_vs_ai_rect,
-            "Play vs AI",
-            input,
-            {0, 0, 0, 0},
-            {20, 20, 20, 100},
-            {255, 255, 255, 255},
-            30
-          )) {
+      if (menu_button(play_vs_ai_rect, "Play vs AI", input)) {
         Menu_Result r;
         r.mode = Menu_Result::VS_AI;
         // Note: window stays open; main() continues using it.
@@ -232,15 +238,7 @@ Menu_Result run_menu(int window_width, int window_height, Input_Feed& inputs) {
       // Play Online button.
       auto play_online_rect =
         place_next(play_vs_ai_rect, 280, 50, "center", "bottom", 20);
-      if (immediate_button(
-            play_online_rect,
-            "Play Online",
-            input,
-            {0, 0, 0, 0},
-            {20, 20, 20, 100},
-            {255, 255, 255, 255},
-            30
-          ))
+      if (menu_button(play_online_rect, "Play Online", input))
         state.screen = Screen::ONLINE;
     } else if (state.screen == Screen::ONLINE) {
       auto container =
@@ -260,7 +258,7 @@ Menu_Result run_menu(int window_width, int window_height, Input_Feed& inputs) {
       if (!state.error_message.empty()) {
         int  error_width = text_width(state.error_message, 18);
         auto error_rect =
-          place_next(title_rect, error_width, 24, "center", "top", 40);
+          place_next(title_rect, error_width, 24, "center", "bottom", 40);
         render_text(
           state.error_message,
           error_rect.x,
@@ -273,14 +271,8 @@ Menu_Result run_menu(int window_width, int window_height, Input_Feed& inputs) {
 
       // Create Game button.
       auto create_game_rect =
-        place_next(button_start_rect, 280, 50, "center", "top", 60);
-      if (immediate_button(
-            create_game_rect,
-            "Create Game",
-            input,
-            {0, 0, 0, 0},
-            {20, 20, 20, 100}
-          )) {
+        place_next(button_start_rect, 280, 50, "center", "bottom", 60);
+      if (menu_button(create_game_rect, "Create Game", input)) {
         state.error_message.clear();
         state.connection = start_hosting();
         state.screen     = Screen::CREATING;
@@ -288,16 +280,17 @@ Menu_Result run_menu(int window_width, int window_height, Input_Feed& inputs) {
 
       // Join Game button.
       auto join_game_rect =
-        place_next(create_game_rect, 280, 50, "center", "top", 20);
-      if (immediate_button(join_game_rect, "Join Game", input)) {
+        place_next(create_game_rect, 280, 50, "center", "bottom", 20);
+      if (menu_button(join_game_rect, "Join Game", input)) {
         state.error_message.clear();
         state.text_input.clear();
         state.screen = Screen::JOINING;
       }
 
       // Back button.
-      auto back_rect = place_next(join_game_rect, 180, 46, "center", "top", 20);
-      if (immediate_button(back_rect, "Back", input)) {
+      auto back_rect =
+        place_next(join_game_rect, 180, 46, "center", "bottom", 20);
+      if (menu_button(back_rect, "Back", input)) {
         state.error_message.clear();
         state.screen = Screen::MAIN;
       }
@@ -320,60 +313,39 @@ Menu_Result run_menu(int window_width, int window_height, Input_Feed& inputs) {
         code = state.connection->room_code;
       }
 
-      auto button_start = title_rect;
-      if (!code.empty()) {
-        // Instruction text.
-        std::string instruction       = "Share this code with your friend:";
-        int         instruction_width = text_width(instruction, 20);
-        auto        instruction_rect =
-          place_next(title_rect, instruction_width, 24, "center", "top", 40);
-        render_text(
-          instruction,
-          instruction_rect.x,
-          instruction_rect.y,
-          20,
-          Color{200, 200, 200, 255}
-        );
+      // Instruction text.
+      std::string instruction       = "Share this code with your friend:";
+      int         instruction_width = text_width(instruction, 20);
+      auto        instruction_rect =
+        place_next(title_rect, instruction_width, 24, "center", "bottom", 40);
+      render_text(
+        instruction,
+        instruction_rect.x,
+        instruction_rect.y,
+        20,
+        Color{200, 200, 200, 255}
+      );
 
-        // Room code.
-        int  code_width = text_width(code, 50);
-        auto code_rect =
-          place_next(instruction_rect, code_width, 60, "center", "top", 30);
-        render_text(
-          code, code_rect.x, code_rect.y, 50, Color{255, 215, 0, 255}
-        );
+      // Room code (or placeholder dots while waiting for it).
+      std::string code_display = code.empty() ? "...." : code;
+      int         code_width   = text_width(code_display, 50);
+      auto        code_rect =
+        place_next(instruction_rect, code_width, 60, "center", "bottom", 30);
+      render_text(
+        code_display, code_rect.x, code_rect.y, 50, Color{255, 215, 0, 255}
+      );
 
-        // Copy Code button.
-        auto copy_button_rect =
-          place_next(code_rect, 200, 44, "center", "top", 30);
-        if (immediate_button(copy_button_rect, "Copy Code", input)) {
-          SetClipboardText(code.c_str());
-        }
-
-        // Waiting message.
-        std::string waiting       = "Waiting for opponent" + dots();
-        int         waiting_width = text_width(waiting, 22);
-        auto        waiting_rect =
-          place_next(copy_button_rect, waiting_width, 26, "center", "top", 30);
-        render_text(
-          waiting, waiting_rect.x, waiting_rect.y, 22, Color{180, 180, 180, 255}
-        );
-        button_start = waiting_rect;
-      } else {
-        // Getting code message.
-        std::string getting       = "Getting your room code" + dots();
-        int         getting_width = text_width(getting, 26);
-        auto        getting_rect =
-          place_next(title_rect, getting_width, 30, "center", "top", 80);
-        render_text(
-          getting, getting_rect.x, getting_rect.y, 26, Color{200, 200, 200, 255}
-        );
-        button_start = getting_rect;
+      // Copy Code button.
+      auto copy_button_rect =
+        place_next(code_rect, 200, 44, "center", "bottom", 30);
+      if (menu_button(copy_button_rect, "Copy Code", input) && !code.empty()) {
+        SetClipboardText(code.c_str());
       }
 
       // Back button.
-      auto back_rect = place_next(button_start, 180, 46, "center", "top", 60);
-      if (immediate_button(back_rect, "Back", input)) {
+      auto back_rect =
+        place_next(copy_button_rect, 180, 46, "center", "bottom", 60);
+      if (menu_button(back_rect, "Back", input)) {
         state.connection.reset();
         state.screen = Screen::ONLINE;
       }
@@ -396,23 +368,26 @@ Menu_Result run_menu(int window_width, int window_height, Input_Feed& inputs) {
       );
 
       // Paste button.
-      auto paste_rect = place_next(title_rect, 160, 44, "center", "top", 130);
-      if (immediate_button(paste_rect, "Paste", input)) {
+      auto paste_rect =
+        place_next(title_rect, 160, 44, "center", "bottom", 130);
+      if (menu_button(paste_rect, "Paste", input)) {
         const char* clip = GetClipboardText();
         if (clip) state.text_input = (state.text_input + clip).substr(0, 16);
       }
 
       // Connect button.
-      auto connect_rect = place_next(paste_rect, 280, 50, "center", "top", 20);
-      if (immediate_button(connect_rect, "Connect", input) &&
+      auto connect_rect =
+        place_next(paste_rect, 280, 50, "center", "bottom", 20);
+      if (menu_button(connect_rect, "Connect", input) &&
           !state.text_input.empty()) {
         state.connection = join_room(state.text_input);
         state.screen     = Screen::CONNECTING;
       }
 
       // Back button.
-      auto back_rect = place_next(connect_rect, 180, 46, "center", "top", 20);
-      if (immediate_button(back_rect, "Back", input)) {
+      auto back_rect =
+        place_next(connect_rect, 180, 46, "center", "bottom", 20);
+      if (menu_button(back_rect, "Back", input)) {
         state.text_input.clear();
         state.screen = Screen::ONLINE;
       }
@@ -430,10 +405,10 @@ Menu_Result run_menu(int window_width, int window_height, Input_Feed& inputs) {
       );
 
       // Connecting message.
-      std::string connecting       = "Connecting" + dots();
+      std::string connecting       = "Connecting...";
       int         connecting_width = text_width(connecting, 30);
       auto        connecting_rect =
-        place_next(title_rect, connecting_width, 35, "center", "top", 80);
+        place_next(title_rect, connecting_width, 35, "center", "bottom", 80);
       render_text(
         connecting,
         connecting_rect.x,
@@ -444,8 +419,8 @@ Menu_Result run_menu(int window_width, int window_height, Input_Feed& inputs) {
 
       // Back button.
       auto back_rect =
-        place_next(connecting_rect, 180, 46, "center", "top", 80);
-      if (immediate_button(back_rect, "Back", input)) {
+        place_next(connecting_rect, 180, 46, "center", "bottom", 80);
+      if (menu_button(back_rect, "Back", input)) {
         state.connection.reset();
         state.screen = Screen::JOINING;
       }
