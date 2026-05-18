@@ -14,3 +14,4 @@ gods/cards/card-images/
 **/build_wasm/
 raylib/
 .cache*/
+**/xcode/

@@ -33,10 +33,6 @@ void sort_hand(Game_State& state, int player_index);
 //   - Fires on_cards_changed once at the end.
 void play_card(Game_State& state, int card_id);
 
-// Finalize a trick that's been held on the table after both cards were played.
-// No-op if pending_trick_resolve is false.
-void resolve_pending_trick(Game_State& state);
-
 // Deal a fresh hand: 10 cards each, 20 in the stock, player 0 leads.
 Game_State quick_setup(std::optional<int> seed = std::nullopt);
 

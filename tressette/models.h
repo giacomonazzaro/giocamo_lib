@@ -77,23 +77,13 @@ struct Game_State : Game {
   int                 current_player    = 0;
   int                 last_trick_winner = -1;  // for the +1 ultima bonus.
   bool                game_over         = false;
-  // True after both cards have been played but before the trick is moved to
-  // the winner's pile and the next draw happens. Lets the UI hold both cards
-  // on the table until the player clicks to advance.
-  bool                  pending_trick_resolve = false;
-  std::function<void()> on_cards_changed;
 
-  Game_State() : on_cards_changed([] {}) {}
+  Game_State() {}
 
   bool                  is_game_over() const override { return game_over; }
   std::optional<Choice> next_choice() override;
 
   void switch_turn() { current_player = 1 - current_player; }
-
-  // Fire on_cards_changed if set (used by the UI to refresh stack contents).
-  void notify_cards_changed() {
-    if (on_cards_changed) on_cards_changed();
-  }
 };
 
 }  // namespace tressette

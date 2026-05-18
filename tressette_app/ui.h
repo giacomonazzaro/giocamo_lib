@@ -16,8 +16,14 @@ constexpr int TRESSETTE_TRICKS_1  = 3;
 constexpr int TRESSETTE_STOCK_IDX = 4;
 constexpr int TRESSETTE_TABLE_IDX = 5;
 
-// Build the 6 stack Things for a Tressette table layout.
-std::vector<Thing> make_tressette_stacks(bool both_hands_visible);
+// Build the 6 stack Things for a Tressette table layout. `bottom_player` is
+// the seat (0 or 1) whose hand sits at the bottom of the screen — i.e. the
+// local player. The stack ordering (HAND_0, HAND_1, …) stays aligned with the
+// player index so agent code can look up by seat without remapping; only the
+// rects/face_up flip.
+std::vector<Thing> make_tressette_stacks(
+  int bottom_player, bool show_opponent_hand
+);
 
 // Draw callback that renders rank/suit text on each card face.
 std::function<void(const Table_State&, const Input&, bool)>

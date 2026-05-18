@@ -68,7 +68,6 @@ void play_card(Game_State& state, int card_id) {
   if (state.trick.size() < 2) {
     // First card of the trick: the responder plays next.
     state.switch_turn();
-    state.notify_cards_changed();
     return;
   }
 
@@ -99,7 +98,6 @@ void play_card(Game_State& state, int card_id) {
   if (state.players[0].hand.empty() && state.players[1].hand.empty()) {
     state.game_over = true;
   }
-  state.notify_cards_changed();
 }
 
 void resolve_pending_trick(Game_State& state) {

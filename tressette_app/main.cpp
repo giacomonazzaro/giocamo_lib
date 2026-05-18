@@ -27,7 +27,10 @@
 #include "ui.h"
 
 static Table_State init_table_state(
-  tressette::Game_State& state, UI_State& ui_state, bool both_hands_visible
+  tressette::Game_State& state,
+  UI_State&              ui_state,
+  int                    bottom_player,
+  bool                   show_opponent_hand
 ) {
   auto table = Table_State();
 
@@ -47,7 +50,8 @@ static Table_State init_table_state(
   table.num_cards = (int)table.things.size();
 
   // 6 stack Things appended after cards.
-  std::vector<Thing> stacks    = make_tressette_stacks(both_hands_visible);
+  std::vector<Thing> stacks =
+    make_tressette_stacks(bottom_player, show_opponent_hand);
   auto               stack_ids = std::vector<int>();
   for (Thing& s : stacks) {
     s.id = (int)table.things.size();
@@ -100,7 +104,8 @@ static void play_tressette(
   tressette::Game_State& state,
   Table_State&           table,
   UI_State&              ui_state,
-  Agent&                 agent
+  Agent&                 agent,
+  int                    bottom_player
 ) {
   if (!IsWindowReady()) {
     SetConfigFlags(FLAG_WINDOW_HIGHDPI);
@@ -114,13 +119,15 @@ static void play_tressette(
   // this). Calling update_stacks every frame would overwrite children managed
   // by the drag system while a card is mid-drag, causing cards to appear in two
   // stacks.
-  state.on_cards_changed = [&]() { update_stacks(table, state); };
+  // state.on_cards_changed = [&]() { update_stacks(table, state); };
 
-  table.draw_callbacks[-1] = [&](const Table_State&, const Input&, bool) {
+  table.draw_callbacks[-1] = [&, bottom_player](
+                               const Table_State&, const Input&, bool
+                             ) {
     for (int i = 0; i < 2; ++i) {
       int  score      = tressette::compute_player_score(state, i);
       bool is_current = (i == state.current_player);
-      int  hud_y      = (i == 0) ? (tt::WINDOW_HEIGHT - 56) : 16;
+      int  hud_y      = (i == bottom_player) ? (tt::WINDOW_HEIGHT - 56) : 16;
       draw_tressette_player_hud(i, score, is_current, hud_y);
     }
   };
@@ -136,7 +143,9 @@ static void play_tressette(
     draw_table(table, input);
 
     current_choice = game_frame(state, agent, current_choice);
-
+    if (current_choice == std::nullopt) {
+      update_stacks(table, state);
+    }
     EndDrawing();
   }
 
@@ -187,10 +196,14 @@ int main(int argc, char** argv) {
 
   tressette::Game_State state = tressette::quick_setup(seed);
   auto ui_state               = UI_State(tt::WINDOW_WIDTH, tt::WINDOW_HEIGHT);
-  // Hide the opponent's hand in vs-AI and online matches; show both in
-  // hot-seat.
-  bool        both_hands_visible = !vs_ai && !is_online;
-  Table_State table = init_table_state(state, ui_state, both_hands_visible);
+  // The local player always sits at the bottom of the screen; in online play
+  // that may be seat 1, in solo it's always seat 0. Show the opponent's hand
+  // only in hot-seat (where one screen is shared).
+  const int  bottom_player      = player_index;
+  const bool show_opponent_hand = !vs_ai && !is_online;
+  Table_State table             = init_table_state(
+    state, ui_state, bottom_player, show_opponent_hand
+  );
 
   auto agent_ui = Tressette_Agent_UI(&table, &ui_state);
 
@@ -213,7 +226,7 @@ int main(int argc, char** argv) {
     agent = new Agent_Duel(&agent_ui, agent_opponent, /*swap=*/false);
   }
 
-  play_tressette(state, table, ui_state, *agent);
+  play_tressette(state, table, ui_state, *agent, bottom_player);
 
   return 0;
 }
