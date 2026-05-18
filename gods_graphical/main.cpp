@@ -170,6 +170,9 @@ void init_table_layout(
   int          window_width,
   int          window_height
 ) {
+  table_state.width  = window_width;
+  table_state.height = window_height;
+
   // Cards aligned with all_cards so card.id is the shared key.
   for (const auto& gc : gods_state.all_cards) {
     Thing kc;
@@ -703,7 +706,7 @@ static void load_snapshots(
   int          bottom_player,
   int          window_width,
   int          window_height,
-  bool         load_from_disk = false
+  bool         load_from_disk = true
 ) {
   // Card hooks (Card::on_played etc.) dispatch through the global card_designs
   // registry, so it must be populated before any gameplay runs — regardless of
