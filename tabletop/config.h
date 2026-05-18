@@ -16,6 +16,7 @@ constexpr float       FONT_SPACING       = 1.0f;
 constexpr int         HAND_SPREAD_X      = 160;
 constexpr int         PILE_SPREAD_Y      = -3;
 constexpr int         WONDERS_SPREAD_X   = 160;
-constexpr const char* FONT_PATH = "./fonts/Cinzel/Cinzel-VariableFont_wght.ttf";
-constexpr const char* WINDOW_TITLE = "Gods";
+constexpr const char* FONT_PATH =
+  "./data/fonts/Cinzel/Cinzel-VariableFont_wght.ttf";
+
 }  // namespace tt
