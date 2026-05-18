@@ -98,7 +98,7 @@ bool immediate_button(
   return hovered;
 }
 
-UI_State::UI_State() {}
+UI_State::UI_State(int width, int height) : window_width(width), window_height(height) {}
 
 Rectangle UI_State::place(
   int width, int height, const std::string& x, const std::string& y, int padding

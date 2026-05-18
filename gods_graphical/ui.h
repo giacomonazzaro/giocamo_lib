@@ -38,4 +38,6 @@ void draw_game_over_screen(
 struct Gods_UI : UI_State {
   bool playground         = false;
   int  power_edit_card_id = -1;  // Card whose power is being edited.
+
+  Gods_UI(int width, int height) : UI_State(width, height) {}
 };

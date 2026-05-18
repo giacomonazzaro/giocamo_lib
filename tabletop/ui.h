@@ -49,11 +49,11 @@ struct UI_State {
   std::unordered_map<int, Button> buttons;
   // Highlight overlay keyed by choice index → kt card id.
   std::unordered_map<int, int> highlighted_cards;
-  int                          window_width  = 0;
-  int                          window_height = 0;
+  int                          window_width;
+  int                          window_height;
   const Input* input = nullptr;
 
-  UI_State();
+  UI_State(int width, int height);
   Rectangle place(
     int                width,
     int                height,

@@ -164,7 +164,11 @@ void populate_stacks_from_gods_state(
 //   [num_cards, num_cards+11) the 11 stacks from make_gods_stacks
 //   num_cards + 11            the root, whose children are all stacks
 void init_table_layout(
-  Table_State& table_state, Game_State& gods_state, int bottom_player = 0
+  Table_State& table_state,
+  Game_State&  gods_state,
+  int          bottom_player,
+  int          window_width,
+  int          window_height
 ) {
   // Cards aligned with all_cards so card.id is the shared key.
   for (const auto& gc : gods_state.all_cards) {
@@ -186,9 +190,9 @@ void init_table_layout(
 
   // Root: sits at the end of `things`, owns all stacks as direct children.
   Thing root;
-  root.name = "root";
-  root.rect = {0.0f, 0.0f, (float)tt::WINDOW_WIDTH, (float)tt::WINDOW_HEIGHT};
-  root.id   = (int)table_state.things.size();
+  root.name     = "root";
+  root.rect     = {0.0f, 0.0f, (float)window_width, (float)window_height};
+  root.id       = (int)table_state.things.size();
   root.children = stack_ids_in_order;
   table_state.things.push_back(root);
   table_state.root = root.id;
@@ -613,6 +617,8 @@ struct Cli_Args {
   bool        skip_menu_vs_ai = false;
   Input_Mode  input_mode      = Input_Mode::Live;
   std::string input_file_path;  // For Record/Playback.
+  int         window_width  = tt::WINDOW_WIDTH;
+  int         window_height = tt::WINDOW_HEIGHT;
 };
 
 static Cli_Args parse_cli_args(int argc, char** argv) {
@@ -627,6 +633,10 @@ static Cli_Args parse_cli_args(int argc, char** argv) {
     } else if (a.rfind("--playback=", 0) == 0) {
       args.input_mode      = Input_Mode::Playback;
       args.input_file_path = a.substr(11);
+    } else if (a.rfind("--width=", 0) == 0) {
+      args.window_width = std::stoi(a.substr(8));
+    } else if (a.rfind("--height=", 0) == 0) {
+      args.window_height = std::stoi(a.substr(9));
     }
   }
   return args;
@@ -675,21 +685,30 @@ static Agent* make_agent(
 // Loads the persisted game + table snapshots from data/. The #if-0 branches
 // in the implementation are dev-only seeds: flip them locally when a new
 // snapshot is needed, then flip back.
-static void load_snapshots(Game_State& gods_state, Table_State& table_state) {
+static void load_snapshots(
+  Game_State&  gods_state,
+  Table_State& table_state,
+  int          bottom_player,
+  int          window_width,
+  int          window_height,
+  bool         load_from_disk = false
+) {
   // Card hooks (Card::on_played etc.) dispatch through the global card_designs
   // registry, so it must be populated before any gameplay runs — regardless of
   // whether the game state comes from quick_setup or from a JSON snapshot.
   fs_helpers::load_card_designs();
-#if 0
-  // Dev path: build a fresh game + layout and save snapshots to disk.
-  gods_state = quick_setup(std::nullopt);
-  init_table_layout(table_state, gods_state, 0);
-#else
-  gods_state  = load_from_json<Game_State>("data/debug_gods_state.json");
-  auto layout = load_from_json<Table_Layout>("data/debug_table_state.json");
-  table_state = Table_State(layout);
-  populate_stacks_from_gods_state(table_state, gods_state);
-#endif
+  if (!load_from_disk) {
+    // Dev path: build a fresh game + layout and save snapshots to disk.
+    gods_state = quick_setup(std::nullopt);
+    init_table_layout(
+      table_state, gods_state, bottom_player, window_width, window_height
+    );
+  } else {
+    gods_state  = load_from_json<Game_State>("data/debug_gods_state.json");
+    auto layout = load_from_json<Table_Layout>("data/debug_table_state.json");
+    table_state = Table_State(window_width, window_height, layout);
+    populate_stacks_from_gods_state(table_state, gods_state);
+  }
   table_state.num_cards = (int)gods_state.all_cards.size();
 }
 
@@ -708,9 +727,15 @@ int main(int argc, char** argv) {
 
   Game_State  gods_state;
   Table_State table_state;
-  load_snapshots(gods_state, table_state);
+  load_snapshots(
+    gods_state,
+    table_state,
+    menu_result.player_index,
+    args.window_width,
+    args.window_height
+  );
 
-  Gods_UI ui_state;
+  Gods_UI ui_state(args.window_width, args.window_height);
   init_card_draw_callbacks(table_state, gods_state, ui_state);
 
   Agent* agent = make_agent(table_state, ui_state, menu_result, online);

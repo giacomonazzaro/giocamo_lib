@@ -70,6 +70,9 @@ struct Input;
 
 // Full table state passed to every render and input function.
 struct Table_State : Table_Layout {
+  int width  = 0;
+  int height = 0;
+
   // TODO: Remove, here we don't have assumptions about the fact that there are
   // cards.
   int num_cards = 0;  // Cards occupy ids [0, num_cards).
@@ -81,16 +84,24 @@ struct Table_State : Table_Layout {
   // HUD/per-thing draw callbacks. Receive Input so they can run immediate-mode
   // buttons against the recorded/replayed input stream.
   std::unordered_map<int, std::function<void(Table_State*, const Input&)>>
-    draw_callbacks;
+                                     draw_callbacks;
   Thing_Location                     zoomed_card_id;
   std::function<bool(int, int, int)> is_drop_card_allowed;
-  std::optional<std::tuple<int, int, int>>
-    dropped_card;  // (src_stack, dst_stack, card_id) after a drop.
 
-  Table_State();
-  Table_State(const Table_Layout& layout)
-      : Table_Layout(layout)
-      , is_drop_card_allowed([](int, int, int) { return true; }) {}
+  // (src_stack, dst_stack, card_id) after a drop.
+  std::optional<std::tuple<int, int, int>> dropped_card;
+
   // Returns dropped_card and resets it to nullopt (consume-once event poll).
-  std::optional<std::tuple<int, int, int>> poll_dropped_card();
+  inline std::optional<std::tuple<int, int, int>> poll_dropped_card() {
+    auto result  = dropped_card;
+    dropped_card = std::nullopt;
+    return result;
+  }
+
+  Table_State() {};
+  Table_State(int width, int height, const Table_Layout& layout)
+      : Table_Layout(layout)
+      , width(width)
+      , height(height)
+      , is_drop_card_allowed([](int, int, int) { return true; }) {}
 };
