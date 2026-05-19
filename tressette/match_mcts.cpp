@@ -19,36 +19,6 @@
 #include <string>
 #include <utility>
 
-// Wraps another Agent and records wall-clock time spent inside its
-// choose_action calls. Used to measure the per-agent compute budget the match
-// is actually spending.
-struct Timing_Agent : Agent {
-  Agent*      inner;
-  std::string name;
-  double      total_seconds = 0.0;
-  int         num_calls     = 0;
-
-  Timing_Agent(Agent* inner, std::string name)
-      : inner(inner), name(std::move(name)) {}
-
-  void message(const std::string&) override {}
-
-  int choose_action(Game& game, const Choice& choice) override {
-    const auto start_time   = std::chrono::steady_clock::now();
-    const int  action_index = inner->choose_action(game, choice);
-    const auto end_time     = std::chrono::steady_clock::now();
-    total_seconds +=
-      std::chrono::duration<double>(end_time - start_time).count();
-    num_calls += 1;
-    return action_index;
-  }
-
-  double average_seconds_per_move() const {
-    if (num_calls == 0) return 0.0;
-    return total_seconds / (double)num_calls;
-  }
-};
-
 static bool parse_int_flag(
   const std::string& arg, const std::string& name, int& out
 ) {
@@ -94,16 +64,16 @@ int main(int argc, char** argv) {
             << ", time_budget_ms=" << mcts_time_budget_ms << ")"
             << "  seed=" << seed << "\n";
 
-  tressette::Tressette_Agent minimax_agent(minimax_depth, minimax_samples);
-  // Agent_Random                                 minimax_agent;
-  Agent_Random mcts_agent;
-  // Agent_MCTS_Stochastic<tressette::Game_State> mcts_agent(
-  //   mcts_iterations,
-  //   mcts_rollout_depth,
-  //   mcts_samples,
-  //   /*exploration_constant=*/1.41421356f,
-  //   mcts_time_budget_seconds
-  // );
+  // tressette::Tressette_Agent minimax_agent(minimax_depth, minimax_samples);
+  Agent_Random minimax_agent;
+  // Agent_Random                                 mcts_agent;
+  Agent_MCTS_Stochastic<tressette::Game_State> mcts_agent(
+    mcts_iterations,
+    mcts_rollout_depth,
+    mcts_samples,
+    /*exploration_constant=*/1.41421356f,
+    mcts_time_budget_seconds
+  );
 
   Timing_Agent timed_minimax(&minimax_agent, "minimax");
   Timing_Agent timed_mcts(&mcts_agent, "mcts");

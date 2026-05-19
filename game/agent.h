@@ -50,3 +50,33 @@ struct Agent_Duel : Agent {
     return agents[choice.player_index]->choose_action(state, choice);
   }
 };
+
+// Wraps another Agent and records wall-clock time spent inside its
+// choose_action calls. Used to measure the per-agent compute budget the match
+// is actually spending.
+struct Timing_Agent : Agent {
+  Agent*      inner;
+  std::string name;
+  double      total_seconds = 0.0;
+  int         num_calls     = 0;
+
+  Timing_Agent(Agent* inner, std::string name)
+      : inner(inner), name(std::move(name)) {}
+
+  void message(const std::string&) override {}
+
+  int choose_action(Game& game, const Choice& choice) override {
+    const auto start_time   = std::chrono::steady_clock::now();
+    const int  action_index = inner->choose_action(game, choice);
+    const auto end_time     = std::chrono::steady_clock::now();
+    total_seconds +=
+      std::chrono::duration<double>(end_time - start_time).count();
+    num_calls += 1;
+    return action_index;
+  }
+
+  double average_seconds_per_move() const {
+    if (num_calls == 0) return 0.0;
+    return total_seconds / (double)num_calls;
+  }
+};
