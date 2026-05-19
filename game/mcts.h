@@ -3,9 +3,11 @@
 #include <algorithm>
 #include <chrono>
 #include <cmath>
+#include <functional>
 #include <limits>
 #include <optional>
 #include <random>
+#include <type_traits>
 #include <vector>
 
 #include "agent.h"
@@ -263,9 +265,20 @@ struct Agent_MCTS : Agent {
 // resulting determinization, and aggregates votes — mirrors the structure of
 // Agent_Minimax_Stochastic. Requires sample_state(state, player_index, rng) to
 // be defined for Game_T, just like the stochastic minimax agent.
-template <class Game_T>
+//
+// The rollout policy is configurable via the Rollout_Agent_T template
+// parameter (default Agent_Random). To use a different policy, pass the type
+// and set `rollout_agent_factory` to a callable that constructs one with the
+// desired arguments. The factory is called once per thread per choose_action
+// call, so each thread gets its own freshly constructed instance.
+template <class Game_T, class Rollout_Agent_T = Agent_Random>
 struct Agent_MCTS_Stochastic : Agent_MCTS<Game_T> {
   int num_samples;
+  // Factory called per-thread to allocate a rollout agent. When the rollout
+  // type is default-constructible (e.g. Agent_Random) the constructor sets a
+  // default factory that calls `Rollout_Agent_T()`; otherwise the caller must
+  // set it before the first `choose_action` call.
+  std::function<Rollout_Agent_T()> rollout_agent_factory;
 
   Agent_MCTS_Stochastic(
     int   num_iterations       = 1000,
@@ -280,7 +293,13 @@ struct Agent_MCTS_Stochastic : Agent_MCTS<Game_T> {
           exploration_constant,
           time_budget_seconds
         )
-      , num_samples(num_samples) {}
+      , num_samples(num_samples) {
+    if constexpr (std::is_default_constructible_v<Rollout_Agent_T>) {
+      rollout_agent_factory = []() -> Rollout_Agent_T {
+        return Rollout_Agent_T();
+      };
+    }
+  }
 
   void message(const std::string&) override {}
 
@@ -294,7 +313,7 @@ struct Agent_MCTS_Stochastic : Agent_MCTS<Game_T> {
 
 #ifdef __EMSCRIPTEN__
     static thread_local std::mt19937 sampling_rng{std::random_device{}()};
-    static thread_local Agent_Random rollout_agent;
+    Rollout_Agent_T                  rollout_agent = rollout_agent_factory();
     // Sequential path: each sample runs in turn, so the per-call budget has to
     // be split across samples to keep the total per-move time on target.
     const float per_sample_budget = (this->time_budget_seconds > 0.0f)
@@ -326,9 +345,9 @@ struct Agent_MCTS_Stochastic : Agent_MCTS<Game_T> {
     auto threads = std::vector<std::thread>(num_samples);
     for (int sample_index = 0; sample_index < num_samples; ++sample_index) {
       threads[sample_index] = std::thread([&, sample_index] {
-        std::mt19937 local_sampling_rng{std::random_device{}()};
-        Agent_Random local_rollout_agent;
-        Game_T       sampled =
+        std::mt19937    local_sampling_rng{std::random_device{}()};
+        Rollout_Agent_T local_rollout_agent = this->rollout_agent_factory();
+        Game_T          sampled =
           sample_state(concrete, choice.player_index, local_sampling_rng);
         // Parallel path: samples run in parallel, so each thread gets the
         // full per-move budget and the total wall time stays ~budget.
