@@ -104,13 +104,15 @@ static void update_stacks(Table_State& table, tressette::Game_State& state) {
 
 // The opponent agent picked for solo (vs-AI) play. Hides the TORCH_AVAILABLE
 // fork so the caller doesn't have to know about it.
+#include <game/mcts.h>
 static Agent* make_ai_opponent() {
 #ifdef TORCH_AVAILABLE
   return new tressette::Agent_Minimax_Neural(
     "tressette/tressette_value_traced.pt", 3, 20
   );
 #else
-  return new tressette::Tressette_Agent(11, 10);
+  // return new tressette::Tressette_Agent(11, 10);
+  return new Agent_MCTS<tressette::Game_State>();
 #endif
 }
 

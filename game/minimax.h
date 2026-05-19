@@ -162,12 +162,12 @@ struct Agent_Minimax_Stochastic : Agent_Minimax<Game_T> {
     }
     for (auto& t : threads) t.join();
     for (const auto& scores : scoress) {
-      votes[argmax(scores)] += 1;
+      votes[argmax_randomized(scores)] += 1;
       // for (int i = 0; i < num_actions; ++i) total_scores[i] += scores[i];
     }
 #endif
 
-    return argmax(votes);
+    return argmax_randomized(votes);
     // return argmax(total_scores);
   }
 };
