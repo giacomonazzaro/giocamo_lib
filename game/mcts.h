@@ -211,7 +211,9 @@ std::vector<float> mcts_scores(
   states.push_back(state);
 
   for (int iteration = 0; iteration < num_iterations; ++iteration) {
-    const int node_index = traverse_to_leaf_node(...);
+    const int node_index = mcts_detail::traverse_to_leaf_node(
+      nodes, states, root_player, exploration_constant
+    );
 
     // 3) Simulation: either evaluate the leaf with the supplied value
     // function, or fall back to a random rollout.
