@@ -30,6 +30,10 @@ struct Node {
   int              visits;
   float  value_sum;  // Cumulative reward, from root_player's perspective.
   Choice choice;     // Pending choice to resolve from this node.
+  // Number of children this node will have once expanded. 0 means terminal
+  // (game over or no actions available). A node is a leaf while `children`
+  // is empty; once expanded, children.size() == num_actions.
+  int num_actions;
 };
 
 // Rollout from `state` using `rollout_agent` to pick actions. Plays until the
@@ -55,14 +59,22 @@ float rollout(
 
 // Picks the child with the highest UCB1 score. When the current node belongs
 // to `root_player`, larger average reward is better (maximizing); otherwise
-// the opponent is assumed to minimize root_player's reward.
+// the opponent is assumed to minimize root_player's reward. Children that
+// haven't been visited yet have an infinite UCB1 score, so they're picked
+// before any standard scoring kicks in.
 inline int best_ucb1_child(
   const std::vector<Node>& nodes,
   int                      node_index,
   int                      root_player,
   float                    exploration_constant
 ) {
-  const Node& parent            = nodes[node_index];
+  const Node& parent = nodes[node_index];
+  // Prefer any never-visited child: UCB1 is infinite for visits == 0, and
+  // avoids a division-by-zero in the score formula below.
+  for (int action_index = 0; action_index < (int)parent.children.size();
+       ++action_index) {
+    if (nodes[parent.children[action_index]].visits == 0) return action_index;
+  }
   const bool  maximizing        = (parent.choice.player_index == root_player);
   const float log_parent_visits = std::log((float)std::max(1, parent.visits));
   int         best_action       = 0;
@@ -84,22 +96,64 @@ inline int best_ucb1_child(
 }
 
 // Initializes a freshly created node from its state. Calls state.next_choice()
-// to discover the next pending choice, leaving the node terminal when the game
-// is over or no actions are available.
+// to cache the next pending choice and the number of actions it offers. The
+// children vector stays empty — children are materialized later by the first
+// expansion of this node.
 template <class Game_T>
 void initialize_node(Node& node, Game_T& state, int parent) {
   node.parent    = parent;
   node.visits    = 0;
   node.value_sum = 0.0f;
   node.children.clear();
-  node.choice = Choice();
+  node.choice      = Choice();
+  node.num_actions = 0;
   if (state.is_game_over()) return;
   std::optional<Choice> choice = state.next_choice();
   if (!choice) return;
   const int num_actions = action_options_count(choice->actions(state));
   if (num_actions == 0) return;
-  node.children.assign(num_actions, -1);
-  node.choice = std::move(*choice);
+  node.choice      = std::move(*choice);
+  node.num_actions = num_actions;
+}
+
+// Walks down the tree from the root by UCB1 until it reaches a leaf — a node
+// with no children allocated yet. If the leaf has never been visited (or is
+// terminal) it's returned as-is for simulation. Otherwise the leaf is expanded
+// (all its children are materialized) and the first child is returned.
+template <class Game_T>
+int traverse_to_leaf_node(
+  std::vector<Node>&   nodes,
+  std::vector<Game_T>& states,
+  int                  root_player,
+  float                exploration_constant
+) {
+  // Descend through expanded nodes until we reach a leaf.
+  int node_index = 0;
+  while (!nodes[node_index].children.empty()) {
+    const int best_action =
+      best_ucb1_child(nodes, node_index, root_player, exploration_constant);
+    node_index = nodes[node_index].children[best_action];
+  }
+
+  // Fresh or terminal leaf: simulate from here.
+  if (nodes[node_index].visits == 0) return node_index;
+  if (nodes[node_index].num_actions == 0) return node_index;
+
+  // Visited leaf: expand all children and return the first one.
+  const int parent_index = node_index;
+  const int num_children = nodes[parent_index].num_actions;
+  nodes[parent_index].children.resize(num_children);
+  for (int action_index = 0; action_index < num_children; ++action_index) {
+    Game_T child_state = states[parent_index];
+    resolve_choice(child_state, nodes[parent_index].choice, action_index);
+    Node child_node;
+    initialize_node(child_node, child_state, parent_index);
+    const int child_index = (int)nodes.size();
+    nodes.push_back(std::move(child_node));
+    states.push_back(std::move(child_state));
+    nodes[parent_index].children[action_index] = child_index;
+  }
+  return nodes[parent_index].children[rand() % num_children];
 }
 
 }  // namespace mcts_detail
@@ -118,7 +172,13 @@ std::vector<float> mcts_scores(
   int           rollout_depth,
   float         exploration_constant,
   Agent&        rollout_agent,
-  float         time_budget_seconds = 0.0f
+  float         time_budget_seconds = 0.0f,
+  // Optional: when set, the simulation step replaces the random rollout with a
+  // direct value lookup at the leaf — AlphaZero-style "neural value at leaf"
+  // instead of Monte Carlo. Use a callable like
+  // [&net](const Game_T& s, int p) { return net.predict(s, p); }.
+  // When set, rollout_agent and rollout_depth are unused.
+  std::function<float(const Game_T&, int)> leaf_evaluator = nullptr
 ) {
   using mcts_detail::best_ucb1_child;
   using mcts_detail::initialize_node;
@@ -139,55 +199,28 @@ std::vector<float> mcts_scores(
 
   // The caller has already popped `root_choice` from the game's choices queue,
   // so we use it directly rather than calling state.next_choice() (which would
-  // return a later pending choice).
+  // return a later pending choice). Children stay empty until the root is
+  // expanded by the first traversal that revisits it.
   Node root_node;
-  root_node.parent = -1;
-  root_node.children.assign(num_root_actions, -1);
-  root_node.visits    = 0;
-  root_node.value_sum = 0.0f;
-  root_node.choice    = root_choice;
+  root_node.parent      = -1;
+  root_node.visits      = 0;
+  root_node.value_sum   = 0.0f;
+  root_node.choice      = root_choice;
+  root_node.num_actions = num_root_actions;
   nodes.push_back(std::move(root_node));
   states.push_back(state);
 
   for (int iteration = 0; iteration < num_iterations; ++iteration) {
-    // 1) Selection: descend the tree until we either find a node with an
-    //    unexpanded action or reach a terminal node.
-    int node_index = 0;
-    while (!nodes[node_index].children.empty()) {
-      int unexpanded_action = -1;
-      for (int i = 0; i < (int)nodes[node_index].children.size(); ++i) {
-        if (nodes[node_index].children[i] < 0) {
-          unexpanded_action = i;
-          break;
-        }
-      }
+    const int node_index = traverse_to_leaf_node(...);
 
-      if (unexpanded_action >= 0) {
-        // 2) Expansion: create a new child node for the chosen action.
-        Game_T child_state = states[node_index];
-        resolve_choice(
-          child_state, nodes[node_index].choice, unexpanded_action
-        );
-        Node child_node;
-        initialize_node(child_node, child_state, node_index);
-        const int child_index = (int)nodes.size();
-        nodes.push_back(std::move(child_node));
-        states.push_back(std::move(child_state));
-        nodes[node_index].children[unexpanded_action] = child_index;
-        node_index                                    = child_index;
-        break;
-      }
-
-      // All children expanded: descend by UCB1.
-      const int best_action =
-        best_ucb1_child(nodes, node_index, root_player, exploration_constant);
-      node_index = nodes[node_index].children[best_action];
-    }
-
-    // 3) Simulation: roll out from the leaf we just reached.
-    const float reward = rollout<Game_T>(
-      states[node_index], root_player, rollout_agent, rollout_depth
-    );
+    // 3) Simulation: either evaluate the leaf with the supplied value
+    // function, or fall back to a random rollout.
+    const float reward =
+      leaf_evaluator
+        ? leaf_evaluator(states[node_index], root_player)
+        : rollout<Game_T>(
+            states[node_index], root_player, rollout_agent, rollout_depth
+          );
 
     // 4) Backpropagation: update visit counts and value sums up to the root.
     int current = node_index;
@@ -207,10 +240,11 @@ std::vector<float> mcts_scores(
   }
 
   std::vector<float> scores(num_root_actions, 0.0f);
+  // If the root never got expanded (e.g., when num_iterations is tiny) every
+  // score stays at zero and the agent falls back to picking uniformly.
+  if ((int)nodes[0].children.size() < num_root_actions) return scores;
   for (int i = 0; i < num_root_actions; ++i) {
-    const int child_index = nodes[0].children[i];
-    if (child_index < 0) continue;
-    scores[i] = (float)nodes[child_index].visits;
+    scores[i] = (float)nodes[nodes[0].children[i]].visits;
   }
   return scores;
 }
