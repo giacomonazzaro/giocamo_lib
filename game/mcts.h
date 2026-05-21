@@ -25,7 +25,6 @@ namespace mcts_detail {
 // expansion of N children only pays for `next_choice()` once per node — this
 // matters for games whose `next_choice()` mutates state.
 struct Node {
-  int              parent;  // Parent node index, -1 for root.
   std::vector<int> children;
   int              visits;
   float  value_sum;  // Cumulative reward, from root_player's perspective.
@@ -101,7 +100,6 @@ inline int best_ucb1_child(
 // expansion of this node.
 template <class Game_T>
 void initialize_node(Node& node, Game_T& state, int parent) {
-  node.parent    = parent;
   node.visits    = 0;
   node.value_sum = 0.0f;
   node.children.clear();
@@ -121,23 +119,26 @@ void initialize_node(Node& node, Game_T& state, int parent) {
 // terminal) it's returned as-is for simulation. Otherwise the leaf is expanded
 // (all its children are materialized) and the first child is returned.
 template <class Game_T>
-int traverse_to_leaf_node(
+std::vector<int> traverse_to_leaf_node(
   std::vector<Node>&   nodes,
   std::vector<Game_T>& states,
   int                  root_player,
-  float                exploration_constant
+  float                exploration_constant,
+  std::mt19937&        rng
 ) {
   // Descend through expanded nodes until we reach a leaf.
-  int node_index = 0;
+  int  node_index = 0;
+  auto path       = std::vector<int>{node_index};
   while (!nodes[node_index].children.empty()) {
     const int best_action =
       best_ucb1_child(nodes, node_index, root_player, exploration_constant);
     node_index = nodes[node_index].children[best_action];
+    path.push_back(node_index);
   }
 
   // Fresh or terminal leaf: simulate from here.
-  if (nodes[node_index].visits == 0) return node_index;
-  if (nodes[node_index].num_actions == 0) return node_index;
+  if (nodes[node_index].visits == 0) return path;
+  if (nodes[node_index].num_actions == 0) return path;
 
   // Visited leaf: expand all children and return the first one.
   const int parent_index = node_index;
@@ -153,7 +154,8 @@ int traverse_to_leaf_node(
     states.push_back(std::move(child_state));
     nodes[parent_index].children[action_index] = child_index;
   }
-  return nodes[parent_index].children[rand() % num_children];
+  path.push_back(nodes[parent_index].children[rng() % num_children]);
+  return path;
 }
 
 }  // namespace mcts_detail
@@ -172,6 +174,7 @@ std::vector<float> mcts_scores(
   int           rollout_depth,
   float         exploration_constant,
   Agent&        rollout_agent,
+  std::mt19937  rng,
   float         time_budget_seconds = 0.0f,
   // Optional: when set, the simulation step replaces the random rollout with a
   // direct value lookup at the leaf — AlphaZero-style "neural value at leaf"
@@ -202,7 +205,6 @@ std::vector<float> mcts_scores(
   // return a later pending choice). Children stay empty until the root is
   // expanded by the first traversal that revisits it.
   Node root_node;
-  root_node.parent      = -1;
   root_node.visits      = 0;
   root_node.value_sum   = 0.0f;
   root_node.choice      = root_choice;
@@ -211,9 +213,10 @@ std::vector<float> mcts_scores(
   states.push_back(state);
 
   for (int iteration = 0; iteration < num_iterations; ++iteration) {
-    const int node_index = mcts_detail::traverse_to_leaf_node(
-      nodes, states, root_player, exploration_constant
+    const auto path = mcts_detail::traverse_to_leaf_node(
+      nodes, states, root_player, exploration_constant, rng
     );
+    const int node_index = path.back();
 
     // 3) Simulation: either evaluate the leaf with the supplied value
     // function, or fall back to a random rollout.
@@ -225,11 +228,9 @@ std::vector<float> mcts_scores(
           );
 
     // 4) Backpropagation: update visit counts and value sums up to the root.
-    int current = node_index;
-    while (current >= 0) {
-      nodes[current].visits += 1;
-      nodes[current].value_sum += reward;
-      current = nodes[current].parent;
+    for (int i = (int)path.size() - 1; i >= 0; --i) {
+      nodes[path[i]].visits += 1;
+      nodes[path[i]].value_sum += reward;
     }
 
     if (time_budget_seconds > 0.0f) {
@@ -281,6 +282,7 @@ struct Agent_MCTS : Agent {
     if (num_actions <= 0) return 0;
     if (num_actions == 1) return 0;
     static thread_local Agent_Random rollout_agent;
+    static thread_local std::mt19937 rng{std::random_device{}()};
 
     std::vector<float> scores = mcts_scores<Game_T>(
       concrete,
@@ -291,6 +293,7 @@ struct Agent_MCTS : Agent {
       rollout_depth,
       exploration_constant,
       rollout_agent,
+      rng,
       time_budget_seconds
     );
     return argmax_randomized(scores);
@@ -348,7 +351,7 @@ struct Agent_MCTS_Stochastic : Agent_MCTS<Game_T> {
     std::vector<int> votes(num_actions, 0);
 
 #ifdef __EMSCRIPTEN__
-    static thread_local std::mt19937 sampling_rng{std::random_device{}()};
+    static thread_local std::mt19937 rng{std::random_device{}()};
     Rollout_Agent_T                  rollout_agent = rollout_agent_factory();
     // Sequential path: each sample runs in turn, so the per-call budget has to
     // be split across samples to keep the total per-move time on target.
@@ -357,8 +360,7 @@ struct Agent_MCTS_Stochastic : Agent_MCTS<Game_T> {
                                           (float)num_samples
                                       : 0.0f;
     for (int sample_index = 0; sample_index < num_samples; ++sample_index) {
-      Game_T sampled =
-        sample_state(concrete, choice.player_index, sampling_rng);
+      Game_T sampled = sample_state(concrete, choice.player_index, rng);
       std::vector<float> scores = mcts_scores<Game_T>(
         sampled,
         choice,
@@ -368,6 +370,7 @@ struct Agent_MCTS_Stochastic : Agent_MCTS<Game_T> {
         this->rollout_depth,
         this->exploration_constant,
         rollout_agent,
+        rng,
         per_sample_budget
       );
       votes[argmax(scores)] += 1;
@@ -381,10 +384,9 @@ struct Agent_MCTS_Stochastic : Agent_MCTS<Game_T> {
     auto threads = std::vector<std::thread>(num_samples);
     for (int sample_index = 0; sample_index < num_samples; ++sample_index) {
       threads[sample_index] = std::thread([&, sample_index] {
-        std::mt19937    local_sampling_rng{std::random_device{}()};
+        std::mt19937    rng{std::random_device{}()};
         Rollout_Agent_T local_rollout_agent = this->rollout_agent_factory();
-        Game_T          sampled =
-          sample_state(concrete, choice.player_index, local_sampling_rng);
+        Game_T sampled = sample_state(concrete, choice.player_index, rng);
         // Parallel path: samples run in parallel, so each thread gets the
         // full per-move budget and the total wall time stays ~budget.
         scoress[sample_index] = mcts_scores<Game_T>(
@@ -396,6 +398,7 @@ struct Agent_MCTS_Stochastic : Agent_MCTS<Game_T> {
           this->rollout_depth,
           this->exploration_constant,
           local_rollout_agent,
+          rng,
           this->time_budget_seconds
         );
       });
