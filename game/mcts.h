@@ -127,8 +127,10 @@ std::vector<int> traverse_to_leaf_node(
   std::mt19937&        rng
 ) {
   // Descend through expanded nodes until we reach a leaf.
-  int  node_index = 0;
-  auto path       = std::vector<int>{node_index};
+  int                      node_index = 0;
+  static thread_local auto path       = std::vector<int>();
+  path.clear();
+  path.push_back(node_index);
   while (!nodes[node_index].children.empty()) {
     const int best_action =
       best_ucb1_child(nodes, node_index, root_player, exploration_constant);

@@ -112,7 +112,14 @@ static Agent* make_ai_opponent() {
   );
 #else
   // return new tressette::Tressette_Agent(11, 10);
-  return new Agent_MCTS<tressette::Game_State>();
+  return new Agent_MCTS_Stochastic<tressette::Game_State>(
+    /* num_iterations       */ 100000,
+    /* rollout_depth        */ 40,
+    /* num_samples          */ 20,
+    /* exploration_constant */ 1.41421356f,
+    /* time_budget_seconds  */ 5.0f
+  );
+
 #endif
 }
 

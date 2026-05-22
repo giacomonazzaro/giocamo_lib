@@ -4,6 +4,11 @@
 #include <random>
 #include <string>
 
+#ifndef __EMSCRIPTEN__
+#include <chrono>
+#include <future>
+#endif
+
 #include "game.h"
 
 struct Agent {
@@ -80,3 +85,71 @@ struct Timing_Agent : Agent {
     return total_seconds / (double)num_calls;
   }
 };
+
+// Runs an inner agent's choose_action on a background thread so the caller
+// can keep drawing frames while it thinks. The first call for a given choice
+// kicks off the worker and returns -1 immediately; subsequent calls return
+// -1 until the worker is done, then return its result and arm the agent
+// for the next choice.
+//
+// Contract: the caller must keep `game` and `choice` alive and unmutated
+// across the calls that share a pending computation. game_frame() already
+// satisfies this — it holds onto the same Choice until the agent returns a
+// non-negative index.
+#ifndef __EMSCRIPTEN__
+struct Agent_Async : Agent {
+  Agent*           inner;
+  std::future<int> pending;
+  bool             in_flight = false;
+
+  explicit Agent_Async(Agent* inner) : inner(inner) {}
+
+  ~Agent_Async() override {
+    // Make sure the worker has finished before our state goes away,
+    // otherwise it would be left holding dangling references.
+    if (in_flight && pending.valid()) pending.wait();
+  }
+
+  void message(const std::string&) override {}
+
+  int choose_action(Game& game, const Choice& choice) override {
+    if (!in_flight) {
+      // First frame for this choice: spawn the worker. We capture `game`
+      // and `choice` by reference because the caller guarantees they stay
+      // alive (and immutable from our perspective) until we return a real
+      // index.
+      Agent* worker_agent = inner;
+      pending =
+        std::async(std::launch::async, [worker_agent, &game, &choice]() {
+          return worker_agent->choose_action(game, choice);
+        });
+      in_flight = true;
+      return -1;
+    }
+    // Not done yet -> tell the game loop to come back next frame.
+    if (pending.wait_for(std::chrono::seconds(0)) !=
+        std::future_status::ready) {
+      return -1;
+    }
+    // Worker finished: deliver its action and re-arm for the next choice.
+    int action_index = pending.get();
+    in_flight        = false;
+    return action_index;
+  }
+};
+#else
+struct Agent_Async : Agent {
+  Agent* inner;
+
+  explicit Agent_Async(Agent* inner) : inner(inner) {}
+
+  void message(const std::string&) override {}
+
+  int choose_action(Game& game, const Choice& choice) override {
+    // Async not supported in Emscripten build: just call the inner agent
+    // directly and block until it returns. The game loop will hitch while
+    // it's thinking, but that's unavoidable without threads.
+    return inner->choose_action(game, choice);
+  }
+};
+#endif
