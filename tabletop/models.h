@@ -48,6 +48,16 @@ VISITABLE_STRUCT(
 // Path of thing IDs from root to the thing.
 using Thing_Location = std::vector<int>;
 
+// A thing's pose in the global frame of the table. The animation pipeline
+// works in this space so that re-parenting (e.g. a card moving from the
+// table stack into a player's captured pile) is just a target swap rather
+// than a coord-system swap. The renderer consumes these directly.
+struct World_Transform {
+  float x        = 0.0f;
+  float y        = 0.0f;
+  float rotation = 0.0f;
+};
+
 // Drag operation in progress.
 struct Drag_State {
   // Root-to-thing path captured when the drag started. Empty when no drag
@@ -82,9 +92,11 @@ struct Table_State : Table_Layout {
   int num_cards = 0;  // Cards occupy ids [0, num_cards).
 
   //
-  Drag_State         drag_state;
-  std::vector<Thing> animated_cards;  // Smoothed mirror of `things`, used for
-                                      // animation. Same indexing.
+  Drag_State                   drag_state;
+  std::vector<World_Transform> animated_world;  // Smoothed world transform
+                                                // per thing, same indexing as
+                                                // `things`. The renderer
+                                                // reads these directly.
   // HUD/per-thing draw callbacks. Receive Input so they can run immediate-mode
   // buttons against the recorded/replayed input stream. The bool argument is
   // the face_up flag of the thing being decorated (true for the HUD slot).

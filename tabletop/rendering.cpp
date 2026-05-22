@@ -307,87 +307,86 @@ void draw_stack_placeholder(int stack_id, const Table_State& state) {
 
 // --- animate ---
 
-void animate(std::vector<Thing>& things, const Table_State& state, float dt) {
-  // Resize mirror to match state.things; copy verbatim on first call so cards
-  // don't fly in from (0,0).
-  if (things.size() != state.things.size()) {
-    things = state.things;
-    return;
-  }
-  int selected = dragged_thing_id(state.drag_state);
-  for (int i = 0; i < (int)state.things.size(); ++i) {
-    Thing&       a      = things[i];
-    const Thing& target = state.things[i];
+// World transform of every thing, computed by walking the tree and summing
+// (x, y, rotation) down each chain. Treating composition as plain addition
+// works here because no parent rotates in this codebase — only leaf cards.
+static void compute_world(
+  int                           id,
+  const World_Transform&        parent,
+  const std::vector<Thing>&     things,
+  std::vector<World_Transform>& output
+) {
+  const Thing& t = things[id];
+  output[id]     = {parent.x + t.rect.x, parent.y + t.rect.y,
+                    parent.rotation + t.rotation};
+  for (int child_id : t.children) compute_world(child_id, output[id], things, output);
+}
 
-    // Preserve the smoothed pose, refresh everything else from target.
-    float ax   = a.rect.x;
-    float ay   = a.rect.y;
-    float arot = a.rotation;
-    a          = target;
-    a.rect.x   = ax;
-    a.rect.y   = ay;
-    a.rotation = arot;
+void animate(
+  std::vector<World_Transform>& animated, const Table_State& state, float dt
+) {
+  const int n = (int)state.things.size();
+  std::vector<World_Transform> target(n);
+  compute_world(state.root, World_Transform{}, state.things, target);
 
-    if (i == selected) {
-      // Dragged card snaps to its current local position.
-      a.rect.x   = target.rect.x;
-      a.rect.y   = target.rect.y;
-      a.rotation = target.rotation;
+  // First frame (or size change): snap so cards don't lurch in from (0,0).
+  if ((int)animated.size() != n) animated = target;
+
+  const int dragged = dragged_thing_id(state.drag_state);
+  for (int i = 0; i < n; ++i) {
+    if (i == dragged) {
+      animated[i] = target[i];  // Snap to cursor.
       continue;
     }
-    float old_x = a.rect.x;
-    a.rect.x    = a.rect.x * (1.0f - dt) + target.rect.x * dt;
-    a.rect.y    = a.rect.y * (1.0f - dt) + target.rect.y * dt;
-    float vx    = a.rect.x - old_x;
-    a.rotation  = a.rotation * (1.0f - dt) + target.rotation * dt + vx * 0.1f;
+    float vx = (target[i].x - animated[i].x) * dt;
+    float vy = (target[i].y - animated[i].y) * dt;
+    // Cap per-frame travel so big jumps (e.g. trick → captured pile) glide
+    // instead of teleporting.
+    const float speed = std::sqrt(vx * vx + vy * vy);
+    const float cap   = 40.0f;
+    if (speed > cap) {
+      vx *= cap / speed;
+      vy *= cap / speed;
+    }
+    animated[i].x += vx;
+    animated[i].y += vy;
+    // Rotation eases toward target with a small swing from x velocity.
+    animated[i].rotation =
+      animated[i].rotation * (1.0f - dt) + target[i].rotation * dt + vx * 0.1f;
   }
 }
 
-// --- DFS render walker ---
-
-static void apply_local_transform(const Thing& t) {
-  if (t.rotation == 0.0f) {
-    rlTranslatef(t.rect.x, t.rect.y, 0.0f);
+// Translate to (wt.x, wt.y) and rotate around the thing's center.
+static void apply_world_transform(const World_Transform& wt, const Thing& t) {
+  if (wt.rotation == 0.0f) {
+    rlTranslatef(wt.x, wt.y, 0.0f);
     return;
   }
-  // Rotate around the thing's center.
-  float w  = is_card(t) ? (float)tt::CARD_WIDTH : t.rect.width;
-  float h  = is_card(t) ? (float)tt::CARD_HEIGHT : t.rect.height;
-  float cx = t.rect.x + w / 2.0f;
-  float cy = t.rect.y + h / 2.0f;
-  rlTranslatef(cx, cy, 0.0f);
-  rlRotatef(t.rotation, 0.0f, 0.0f, 1.0f);
+  float w = is_card(t) ? (float)tt::CARD_WIDTH : t.rect.width;
+  float h = is_card(t) ? (float)tt::CARD_HEIGHT : t.rect.height;
+  rlTranslatef(wt.x + w / 2.0f, wt.y + h / 2.0f, 0.0f);
+  rlRotatef(wt.rotation, 0.0f, 0.0f, 1.0f);
   rlTranslatef(-w / 2.0f, -h / 2.0f, 0.0f);
 }
 
-static void draw_thing_recursive(
-  int                       thing_id,
-  const Table_State&        state,
-  const std::vector<Thing>& source,
-  bool                      parent_face_up,
-  const Input&              input
+// Walk the tree to draw each thing at its absolute world transform. No
+// matrix nesting — transforms are already fully resolved by animate().
+static void draw_thing_world(
+  int id, const Table_State& state, bool parent_face_up, const Input& input
 ) {
-  const Thing& t = source[thing_id];
-  rlPushMatrix();
-  apply_local_transform(t);
-  auto face_up = parent_face_up && state.things[thing_id].face_up;
-
-  // Draw the card body (skip the dragged card — it's drawn on top later).
-  if (thing_id != dragged_thing_id(state.drag_state)) {
+  const Thing& t       = state.things[id];
+  const bool   face_up = parent_face_up && t.face_up;
+  if (id != dragged_thing_id(state.drag_state)) {
+    rlPushMatrix();
+    apply_world_transform(state.animated_world[id], t);
     draw_thing(t, face_up);
+    auto cb = state.draw_callbacks.find(id);
+    if (cb != state.draw_callbacks.end()) cb->second(state, input, face_up);
+    rlPopMatrix();
   }
-
-  // Per-thing draw callback fires after self-draw, before children.
-  auto cb_it = state.draw_callbacks.find(thing_id);
-  if (cb_it != state.draw_callbacks.end()) {
-    cb_it->second(state, input, face_up);
-  }
-
-  // Children inherit this thing's face_up.
   for (int child_id : t.children) {
-    draw_thing_recursive(child_id, state, source, t.face_up, input);
+    draw_thing_world(child_id, state, face_up, input);
   }
-  rlPopMatrix();
 }
 
 // --- draw_zoomed_card ---
@@ -423,8 +422,7 @@ void draw_zoomed_card(const Thing& card, bool face_up) {
 // --- draw_table ---
 
 void draw_table(Table_State& state, const Input& input) {
-  // Smoothed mirror of state.things; lerps every frame toward target.
-  animate(state.animated_cards, state, 0.1f);
+  animate(state.animated_world, state, 0.1f);
 
   // Highlight the hovered stack while dragging.
   if (state.drag_state.current_stack != -1 &&
@@ -432,45 +430,27 @@ void draw_table(Table_State& state, const Input& input) {
     draw_stack_placeholder(state.drag_state.current_stack, state);
   }
 
-  // Render the scene tree DFS from root. Root's direct children are sorted by
-  // depth so existing layered draw order is preserved.
-  const Thing&     root_target = state.things[state.root];
-  const Thing&     root_anim   = state.animated_cards[state.root];
-  std::vector<int> draw_order  = root_target.children;
+  // Depth-sort root's children so layered draw order is preserved.
+  const Thing&     root_thing = state.things[state.root];
+  std::vector<int> draw_order = root_thing.children;
   std::sort(draw_order.begin(), draw_order.end(), [&state](int a, int b) {
-    return state.animated_cards[a].depth < state.animated_cards[b].depth;
+    return state.things[a].depth < state.things[b].depth;
   });
-
-  rlPushMatrix();
-  apply_local_transform(root_anim);
   for (int child_id : draw_order) {
-    draw_thing_recursive(
-      child_id, state, state.animated_cards, root_anim.face_up, input
-    );
+    draw_thing_world(child_id, state, root_thing.face_up, input);
   }
-  rlPopMatrix();
 
-  // Draw the dragged card last so it sits above everything else. Only cards
-  // get this overlay pass — stacks render through the normal recursive walk
-  // at their updated position.
+  // Dragged card overlay: drawn last so it sits above everything else.
   int dragged = dragged_thing_id(state.drag_state);
   if (dragged >= 0 && is_card(state.things[dragged])) {
-    // Use the parent's world transform as the base; the card's own local
-    // transform is applied on top.
-    int     parent_id    = find_parent(dragged, state);
-    Vector2 parent_world = (parent_id >= 0) ? local_to_world(parent_id, state)
-                                            : Vector2{0.0f, 0.0f};
-    rlPushMatrix();
-    rlTranslatef(parent_world.x, parent_world.y, 0.0f);
-    const Thing& c = state.animated_cards[dragged];
-    apply_local_transform(c);
     bool face_up = true;
     int  orig    = state.drag_state.original_stack;
     if (orig >= 0 && orig != state.root) face_up = state.things[orig].face_up;
-    draw_thing(c, face_up);
-    auto dc_it = state.draw_callbacks.find(dragged);
-    if (dc_it != state.draw_callbacks.end())
-      dc_it->second(state, input, face_up);
+    rlPushMatrix();
+    apply_world_transform(state.animated_world[dragged], state.things[dragged]);
+    draw_thing(state.things[dragged], face_up);
+    auto cb = state.draw_callbacks.find(dragged);
+    if (cb != state.draw_callbacks.end()) cb->second(state, input, face_up);
     rlPopMatrix();
   }
 
