@@ -1,0 +1,242 @@
+#include "ui.h"
+
+#include <scopa/gameplay.h>
+#include <tabletop/config.h>
+#include <tabletop/input.h>
+#include <tabletop/rendering.h>
+
+#include <string>
+
+// raylib last: its color macros (RED/GREEN/BLUE) would expand inside enums
+// otherwise.
+#include <raylib.h>
+
+// Suit name in Italian.
+static const char* suit_name(scopa::Suit suit) {
+  switch (suit) {
+    case scopa::Suit::COPPE: return "Coppe";
+    case scopa::Suit::DENARI: return "Denari";
+    case scopa::Suit::SPADE: return "Spade";
+    case scopa::Suit::BASTONI: return "Bastoni";
+  }
+  return "";
+}
+
+// Suit accent color for the rank/suit label on the card face.
+static Color suit_color(scopa::Suit suit) {
+  switch (suit) {
+    case scopa::Suit::COPPE: return Color{180, 50, 70, 255};
+    case scopa::Suit::DENARI: return Color{210, 170, 30, 255};
+    case scopa::Suit::SPADE: return Color{70, 110, 190, 255};
+    case scopa::Suit::BASTONI: return Color{80, 150, 80, 255};
+  }
+  return Color{0, 0, 0, 255};
+}
+
+// Rank labels: 1-7 numeric, 8-10 face-card names.
+static const char* rank_label(int rank) {
+  switch (rank) {
+    case 1: return "Asso";
+    case 2: return "2";
+    case 3: return "3";
+    case 4: return "4";
+    case 5: return "5";
+    case 6: return "6";
+    case 7: return "7";
+    case 8: return "Fante";
+    case 9: return "Cavallo";
+    case 10: return "Re";
+  }
+  return "?";
+}
+
+std::vector<Thing> make_scopa_stacks(
+  int bottom_player, bool show_opponent_hand
+) {
+  const int window_width  = tt::WINDOW_WIDTH;
+  const int window_height = tt::WINDOW_HEIGHT;
+  const int card_width    = tt::CARD_WIDTH;
+  const int card_height   = tt::CARD_HEIGHT;
+  const int margin        = 30;
+  const int hand_spread   = card_width;
+  const int pile_spread   = -3;
+  const int table_spread  = card_width + 20;
+  // Plenty of space for up to 9 cards in a hand.
+  const int hand_width  = hand_spread * 8 + card_width;
+  // Table can grow to a dozen-ish cards in extreme runs; size for 10.
+  const int table_width = table_spread * 9 + card_width;
+
+  Rectangle window =
+    Rectangle{0.0f, 0.0f, (float)window_width, (float)window_height};
+
+  // Layout: bottom-hand, top-hand, both captured piles to the side, stock
+  // off to one side and the table strip down the middle of the screen.
+  Rectangle bottom_hand_rect =
+    place_inside(window, hand_width, card_height, "center", "bottom", margin);
+  Rectangle top_hand_rect =
+    place_inside(window, hand_width, card_height, "center", "top", margin);
+  Rectangle bottom_captured_rect = place_next(
+    bottom_hand_rect, card_width, card_height, "right", "center", margin
+  );
+  Rectangle top_captured_rect = place_next(
+    top_hand_rect, card_width, card_height, "left", "center", margin
+  );
+  Rectangle stock_rect = place_next(
+    top_hand_rect, card_width, card_height, "right", "center", margin
+  );
+  Rectangle table_rect =
+    place_inside(window, table_width, card_height, "center", "center", 0);
+
+  // Seat-indexed rects: index by player id, not by screen position.
+  const int top_player = 1 - bottom_player;
+  Rectangle hand_rect[2];
+  Rectangle captured_rect[2];
+  hand_rect[bottom_player]     = bottom_hand_rect;
+  hand_rect[top_player]        = top_hand_rect;
+  captured_rect[bottom_player] = bottom_captured_rect;
+  captured_rect[top_player]    = top_captured_rect;
+
+  auto make = [](Rectangle rect, float spread_x, float spread_y, bool face_up,
+                 const char* name) {
+    Thing thing;
+    thing.rect     = rect;
+    thing.spread_x = spread_x;
+    thing.spread_y = spread_y;
+    thing.face_up  = face_up;
+    thing.name     = name;
+    return thing;
+  };
+
+  // Local hand is always face-up; opponent's depends on show_opponent_hand.
+  bool face_up_0 = (bottom_player == 0) ? true : show_opponent_hand;
+  bool face_up_1 = (bottom_player == 1) ? true : show_opponent_hand;
+
+  return {
+    make(hand_rect[0], (float)hand_spread, 0.0f, face_up_0, "p0_hand"),
+    make(hand_rect[1], (float)hand_spread, 0.0f, face_up_1, "p1_hand"),
+    make(captured_rect[0], 0.0f, (float)pile_spread, false, "p0_captured"),
+    make(captured_rect[1], 0.0f, (float)pile_spread, false, "p1_captured"),
+    make(stock_rect, 0.0f, (float)pile_spread, false, "stock"),
+    make(table_rect, (float)table_spread, 0.0f, true, "table"),
+  };
+}
+
+std::function<void(const Table_State&, const Input&, bool)>
+make_card_draw_callback(
+  const scopa::Game_State& state, UI_State& ui_state, int id
+) {
+  return
+    [&state, &ui_state, id](const Table_State&, const Input&, bool face_up) {
+      if (!face_up) return;
+      const scopa::Card& card        = state.all_cards[id];
+      const char*        rank_str    = rank_label(card.rank);
+      const char*        suit_str    = suit_name(card.suit);
+      Color              text_color  = {255, 255, 255, 255};
+      int                card_width  = tt::CARD_WIDTH;
+      int                card_height = tt::CARD_HEIGHT;
+      int                rank_size   = (card.rank < 8) ? 56 : 32;
+      int                rank_w      = text_width(rank_str, rank_size);
+      render_text(
+        rank_str,
+        (float)(card_width / 2 - rank_w / 2),
+        card_height * 0.18f,
+        rank_size,
+        text_color
+      );
+      int suit_size = 22;
+      int suit_w    = text_width(suit_str, suit_size);
+      render_text(
+        suit_str,
+        (float)(card_width / 2 - suit_w / 2),
+        card_height * 0.55f,
+        suit_size,
+        text_color
+      );
+
+      // The 7 of Denari (Settebello) gets a small star marker so the player
+      // remembers where the headline point is.
+      if (card.rank == 7 && card.suit == scopa::Suit::DENARI) {
+        render_text("*", 8.0f, 8.0f, 28, Color{255, 215, 0, 255});
+      }
+
+      // Highlight border for legal-to-play / selectable cards.
+      if (ui_state.highlighted_cards.count(id) > 0) {
+        DrawRectangleRoundedLinesEx(
+          Rectangle{0.0f, 0.0f, (float)card_width, (float)card_height},
+          0.18f,
+          8,
+          4.0f,
+          Color{255, 215, 0, 200}
+        );
+      }
+    };
+}
+
+void draw_scopa_player_hud(
+  const scopa::Game_State& state,
+  int                      player_index,
+  bool                     is_current,
+  int                      hud_y
+) {
+  int total    = scopa::compute_player_score(state, player_index);
+  int primiera = scopa::compute_primiera(state, player_index);
+  int denari   = 0;
+  for (int card_id : state.players[player_index].captured) {
+    if (state.all_cards[card_id].suit == scopa::Suit::DENARI) ++denari;
+  }
+  int cards = (int)state.players[player_index].captured.size();
+  int scope = state.players[player_index].scope;
+
+  std::string label = "Player " + std::to_string(player_index + 1) + ": " +
+                      std::to_string(total) + "   cards " +
+                      std::to_string(cards) + "  denari " +
+                      std::to_string(denari) + "  primiera " +
+                      std::to_string(primiera) + "  scope " +
+                      std::to_string(scope);
+  Color text_color = is_current ? Color{200, 200, 200, 255}
+                                : Color{120, 120, 120, 200};
+  render_text(label, 30.0f, (float)hud_y, 24, text_color);
+}
+
+void draw_scopa_game_over_screen(
+  Table_State& table_state, const std::vector<int>& scores
+) {
+  const int   window_width  = tt::WINDOW_WIDTH;
+  const int   window_height = tt::WINDOW_HEIGHT;
+  const char* title         = "GAME OVER";
+  const char* msg           = (scores[0] > scores[1])   ? "Player 1 wins!"
+                              : (scores[1] > scores[0]) ? "Player 2 wins!"
+                                                        : "It's a tie.";
+  std::string score_line    = std::to_string(scores[0]) + " - " +
+                              std::to_string(scores[1]);
+
+  while (!WindowShouldClose()) {
+    Input input = capture_input();
+    BeginDrawing();
+    draw_background(input, 0.0f);
+    draw_table(table_state, input);
+    DrawRectangle(0, 0, window_width, window_height, Color{0, 0, 0, 160});
+    render_text(
+      title,
+      (float)(window_width / 2 - text_width(title, 60) / 2),
+      320.0f,
+      60,
+      Color{255, 255, 255, 255}
+    );
+    render_text(
+      msg,
+      (float)(window_width / 2 - text_width(msg, 36) / 2),
+      410.0f,
+      36,
+      Color{255, 215, 0, 255}
+    );
+    render_text(
+      score_line,
+      (float)(window_width / 2 - text_width(score_line, 30) / 2),
+      470.0f,
+      30,
+      Color{200, 200, 200, 255}
+    );
+    EndDrawing();
+  }
+}
