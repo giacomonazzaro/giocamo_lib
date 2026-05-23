@@ -412,10 +412,7 @@ static void play_gods(
       auto path = find_thing_at(
         (float)frame_input.mouse_x, (float)frame_input.mouse_y, table_state
       );
-      table_state.zoomed_card_id =
-        (!path.empty() && is_card(table_state.things[path.back()]))
-          ? std::move(path)
-          : Thing_Location{};
+      table_state.zoomed_card_id = std::move(path);
     } else {
       table_state.zoomed_card_id.clear();
     }
@@ -426,7 +423,7 @@ static void play_gods(
     // Playground: P opens the power editor for the hovered card.
     if (ui_state.playground && key_pressed(frame_input, KEY_P)) {
       auto path = find_thing_at((float)mx, (float)my, table_state);
-      if (!path.empty() && is_card(table_state.things[path.back()])) {
+      if (!path.empty()) {
         int hovered = path.back();
         ui_state.power_edit_card_id =
           (ui_state.power_edit_card_id == hovered) ? -1 : hovered;

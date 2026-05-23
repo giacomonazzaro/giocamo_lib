@@ -68,13 +68,10 @@ bool stack_is_full(const Thing& stack) {
 bool point_in_thing(
   float px, float py, int thing_id, const Table_State& state
 ) {
-  // Cards store only x/y in rect (size implicit via CARD_WIDTH/HEIGHT);
-  // other things use their rect's width/height.
-  Rectangle    r = world_rect(thing_id, state);
-  const Thing& t = state.things[thing_id];
-  float        w = is_card(t) ? (float)tt::CARD_WIDTH : r.width;
-  float        h = is_card(t) ? (float)tt::CARD_HEIGHT : r.height;
-  return (r.x <= px && px <= r.x + w && r.y <= py && py <= r.y + h);
+  Rectangle r = world_rect(thing_id, state);
+  return (
+    r.x <= px && px <= r.x + r.width && r.y <= py && py <= r.y + r.height
+  );
 }
 
 bool point_in_card(float px, float py, int card_id, const Table_State& state) {
@@ -114,11 +111,9 @@ static bool find_thing_at_rec(
   Thing_Location&    path
 ) {
   const Thing& t = state.things[thing_id];
-
-  // Inverse of apply_local_transform: parent-local → thing-local.
-  float w = is_card(t) ? (float)tt::CARD_WIDTH : t.rect.width;
-  float h = is_card(t) ? (float)tt::CARD_HEIGHT : t.rect.height;
-  float local_px, local_py;
+  float        w = t.rect.width;
+  float        h = t.rect.height;
+  float        local_px, local_py;
   if (t.rotation == 0.0f) {
     local_px = px - t.rect.x;
     local_py = py - t.rect.y;
@@ -126,15 +121,15 @@ static bool find_thing_at_rec(
     // Renderer rotates around (cx, cy) by t.rotation degrees. To go from
     // parent-local back to thing-local: translate to center, rotate by
     // -t.rotation, shift to top-left origin.
-    float cx       = t.rect.x + w / 2.0f;
-    float cy       = t.rect.y + h / 2.0f;
-    float dx       = px - cx;
-    float dy       = py - cy;
+    float cx        = t.rect.x + w / 2.0f;
+    float cy        = t.rect.y + h / 2.0f;
+    float dx        = px - cx;
+    float dy        = py - cy;
     float angle_rad = t.rotation * (float)(M_PI / 180.0);
-    float cos_a    = std::cos(angle_rad);
-    float sin_a    = std::sin(angle_rad);
-    local_px       = cos_a * dx + sin_a * dy + w / 2.0f;
-    local_py       = -sin_a * dx + cos_a * dy + h / 2.0f;
+    float cos_a     = std::cos(angle_rad);
+    float sin_a     = std::sin(angle_rad);
+    local_px        = cos_a * dx + sin_a * dy + w / 2.0f;
+    local_py        = -sin_a * dx + cos_a * dy + h / 2.0f;
   }
 
   // Prune: containment in thing-local space. Root is exempt — it covers the
@@ -167,17 +162,6 @@ Thing_Location find_thing_at(float px, float py, const Table_State& state) {
   // Root's local space coincides with world space (rect at origin).
   find_thing_at_rec(px, py, state.root, state, path);
   return path;
-}
-
-int find_stack_at(float px, float py, const Table_State& state) {
-  // Topmost container child of root whose world rect contains the point.
-  const auto& root_children = state.things[state.root].children;
-  for (int i = (int)root_children.size() - 1; i >= 0; i--) {
-    int child_id = root_children[i];
-    if (!is_container(state.things[child_id])) continue;
-    if (point_in_stack_area(px, py, child_id, state)) return child_id;
-  }
-  return -1;
 }
 
 void handle_mouse_press(Table_State& state, const Input& input) {
@@ -229,24 +213,21 @@ void handle_mouse_release(Table_State& state) {
   state.dropped_card =
     std::make_tuple(drag.original_stack, drag.current_stack, card_id);
 
-  int  original_stack  = drag.original_stack;
-  int  current_stack   = drag.current_stack;
-  bool dragged_is_card = is_card(state.things[card_id]);
-  state.drag_state     = Drag_State();
+  int original_stack = drag.original_stack;
+  int current_stack  = drag.current_stack;
+  state.drag_state   = Drag_State();
 
-  // Re-layout cards in the affected stacks. Only when the dragged thing is a
-  // card — dragging a stack must not re-flow root's children.
-  if (dragged_is_card) {
-    if (original_stack >= 0)
-      update_card_positions(original_stack, state, /*sort=*/true);
-    if (current_stack >= 0 && current_stack != original_stack)
-      update_card_positions(current_stack, state, /*sort=*/true);
-  }
+  // Re-layout the affected stacks. Skip root: its "layout" would smush all
+  // top-level zones together with its zero spread.
+  if (original_stack >= 0 && original_stack != state.root)
+    update_card_positions(original_stack, state, /*sort=*/true);
+  if (current_stack >= 0 && current_stack != original_stack &&
+      current_stack != state.root)
+    update_card_positions(current_stack, state, /*sort=*/true);
 
   // Re-anchor the smoothed world transform to where the user released, so
   // the lerp glides from there into the new stack's slot.
-  if (dragged_is_card && card_id >= 0 &&
-      card_id < (int)state.animated_world.size()) {
+  if (card_id >= 0 && card_id < (int)state.animated_world.size()) {
     state.animated_world[card_id].x = card_world_at_release.x;
     state.animated_world[card_id].y = card_world_at_release.y;
   }
@@ -265,11 +246,8 @@ void handle_mouse_move(Table_State& state, const Input& input) {
   float target_world_x = mx - drag.offset_x;
   float target_world_y = my - drag.offset_y;
 
-  // Stacks-within-stacks layout only applies when the dragged thing is a card.
-  // Dragging a whole stack must not trigger re-flows of root's children.
-  bool dragged_is_card = is_card(state.things[card_id]);
-
-  int hovered_stack = find_stack_at(mx, my, state);
+  auto location      = find_thing_at(mx, my, state);
+  int  hovered_stack = location.empty() ? -1 : location.back();
   // Don't reparent the dragged thing into itself — would create a cycle in
   // the scene tree.
   if (hovered_stack == card_id) hovered_stack = -1;
@@ -281,8 +259,7 @@ void handle_mouse_move(Table_State& state, const Input& input) {
       auto  it  = std::find(cur.begin(), cur.end(), card_id);
       if (it != cur.end()) {
         cur.erase(it);
-        if (dragged_is_card)
-          update_card_positions(drag.current_stack, state, /*sort=*/true);
+        update_card_positions(drag.current_stack, state, /*sort=*/true);
       }
     }
 
@@ -290,30 +267,18 @@ void handle_mouse_move(Table_State& state, const Input& input) {
     bool   allowed =
       state.is_drop_card_allowed(drag.original_stack, hovered_stack, card_id);
     bool full = stack_is_full(hovered);
-    fprintf(
-      stderr,
-      "[drag] orig=%d hover=%d card=%d allowed=%d full=%d\n",
-      drag.original_stack,
-      hovered_stack,
-      card_id,
-      (int)allowed,
-      (int)full
-    );
 
     if (allowed && !full) {
       hovered.children.push_back(card_id);
-      if (dragged_is_card)
-        update_card_positions(hovered_stack, state, /*sort=*/true);
+      update_card_positions(hovered_stack, state, /*sort=*/true);
       drag.current_stack = hovered_stack;
     } else {
       drag.current_stack = -1;
     }
   }
 
-  if (hovered_stack >= 0 && dragged_is_card) {
+  if (hovered_stack >= 0) {
     update_card_positions(hovered_stack, state, /*sort=*/true);
-    drag.last_hovered_stack = hovered_stack;
-  } else if (hovered_stack >= 0) {
     drag.last_hovered_stack = hovered_stack;
   }
 
@@ -374,16 +339,15 @@ void process_input(Table_State& state, const Input& input) {
   float my = (float)input.mouse_y;
 
   if (key_down(input, KEY_SPACE)) {
-    auto path            = find_thing_at(mx, my, state);
-    state.zoomed_card_id = (!path.empty() && is_card(state.things[path.back()]))
-                             ? std::move(path)
-                             : Thing_Location{};
+    state.zoomed_card_id = find_thing_at(mx, my, state);
   } else {
     state.zoomed_card_id.clear();
   }
 
   if (key_pressed(input, KEY_S)) {
-    int stack_id = find_stack_at(mx, my, state);
-    shuffle_stack(state, stack_id);
+    auto location = find_thing_at(mx, my, state);
+    if (!location.empty()) {
+      shuffle_stack(state, location.back());
+    }
   }
 }

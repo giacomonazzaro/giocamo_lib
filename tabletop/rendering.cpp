@@ -27,7 +27,6 @@ static float  s_bg_turn_value     = 0.0f;
 static Font s_font        = {0};
 static bool s_font_loaded = false;
 
-static std::unordered_map<std::string, Texture2D> s_texture_cache;
 static std::unordered_map<std::string, Texture2D> s_rounded_texture_cache;
 
 // --- Background shader loading ---
@@ -72,21 +71,6 @@ static Font& get_font() {
 }
 
 // --- Texture cache helpers ---
-
-static Texture2D* get_texture(const std::string& image_path) {
-  auto it = s_texture_cache.find(image_path);
-  if (it != s_texture_cache.end()) {
-    return &it->second;
-  }
-
-  if (!FileExists(image_path.c_str())) {
-    return nullptr;
-  }
-
-  Texture2D tex               = LoadTexture(image_path.c_str());
-  s_texture_cache[image_path] = tex;
-  return &s_texture_cache[image_path];
-}
 
 static Texture2D* get_rounded_texture(const std::string& image_path) {
   auto it = s_rounded_texture_cache.find(image_path);
@@ -250,12 +234,10 @@ void draw_thing(const Thing& card, bool face_up) {
     return;
   }
 
-  // Cards store only x/y in rect (size implicit via CARD_WIDTH/HEIGHT);
-  // other things use their rect's width/height.
   float x = 0.0f;
   float y = 0.0f;
-  float w = is_card(card) ? (float)tt::CARD_WIDTH : card.rect.width;
-  float h = is_card(card) ? (float)tt::CARD_HEIGHT : card.rect.height;
+  float w = card.rect.width;
+  float h = card.rect.height;
   float r = (float)tt::CARD_CORNER_RADIUS;
 
   // Thing background: image with rounded corners, or solid color fallback.
@@ -362,11 +344,9 @@ static void apply_world_transform(const World_Transform& wt, const Thing& t) {
     rlTranslatef(wt.x, wt.y, 0.0f);
     return;
   }
-  float w = is_card(t) ? (float)tt::CARD_WIDTH : t.rect.width;
-  float h = is_card(t) ? (float)tt::CARD_HEIGHT : t.rect.height;
-  rlTranslatef(wt.x + w / 2.0f, wt.y + h / 2.0f, 0.0f);
+  rlTranslatef(wt.x + t.rect.width / 2.0f, wt.y + t.rect.height / 2.0f, 0.0f);
   rlRotatef(wt.rotation, 0.0f, 0.0f, 1.0f);
-  rlTranslatef(-w / 2.0f, -h / 2.0f, 0.0f);
+  rlTranslatef(-t.rect.width / 2.0f, -t.rect.height / 2.0f, 0.0f);
 }
 
 // Walk the tree to draw each thing at its absolute world transform. No
@@ -442,7 +422,7 @@ void draw_table(Table_State& state, const Input& input) {
 
   // Dragged card overlay: drawn last so it sits above everything else.
   int dragged = dragged_thing_id(state.drag_state);
-  if (dragged >= 0 && is_card(state.things[dragged])) {
+  if (dragged >= 0) {
     bool face_up = true;
     int  orig    = state.drag_state.original_stack;
     if (orig >= 0 && orig != state.root) face_up = state.things[orig].face_up;

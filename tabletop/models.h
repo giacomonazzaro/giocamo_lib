@@ -7,6 +7,7 @@
 #include <vector>
 
 #include "../struct/visit.hpp"
+#include "config.h"
 #include "raylib.h"
 
 VISITABLE_STRUCT(Rectangle, x, y, width, height);
@@ -17,11 +18,11 @@ struct Thing {
   std::string name;
   int         id = 0;
   std::string image_path;
-  Color       color;
-  Rectangle   rect     = {255.0f, 255.0f, 255.0f, 100.0f};
-  float       rotation = 0.0f;
-  bool        face_up  = true;
-  float       depth    = 0.0f;
+  Color       color = {255, 255, 255, 50};
+  Rectangle rect = {0.0f, 0.0f, (float)tt::CARD_WIDTH, (float)tt::CARD_HEIGHT};
+  float     rotation = 0.0f;
+  bool      face_up  = true;
+  float     depth    = 0.0f;
 
   // Container
   int              capacity = -1;  // -1 = unlimited.
@@ -101,7 +102,8 @@ struct Table_State : Table_Layout {
   // buttons against the recorded/replayed input stream. The bool argument is
   // the face_up flag of the thing being decorated (true for the HUD slot).
   std::unordered_map<
-    int, std::function<void(const Table_State&, const Input&, bool)>>
+    int,
+    std::function<void(const Table_State&, const Input&, bool)>>
                                      draw_callbacks;
   Thing_Location                     zoomed_card_id;
   std::function<bool(int, int, int)> is_drop_card_allowed;
