@@ -12,23 +12,16 @@
 // Keys we sample once per frame. Adding a new key here is all it takes to
 // make a hotkey recordable/replayable.
 static const int s_watched_pressed[] = {
-  KEY_R,
-  KEY_S,
-  KEY_P,
-  KEY_V,
-  KEY_C,
-  KEY_ENTER,
-  KEY_BACKSPACE,
-  KEY_ONE,
-  KEY_TWO,
-  KEY_THREE,
-  KEY_FOUR,
-  KEY_FIVE,
-  KEY_SIX,
-  KEY_SEVEN,
-  KEY_EIGHT,
-  KEY_NINE,
-  KEY_ZERO,
+  KEY_A, KEY_B, KEY_C, KEY_D, KEY_E, KEY_F, KEY_G, KEY_H, KEY_I, KEY_J,
+  KEY_K, KEY_L, KEY_M, KEY_N, KEY_O, KEY_P, KEY_Q, KEY_R, KEY_S, KEY_T,
+  KEY_U, KEY_V, KEY_W, KEY_X, KEY_Y, KEY_Z,
+  KEY_ZERO, KEY_ONE, KEY_TWO, KEY_THREE, KEY_FOUR,
+  KEY_FIVE, KEY_SIX, KEY_SEVEN, KEY_EIGHT, KEY_NINE,
+  KEY_ENTER, KEY_BACKSPACE, KEY_TAB, KEY_ESCAPE, KEY_DELETE,
+  KEY_LEFT, KEY_RIGHT, KEY_UP, KEY_DOWN,
+  KEY_MINUS, KEY_EQUAL, KEY_LEFT_BRACKET, KEY_RIGHT_BRACKET,
+  KEY_SEMICOLON, KEY_APOSTROPHE, KEY_GRAVE, KEY_BACKSLASH,
+  KEY_COMMA, KEY_PERIOD, KEY_SLASH,
 };
 static const int s_watched_down[] = {
   KEY_SPACE,

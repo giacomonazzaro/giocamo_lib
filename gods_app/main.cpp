@@ -433,9 +433,10 @@ static void play_gods(
       }
     }
 
-    if (key_pressed(frame_input, KEY_S)) {
+    if (key_pressed(frame_input, KEY_D)) {
       save_to_json<Game_State>(gods_state, "data/debug_gods_state.json");
       save_to_json<Table_Layout>(table_state, "data/debug_table_state.json");
+      printf("Saved debug snapshot to data/debug_*.json\n");
     }
 
     // While power editor is open, 1-9 / 0 set the power directly.
@@ -633,6 +634,9 @@ struct Cli_Args {
   std::string input_file_path;  // For Record/Playback.
   int         window_width  = tt::WINDOW_WIDTH;
   int         window_height = tt::WINDOW_HEIGHT;
+  // When true, boot from data/debug_*.json (the saved layout + game state).
+  // Default is a fresh deal via quick_setup; --load opts into the snapshot.
+  bool load_from_disk = false;
 };
 VISITABLE_STRUCT(
   Cli_Args,
@@ -640,7 +644,8 @@ VISITABLE_STRUCT(
   input_mode,
   input_file_path,
   window_width,
-  window_height
+  window_height,
+  load_from_disk
 );
 
 static Cli_Args parse_cli_args(int argc, char** argv) {
@@ -649,6 +654,8 @@ static Cli_Args parse_cli_args(int argc, char** argv) {
     std::string a = argv[i];
     if (a == "agent") {
       args.skip_menu_vs_ai = true;
+    } else if (a == "--load") {
+      args.load_from_disk = true;
     } else if (a.rfind("--record=", 0) == 0) {
       args.input_mode      = Input_Mode::Record;
       args.input_file_path = a.substr(9);
@@ -723,16 +730,13 @@ static void init_table_and_gods_states(
     gods_state  = load_from_json<Game_State>("data/debug_gods_state.json");
     auto layout = load_from_json<Table_Layout>("data/debug_table_state.json");
     table_state = Table_State(window_width, window_height, layout);
-    // The snapshot may have been saved on another machine, so stored image
-    // paths can be stale; re-derive from card_designs on the current host.
-    // Older snapshots also saved cards with rect.width/height == 0 because
-    // the old renderer hardcoded CARD_WIDTH/HEIGHT for them; refresh those
-    // dimensions so the size-driven renderer can actually draw the card.
-    for (const auto& gc : gods_state.all_cards) {
-      Thing& card_thing     = table_state.things[gc.id];
-      card_thing.image_path = get_image_path(card_designs[gc.id]->name);
-    }
-    populate_stacks_from_gods_state(table_state, gods_state);
+    // // The saved layout is authoritative — if it disagrees with the saved
+    // // gods_state (e.g. the snapshot was taken while the user was rearranging
+    // // cards in playground mode), sync the game state to the layout rather
+    // // than overwriting the layout from gods_state.
+    // sync_game_state_from_table(
+    //   table_state, gods_state, (int)gods_state.all_cards.size()
+    // );
   }
 }
 
@@ -759,7 +763,7 @@ int main(int argc, char** argv) {
     menu_result.player_index,
     args.window_width,
     args.window_height,
-    true
+    args.load_from_disk
   );
 
   Gods_UI ui_state(args.window_width, args.window_height);
