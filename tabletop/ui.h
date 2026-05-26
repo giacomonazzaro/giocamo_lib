@@ -48,8 +48,8 @@ bool immediate_button(
 struct UI_State {
   // Persistent buttons drawn each frame by draw_buttons().
   std::unordered_map<int, Button> buttons;
-  // Highlight overlay keyed by choice index → kt card id.
-  std::unordered_map<int, int> highlighted_cards;
+  // Highlight overlay keyed by choice index → thing id.
+  std::unordered_map<int, int> highlighted_things;
   int                          window_width;
   int                          window_height;
   const Input*                 input = nullptr;

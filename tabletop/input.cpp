@@ -41,28 +41,27 @@ static const int s_watched_down[] = {
 };
 
 Input capture_input() {
-  Input in;
-  in.mouse_x       = GetMouseX();
-  in.mouse_y       = GetMouseY();
-  in.left_pressed  = IsMouseButtonPressed(MOUSE_BUTTON_LEFT);
-  in.left_released = IsMouseButtonReleased(MOUSE_BUTTON_LEFT);
+  Input input;
+  input.mouse_x       = GetMouseX();
+  input.mouse_y       = GetMouseY();
+  input.left_pressed  = IsMouseButtonPressed(MOUSE_BUTTON_LEFT);
+  input.left_released = IsMouseButtonReleased(MOUSE_BUTTON_LEFT);
   for (int k : s_watched_pressed) {
-    if (IsKeyPressed(k)) in.keys_pressed.push_back(k);
+    if (IsKeyPressed(k)) input.keys_pressed.push_back(k);
   }
   for (int k : s_watched_down) {
-    if (IsKeyDown(k)) in.keys_down.push_back(k);
+    if (IsKeyDown(k)) input.keys_down.push_back(k);
   }
   // Drain the typed-character queue. Menus need this for room-code input.
   int c;
   while ((c = GetCharPressed()) != 0) {
-    if (c >= 32 && c < 127) in.chars_typed.push_back((char)c);
+    if (c >= 32 && c < 127) input.chars_typed.push_back((char)c);
   }
-  return in;
+  return input;
 }
 
-bool stack_is_full(const Thing& stack) {
-  // True if the container has a capacity limit and has reached it.
-  return stack.capacity >= 0 && (int)stack.children.size() >= stack.capacity;
+bool is_full(const Thing& thing) {
+  return thing.capacity >= 0 && (int)thing.children.size() >= thing.capacity;
 }
 
 bool point_in_thing(
@@ -74,26 +73,11 @@ bool point_in_thing(
   );
 }
 
-bool point_in_card(float px, float py, int card_id, const Table_State& state) {
-  return point_in_thing(px, py, card_id, state);
-}
-
-bool card_pressed(int card_id, const Table_State& state, const Input& input) {
+bool thing_pressed(int thing_id, const Table_State& state, const Input& input) {
   if (!input.left_pressed) return false;
-  return point_in_card(
-    (float)input.mouse_x, (float)input.mouse_y, card_id, state
+  return point_in_thing(
+    (float)input.mouse_x, (float)input.mouse_y, thing_id, state
   );
-}
-
-bool point_in_stack_area(
-  float px, float py, int stack_id, const Table_State& state
-) {
-  // Use the stack's world rect (width/height are stored locally; world rect
-  // computes their world-space position).
-  Rectangle r = world_rect(stack_id, state);
-  float     h = (float)tt::CARD_HEIGHT;
-  // Match the original semantics: vertical span is one card height.
-  return (r.x <= px && px <= r.x + r.width && r.y <= py && py <= r.y + h);
 }
 
 // Reverse-DFS so the visually topmost (last-drawn) thing under (px, py) wins.
@@ -165,161 +149,161 @@ Thing_Location find_thing_at(float px, float py, const Table_State& state) {
 }
 
 void handle_mouse_press(Table_State& state, const Input& input) {
-  // Mouse pressed — begin drag if a card is under the cursor.
+  // Mouse pressed — begin drag on the thing under the cursor.
   float       mx   = (float)input.mouse_x;
   float       my   = (float)input.mouse_y;
   Drag_State& drag = state.drag_state;
 
   Thing_Location path = find_thing_at(mx, my, state);
-  // Need at least two elements (parent + card); clicking empty space returns an
+  // Need at least two elements (parent + child); clicking empty space returns an
   // empty path which would make path[size-2] undefined behavior.
   if (path.size() < 2) return;
 
-  int card_id  = path.back();
-  int stack_id = path[path.size() - 2];
+  int thing_id  = path.back();
+  int parent_id = path[path.size() - 2];
 
   drag.location       = std::move(path);
-  drag.current_stack  = stack_id;
-  drag.original_stack = stack_id;
+  drag.current_parent  = parent_id;
+  drag.original_parent = parent_id;
   // Drag offset in world coords so it's parent-agnostic during hover.
-  Vector2 card_world = local_to_world(card_id, state);
-  drag.offset_x      = mx - card_world.x;
-  drag.offset_y      = my - card_world.y;
+  Vector2 world_pos = local_to_world(thing_id, state);
+  drag.offset_x      = mx - world_pos.x;
+  drag.offset_y      = my - world_pos.y;
 }
 
 void handle_mouse_release(Table_State& state) {
   // Mouse released — finalize the drop.
   Drag_State& drag    = state.drag_state;
-  int         card_id = dragged_thing_id(drag);
-  if (card_id < 0) return;
+  int         thing_id = dragged_thing_id(drag);
+  if (thing_id < 0) return;
 
-  // Capture the card's current world position (where the user let go) so the
+  // Capture the thing.s current world position (where the user let go) so the
   // animation can lerp from that point — not from a stale rect that's about to
   // be reinterpreted in a different parent's coordinate space.
-  Vector2 card_world_at_release = local_to_world(card_id, state);
+  Vector2 world_at_release = local_to_world(thing_id, state);
 
-  bool allowed = state.is_drop_card_allowed(
-    drag.original_stack, drag.current_stack, card_id
+  bool allowed = state.is_drop_allowed(
+    drag.original_parent, drag.current_parent, thing_id
   );
 
   if (!allowed) {
     // Snap back: re-attach to original parent if we're floating without one.
-    if (drag.current_stack == -1) {
-      state.things[drag.original_stack].children.push_back(card_id);
+    if (drag.current_parent == -1) {
+      state.things[drag.original_parent].children.push_back(thing_id);
     }
   }
 
-  // Signal drop as (from_stack, to_stack, card_id).
-  state.dropped_card =
-    std::make_tuple(drag.original_stack, drag.current_stack, card_id);
+  // Signal drop as (from_parent, to_parent, thing_id).
+  state.dropped_thing =
+    std::make_tuple(drag.original_parent, drag.current_parent, thing_id);
 
-  int original_stack = drag.original_stack;
-  int current_stack  = drag.current_stack;
+  int original_parent = drag.original_parent;
+  int current_parent  = drag.current_parent;
   state.drag_state   = Drag_State();
 
-  // Re-layout the affected stacks. Skip root: its "layout" would smush all
+  // Re-layout the affected parents. Skip root: its "layout" would smush all
   // top-level zones together with its zero spread.
-  if (original_stack >= 0 && original_stack != state.root)
-    update_card_positions(original_stack, state, /*sort=*/true);
-  if (current_stack >= 0 && current_stack != original_stack &&
-      current_stack != state.root)
-    update_card_positions(current_stack, state, /*sort=*/true);
+  if (original_parent >= 0 && original_parent != state.root)
+    update_children_positions(original_parent, state, /*sort=*/true);
+  if (current_parent >= 0 && current_parent != original_parent &&
+      current_parent != state.root)
+    update_children_positions(current_parent, state, /*sort=*/true);
 
   // Re-anchor the smoothed world transform to where the user released, so
-  // the lerp glides from there into the new stack's slot.
-  if (card_id >= 0 && card_id < (int)state.animated_world.size()) {
-    state.animated_world[card_id].x = card_world_at_release.x;
-    state.animated_world[card_id].y = card_world_at_release.y;
+  // the lerp glides from there into the new parent.s slot.
+  if (thing_id >= 0 && thing_id < (int)state.animated_world.size()) {
+    state.animated_world[thing_id].x = world_at_release.x;
+    state.animated_world[thing_id].y = world_at_release.y;
   }
 }
 
 void handle_mouse_move(Table_State& state, const Input& input) {
-  // Continuously update dragged card position.
+  // Continuously update the dragged thing.s position.
   Drag_State& drag    = state.drag_state;
-  int         card_id = dragged_thing_id(drag);
-  if (card_id < 0) return;
+  int         thing_id = dragged_thing_id(drag);
+  if (thing_id < 0) return;
 
   float mx = (float)input.mouse_x;
   float my = (float)input.mouse_y;
 
-  // Target world position for the dragged card.
+  // Target world position for the dragged thing.
   float target_world_x = mx - drag.offset_x;
   float target_world_y = my - drag.offset_y;
 
   auto location      = find_thing_at(mx, my, state);
-  int  hovered_stack = location.empty() ? -1 : location.back();
+  int  hovered = location.empty() ? -1 : location.back();
   // Don't reparent the dragged thing into itself — would create a cycle in
   // the scene tree.
-  if (hovered_stack == card_id) hovered_stack = -1;
+  if (hovered == thing_id) hovered = -1;
 
-  if (hovered_stack >= 0 && drag.last_hovered_stack != hovered_stack) {
-    // Reparent: remove from current stack, optionally add to hovered stack.
-    if (drag.current_stack >= 0) {
-      auto& cur = state.things[drag.current_stack].children;
-      auto  it  = std::find(cur.begin(), cur.end(), card_id);
+  if (hovered >= 0 && drag.last_hovered_parent != hovered) {
+    // Reparent: detach from the old parent, optionally attach to the hovered one.
+    if (drag.current_parent >= 0) {
+      auto& cur = state.things[drag.current_parent].children;
+      auto  it  = std::find(cur.begin(), cur.end(), thing_id);
       if (it != cur.end()) {
         cur.erase(it);
-        update_card_positions(drag.current_stack, state, /*sort=*/true);
+        update_children_positions(drag.current_parent, state, /*sort=*/true);
       }
     }
 
-    Thing& hovered = state.things[hovered_stack];
+    Thing& hovered_thing = state.things[hovered];
     bool   allowed =
-      state.is_drop_card_allowed(drag.original_stack, hovered_stack, card_id);
-    bool full = stack_is_full(hovered);
+      state.is_drop_allowed(drag.original_parent, hovered, thing_id);
+    bool full = is_full(hovered_thing);
 
     if (allowed && !full) {
-      hovered.children.push_back(card_id);
-      update_card_positions(hovered_stack, state, /*sort=*/true);
-      drag.current_stack = hovered_stack;
+      hovered_thing.children.push_back(thing_id);
+      update_children_positions(hovered, state, /*sort=*/true);
+      drag.current_parent = hovered;
     } else {
-      drag.current_stack = -1;
+      drag.current_parent = -1;
     }
   }
 
-  if (hovered_stack >= 0) {
-    update_card_positions(hovered_stack, state, /*sort=*/true);
-    drag.last_hovered_stack = hovered_stack;
+  if (hovered >= 0) {
+    update_children_positions(hovered, state, /*sort=*/true);
+    drag.last_hovered_parent = hovered;
   }
 
-  // Now position the card under the cursor — convert world → local of parent.
-  Thing& card   = state.things[card_id];
-  int parent_id = (drag.current_stack >= 0) ? drag.current_stack : state.root;
+  // Now position the dragged thing under the cursor — convert world → local of parent.
+  Thing& thing   = state.things[thing_id];
+  int parent_id = (drag.current_parent >= 0) ? drag.current_parent : state.root;
   Vector2 parent_world = local_to_world(parent_id, state);
-  card.rect.x          = target_world_x - parent_world.x;
-  card.rect.y          = target_world_y - parent_world.y;
+  thing.rect.x          = target_world_x - parent_world.x;
+  thing.rect.y          = target_world_y - parent_world.y;
 }
 
-void handle_rotate_card(
+void handle_rotate_thing(
   Table_State& state, const Input& input, bool clockwise
 ) {
-  // Rotate the card under the cursor by 90 degrees.
+  // Rotate the thing under the cursor by 90 degrees.
   float mx = (float)input.mouse_x;
   float my = (float)input.mouse_y;
 
   auto path = find_thing_at(mx, my, state);
   if (path.empty()) return;
 
-  int    card_id = path.back();
-  Thing& card    = state.things[card_id];
+  int    thing_id = path.back();
+  Thing& thing    = state.things[thing_id];
   if (clockwise)
-    card.rotation = card.rotation + 90;
+    thing.rotation = thing.rotation + 90;
   else
-    card.rotation = card.rotation - 90;
+    thing.rotation = thing.rotation - 90;
 }
 
-void shuffle_stack(Table_State& state, int stack_id) {
-  if (stack_id < 0) return;
+void shuffle_thing(Table_State& state, int parent_id) {
+  if (parent_id < 0) return;
 
-  Thing&              stack = state.things[stack_id];
+  Thing&              thing = state.things[parent_id];
   static std::mt19937 rng{std::random_device{}()};
-  std::shuffle(stack.children.begin(), stack.children.end(), rng);
-  update_card_positions(stack_id, state, /*sort=*/false);
+  std::shuffle(thing.children.begin(), thing.children.end(), rng);
+  update_children_positions(parent_id, state, /*sort=*/false);
 }
 
 void process_input(Table_State& state, const Input& input) {
   // Per-frame input processing.
-  state.dropped_card = std::nullopt;
+  state.dropped_thing = std::nullopt;
 
   if (input.left_pressed) {
     handle_mouse_press(state, input);
@@ -332,22 +316,22 @@ void process_input(Table_State& state, const Input& input) {
   bool shift = key_down(input, KEY_LEFT_SHIFT) ||
                key_down(input, KEY_RIGHT_SHIFT);
   if (key_pressed(input, KEY_R)) {
-    handle_rotate_card(state, input, /*clockwise=*/!shift);
+    handle_rotate_thing(state, input, /*clockwise=*/!shift);
   }
 
   float mx = (float)input.mouse_x;
   float my = (float)input.mouse_y;
 
   if (key_down(input, KEY_SPACE)) {
-    state.zoomed_card_id = find_thing_at(mx, my, state);
+    state.zoomed_thing_id = find_thing_at(mx, my, state);
   } else {
-    state.zoomed_card_id.clear();
+    state.zoomed_thing_id.clear();
   }
 
   if (key_pressed(input, KEY_S)) {
     auto location = find_thing_at(mx, my, state);
     if (!location.empty()) {
-      shuffle_stack(state, location.back());
+      shuffle_thing(state, location.back());
     }
   }
 }

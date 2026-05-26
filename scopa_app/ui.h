@@ -8,7 +8,8 @@
 #include <tabletop/models.h>
 #include <tabletop/ui.h>
 
-// Stack offsets from num_cards (add num_cards to get thing_ids).
+// Stack offsets from the first stack thing-id (add the stacks_offset to get
+// the absolute thing_id).
 constexpr int SCOPA_HAND_0       = 0;
 constexpr int SCOPA_HAND_1       = 1;
 constexpr int SCOPA_CAPTURED_0   = 2;

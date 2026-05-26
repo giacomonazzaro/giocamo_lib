@@ -134,7 +134,7 @@ make_card_draw_callback(
       render_text(slbl, (float)(w / 2 - sw / 2), h * 0.55f, suit_size, col);
 
       // Highlight border for legal cards.
-      if (ui_state.highlighted_cards.count(id) > 0) {
+      if (ui_state.highlighted_things.count(id) > 0) {
         DrawRectangleRoundedLinesEx(
           Rectangle{0.0f, 0.0f, (float)w, (float)h},
           0.18f,

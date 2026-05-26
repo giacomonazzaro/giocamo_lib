@@ -8,10 +8,10 @@
 #include <variant>
 
 void sync_game_state_from_table(
-  Table_State& table_state, Game_State& gods_state
+  Table_State& table_state, Game_State& gods_state, int stacks_offset
 ) {
   for (int i = 0; i < 2; ++i) {
-    Stack_Indices s               = stack_indices(i, table_state);
+    Stack_Indices s               = stack_indices(i, stacks_offset);
     gods_state.players[i].deck    = table_state.things[s.deck].children;
     gods_state.players[i].hand    = table_state.things[s.hand].children;
     gods_state.players[i].discard = table_state.things[s.discard].children;
@@ -25,14 +25,16 @@ void sync_game_state_from_table(
   }
 }
 
-void update_stacks(Table_State& table_state, Game_State& gods_state) {
+void update_stacks(
+  Table_State& table_state, Game_State& gods_state, int stacks_offset
+) {
   auto refresh = [&](int stack_id, const std::vector<int>& card_ids) {
     table_state.things[stack_id].children = card_ids;
-    update_card_positions(stack_id, table_state, /*sort=*/false);
+    update_children_positions(stack_id, table_state, /*sort=*/false);
   };
 
   for (int i = 0; i < 2; ++i) {
-    Stack_Indices s = stack_indices(i, table_state);
+    Stack_Indices s = stack_indices(i, stacks_offset);
     refresh(s.deck, gods_state.players[i].deck);
     refresh(s.hand, gods_state.players[i].hand);
     refresh(s.discard, gods_state.players[i].discard);
@@ -52,22 +54,22 @@ int Agent_UI::choose_action(Game& state, const Choice& choice) {
   int total_options = action_options_count(action_type);
   if (total_options == 1 && choice.description != "main") return 0;
 
-  Stack_Indices my_zones   = stack_indices(choice.player_index, *table_state);
+  Stack_Indices my_zones   = stack_indices(choice.player_index, stacks_offset);
   int           hand_stack = my_zones.hand;
   int           play_stack = my_zones.wonders;
 
   // Set drag-and-drop permission (safe to call every frame).
-  table_state->is_drop_card_allowed = [hand_stack,
+  table_state->is_drop_allowed = [hand_stack,
                                        play_stack](int src, int dst, int) {
     if (src == dst) return true;
     return src == hand_stack && dst == play_stack;
   };
 
   // Clear highlights — repopulated below for this frame.
-  ui_state->highlighted_cards.clear();
+  ui_state->highlighted_things.clear();
 
   // Handle dropped card (drag-and-drop to play from hand).
-  auto dropped = table_state->poll_dropped_card();
+  auto dropped = table_state->poll_dropped_thing();
   if (dropped) {
     auto [orig, target, dropped_card_id] = *dropped;
     if (choice.description == "main" && orig == hand_stack &&
@@ -125,16 +127,16 @@ int Agent_UI::choose_action(Game& state, const Choice& choice) {
       Card_Id cid = unpack_card_id(cc->targets[i]);
       if (Card_Id::is_null(cid)) {
         if (immediate_button(button, done_label, input)) {
-          ui_state->highlighted_cards.clear();
+          ui_state->highlighted_things.clear();
           return i;
         }
         button.x += button.width + (float)gap;
       } else {
         int kt_card_id                 = gods_state.get_card(cid).id;
-        ui_state->highlighted_cards[i] = kt_card_id;
+        ui_state->highlighted_things[i] = kt_card_id;
         if (mouse_clicked && choice.description != "main") {
-          if (card_pressed(kt_card_id, *table_state, input)) {
-            ui_state->highlighted_cards.clear();
+          if (thing_pressed(kt_card_id, *table_state, input)) {
+            ui_state->highlighted_things.clear();
             return i;
           }
         }
@@ -167,9 +169,9 @@ int Agent_UI::choose_action(Game& state, const Choice& choice) {
     for (const Card_Id& cid : all_card_ids) {
       int kt_card_id = gods_state.get_card(cid).id;
       if (card_multiselection.find(cid) == card_multiselection.end()) {
-        ui_state->highlighted_cards[kt_card_id] = kt_card_id;
+        ui_state->highlighted_things[kt_card_id] = kt_card_id;
         if (frame_mouse_clicked) {
-          if (card_pressed(kt_card_id, *table_state, input)) {
+          if (thing_pressed(kt_card_id, *table_state, input)) {
             card_multiselection.insert(cid);
             frame_mouse_clicked = 0;
           }
@@ -196,7 +198,7 @@ int Agent_UI::choose_action(Game& state, const Choice& choice) {
           // Without combination decoding we resolve by trial; fallback to 0.
           (void)idx;
         }
-        ui_state->highlighted_cards.clear();
+        ui_state->highlighted_things.clear();
         card_multiselection.clear();
         return 0;
       }

@@ -31,7 +31,7 @@ static Table_State init_table_state(
   bool               show_opponent_hand
 ) {
   Table_State table;
-  table.is_drop_card_allowed = [](int, int, int) { return false; };
+  table.is_drop_allowed = [](int, int, int) { return false; };
 
   // One Thing per card; ids 0..39 match all_cards indices.
   for (const auto& card : state.all_cards) {
@@ -46,7 +46,6 @@ static Table_State init_table_state(
     table.draw_callbacks[card.id] =
       make_card_draw_callback(state, ui_state, card.id);
   }
-  table.num_cards = (int)table.things.size();
 
   // 6 stack Things appended after cards.
   std::vector<Thing> stacks =
@@ -59,7 +58,7 @@ static Table_State init_table_state(
   }
 
   // Populate stack children from game state.
-  int base                                       = table.num_cards;
+  int base                                       = (int)state.all_cards.size();
   table.things[base + SCOPA_HAND_0].children     = state.players[0].hand;
   table.things[base + SCOPA_HAND_1].children     = state.players[1].hand;
   table.things[base + SCOPA_CAPTURED_0].children = state.players[0].captured;
@@ -77,17 +76,17 @@ static Table_State init_table_state(
   table.root = root.id;
 
   for (int stack_id : stack_ids) {
-    update_card_positions(stack_id, table, false);
+    update_children_positions(stack_id, table, false);
   }
   return table;
 }
 
 static void update_stacks(Table_State& table, scopa::Game_State& state) {
-  int  base    = table.num_cards;
+  int  base    = (int)state.all_cards.size();
   auto refresh = [&](int idx, const std::vector<int>& cards) {
     int stack_id                    = base + idx;
     table.things[stack_id].children = cards;
-    update_card_positions(stack_id, table, false);
+    update_children_positions(stack_id, table, false);
   };
   refresh(SCOPA_HAND_0, state.players[0].hand);
   refresh(SCOPA_HAND_1, state.players[1].hand);
@@ -205,7 +204,9 @@ int main(int argc, char** argv) {
   Table_State       table =
     init_table_state(state, ui_state, bottom_player, show_opponent_hand);
 
-  auto   agent_ui = Scopa_Agent_UI(&table, &ui_state, player_index);
+  auto   agent_ui = Scopa_Agent_UI(
+    &table, &ui_state, player_index, (int)state.all_cards.size()
+  );
   Agent* agent    = make_agent(&agent_ui, vs_ai, player_index);
 
   play_scopa(state, table, ui_state, *agent, bottom_player);

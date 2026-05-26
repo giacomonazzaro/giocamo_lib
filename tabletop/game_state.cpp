@@ -6,7 +6,7 @@
 #include "raylib.h"
 
 int find_parent(int thing_id, const Table_State& state) {
-  // Linear scan: tree depth is small (2) and total things is in the hundreds.
+  // Linear scan: tree depth is small and total things is in the hundreds.
   for (int i = 0; i < (int)state.things.size(); ++i) {
     const auto& children = state.things[i].children;
     if (std::find(children.begin(), children.end(), thing_id) != children.end())
@@ -35,15 +35,14 @@ Rectangle world_rect(int thing_id, const Table_State& state) {
   return Rectangle{p.x, p.y, t.rect.width, t.rect.height};
 }
 
-void update_card_positions(int stack_id, Table_State& state, bool sort) {
-  // Set each child's local rect (x, y) within the stack based on spread.
-  Thing& stack = state.things[stack_id];
-  size_t n     = stack.children.size();
+void update_children_positions(int parent_id, Table_State& state, bool sort) {
+  Thing& parent = state.things[parent_id];
+  size_t n      = parent.children.size();
 
   if (sort && n > 0) {
     // Sort children by their current local x position.
     std::sort(
-      stack.children.begin(), stack.children.end(), [&state](int a, int b) {
+      parent.children.begin(), parent.children.end(), [&state](int a, int b) {
         return state.things[a].rect.x < state.things[b].rect.x;
       }
     );
@@ -51,35 +50,34 @@ void update_card_positions(int stack_id, Table_State& state, bool sort) {
 
   if (n == 0) return;
 
-  float spread_x   = stack.spread_x;
-  float spread_y   = stack.spread_y;
-  float card_width = static_cast<float>(tt::CARD_WIDTH);
+  float spread_x   = parent.spread_x;
+  float spread_y   = parent.spread_y;
+  float child_width = static_cast<float>(tt::CARD_WIDTH);
 
-  // Adaptive spread: shrink if cards would exceed stack width.
-  if (n > 1 && stack.rect.width > 0.0f && spread_x != 0.0f) {
-    float total_width = static_cast<float>(n - 1) * spread_x + card_width;
-    if (total_width > stack.rect.width) {
-      spread_x = (stack.rect.width - card_width) / static_cast<float>(n - 1);
+  // Adaptive spread: shrink if children would exceed the parent's width.
+  if (n > 1 && parent.rect.width > 0.0f && spread_x != 0.0f) {
+    float total_width = static_cast<float>(n - 1) * spread_x + child_width;
+    if (total_width > parent.rect.width) {
+      spread_x = (parent.rect.width - child_width) / static_cast<float>(n - 1);
     }
   }
 
   float total_spread_x = (n > 1) ? static_cast<float>(n - 1) * spread_x : 0.0f;
   float total_spread_y = (n > 1) ? static_cast<float>(n - 1) * spread_y : 0.0f;
 
-  // In local space: center horizontally inside the stack's rect.
-  float mid_x_local   = (stack.rect.width > 0.0f) ? stack.rect.width / 2.0f
-                                                  : 0.0f;
-  float start_x_local = mid_x_local - (total_spread_x + card_width) / 2.0f;
-  // Vertical: cards float around the stack's top edge as in the original.
+  // In local space: center horizontally inside the parent's rect.
+  float mid_x_local   = (parent.rect.width > 0.0f) ? parent.rect.width / 2.0f
+                                                   : 0.0f;
+  float start_x_local = mid_x_local - (total_spread_x + child_width) / 2.0f;
   float start_y_local = -total_spread_y / 2.0f;
 
   int drag_id = dragged_thing_id(state.drag_state);
   for (int i = 0; i < (int)n; i++) {
-    int card_id = stack.children[i];
-    if (card_id != drag_id) {
-      Thing& card = state.things[card_id];
-      card.rect.x = start_x_local + static_cast<float>(i) * spread_x;
-      card.rect.y = start_y_local + static_cast<float>(i) * spread_y;
+    int child_id = parent.children[i];
+    if (child_id != drag_id) {
+      Thing& child = state.things[child_id];
+      child.rect.x = start_x_local + static_cast<float>(i) * spread_x;
+      child.rect.y = start_y_local + static_cast<float>(i) * spread_y;
     }
   }
 }

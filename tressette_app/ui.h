@@ -8,7 +8,8 @@
 #include <tabletop/ui.h>
 #include <tressette/models.h>
 
-// Stack offsets from num_cards (add num_cards to get thing_ids).
+// Stack offsets from the first stack thing-id (add stacks_offset to get
+// the absolute thing_id).
 constexpr int TRESSETTE_HAND_0    = 0;
 constexpr int TRESSETTE_HAND_1    = 1;
 constexpr int TRESSETTE_TRICKS_0  = 2;

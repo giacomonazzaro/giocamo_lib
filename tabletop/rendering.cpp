@@ -192,9 +192,9 @@ void draw_background(const Input& input, float turn) {
   EndShaderMode();
 }
 
-// --- draw_card_back ---
+// --- draw_thing_back ---
 
-void draw_card_back() {
+void draw_thing_back() {
   float x = 0.0f;
   float y = 0.0f;
   float w = (float)tt::CARD_WIDTH;
@@ -228,26 +228,26 @@ void draw_card_back() {
 
 // --- draw_thing ---
 
-void draw_thing(const Thing& card, bool face_up) {
+void draw_thing(const Thing& thing, bool face_up) {
   if (!face_up) {
-    draw_card_back();
+    draw_thing_back();
     return;
   }
 
   float x = 0.0f;
   float y = 0.0f;
-  float w = card.rect.width;
-  float h = card.rect.height;
+  float w = thing.rect.width;
+  float h = thing.rect.height;
   float r = (float)tt::CARD_CORNER_RADIUS;
 
   // Thing background: image with rounded corners, or solid color fallback.
   Texture2D* texture = nullptr;
-  if (!card.image_path.empty()) {
-    texture = get_rounded_texture(card.image_path);
+  if (!thing.image_path.empty()) {
+    texture = get_rounded_texture(thing.image_path);
   }
 
   if (texture) {
-    // Draw image scaled to fill the card.
+    // Draw image scaled to fill the thing.
     Rectangle source_rect = {
       0.0f, 0.0f, (float)texture->width, (float)texture->height
     };
@@ -258,16 +258,16 @@ void draw_thing(const Thing& card, bool face_up) {
   } else if (w > 0.0f && h > 0.0f) {
     // Fallback: solid color background sized to the thing's own rect.
     DrawRectangleRounded(
-      Rectangle{x, y, w, h}, r / std::min(w, h), 8, card.color
+      Rectangle{x, y, w, h}, r / std::min(w, h), 8, thing.color
     );
   }
 }
 
-// --- draw_stack_placeholder ---
+// --- draw_drop_placeholder ---
 
-void draw_stack_placeholder(int stack_id, const Table_State& state) {
+void draw_drop_placeholder(int thing_id, const Table_State& state) {
   // Drawn in world coords (overlay, not part of the DFS tree walk).
-  Rectangle r_world = world_rect(stack_id, state);
+  Rectangle r_world = world_rect(thing_id, state);
   float     w       = (float)tt::CARD_WIDTH;
   float     h       = (float)tt::CARD_HEIGHT;
   float     r       = (float)tt::CARD_CORNER_RADIUS;
@@ -276,7 +276,7 @@ void draw_stack_placeholder(int stack_id, const Table_State& state) {
     r_world, r / std::min(w, h), 8, 1.0f, Color{100, 100, 100, 100}
   );
 
-  const std::string& label   = state.things[stack_id].name;
+  const std::string& label   = state.things[thing_id].name;
   int                label_w = text_width(label, 14);
   render_text(
     label,
@@ -291,7 +291,7 @@ void draw_stack_placeholder(int stack_id, const Table_State& state) {
 
 // World transform of every thing, computed by walking the tree and summing
 // (x, y, rotation) down each chain. Treating composition as plain addition
-// works here because no parent rotates in this codebase — only leaf cards.
+// works here because no parent rotates in this codebase — only leaf things.
 static void compute_world(
   int                           id,
   const World_Transform&        parent,
@@ -311,7 +311,7 @@ void animate(
   std::vector<World_Transform> target(n);
   compute_world(state.root, World_Transform{}, state.things, target);
 
-  // First frame (or size change): snap so cards don't lurch in from (0,0).
+  // First frame (or size change): snap so things do not lurch in from (0,0).
   if ((int)animated.size() != n) animated = target;
 
   const int dragged = dragged_thing_id(state.drag_state);
@@ -369,33 +369,33 @@ static void draw_thing_world(
   }
 }
 
-// --- draw_zoomed_card ---
+// --- draw_zoomed_thing ---
 
-void draw_zoomed_card(const Thing& card, bool face_up) {
+void draw_zoomed_thing(const Thing& thing, bool face_up) {
   int screen_w = GetScreenWidth();
   int screen_h = GetScreenHeight();
 
   // Dim background.
   DrawRectangle(0, 0, screen_w, screen_h, Color{0, 0, 0, 160});
 
-  float card_w = (float)tt::CARD_WIDTH;
-  float card_h = (float)tt::CARD_HEIGHT;
+  float thing_w = (float)tt::CARD_WIDTH;
+  float thing_h = (float)tt::CARD_HEIGHT;
   float margin = 40.0f;
 
-  // Scale card to fill screen with some margin.
+  // Scale to fill the screen with some margin.
   float scale = std::min(
-    ((float)screen_w - 2.0f * margin) / card_w,
-    ((float)screen_h - 2.0f * margin) / card_h
+    ((float)screen_w - 2.0f * margin) / thing_w,
+    ((float)screen_h - 2.0f * margin) / thing_h
   );
 
   // Center on screen.
-  float cx = ((float)screen_w - card_w * scale) / 2.0f;
-  float cy = ((float)screen_h - card_h * scale) / 2.0f;
+  float cx = ((float)screen_w - thing_w * scale) / 2.0f;
+  float cy = ((float)screen_h - thing_h * scale) / 2.0f;
 
   rlPushMatrix();
   rlTranslatef(cx, cy, 0.0f);
   rlScalef(scale, scale, 1.0f);
-  draw_thing(card, face_up);
+  draw_thing(thing, face_up);
   rlPopMatrix();
 }
 
@@ -404,10 +404,10 @@ void draw_zoomed_card(const Thing& card, bool face_up) {
 void draw_table(Table_State& state, const Input& input) {
   animate(state.animated_world, state, 0.1f);
 
-  // Highlight the hovered stack while dragging.
-  if (state.drag_state.current_stack != -1 &&
-      state.drag_state.current_stack != state.root) {
-    draw_stack_placeholder(state.drag_state.current_stack, state);
+  // Highlight the hovered drop target while dragging.
+  if (state.drag_state.current_parent != -1 &&
+      state.drag_state.current_parent != state.root) {
+    draw_drop_placeholder(state.drag_state.current_parent, state);
   }
 
   // Depth-sort root's children so layered draw order is preserved.
@@ -420,11 +420,11 @@ void draw_table(Table_State& state, const Input& input) {
     draw_thing_world(child_id, state, root_thing.face_up, input);
   }
 
-  // Dragged card overlay: drawn last so it sits above everything else.
+  // Dragged thing overlay: drawn last so it sits above everything else.
   int dragged = dragged_thing_id(state.drag_state);
   if (dragged >= 0) {
     bool face_up = true;
-    int  orig    = state.drag_state.original_stack;
+    int  orig    = state.drag_state.original_parent;
     if (orig >= 0 && orig != state.root) face_up = state.things[orig].face_up;
     rlPushMatrix();
     apply_world_transform(state.animated_world[dragged], state.things[dragged]);
@@ -441,15 +441,15 @@ void draw_table(Table_State& state, const Input& input) {
     hud_it->second(state, input, true);
   }
 
-  // Zoomed card on top of everything. zoomed_card_id is a path [root, ...,
-  // card] when set; its direct parent (path[size-2]) is the owning stack.
-  if (!state.zoomed_card_id.empty()) {
-    int  card_id = state.zoomed_card_id.back();
+  // Zoomed thing on top of everything. zoomed_thing_id is a path [root, ...,
+  // thing] when set; its direct parent (path[size-2]) is the owning parent.
+  if (!state.zoomed_thing_id.empty()) {
+    int  thing_id = state.zoomed_thing_id.back();
     bool face_up = true;
-    if (state.zoomed_card_id.size() >= 2) {
-      int owner = state.zoomed_card_id[state.zoomed_card_id.size() - 2];
+    if (state.zoomed_thing_id.size() >= 2) {
+      int owner = state.zoomed_thing_id[state.zoomed_thing_id.size() - 2];
       face_up   = state.things[owner].face_up;
     }
-    draw_zoomed_card(state.things[card_id], face_up);
+    draw_zoomed_thing(state.things[thing_id], face_up);
   }
 }

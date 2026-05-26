@@ -8,5 +8,6 @@ int       find_parent(int thing_id, const Table_State& state);
 Vector2   local_to_world(int thing_id, const Table_State& state);
 Rectangle world_rect(int thing_id, const Table_State& state);
 
-// Reflow a stack's children into their slot positions based on spread.
-void update_card_positions(int stack_id, Table_State& state, bool sort);
+// Reflow a thing's children into their slot positions based on the parent's
+// spread_x / spread_y.
+void update_children_positions(int parent_id, Table_State& state, bool sort);

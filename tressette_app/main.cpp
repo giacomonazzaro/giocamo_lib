@@ -34,7 +34,7 @@ static Table_State init_table_state(
   bool                   show_opponent_hand
 ) {
   auto table                 = Table_State();
-  table.is_drop_card_allowed = [](int, int, int) { return false; };
+  table.is_drop_allowed = [](int, int, int) { return false; };
 
   // One Thing per card; ids 0..39 match all_cards indices.
   for (const auto& c : state.all_cards) {
@@ -49,7 +49,6 @@ static Table_State init_table_state(
     table.things.push_back(t);
     table.draw_callbacks[c.id] = make_card_draw_callback(state, ui_state, c.id);
   }
-  table.num_cards = (int)table.things.size();
 
   // 6 stack Things appended after cards.
   std::vector<Thing> stacks =
@@ -62,7 +61,7 @@ static Table_State init_table_state(
   }
 
   // Populate stack children from game state.
-  int base                                       = table.num_cards;
+  int base                                       = (int)state.all_cards.size();
   table.things[base + TRESSETTE_HAND_0].children = state.players[0].hand;
   table.things[base + TRESSETTE_HAND_1].children = state.players[1].hand;
   table.things[base + TRESSETTE_TRICKS_0].children =
@@ -82,17 +81,17 @@ static Table_State init_table_state(
   table.root = root.id;
 
   for (int sid : stack_ids) {
-    update_card_positions(sid, table, false);
+    update_children_positions(sid, table, false);
   }
   return table;
 }
 
 static void update_stacks(Table_State& table, tressette::Game_State& state) {
-  int  base    = table.num_cards;
+  int  base    = (int)state.all_cards.size();
   auto refresh = [&](int idx, const std::vector<int>& cards) {
     int sid                    = base + idx;
     table.things[sid].children = cards;
-    update_card_positions(sid, table, false);
+    update_children_positions(sid, table, false);
   };
   refresh(TRESSETTE_HAND_0, state.players[0].hand);
   refresh(TRESSETTE_HAND_1, state.players[1].hand);
@@ -252,7 +251,9 @@ int main(int argc, char** argv) {
   Table_State table =
     init_table_state(state, ui_state, bottom_player, show_opponent_hand);
 
-  auto agent_ui = Tressette_Agent_UI(&table, &ui_state, player_index);
+  auto agent_ui = Tressette_Agent_UI(
+    &table, &ui_state, player_index, (int)state.all_cards.size()
+  );
 
   Agent* agent = make_agent(&agent_ui, vs_ai, online, player_index);
 

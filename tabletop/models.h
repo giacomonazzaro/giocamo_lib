@@ -50,8 +50,8 @@ VISITABLE_STRUCT(
 using Thing_Location = std::vector<int>;
 
 // A thing's pose in the global frame of the table. The animation pipeline
-// works in this space so that re-parenting (e.g. a card moving from the
-// table stack into a player's captured pile) is just a target swap rather
+// works in this space so that re-parenting (e.g. a thing moving from one
+// parent into another) is just a target swap rather
 // than a coord-system swap. The renderer consumes these directly.
 struct World_Transform {
   float x        = 0.0f;
@@ -64,9 +64,9 @@ struct Drag_State {
   // Root-to-thing path captured when the drag started. Empty when no drag
   // is in progress.
   Thing_Location location;
-  int            current_stack      = -1;
-  int            last_hovered_stack = -1;
-  int            original_stack     = -1;
+  int            current_parent      = -1;
+  int            last_hovered_parent = -1;
+  int            original_parent     = -1;
   float          offset_x = 0.0f, offset_y = 0.0f;
 };
 
@@ -88,16 +88,10 @@ struct Table_State : Table_Layout {
   int width  = 0;
   int height = 0;
 
-  // TODO: Remove, here we don't have assumptions about the fact that there are
-  // cards.
-  int num_cards = 0;  // Cards occupy ids [0, num_cards).
-
-  //
   Drag_State                   drag_state;
-  std::vector<World_Transform> animated_world;  // Smoothed world transform
-                                                // per thing, same indexing as
-                                                // `things`. The renderer
-                                                // reads these directly.
+  // Smoothed world transform per thing, same indexing as `things`. The
+  // renderer reads these directly.
+  std::vector<World_Transform> animated_world;
   // HUD/per-thing draw callbacks. Receive Input so they can run immediate-mode
   // buttons against the recorded/replayed input stream. The bool argument is
   // the face_up flag of the thing being decorated (true for the HUD slot).
@@ -105,16 +99,16 @@ struct Table_State : Table_Layout {
     int,
     std::function<void(const Table_State&, const Input&, bool)>>
                                      draw_callbacks;
-  Thing_Location                     zoomed_card_id;
-  std::function<bool(int, int, int)> is_drop_card_allowed;
+  Thing_Location                     zoomed_thing_id;
+  std::function<bool(int, int, int)> is_drop_allowed;
 
-  // (src_stack, dst_stack, card_id) after a drop.
-  std::optional<std::tuple<int, int, int>> dropped_card;
+  // (from_parent, to_parent, thing_id) after a drop.
+  std::optional<std::tuple<int, int, int>> dropped_thing;
 
-  // Returns dropped_card and resets it to nullopt (consume-once event poll).
-  inline std::optional<std::tuple<int, int, int>> poll_dropped_card() {
-    auto result  = dropped_card;
-    dropped_card = std::nullopt;
+  // Returns dropped_thing and resets it to nullopt (consume-once event poll).
+  inline std::optional<std::tuple<int, int, int>> poll_dropped_thing() {
+    auto result   = dropped_thing;
+    dropped_thing = std::nullopt;
     return result;
   }
 
@@ -123,5 +117,5 @@ struct Table_State : Table_Layout {
       : Table_Layout(layout)
       , width(width)
       , height(height)
-      , is_drop_card_allowed([](int, int, int) { return true; }) {}
+      , is_drop_allowed([](int, int, int) { return true; }) {}
 };

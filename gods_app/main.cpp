@@ -153,14 +153,14 @@ void populate_stacks_from_gods_state(
 
   // Lay out cards inside each stack.
   for (int stack_id : table_state.things[table_state.root].children) {
-    update_card_positions(stack_id, table_state, /*sort=*/false);
+    update_children_positions(stack_id, table_state, /*sort=*/false);
   }
 }
 
 // Build the initial Table_Layout. Things are laid out:
-//   [0, num_cards)            cards aligned 1:1 with gods_state.all_cards
-//   [num_cards, num_cards+11) the 11 stacks from make_gods_stacks
-//   num_cards + 11            the root, whose children are all stacks
+//   [0, N)                    cards aligned 1:1 with gods_state.all_cards
+//   [N, N+11)                 the 11 stacks from make_gods_stacks
+//   N + 11                    the root, whose children are all stacks
 void init_table_layout(
   Table_State& table_state,
   Game_State&  gods_state,
@@ -203,7 +203,7 @@ void init_table_layout(
 }
 
 // Initialize the non-layout state on top of an already-built Table_Layout:
-// num_cards and the per-card draw callbacks.
+// the per-card draw callbacks.
 void init_card_draw_callbacks(
   Table_State&      table_state,
   const Game_State& gods_state,
@@ -222,7 +222,7 @@ void init_card_draw_callbacks(
         }
         int w = tt::CARD_WIDTH;
         int h = tt::CARD_HEIGHT;
-        for (const auto& [k, kt_card_id] : ui_state.highlighted_cards) {
+        for (const auto& [k, kt_card_id] : ui_state.highlighted_things) {
           if (kt_card_id == id) {
             DrawRectangleRoundedLinesEx(
               Rectangle{0.0f, 0.0f, (float)w, (float)h},
@@ -285,11 +285,11 @@ static void draw_hud(
   if (immediate_button(button, label, input, Color{20, 20, 20, 100})) {
     ui_state.playground = !ui_state.playground;
     if (!ui_state.playground) {
-      sync_game_state_from_table(*table_state, gods_state);
+      sync_game_state_from_table(*table_state, gods_state, (int)gods_state.all_cards.size());
       ui_state.power_edit_card_id = -1;
     } else {
-      table_state->is_drop_card_allowed = [](int, int, int) { return true; };
-      ui_state.highlighted_cards.clear();
+      table_state->is_drop_allowed = [](int, int, int) { return true; };
+      ui_state.highlighted_things.clear();
     }
   }
 
@@ -341,7 +341,7 @@ static void draw_hud(
               window, tt::CARD_WIDTH, tt::CARD_HEIGHT, "right", "center", 10
             );
       s.rect = target;
-      update_card_positions(child_id, *table_state, false);
+      update_children_positions(child_id, *table_state, false);
       break;
     }
   }
@@ -412,9 +412,9 @@ static void play_gods(
       auto path = find_thing_at(
         (float)frame_input.mouse_x, (float)frame_input.mouse_y, table_state
       );
-      table_state.zoomed_card_id = std::move(path);
+      table_state.zoomed_thing_id = std::move(path);
     } else {
-      table_state.zoomed_card_id.clear();
+      table_state.zoomed_thing_id.clear();
     }
 
     process_input(table_state, frame_input);
@@ -476,14 +476,14 @@ static void play_gods(
         Thing& s           = table_state.things[stack_id];
         bool   is_expanded = s.spread_x > 0.0f;
         bool   inside =
-          point_in_stack_area((float)mx, (float)my, stack_id, table_state);
+          point_in_thing((float)mx, (float)my, stack_id, table_state);
         if (inside && !is_expanded) {
           s.rect = ui_state.place(
             tt::CARD_WIDTH * 7, tt::CARD_HEIGHT, "center", "center"
           );
           s.spread_x = 150.0f;
           s.depth    = 1.0f;
-          update_card_positions(stack_id, table_state, false);
+          update_children_positions(stack_id, table_state, false);
         } else if (is_expanded && !inside) {
           // Restore original rect from a fresh layout. Match by name since
           // ordinal positions in make_gods_stacks aren't aligned with
@@ -499,7 +499,7 @@ static void play_gods(
           }
           s.spread_x = 0.0f;
           s.depth    = 0.0f;
-          update_card_positions(stack_id, table_state, false);
+          update_children_positions(stack_id, table_state, false);
         }
       }
     }
@@ -509,7 +509,7 @@ static void play_gods(
     // peers).
     auto serialize_stacks = [&]() {
       nlohmann::json out = nlohmann::json::array();
-      for (int i = table_state.num_cards; i < table_state.root; ++i) {
+      for (int i = (int)gods_state.all_cards.size(); i < table_state.root; ++i) {
         out.push_back(table_state.things[i].children);
       }
       return out;
@@ -532,7 +532,7 @@ static void play_gods(
 
     // Send stacks if in playground/no-logic mode and something changed.
     if ((!agent || ui_state.playground) && online) {
-      auto dropped     = table_state.poll_dropped_card();
+      auto dropped     = table_state.poll_dropped_thing();
       bool should_send = dropped.has_value() ||
                          key_pressed(frame_input, KEY_R) ||
                          key_pressed(frame_input, KEY_S);
@@ -552,22 +552,22 @@ static void play_gods(
         std::string t   = msg.value("type", "");
         if (t == "stacks") {
           const auto& arr        = msg["stacks"];
-          int         num_stacks = table_state.root - table_state.num_cards;
+          int         num_stacks = table_state.root - (int)gods_state.all_cards.size();
           for (size_t i = 0; i < arr.size() && (int)i < num_stacks; ++i) {
-            int stack_id = table_state.num_cards + (int)i;
+            int stack_id = (int)gods_state.all_cards.size() + (int)i;
             table_state.things[stack_id].children =
               arr[i].get<std::vector<int>>();
-            update_card_positions(stack_id, table_state, false);
+            update_children_positions(stack_id, table_state, false);
           }
         } else if (t == "playground") {
           ui_state.playground = msg.value("on", false);
           if (ui_state.playground) {
-            table_state.is_drop_card_allowed = [](int, int, int) {
+            table_state.is_drop_allowed = [](int, int, int) {
               return true;
             };
-            ui_state.highlighted_cards.clear();
+            ui_state.highlighted_things.clear();
           } else {
-            sync_game_state_from_table(table_state, gods_state);
+            sync_game_state_from_table(table_state, gods_state, (int)gods_state.all_cards.size());
             ui_state.power_edit_card_id = -1;
           }
         } else if (t == "all_cards") {
@@ -595,13 +595,13 @@ static void play_gods(
       // Broadcast card mutations to the remote player after a choice resolves.
       if (online && had_choice && !current_choice.has_value())
         broadcast_cards();
-      update_stacks(table_state, gods_state);
+      update_stacks(table_state, gods_state, (int)gods_state.all_cards.size());
     }
     EndDrawing();
   }
 
   if (gods_state.game_over) {
-    update_stacks(table_state, gods_state);
+    update_stacks(table_state, gods_state, (int)gods_state.all_cards.size());
     std::vector<int> scores = {
       compute_player_score(gods_state, 0), compute_player_score(gods_state, 1)
     };
@@ -675,10 +675,12 @@ static Agent* make_agent(
   Table_State&       table_state,
   UI_State&          ui_state,
   const Menu_Result& menu_result,
-  const Online*      online
+  const Online*      online,
+  int                stacks_offset
 ) {
-  Agent_UI* agent_ui =
-    new Agent_UI(&table_state, &ui_state, menu_result.player_index);
+  Agent_UI* agent_ui = new Agent_UI(
+    &table_state, &ui_state, menu_result.player_index, stacks_offset
+  );
 
   if (online) {
     return make_online_duel(agent_ui, *online, menu_result.player_index);
@@ -722,7 +724,6 @@ static void init_table_and_gods_states(
     }
     populate_stacks_from_gods_state(table_state, gods_state);
   }
-  table_state.num_cards = (int)gods_state.all_cards.size();
 }
 
 int main(int argc, char** argv) {
@@ -753,7 +754,10 @@ int main(int argc, char** argv) {
   Gods_UI ui_state(args.window_width, args.window_height);
   init_card_draw_callbacks(table_state, gods_state, ui_state);
 
-  Agent* agent = make_agent(table_state, ui_state, menu_result, online);
+  Agent* agent = make_agent(
+    table_state, ui_state, menu_result, online,
+    (int)gods_state.all_cards.size()
+  );
 
   play_gods(
     gods_state,

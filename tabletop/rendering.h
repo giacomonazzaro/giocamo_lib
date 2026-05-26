@@ -6,10 +6,10 @@
 struct Input;
 void draw_background(const Input& input, float turn = 0.0f);
 void draw_table(Table_State& state, const Input& input);
-void draw_card_back();
-void draw_zoomed_card(const Thing& card, bool face_up);
-// Dashed outline placeholder drawn in world coords. stack_id is a thing-id.
-void draw_stack_placeholder(int stack_id, const Table_State& state);
+void draw_thing_back();
+void draw_zoomed_thing(const Thing& thing, bool face_up);
+// Dashed outline placeholder drawn in world coords. thing_id is a thing-id.
+void draw_drop_placeholder(int thing_id, const Table_State& state);
 // Smooth per-thing world transforms toward the current target tree.
 void animate(
   std::vector<World_Transform>& animated,

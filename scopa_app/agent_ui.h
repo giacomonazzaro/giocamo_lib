@@ -14,14 +14,20 @@ struct Scopa_Agent_UI : Agent {
   Table_State* table_state;
   UI_State*    ui_state;
   int          player_index;
+  int          stacks_offset;  // First stack thing-id in table_state->things.
 
   // Cross-frame state for the two-step "play card → choose capture" flow.
   int                            pending_played_card_id = -1;
   std::vector<int>               pending_action_indices;
   std::vector<std::vector<int>>  pending_capture_options;
 
-  Scopa_Agent_UI(Table_State* table, UI_State* ui, int player_index)
-      : table_state(table), ui_state(ui), player_index(player_index) {}
+  Scopa_Agent_UI(
+    Table_State* table, UI_State* ui, int player_index, int stacks_offset
+  )
+      : table_state(table)
+      , ui_state(ui)
+      , player_index(player_index)
+      , stacks_offset(stacks_offset) {}
 
   void message(const std::string&) override {}
   int  choose_action(Game& game, const Choice& choice) override;

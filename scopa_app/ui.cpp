@@ -160,7 +160,7 @@ make_card_draw_callback(
       }
 
       // Highlight border for legal-to-play / selectable cards.
-      if (ui_state.highlighted_cards.count(id) > 0) {
+      if (ui_state.highlighted_things.count(id) > 0) {
         DrawRectangleRoundedLinesEx(
           Rectangle{0.0f, 0.0f, (float)card_width, (float)card_height},
           0.18f,
