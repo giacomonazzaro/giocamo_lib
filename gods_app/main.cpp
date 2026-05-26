@@ -434,6 +434,13 @@ static void play_gods(
     }
 
     if (key_pressed(frame_input, KEY_D)) {
+      // Push any unsynced layout changes (e.g. playground rearrangement)
+      // back into gods_state so the two snapshots agree — otherwise the
+      // load path's per-frame update_stacks would snap cards back to
+      // whatever gods_state.players[*] says.
+      sync_game_state_from_table(
+        table_state, gods_state, (int)gods_state.all_cards.size()
+      );
       save_to_json<Game_State>(gods_state, "data/debug_gods_state.json");
       save_to_json<Table_Layout>(table_state, "data/debug_table_state.json");
       printf("Saved debug snapshot to data/debug_*.json\n");
@@ -637,6 +644,9 @@ struct Cli_Args {
   // When true, boot from data/debug_*.json (the saved layout + game state).
   // Default is a fresh deal via quick_setup; --load opts into the snapshot.
   bool load_from_disk = false;
+  // --hot-seat: two humans share the screen. Skips the menu and routes the
+  // opponent seat to the same Agent_UI as the local one.
+  bool hot_seat = false;
 };
 VISITABLE_STRUCT(
   Cli_Args,
@@ -645,7 +655,8 @@ VISITABLE_STRUCT(
   input_file_path,
   window_width,
   window_height,
-  load_from_disk
+  load_from_disk,
+  hot_seat
 );
 
 static Cli_Args parse_cli_args(int argc, char** argv) {
@@ -656,6 +667,8 @@ static Cli_Args parse_cli_args(int argc, char** argv) {
       args.skip_menu_vs_ai = true;
     } else if (a == "--load") {
       args.load_from_disk = true;
+    } else if (a == "--hot-seat") {
+      args.hot_seat = true;
     } else if (a.rfind("--record=", 0) == 0) {
       args.input_mode      = Input_Mode::Record;
       args.input_file_path = a.substr(9);
@@ -690,7 +703,8 @@ static Agent* make_agent(
   UI_State&          ui_state,
   const Menu_Result& menu_result,
   const Online*      online,
-  int                stacks_offset
+  int                stacks_offset,
+  bool               hot_seat
 ) {
   Agent_UI* agent_ui = new Agent_UI(
     &table_state, &ui_state, menu_result.player_index, stacks_offset
@@ -700,7 +714,7 @@ static Agent* make_agent(
     return make_online_duel(agent_ui, *online, menu_result.player_index);
   }
 
-  Agent* opponent = (menu_result.mode == Menu_Result::VS_AI)
+  Agent* opponent = (!hot_seat && menu_result.mode == Menu_Result::VS_AI)
                       ? (Agent*)new Agent_Minimax_Stochastic_Gods(6, 20)
                       : (Agent*)agent_ui;  // hot-seat.
   return new Agent_Duel(
@@ -730,13 +744,6 @@ static void init_table_and_gods_states(
     gods_state  = load_from_json<Game_State>("data/debug_gods_state.json");
     auto layout = load_from_json<Table_Layout>("data/debug_table_state.json");
     table_state = Table_State(window_width, window_height, layout);
-    // // The saved layout is authoritative — if it disagrees with the saved
-    // // gods_state (e.g. the snapshot was taken while the user was rearranging
-    // // cards in playground mode), sync the game state to the layout rather
-    // // than overwriting the layout from gods_state.
-    // sync_game_state_from_table(
-    //   table_state, gods_state, (int)gods_state.all_cards.size()
-    // );
   }
 }
 
@@ -747,7 +754,7 @@ int main(int argc, char** argv) {
   init_input_recorder(inputs, args.input_mode, args.input_file_path);
 
   Menu_Result menu_result;
-  if (!args.skip_menu_vs_ai)
+  if (!args.skip_menu_vs_ai && !args.hot_seat)
     menu_result =
       run_menu("Gods", args.window_width, args.window_height, inputs);
 
@@ -770,7 +777,8 @@ int main(int argc, char** argv) {
   init_card_draw_callbacks(table_state, gods_state, ui_state);
 
   Agent* agent = make_agent(
-    table_state, ui_state, menu_result, online, (int)gods_state.all_cards.size()
+    table_state, ui_state, menu_result, online,
+    (int)gods_state.all_cards.size(), args.hot_seat
   );
 
   play_gods(

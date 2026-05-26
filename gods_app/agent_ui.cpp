@@ -10,6 +10,9 @@
 void sync_game_state_from_table(
   Table_State& table_state, Game_State& gods_state, int stacks_offset
 ) {
+  // peoples is a flat list across both players; rebuild it from the table
+  // so subsequent update_stacks calls don't clear the peoples zones.
+  gods_state.peoples.clear();
   for (int i = 0; i < 2; ++i) {
     Stack_Indices s               = stack_indices(i, stacks_offset);
     gods_state.players[i].deck    = table_state.things[s.deck].children;
@@ -21,6 +24,7 @@ void sync_game_state_from_table(
     }
     for (int pid : table_state.things[s.peoples].children) {
       gods_state.all_cards[pid].owner = i;
+      gods_state.peoples.push_back(pid);
     }
   }
 }

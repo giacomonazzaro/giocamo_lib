@@ -13,7 +13,7 @@
       "id": 1,
       "card_type": 1,
       "color": 2,
-      "power": 5,
+      "power": 4,
       "counters": 0,
       "destroyed": false,
       "owner": -1
@@ -22,7 +22,7 @@
       "id": 2,
       "card_type": 1,
       "color": 2,
-      "power": 5,
+      "power": 2,
       "counters": 0,
       "destroyed": false,
       "owner": -1
@@ -31,7 +31,7 @@
       "id": 3,
       "card_type": 1,
       "color": 0,
-      "power": 3,
+      "power": 1,
       "counters": 0,
       "destroyed": false,
       "owner": -1
@@ -40,7 +40,7 @@
       "id": 4,
       "card_type": 1,
       "color": 0,
-      "power": 5,
+      "power": 4,
       "counters": 0,
       "destroyed": false,
       "owner": -1
@@ -49,7 +49,7 @@
       "id": 5,
       "card_type": 1,
       "color": 0,
-      "power": 1,
+      "power": 4,
       "counters": 0,
       "destroyed": false,
       "owner": -1
@@ -58,16 +58,16 @@
       "id": 6,
       "card_type": 1,
       "color": 1,
-      "power": 4,
+      "power": 3,
       "counters": 0,
       "destroyed": false,
-      "owner": 0
+      "owner": -1
     },
     {
       "id": 7,
       "card_type": 1,
       "color": 1,
-      "power": 4,
+      "power": 5,
       "counters": 0,
       "destroyed": false,
       "owner": -1
@@ -76,7 +76,7 @@
       "id": 8,
       "card_type": 1,
       "color": 2,
-      "power": 1,
+      "power": 5,
       "counters": 0,
       "destroyed": false,
       "owner": -1
@@ -85,7 +85,7 @@
       "id": 9,
       "card_type": 1,
       "color": 2,
-      "power": 4,
+      "power": 2,
       "counters": 0,
       "destroyed": false,
       "owner": -1
@@ -103,7 +103,7 @@
       "id": 11,
       "card_type": 1,
       "color": 0,
-      "power": 3,
+      "power": 2,
       "counters": 0,
       "destroyed": false,
       "owner": -1
@@ -112,7 +112,7 @@
       "id": 12,
       "card_type": 1,
       "color": 0,
-      "power": 5,
+      "power": 3,
       "counters": 0,
       "destroyed": false,
       "owner": -1
@@ -121,7 +121,7 @@
       "id": 13,
       "card_type": 1,
       "color": 1,
-      "power": 5,
+      "power": 1,
       "counters": 0,
       "destroyed": false,
       "owner": -1
@@ -139,7 +139,7 @@
       "id": 15,
       "card_type": 1,
       "color": 1,
-      "power": 5,
+      "power": 4,
       "counters": 0,
       "destroyed": false,
       "owner": -1
@@ -148,16 +148,16 @@
       "id": 16,
       "card_type": 0,
       "color": 2,
-      "power": 4,
+      "power": 2,
       "counters": 0,
       "destroyed": false,
-      "owner": -1
+      "owner": 0
     },
     {
       "id": 17,
       "card_type": 0,
       "color": 2,
-      "power": 4,
+      "power": 1,
       "counters": 0,
       "destroyed": false,
       "owner": -1
@@ -166,7 +166,7 @@
       "id": 18,
       "card_type": 0,
       "color": 0,
-      "power": 1,
+      "power": 4,
       "counters": 0,
       "destroyed": false,
       "owner": -1
@@ -175,7 +175,7 @@
       "id": 19,
       "card_type": 0,
       "color": 0,
-      "power": 4,
+      "power": 3,
       "counters": 0,
       "destroyed": false,
       "owner": -1
@@ -184,16 +184,16 @@
       "id": 20,
       "card_type": 0,
       "color": 0,
-      "power": 4,
+      "power": 2,
       "counters": 0,
       "destroyed": false,
-      "owner": -1
+      "owner": 0
     },
     {
       "id": 21,
       "card_type": 0,
       "color": 1,
-      "power": 4,
+      "power": 2,
       "counters": 0,
       "destroyed": false,
       "owner": -1
@@ -202,7 +202,7 @@
       "id": 22,
       "card_type": 0,
       "color": 1,
-      "power": 3,
+      "power": 2,
       "counters": 0,
       "destroyed": false,
       "owner": -1
@@ -211,7 +211,7 @@
       "id": 23,
       "card_type": 0,
       "color": 1,
-      "power": 4,
+      "power": 1,
       "counters": 0,
       "destroyed": false,
       "owner": -1
@@ -220,7 +220,7 @@
       "id": 24,
       "card_type": 0,
       "color": 2,
-      "power": 2,
+      "power": 4,
       "counters": 0,
       "destroyed": false,
       "owner": -1
@@ -229,7 +229,7 @@
       "id": 25,
       "card_type": 0,
       "color": 2,
-      "power": 3,
+      "power": 1,
       "counters": 0,
       "destroyed": false,
       "owner": -1
@@ -238,7 +238,7 @@
       "id": 26,
       "card_type": 0,
       "color": 2,
-      "power": 2,
+      "power": 3,
       "counters": 0,
       "destroyed": false,
       "owner": -1
@@ -247,7 +247,7 @@
       "id": 27,
       "card_type": 0,
       "color": 0,
-      "power": 4,
+      "power": 5,
       "counters": 0,
       "destroyed": false,
       "owner": -1
@@ -256,7 +256,7 @@
       "id": 28,
       "card_type": 0,
       "color": 0,
-      "power": 4,
+      "power": 2,
       "counters": 0,
       "destroyed": false,
       "owner": -1
@@ -265,25 +265,25 @@
       "id": 29,
       "card_type": 0,
       "color": 0,
-      "power": 5,
+      "power": 4,
       "counters": 0,
       "destroyed": false,
-      "owner": -1
+      "owner": 1
     },
     {
       "id": 30,
       "card_type": 0,
       "color": 1,
-      "power": 1,
+      "power": 4,
       "counters": 0,
       "destroyed": false,
-      "owner": -1
+      "owner": 1
     },
     {
       "id": 31,
       "card_type": 0,
       "color": 1,
-      "power": 4,
+      "power": 5,
       "counters": 0,
       "destroyed": false,
       "owner": -1
@@ -301,7 +301,7 @@
       "id": 33,
       "card_type": 2,
       "color": 3,
-      "power": 4,
+      "power": 3,
       "counters": 0,
       "destroyed": false,
       "owner": -1
@@ -310,7 +310,7 @@
       "id": 34,
       "card_type": 2,
       "color": 3,
-      "power": 4,
+      "power": 1,
       "counters": 0,
       "destroyed": false,
       "owner": -1
@@ -319,7 +319,7 @@
       "id": 35,
       "card_type": 2,
       "color": 3,
-      "power": 1,
+      "power": 3,
       "counters": 0,
       "destroyed": false,
       "owner": -1
@@ -328,7 +328,7 @@
       "id": 36,
       "card_type": 2,
       "color": 3,
-      "power": 2,
+      "power": 1,
       "counters": 0,
       "destroyed": false,
       "owner": -1
@@ -337,7 +337,7 @@
       "id": 37,
       "card_type": 2,
       "color": 3,
-      "power": 4,
+      "power": 2,
       "counters": 0,
       "destroyed": false,
       "owner": -1
@@ -357,63 +357,65 @@
       "name": "Player 1",
       "deck": [],
       "hand": [
-        26,
-        19,
-        21,
-        2
+        11,
+        12
       ],
-      "discard": [],
+      "discard": [
+        0
+      ],
       "wonders": [
-        6
+        16,
+        20
       ]
     },
     {
       "name": "Player 2",
       "deck": [],
       "hand": [
-        32,
-        0,
-        36,
-        18,
-        7
+        34,
+        17,
+        8
       ],
       "discard": [],
-      "wonders": []
+      "wonders": [
+        30,
+        29
+      ]
     }
   ],
   "peoples": [],
   "shared_deck": [
-    8,
-    29,
-    25,
-    33,
-    4,
-    31,
-    24,
-    9,
-    16,
-    11,
-    27,
-    17,
-    10,
-    38,
-    20,
-    28,
-    37,
-    13,
-    12,
-    22,
-    3,
-    23,
-    1,
-    35,
-    30,
     15,
-    34,
+    9,
+    36,
+    33,
+    26,
+    6,
+    35,
+    38,
+    32,
+    10,
     5,
-    14
+    27,
+    37,
+    2,
+    1,
+    7,
+    4,
+    25,
+    14,
+    24,
+    22,
+    19,
+    28,
+    31,
+    3,
+    21,
+    23,
+    13,
+    18
   ],
-  "current_player": 0,
+  "current_player": 1,
   "current_phase": 1,
   "game_over": false
 }
