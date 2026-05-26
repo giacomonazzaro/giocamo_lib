@@ -50,8 +50,8 @@ void update_children_positions(int parent_id, Table_State& state, bool sort) {
 
   if (n == 0) return;
 
-  float spread_x   = parent.spread_x;
-  float spread_y   = parent.spread_y;
+  float spread_x    = parent.spread_x;
+  float spread_y    = parent.spread_y;
   float child_width = static_cast<float>(tt::CARD_WIDTH);
 
   // Adaptive spread: shrink if children would exceed the parent's width.
@@ -80,4 +80,16 @@ void update_children_positions(int parent_id, Table_State& state, bool sort) {
       child.rect.y = start_y_local + static_cast<float>(i) * spread_y;
     }
   }
+}
+
+Thing make_card(int id, const std::string& image_path) {
+  auto card = Thing{};
+  card.id   = id;
+  if (!image_path.empty()) {
+    card.image_path = image_path;
+  }
+  card.capacity    = 0;
+  card.rect.width  = (float)tt::CARD_WIDTH;
+  card.rect.height = (float)tt::CARD_HEIGHT;
+  return card;
 }

@@ -173,10 +173,9 @@ void init_table_layout(
 
   // Cards aligned with all_cards so card.id is the shared key.
   for (const auto& gc : gods_state.all_cards) {
-    Thing kc;
-    kc.id         = gc.id;
-    kc.image_path = get_image_path(card_designs[gc.id]->name);
-    table_state.things.push_back(kc);
+    auto  image_path = get_image_path(card_designs[gc.id]->name);
+    Thing card       = make_card(gc.id, image_path);
+    table_state.things.push_back(card);
   }
 
   // Stack things: assign ids by append order. Track the insertion order so
@@ -285,7 +284,9 @@ static void draw_hud(
   if (immediate_button(button, label, input, Color{20, 20, 20, 100})) {
     ui_state.playground = !ui_state.playground;
     if (!ui_state.playground) {
-      sync_game_state_from_table(*table_state, gods_state, (int)gods_state.all_cards.size());
+      sync_game_state_from_table(
+        *table_state, gods_state, (int)gods_state.all_cards.size()
+      );
       ui_state.power_edit_card_id = -1;
     } else {
       table_state->is_drop_allowed = [](int, int, int) { return true; };
@@ -432,6 +433,11 @@ static void play_gods(
       }
     }
 
+    if (key_pressed(frame_input, KEY_S)) {
+      save_to_json<Game_State>(gods_state, "data/debug_gods_state.json");
+      save_to_json<Table_Layout>(table_state, "data/debug_table_state.json");
+    }
+
     // While power editor is open, 1-9 / 0 set the power directly.
     // KEY_ONE..KEY_NINE map to powers 1..9; KEY_ZERO maps to 10.
     if (ui_state.power_edit_card_id != -1) {
@@ -509,7 +515,8 @@ static void play_gods(
     // peers).
     auto serialize_stacks = [&]() {
       nlohmann::json out = nlohmann::json::array();
-      for (int i = (int)gods_state.all_cards.size(); i < table_state.root; ++i) {
+      for (int i = (int)gods_state.all_cards.size(); i < table_state.root;
+           ++i) {
         out.push_back(table_state.things[i].children);
       }
       return out;
@@ -551,8 +558,8 @@ static void play_gods(
         const auto& msg = *msg_opt;
         std::string t   = msg.value("type", "");
         if (t == "stacks") {
-          const auto& arr        = msg["stacks"];
-          int         num_stacks = table_state.root - (int)gods_state.all_cards.size();
+          const auto& arr = msg["stacks"];
+          int num_stacks  = table_state.root - (int)gods_state.all_cards.size();
           for (size_t i = 0; i < arr.size() && (int)i < num_stacks; ++i) {
             int stack_id = (int)gods_state.all_cards.size() + (int)i;
             table_state.things[stack_id].children =
@@ -562,12 +569,12 @@ static void play_gods(
         } else if (t == "playground") {
           ui_state.playground = msg.value("on", false);
           if (ui_state.playground) {
-            table_state.is_drop_allowed = [](int, int, int) {
-              return true;
-            };
+            table_state.is_drop_allowed = [](int, int, int) { return true; };
             ui_state.highlighted_things.clear();
           } else {
-            sync_game_state_from_table(table_state, gods_state, (int)gods_state.all_cards.size());
+            sync_game_state_from_table(
+              table_state, gods_state, (int)gods_state.all_cards.size()
+            );
             ui_state.power_edit_card_id = -1;
           }
         } else if (t == "all_cards") {
@@ -718,9 +725,12 @@ static void init_table_and_gods_states(
     table_state = Table_State(window_width, window_height, layout);
     // The snapshot may have been saved on another machine, so stored image
     // paths can be stale; re-derive from card_designs on the current host.
+    // Older snapshots also saved cards with rect.width/height == 0 because
+    // the old renderer hardcoded CARD_WIDTH/HEIGHT for them; refresh those
+    // dimensions so the size-driven renderer can actually draw the card.
     for (const auto& gc : gods_state.all_cards) {
-      table_state.things[gc.id].image_path =
-        get_image_path(card_designs[gc.id]->name);
+      Thing& card_thing     = table_state.things[gc.id];
+      card_thing.image_path = get_image_path(card_designs[gc.id]->name);
     }
     populate_stacks_from_gods_state(table_state, gods_state);
   }
@@ -748,15 +758,15 @@ int main(int argc, char** argv) {
     table_state,
     menu_result.player_index,
     args.window_width,
-    args.window_height
+    args.window_height,
+    true
   );
 
   Gods_UI ui_state(args.window_width, args.window_height);
   init_card_draw_callbacks(table_state, gods_state, ui_state);
 
   Agent* agent = make_agent(
-    table_state, ui_state, menu_result, online,
-    (int)gods_state.all_cards.size()
+    table_state, ui_state, menu_result, online, (int)gods_state.all_cards.size()
   );
 
   play_gods(

@@ -78,18 +78,20 @@ static Texture2D* get_rounded_texture(const std::string& image_path) {
     return &it->second;
   }
 
-  if (!FileExists(image_path.c_str())) {
-    return nullptr;
-  }
-
   float w = (float)tt::CARD_WIDTH;
   float h = (float)tt::CARD_HEIGHT;
   float r = (float)tt::CARD_CORNER_RADIUS;
 
-  // Load image at original resolution (GPU scales when drawing).
+  // Load image at original resolution (GPU scales when drawing). raylib
+  // returns an image with width==0 when the file is missing — bail in that
+  // case so the renderer can fall back to a solid-color rect.
   Image image = LoadImage(image_path.c_str());
   int   iw    = image.width;
   int   ih    = image.height;
+  if (iw == 0 || ih == 0) {
+    UnloadImage(image);
+    return nullptr;
+  }
 
   // Scale corner radius to match image resolution.
   int sr = (int)(r * std::min((float)iw / w, (float)ih / h));

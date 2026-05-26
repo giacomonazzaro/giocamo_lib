@@ -8,9 +8,14 @@
 #include <algorithm>
 #include <cctype>
 
-// Relative to the working directory (gods-app root on desktop, "/" on web
-// where assets are preloaded into MEMFS).
+// On desktop assets sit relative to the gods-app working directory; on web
+// they're preloaded at the absolute path "/gods/card-images" in MEMFS, and
+// the emscripten cwd isn't guaranteed to be "/".
+#ifdef __EMSCRIPTEN__
+static const std::string IMAGES_DIR = "/gods/card-images";
+#else
 static const std::string IMAGES_DIR = "gods/card-images";
+#endif
 
 std::vector<Thing> make_gods_stacks(
   int bottom_player, int window_width, int window_height
@@ -99,9 +104,10 @@ std::string get_image_path(const std::string& card_name) {
     return (char)std::tolower(c);
   });
   std::replace(name.begin(), name.end(), ' ', '_');
-  std::string path = IMAGES_DIR + "/" + name + ".png";
-  if (FileExists(path.c_str())) return path;
-  return "";
+  // Don't FileExists-gate — raylib handles missing files by returning a
+  // null texture, which the renderer falls back from. The check was also
+  // unreliable on emscripten depending on cwd.
+  return IMAGES_DIR + "/" + name + ".png";
 }
 
 void draw_card_power_badge(const std::string& power, bool destroyed) {
