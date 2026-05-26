@@ -1,4 +1,3 @@
-#ifndef __EMSCRIPTEN__
 #include "agents.h"
 
 #include <nlohmann/json.hpp>
@@ -6,13 +5,15 @@
 int Agent_Remote::choose_action(Game& state, const Choice& choice) {
   (void)state;
   (void)choice;
-  auto msg = recv_message(online);
-  if (!msg.contains("index")) return -1;
-  return msg["index"].get<int>();
+  auto msg = try_recv_message(online, "action");
+  if (!msg) return -1;
+  if (!msg->contains("index")) return -1;
+  return (*msg)["index"].get<int>();
 }
 
 int Agent_Local_Online::choose_action(Game& state, const Choice& choice) {
-  int            index = local_agent->choose_action(state, choice);
+  int index = local_agent->choose_action(state, choice);
+  if (index < 0) return -1;
   nlohmann::json m;
   m["type"]  = "action";
   m["index"] = index;
@@ -27,5 +28,3 @@ Agent* make_online_duel(
   Agent* opponent_seat = new Agent_Remote(online);
   return new Agent_Duel(local_seat, opponent_seat, /*swap=*/player_index != 0);
 }
-
-#endif

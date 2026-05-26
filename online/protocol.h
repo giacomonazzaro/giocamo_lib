@@ -2,27 +2,22 @@
 #include <nlohmann/json.hpp>
 #include <optional>
 #include <string>
-#include <utility>
 
 #include "models.h"
 
-// The two things needed to talk to the peer over the network. Bundled so
-// they can be passed as a single parameter through the play_gods/main call
-// stack. A nullptr `const Online*` is the convention for "local-only";
-// where Online itself is held by value, `sock == nullptr` means the same.
-// Lifetime of `sock` is managed at the producer (menu.cpp keeps the socket
-// alive for the process lifetime).
-struct Online {
-  UDP_Socket*                 sock = nullptr;
-  std::pair<std::string, int> friend_addr;
-};
-
-// Sends data reliably to the peer (non-blocking). Retried in the background
-// until ACK'd.
+// Publish a JSON message to the peer's recv topic via ntfy.sh. Blocking;
+// happens at most once per turn so the cost is negligible.
 void send_message(const Online& online, const nlohmann::json& data);
 
-// Blocks until a message arrives from the peer; returns the JSON payload.
-nlohmann::json recv_message(const Online& online);
+// Non-blocking receive. If `only_type` is "action", returns the next queued
+// action message; otherwise returns the next non-action message ("hello",
+// "all_cards", "stacks", "playground", ...). The split is necessary because
+// the gods_app main loop and Agent_Remote both drain the inbox — without
+// separate queues, the main loop would steal action messages.
+std::optional<nlohmann::json> try_recv_message(
+  const Online& online, const std::string& only_type = ""
+);
 
-// Non-blocking receive; returns nullopt if no message is available.
-std::optional<nlohmann::json> try_recv_message(const Online& online);
+// Blocking version of try_recv_message — used by the handshake. Polls in
+// the background while yielding to the OS / JS event loop.
+nlohmann::json recv_message(const Online& online);

@@ -1,11 +1,7 @@
 #pragma once
 
-#ifdef __EMSCRIPTEN__
-#include <online/online_stub.h>
-#else
 #include <online/protocol.h>
 #include <online/setup.h>
-#endif
 
 #include <tabletop/input_recorder.h>
 

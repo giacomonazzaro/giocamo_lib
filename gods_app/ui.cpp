@@ -69,7 +69,10 @@ std::vector<Thing> make_gods_stacks(
     std::swap(p0_wonders, p1_wonders);
   }
 
-  bool visible = (bottom_player == 0);
+  // Each hand is visible only to the player who owns it. Without this
+  // split, the joiner (bottom_player == 1) would see both hands face-down.
+  bool p0_visible = (bottom_player == 0);
+  bool p1_visible = (bottom_player == 1);
 
   auto mk = [](Rectangle r, int sx, int sy, bool face_up, std::string name) {
     Thing t;
@@ -84,12 +87,12 @@ std::vector<Thing> make_gods_stacks(
 
   std::vector<Thing> out;
   out.push_back(mk(p0_deck, 0, spread_pile, false, "p0_deck"));
-  out.push_back(mk(p0_hand, spread_hand, 0, visible, "p0_hand"));
+  out.push_back(mk(p0_hand, spread_hand, 0, p0_visible, "p0_hand"));
   out.push_back(mk(p0_discard, 0, spread_pile, true, "p0_discard"));
   out.push_back(mk(p0_peoples, spread_wonders, 0, true, "p0_peoples"));
   out.push_back(mk(p0_wonders, spread_wonders, 0, true, "p0_wonders"));
   out.push_back(mk(p1_deck, 0, spread_pile, false, "p1_deck"));
-  out.push_back(mk(p1_hand, spread_hand, 0, visible, "p1_hand"));
+  out.push_back(mk(p1_hand, spread_hand, 0, p1_visible, "p1_hand"));
   out.push_back(mk(p1_discard, 0, spread_pile, true, "p1_discard"));
   out.push_back(mk(p1_peoples, spread_wonders, 0, true, "p1_peoples"));
   out.push_back(mk(p1_wonders, spread_wonders, 0, true, "p1_wonders"));

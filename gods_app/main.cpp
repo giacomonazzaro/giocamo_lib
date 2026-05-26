@@ -10,25 +10,19 @@
 #include <string>
 #include <vector>
 
-// Include everything *before* raylib — raylib defines RED/GREEN/BLUE/YELLOW as
-// macros that conflict with our Card_Color enum values.
-#include <game/agent.h>
-#include <game/game.h>
+// Include gods/ headers before anything that transitively pulls raylib —
+// raylib defines RED/GREEN/BLUE/YELLOW as macros and that conflicts with
+// our Card_Color enum values, so the enum has to be parsed first.
 #include <gods/ai.h>
 #include <gods/gameplay.h>
 #include <gods/models.h>
 #include <gods/setup.h>
-#ifndef __EMSCRIPTEN__
-#include <online/protocol.h>
-#else
-#include <online/online_stub.h>
-#endif
 
-// online/agents.h provides Emscripten stubs internally, so it's safe to
-// include unconditionally — make_agent() references make_online_duel even in
-// the web build (the online code path is just never reached at runtime).
+#include <game/agent.h>
+#include <game/game.h>
 #include <giocamo/menu.h>
 #include <online/agents.h>
+#include <online/protocol.h>
 #include <tabletop/config.h>
 #include <tabletop/game_state.h>
 #include <tabletop/input.h>
@@ -753,10 +747,21 @@ int main(int argc, char** argv) {
   Input_Feed inputs;
   init_input_recorder(inputs, args.input_mode, args.input_file_path);
 
+  // --local-host / --local-join shortcut: skip the menu entirely and run the
+  // synchronous loopback handshake. Lets two terminals on one machine play
+  // without typing a room code.
+  auto local_conn = setup_local_from_argv(argc, argv);
+
   Menu_Result menu_result;
-  if (!args.skip_menu_vs_ai && !args.hot_seat)
+  if (local_conn) {
+    menu_result.mode         = Menu_Result::ONLINE;
+    menu_result.online       = local_conn->online;
+    menu_result.player_index = local_conn->player_index;
+    menu_result.seed         = local_conn->seed;
+  } else if (!args.skip_menu_vs_ai && !args.hot_seat) {
     menu_result =
       run_menu("Gods", args.window_width, args.window_height, inputs);
+  }
 
   // nullptr means local-only; otherwise borrow the bundle from menu_result.
   const Online* online =
@@ -777,8 +782,12 @@ int main(int argc, char** argv) {
   init_card_draw_callbacks(table_state, gods_state, ui_state);
 
   Agent* agent = make_agent(
-    table_state, ui_state, menu_result, online,
-    (int)gods_state.all_cards.size(), args.hot_seat
+    table_state,
+    ui_state,
+    menu_result,
+    online,
+    (int)gods_state.all_cards.size(),
+    args.hot_seat
   );
 
   play_gods(

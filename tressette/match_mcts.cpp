@@ -7,6 +7,7 @@
 #include <game/agent.h>
 #include <game/game.h>
 #include <game/mcts.h>
+#include <game/mcts_old.h>
 #include <game/minimax.h>
 #include <tressette/ai.h>
 #include <tressette/gameplay.h>
@@ -68,38 +69,26 @@ int main(int argc, char** argv) {
             << ", rollout_minimax_depth=" << rollout_minimax_depth << ")"
             << "  seed=" << seed << "\n";
 
-  // Both agents use Agent_Minimax<tressette::Game_State> as their rollout
-  // policy. Plain Agent_Minimax (not Stochastic) because:
-  //   - the parent Stochastic MCTS has already determinized hidden info via
-  //     sample_state(...) before calling mcts_scores, so re-sampling inside
-  //     the rollout would scramble information we already committed to;
-  //   - Agent_Minimax_Stochastic spawns num_samples threads per call, which
-  //     would explode into thousands of short-lived threads inside the
-  //     rollout loop.
-  using Mcts_Agent_T = Agent_MCTS_Stochastic<
-    tressette::Game_State,
-    Agent_Minimax<tressette::Game_State>>;
+  // Two MCTS agents with identical settings and the same random rollout
+  // policy, so the only difference is which mcts header backs them. Swap the
+  // types here to repurpose the program for other A/B comparisons.
+  (void)rollout_minimax_depth;
 
-  Agent_MCTS_Stochastic<tressette::Game_State> weak_agent(
+  Agent_MCTS_Stochastic_Old<tressette::Game_State> weak_agent(
     mcts_iterations,
     mcts_rollout_depth,
     mcts_samples,
-    /*exploration_constant=*/1.41421356f
-    // mcts_time_budget_seconds * 0.01f
+    /*exploration_constant=*/1.41421356f,
+    mcts_time_budget_seconds
   );
-  // weak_agent.rollout_agent_factory = []() { return Agent_Random(); };
-  // Agent_Random weak_agent;
 
-  Mcts_Agent_T strong_agent(
+  Agent_MCTS_Stochastic<tressette::Game_State> strong_agent(
     mcts_iterations,
     mcts_rollout_depth,
     mcts_samples,
-    /*exploration_constant=*/1.41421356f
-    // mcts_time_budget_seconds
+    /*exploration_constant=*/1.41421356f,
+    mcts_time_budget_seconds
   );
-  strong_agent.rollout_agent_factory = [=]() {
-    return Agent_Minimax<tressette::Game_State>(rollout_minimax_depth);
-  };
 
   Timing_Agent timed_weak(&weak_agent, "weak");
   Timing_Agent timed_strong(&strong_agent, "strong");

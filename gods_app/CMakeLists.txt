@@ -25,9 +25,7 @@ add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/../tabletop  ${CMAKE_BINARY_DIR}/ta
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/../gods           ${CMAKE_BINARY_DIR}/gods_build)
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/../giocamo           ${CMAKE_BINARY_DIR}/giocamo_build)
 
-if(NOT EMSCRIPTEN)
-    add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/../online ${CMAKE_BINARY_DIR}/online_build)
-endif()
+add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/../online ${CMAKE_BINARY_DIR}/online_build)
 
 add_executable(gods_app main.cpp ui.cpp agent_ui.cpp)
 target_include_directories(gods_app PRIVATE
@@ -42,14 +40,12 @@ target_link_libraries(gods_app PRIVATE
     giocamo
     nlohmann_json::nlohmann_json
 )
-if(NOT EMSCRIPTEN)
-    target_link_libraries(gods_app PRIVATE online_lib)
-endif()
+target_link_libraries(gods_app PRIVATE online_lib)
 
 if(EMSCRIPTEN)
     # Flags from the raylib Working-for-Web guide.
-    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -s USE_GLFW=3 -s ASSERTIONS=1 -s WASM=1 -s ASYNCIFY -s GL_ENABLE_GET_PROC_ADDRESS=1")
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -s USE_GLFW=3 -s ASSERTIONS=1 -s WASM=1 -s ASYNCIFY -s GL_ENABLE_GET_PROC_ADDRESS=1")
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -s USE_GLFW=3 -s ASSERTIONS=1 -s WASM=1 -s ASYNCIFY -s GL_ENABLE_GET_PROC_ADDRESS=1 -s FETCH=1")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -s USE_GLFW=3 -s ASSERTIONS=1 -s WASM=1 -s ASYNCIFY -s GL_ENABLE_GET_PROC_ADDRESS=1 -s FETCH=1")
     set(CMAKE_EXECUTABLE_SUFFIX ".html")
 
     # Bundle all game assets into the .data file for the browser.
