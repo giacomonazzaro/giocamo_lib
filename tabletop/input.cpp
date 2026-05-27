@@ -88,31 +88,31 @@ static bool find_thing_at_rec(
   Thing_Location&    path
 ) {
   const Thing& t = state.things[thing_id];
-  float        w = t.rect.width;
-  float        h = t.rect.height;
-  float        local_px, local_py;
-  if (t.rotation == 0.0f) {
-    local_px = px - t.rect.x;
-    local_py = py - t.rect.y;
+  float        w = t.size.x;
+  float        h = t.size.y;
+  // (px, py) is in the parent's local space, whose origin is the parent's
+  // center. Express it in this thing's local space, whose origin is this
+  // thing's center.
+  float dx = px - t.transform.x;
+  float dy = py - t.transform.y;
+  float local_px, local_py;
+  if (t.transform.rotation == 0.0f) {
+    local_px = dx;
+    local_py = dy;
   } else {
-    // Renderer rotates around (cx, cy) by t.rotation degrees. To go from
-    // parent-local back to thing-local: translate to center, rotate by
-    // -t.rotation, shift to top-left origin.
-    float cx        = t.rect.x + w / 2.0f;
-    float cy        = t.rect.y + h / 2.0f;
-    float dx        = px - cx;
-    float dy        = py - cy;
-    float angle_rad = t.rotation * (float)(M_PI / 180.0);
+    // Renderer rotates around the thing's center by t.transform.rotation
+    // degrees. Inverse: rotate by -t.transform.rotation.
+    float angle_rad = t.transform.rotation * (float)(M_PI / 180.0);
     float cos_a     = std::cos(angle_rad);
     float sin_a     = std::sin(angle_rad);
-    local_px        = cos_a * dx + sin_a * dy + w / 2.0f;
-    local_py        = -sin_a * dx + cos_a * dy + h / 2.0f;
+    local_px        = cos_a * dx + sin_a * dy;
+    local_py        = -sin_a * dx + cos_a * dy;
   }
 
-  // Prune: containment in thing-local space. Root is exempt — it covers the
-  // entire window, so the check would always pass.
+  // Prune: containment in thing-local space (centered at origin). Root is
+  // exempt — it covers the entire window, so the check would always pass.
   if (thing_id != state.root) {
-    if (local_px < 0.0f || local_px > w || local_py < 0.0f || local_py > h)
+    if (std::abs(local_px) > w / 2.0f || std::abs(local_py) > h / 2.0f)
       return false;
   }
 
@@ -260,11 +260,13 @@ void handle_mouse_move(Table_State& state, const Input& input) {
   }
 
   // Now position the dragged thing under the cursor — convert world → local of parent.
-  Thing& thing   = state.things[thing_id];
-  int parent_id = (drag.current_parent >= 0) ? drag.current_parent : state.root;
+  // Both target_world and parent_world are centers; subtracting gives the
+  // thing's center in the parent's local space.
+  Thing& thing      = state.things[thing_id];
+  int parent_id     = (drag.current_parent >= 0) ? drag.current_parent : state.root;
   Vector2 parent_world = local_to_world(parent_id, state);
-  thing.rect.x          = target_world_x - parent_world.x;
-  thing.rect.y          = target_world_y - parent_world.y;
+  thing.transform.x = target_world_x - parent_world.x;
+  thing.transform.y = target_world_y - parent_world.y;
 }
 
 void handle_rotate_thing(
@@ -280,9 +282,9 @@ void handle_rotate_thing(
   int    thing_id = path.back();
   Thing& thing    = state.things[thing_id];
   if (clockwise)
-    thing.rotation = thing.rotation + 90;
+    thing.transform.rotation = thing.transform.rotation + 90.0f;
   else
-    thing.rotation = thing.rotation - 90;
+    thing.transform.rotation = thing.transform.rotation - 90.0f;
 }
 
 void shuffle_thing(Table_State& state, int parent_id) {

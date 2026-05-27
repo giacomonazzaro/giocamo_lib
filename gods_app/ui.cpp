@@ -76,7 +76,7 @@ std::vector<Thing> make_gods_stacks(
 
   auto mk = [](Rectangle r, int sx, int sy, bool face_up, std::string name) {
     Thing t;
-    t.rect     = r;
+    set_local_rect(t, r);
     t.spread_x = (float)sx;
     t.spread_y = (float)sy;
     t.face_up  = true;

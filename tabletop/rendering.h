@@ -12,9 +12,7 @@ void draw_zoomed_thing(const Thing& thing, bool face_up);
 void draw_drop_placeholder(int thing_id, const Table_State& state);
 // Smooth per-thing world transforms toward the current target tree.
 void animate(
-  std::vector<World_Transform>& animated,
-  const Table_State&            state,
-  float                         dt = 0.1f
+  std::vector<Transform2D>& animated, const Table_State& state, float dt = 0.1f
 );
 void render_text(
   const std::string& text, float x, float y, int size, Color color

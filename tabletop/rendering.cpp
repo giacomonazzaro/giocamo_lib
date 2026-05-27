@@ -197,11 +197,12 @@ void draw_background(const Input& input, float turn) {
 // --- draw_thing_back ---
 
 void draw_thing_back() {
-  float x = 0.0f;
-  float y = 0.0f;
+  // Drawn centered at origin. The world transform places this center.
   float w = (float)tt::CARD_WIDTH;
   float h = (float)tt::CARD_HEIGHT;
   float r = (float)tt::CARD_CORNER_RADIUS;
+  float x = -w / 2.0f;
+  float y = -h / 2.0f;
 
   // Thing colors from kt namespace (matching config.py defaults).
   Color back_color    = {60, 80, 120, 255};
@@ -236,10 +237,11 @@ void draw_thing(const Thing& thing, bool face_up) {
     return;
   }
 
-  float x = 0.0f;
-  float y = 0.0f;
-  float w = thing.rect.width;
-  float h = thing.rect.height;
+  // Drawn centered at origin. The world transform places this center.
+  float w = thing.size.x;
+  float h = thing.size.y;
+  float x = -w / 2.0f;
+  float y = -h / 2.0f;
   float r = (float)tt::CARD_CORNER_RADIUS;
 
   // Thing background: image with rounded corners, or solid color fallback.
@@ -295,23 +297,27 @@ void draw_drop_placeholder(int thing_id, const Table_State& state) {
 // (x, y, rotation) down each chain. Treating composition as plain addition
 // works here because no parent rotates in this codebase — only leaf things.
 static void compute_world(
-  int                           id,
-  const World_Transform&        parent,
-  const std::vector<Thing>&     things,
-  std::vector<World_Transform>& output
+  int                       id,
+  const Transform2D&        parent,
+  const std::vector<Thing>& things,
+  std::vector<Transform2D>& output
 ) {
   const Thing& t = things[id];
-  output[id]     = {parent.x + t.rect.x, parent.y + t.rect.y,
-                    parent.rotation + t.rotation};
-  for (int child_id : t.children) compute_world(child_id, output[id], things, output);
+  output[id]     = {
+    parent.x + t.transform.x,
+    parent.y + t.transform.y,
+    parent.rotation + t.transform.rotation
+  };
+  for (int child_id : t.children)
+    compute_world(child_id, output[id], things, output);
 }
 
 void animate(
-  std::vector<World_Transform>& animated, const Table_State& state, float dt
+  std::vector<Transform2D>& animated, const Table_State& state, float dt
 ) {
-  const int n = (int)state.things.size();
-  std::vector<World_Transform> target(n);
-  compute_world(state.root, World_Transform{}, state.things, target);
+  const int                n = (int)state.things.size();
+  std::vector<Transform2D> target(n);
+  compute_world(state.root, Transform2D{}, state.things, target);
 
   // First frame (or size change): snap so things do not lurch in from (0,0).
   if ((int)animated.size() != n) animated = target;
@@ -335,20 +341,18 @@ void animate(
     animated[i].x += vx;
     animated[i].y += vy;
     // Rotation eases toward target with a small swing from x velocity.
-    animated[i].rotation =
-      animated[i].rotation * (1.0f - dt) + target[i].rotation * dt + vx * 0.1f;
+    animated[i].rotation = animated[i].rotation * (1.0f - dt) +
+                           target[i].rotation * dt + vx * 0.1f;
   }
 }
 
-// Translate to (wt.x, wt.y) and rotate around the thing's center.
-static void apply_world_transform(const World_Transform& wt, const Thing& t) {
-  if (wt.rotation == 0.0f) {
-    rlTranslatef(wt.x, wt.y, 0.0f);
-    return;
+// Translate to (wt.x, wt.y) — which is the thing's center — and rotate
+// around it. draw_thing draws centered at origin so no further offset.
+static void apply_world_transform(const Transform2D& wt) {
+  rlTranslatef(wt.x, wt.y, 0.0f);
+  if (wt.rotation != 0.0f) {
+    rlRotatef(wt.rotation, 0.0f, 0.0f, 1.0f);
   }
-  rlTranslatef(wt.x + t.rect.width / 2.0f, wt.y + t.rect.height / 2.0f, 0.0f);
-  rlRotatef(wt.rotation, 0.0f, 0.0f, 1.0f);
-  rlTranslatef(-t.rect.width / 2.0f, -t.rect.height / 2.0f, 0.0f);
 }
 
 // Walk the tree to draw each thing at its absolute world transform. No
@@ -360,7 +364,7 @@ static void draw_thing_world(
   const bool   face_up = parent_face_up && t.face_up;
   if (id != dragged_thing_id(state.drag_state)) {
     rlPushMatrix();
-    apply_world_transform(state.animated_world[id], t);
+    apply_world_transform(state.animated_world[id]);
     draw_thing(t, face_up);
     auto cb = state.draw_callbacks.find(id);
     if (cb != state.draw_callbacks.end()) cb->second(state, input, face_up);
@@ -382,7 +386,7 @@ void draw_zoomed_thing(const Thing& thing, bool face_up) {
 
   float thing_w = (float)tt::CARD_WIDTH;
   float thing_h = (float)tt::CARD_HEIGHT;
-  float margin = 40.0f;
+  float margin  = 40.0f;
 
   // Scale to fill the screen with some margin.
   float scale = std::min(
@@ -390,9 +394,9 @@ void draw_zoomed_thing(const Thing& thing, bool face_up) {
     ((float)screen_h - 2.0f * margin) / thing_h
   );
 
-  // Center on screen.
-  float cx = ((float)screen_w - thing_w * scale) / 2.0f;
-  float cy = ((float)screen_h - thing_h * scale) / 2.0f;
+  // draw_thing draws centered at origin; translate to the screen center.
+  float cx = (float)screen_w / 2.0f;
+  float cy = (float)screen_h / 2.0f;
 
   rlPushMatrix();
   rlTranslatef(cx, cy, 0.0f);
@@ -429,7 +433,7 @@ void draw_table(Table_State& state, const Input& input) {
     int  orig    = state.drag_state.original_parent;
     if (orig >= 0 && orig != state.root) face_up = state.things[orig].face_up;
     rlPushMatrix();
-    apply_world_transform(state.animated_world[dragged], state.things[dragged]);
+    apply_world_transform(state.animated_world[dragged]);
     draw_thing(state.things[dragged], face_up);
     auto cb = state.draw_callbacks.find(dragged);
     if (cb != state.draw_callbacks.end()) cb->second(state, input, face_up);
@@ -447,7 +451,7 @@ void draw_table(Table_State& state, const Input& input) {
   // thing] when set; its direct parent (path[size-2]) is the owning parent.
   if (!state.zoomed_thing_id.empty()) {
     int  thing_id = state.zoomed_thing_id.back();
-    bool face_up = true;
+    bool face_up  = true;
     if (state.zoomed_thing_id.size() >= 2) {
       int owner = state.zoomed_thing_id[state.zoomed_thing_id.size() - 2];
       face_up   = state.things[owner].face_up;

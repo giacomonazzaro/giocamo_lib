@@ -12,17 +12,32 @@
 
 VISITABLE_STRUCT(Rectangle, x, y, width, height);
 VISITABLE_STRUCT(Color, r, g, b, a);
+VISITABLE_STRUCT(Vector2, x, y);
+
+// Position and rotation of thing w.r.t. parent.
+struct Transform2D {
+  float x        = 0.0f;
+  float y        = 0.0f;
+  float rotation = 0.0f;
+};
+VISITABLE_STRUCT(Transform2D, x, y, rotation);
 
 // Base visual entity with optional draw callback.
 struct Thing {
+  // Info.
   std::string name;
   int         id = 0;
-  std::string image_path;
+
+  // Appearance.
   Color       color = {255, 255, 255, 50};
-  Rectangle rect = {0.0f, 0.0f, (float)tt::CARD_WIDTH, (float)tt::CARD_HEIGHT};
-  float     rotation = 0.0f;
-  bool      face_up  = true;
-  float     depth    = 0.0f;
+  std::string image_path;
+
+  // Geometry. A thing is assumed to be a rectangle for now, centered at (0,0).
+  Transform2D transform;
+  Vector2     size = {(float)tt::CARD_WIDTH, (float)tt::CARD_HEIGHT};
+
+  bool  face_up = true;
+  float depth   = 0.0f;
 
   // Container
   int              capacity = -1;  // -1 = unlimited.
@@ -36,8 +51,8 @@ VISITABLE_STRUCT(
   id,
   image_path,
   color,
-  rect,
-  rotation,
+  size,
+  transform,
   face_up,
   depth,
   capacity,
@@ -46,18 +61,26 @@ VISITABLE_STRUCT(
   spread_y
 );
 
+// Set a thing's local rectangle from top-left coords. transform.x/y
+// stores the center, so we offset by half the size.
+inline void set_local_rect(Thing& thing, Rectangle rect) {
+  thing.size        = {rect.width, rect.height};
+  thing.transform.x = rect.x + rect.width / 2.0f;
+  thing.transform.y = rect.y + rect.height / 2.0f;
+}
+
+// Local-space rectangle (top-left coords) of a thing.
+inline Rectangle local_rect(const Thing& thing) {
+  return Rectangle{
+    thing.transform.x - thing.size.x / 2.0f,
+    thing.transform.y - thing.size.y / 2.0f,
+    thing.size.x,
+    thing.size.y,
+  };
+}
+
 // Path of thing IDs from root to the thing.
 using Thing_Location = std::vector<int>;
-
-// A thing's pose in the global frame of the table. The animation pipeline
-// works in this space so that re-parenting (e.g. a thing moving from one
-// parent into another) is just a target swap rather
-// than a coord-system swap. The renderer consumes these directly.
-struct World_Transform {
-  float x        = 0.0f;
-  float y        = 0.0f;
-  float rotation = 0.0f;
-};
 
 // Drag operation in progress.
 struct Drag_State {
@@ -88,10 +111,10 @@ struct Table_State : Table_Layout {
   int width  = 0;
   int height = 0;
 
-  Drag_State                   drag_state;
+  Drag_State drag_state;
   // Smoothed world transform per thing, same indexing as `things`. The
   // renderer reads these directly.
-  std::vector<World_Transform> animated_world;
+  std::vector<Transform2D> animated_world;
   // HUD/per-thing draw callbacks. Receive Input so they can run immediate-mode
   // buttons against the recorded/replayed input stream. The bool argument is
   // the face_up flag of the thing being decorated (true for the HUD slot).

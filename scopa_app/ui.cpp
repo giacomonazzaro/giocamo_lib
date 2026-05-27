@@ -99,7 +99,7 @@ std::vector<Thing> make_scopa_stacks(
   auto make = [](Rectangle rect, float spread_x, float spread_y, bool face_up,
                  const char* name) {
     Thing thing;
-    thing.rect     = rect;
+    set_local_rect(thing, rect);
     thing.spread_x = spread_x;
     thing.spread_y = spread_y;
     thing.face_up  = face_up;

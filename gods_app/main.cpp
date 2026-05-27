@@ -186,7 +186,8 @@ void init_table_layout(
   // Root: sits at the end of `things`, owns all stacks as direct children.
   Thing root;
   root.name     = "root";
-  root.rect     = {0.0f, 0.0f, (float)window_width, (float)window_height};
+  // Root keeps transform at {0,0} so root-local space == world space.
+  root.size     = {(float)window_width, (float)window_height};
   root.id       = (int)table_state.things.size();
   root.children = stack_ids_in_order;
   table_state.things.push_back(root);
@@ -335,7 +336,7 @@ static void draw_hud(
           : place_next(
               window, tt::CARD_WIDTH, tt::CARD_HEIGHT, "right", "center", 10
             );
-      s.rect = target;
+      set_local_rect(s, target);
       update_children_positions(child_id, *table_state, false);
       break;
     }
@@ -486,9 +487,9 @@ static void play_gods(
         bool   inside =
           point_in_thing((float)mx, (float)my, stack_id, table_state);
         if (inside && !is_expanded) {
-          s.rect = ui_state.place(
+          set_local_rect(s, ui_state.place(
             tt::CARD_WIDTH * 7, tt::CARD_HEIGHT, "center", "center"
-          );
+          ));
           s.spread_x = 150.0f;
           s.depth    = 1.0f;
           update_children_positions(stack_id, table_state, false);
@@ -501,7 +502,8 @@ static void play_gods(
           );
           for (const Thing& f : fresh) {
             if (f.name == s.name) {
-              s.rect = f.rect;
+              s.transform = f.transform;
+              s.size      = f.size;
               break;
             }
           }
