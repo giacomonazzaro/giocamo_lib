@@ -717,20 +717,22 @@ static Agent* make_agent(
 }
 
 static void init_table_and_gods_states(
-  Game_State&  gods_state,
-  Table_State& table_state,
-  int          bottom_player,
-  int          window_width,
-  int          window_height,
-  bool         load_from_disk = true
+  Game_State&         gods_state,
+  Table_State&        table_state,
+  int                 bottom_player,
+  int                 window_width,
+  int                 window_height,
+  bool                load_from_disk,
+  std::optional<int>  seed
 ) {
   // Card hooks (Card::on_played etc.) dispatch through the global card_designs
   // registry, so it must be populated before any gameplay runs — regardless of
   // whether the game state comes from quick_setup or from a JSON snapshot.
   fs_helpers::load_card_designs();
   if (!load_from_disk) {
-    // Dev path: build a fresh game + layout and save snapshots to disk.
-    gods_state = quick_setup(std::nullopt);
+    // Online peers pass the same seed (negotiated during the handshake) so
+    // both sides shuffle the deck identically.
+    gods_state = quick_setup(seed);
     init_table_layout(
       table_state, gods_state, bottom_player, window_width, window_height
     );
@@ -769,13 +771,18 @@ int main(int argc, char** argv) {
 
   Game_State  gods_state;
   Table_State table_state;
+  // Online peers feed the negotiated seed into quick_setup so both sides
+  // see the same deal. Solo / hot-seat get a fresh random seed.
+  std::optional<int> game_seed = online ? std::optional<int>(menu_result.seed)
+                                        : std::nullopt;
   init_table_and_gods_states(
     gods_state,
     table_state,
     menu_result.player_index,
     args.window_width,
     args.window_height,
-    args.load_from_disk
+    args.load_from_disk,
+    game_seed
   );
 
   Gods_UI ui_state(args.window_width, args.window_height);

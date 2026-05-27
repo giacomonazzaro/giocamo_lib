@@ -24,8 +24,10 @@ URL="http://localhost:8080/gods_app.html"
 echo ""
 echo "Starting server at $URL"
 
-# Start server in background, open the browser, then wait for Ctrl-C.
-python3 -m http.server 8080 --directory "$BUILD_DIR" &
+# Start the dev server in the background. web_server.py serves the build
+# directory AND runs a tiny same-origin ntfy.sh-compatible relay at /ntfy/
+# so the wasm peers don't need any external network.
+python3 "$SCRIPT_DIR/web_server.py" "$BUILD_DIR" 8080 &
 SERVER_PID=$!
 sleep 0.5
 open "$URL"

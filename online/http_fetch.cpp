@@ -5,20 +5,44 @@
 #include <cstring>
 #include <string>
 
-// Synchronous send is fine — happens once per turn at most, and ASYNCIFY
-// keeps the JS event loop ticking during the wait.
-static std::string do_sync_fetch(
-  const char* method, const std::string& url, const std::string& body
-) {
+// Body owner: emscripten_fetch keeps a pointer to the request body but
+// doesn't copy it, so we have to keep the bytes alive until onsuccess /
+// onerror fires. The free function deletes the owner.
+static void close_with_owner(emscripten_fetch_t* fetch) {
+  auto* owner = static_cast<std::string*>(fetch->userData);
+  delete owner;
+  emscripten_fetch_close(fetch);
+}
+
+// Fire-and-forget POST. We don't use the response, and Chrome blocks
+// synchronous XHR on the main thread (EMSCRIPTEN_FETCH_SYNCHRONOUS is
+// pthread-only on the browser), so this MUST be async.
+std::string http_post(const std::string& url, const std::string& body) {
   emscripten_fetch_attr_t attr;
   emscripten_fetch_attr_init(&attr);
-  for (int i = 0; method[i] && i < 31; ++i) attr.requestMethod[i] = method[i];
+  std::strcpy(attr.requestMethod, "POST");
+  attr.attributes = EMSCRIPTEN_FETCH_LOAD_TO_MEMORY;
+  auto* owner            = new std::string(body);
+  attr.requestData       = owner->data();
+  attr.requestDataSize   = owner->size();
+  attr.userData          = owner;
+  attr.onsuccess         = close_with_owner;
+  attr.onerror           = close_with_owner;
+  emscripten_fetch(&attr, url.c_str());
+  return "";
+}
+
+// Blocking GET. Currently unused on wasm (Async_Get drives polling
+// directly), but kept for API parity with the native impl in case anything
+// else picks it up. Synchronous + ASYNCIFY is OK on the main thread for a
+// GET with no request body — Chrome's sync-XHR block is specifically for
+// requests that have a body to upload.
+std::string http_get(const std::string& url) {
+  emscripten_fetch_attr_t attr;
+  emscripten_fetch_attr_init(&attr);
+  std::strcpy(attr.requestMethod, "GET");
   attr.attributes =
     EMSCRIPTEN_FETCH_LOAD_TO_MEMORY | EMSCRIPTEN_FETCH_SYNCHRONOUS;
-  if (!body.empty()) {
-    attr.requestData     = body.c_str();
-    attr.requestDataSize = body.size();
-  }
   emscripten_fetch_t* fetch = emscripten_fetch(&attr, url.c_str());
   std::string         response;
   if (fetch && fetch->status == 200 && fetch->numBytes > 0) {
@@ -26,14 +50,6 @@ static std::string do_sync_fetch(
   }
   if (fetch) emscripten_fetch_close(fetch);
   return response;
-}
-
-std::string http_post(const std::string& url, const std::string& body) {
-  return do_sync_fetch("POST", url, body);
-}
-
-std::string http_get(const std::string& url) {
-  return do_sync_fetch("GET", url, "");
 }
 
 // --- Async_Get -----------------------------------------------------------

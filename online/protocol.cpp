@@ -14,13 +14,26 @@
 
 namespace {
 
-// Relay base URL. Defaults to the public ntfy.sh service; can be overridden
-// via the NTFY_URL environment variable (handy when ntfy.sh is down or you
-// want to point at a self-hosted instance or a local test relay).
+// Relay base URL.
+//   - Wasm defaults to "/ntfy/" — a same-origin path served by
+//     web_server.py, so two browser tabs always reach the same relay with
+//     no external network dependency.
+//   - Native defaults to the public ntfy.sh service.
+// Either platform can override via the NTFY_URL environment variable
+// (e.g. to point native peers at a local web_server.py).
 std::string ntfy_base_url() {
   static std::string base = []() {
     const char* env = std::getenv("NTFY_URL");
-    std::string s   = env && *env ? env : "https://ntfy.sh";
+    std::string s;
+    if (env && *env) {
+      s = env;
+    } else {
+#ifdef __EMSCRIPTEN__
+      s = "/ntfy";
+#else
+      s = "https://ntfy.sh";
+#endif
+    }
     if (s.empty() || s.back() != '/') s += "/";
     return s;
   }();
