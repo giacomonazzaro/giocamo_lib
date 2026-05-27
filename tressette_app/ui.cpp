@@ -88,7 +88,7 @@ std::vector<Thing> make_tressette_stacks(
 
   auto make = [](Rectangle r, float sx, float sy, bool fu, const char* name) {
     Thing t;
-    t.rect     = r;
+    set_local_rect(t, r);
     t.spread_x = sx;
     t.spread_y = sy;
     t.face_up  = fu;
@@ -117,26 +117,29 @@ make_card_draw_callback(
   return
     [&state, &ui_state, id](const Table_State&, const Input&, bool face_up) {
       if (!face_up) return;
-      const tressette::Card& c    = state.all_cards[id];
-      const char*            rlbl = rank_label(c.rank);
-      const char*            slbl = suit_name(c.suit);
-      Color                  col  = {255, 255, 255, 255};
-      int                    w    = tt::CARD_WIDTH;
-      int                    h    = tt::CARD_HEIGHT;
+      // Drawn in card-local space where the card center is at (0, 0).
+      const tressette::Card& c      = state.all_cards[id];
+      const char*            rlbl   = rank_label(c.rank);
+      const char*            slbl   = suit_name(c.suit);
+      Color                  col    = {255, 255, 255, 255};
+      int                    w      = tt::CARD_WIDTH;
+      int                    h      = tt::CARD_HEIGHT;
+      float                  half_h = (float)h / 2.0f;
+      float                  half_w = (float)w / 2.0f;
       // Big rank number/word near the top, horizontally centered.
       int rank_size = (c.rank < 8) ? 56 : 32;
       int tw        = text_width(rlbl, rank_size);
-      render_text(rlbl, (float)(w / 2 - tw / 2), h * 0.18f, rank_size, col);
+      render_text(rlbl, (float)(-tw / 2), h * 0.18f - half_h, rank_size, col);
 
       // Suit name underneath.
       int suit_size = 22;
       int sw        = text_width(slbl, suit_size);
-      render_text(slbl, (float)(w / 2 - sw / 2), h * 0.55f, suit_size, col);
+      render_text(slbl, (float)(-sw / 2), h * 0.55f - half_h, suit_size, col);
 
       // Highlight border for legal cards.
       if (ui_state.highlighted_things.count(id) > 0) {
         DrawRectangleRoundedLinesEx(
-          Rectangle{0.0f, 0.0f, (float)w, (float)h},
+          Rectangle{-half_w, -half_h, (float)w, (float)h},
           0.18f,
           8,
           4.0f,

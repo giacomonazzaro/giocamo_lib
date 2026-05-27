@@ -214,12 +214,13 @@ void init_card_draw_callbacks(
         if (face_up) {
           draw_card_power_badge(power, gcard.destroyed);
         }
+        // Drawn in card-local space where the card center is at (0, 0).
         int w = tt::CARD_WIDTH;
         int h = tt::CARD_HEIGHT;
         for (const auto& [k, kt_card_id] : ui_state.highlighted_things) {
           if (kt_card_id == id) {
             DrawRectangleRoundedLinesEx(
-              Rectangle{0.0f, 0.0f, (float)w, (float)h},
+              Rectangle{-(float)w / 2.0f, -(float)h / 2.0f, (float)w, (float)h},
               0.25f,
               8,
               4.0f,

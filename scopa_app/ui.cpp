@@ -128,18 +128,21 @@ make_card_draw_callback(
   return
     [&state, &ui_state, id](const Table_State&, const Input&, bool face_up) {
       if (!face_up) return;
+      // Drawn in card-local space where the card center is at (0, 0).
       const scopa::Card& card        = state.all_cards[id];
       const char*        rank_str    = rank_label(card.rank);
       const char*        suit_str    = suit_name(card.suit);
       Color              text_color  = {255, 255, 255, 255};
       int                card_width  = tt::CARD_WIDTH;
       int                card_height = tt::CARD_HEIGHT;
+      float              half_h      = (float)card_height / 2.0f;
+      float              half_w      = (float)card_width / 2.0f;
       int                rank_size   = (card.rank < 8) ? 56 : 32;
       int                rank_w      = text_width(rank_str, rank_size);
       render_text(
         rank_str,
-        (float)(card_width / 2 - rank_w / 2),
-        card_height * 0.18f,
+        (float)(-rank_w / 2),
+        card_height * 0.18f - half_h,
         rank_size,
         text_color
       );
@@ -147,22 +150,22 @@ make_card_draw_callback(
       int suit_w    = text_width(suit_str, suit_size);
       render_text(
         suit_str,
-        (float)(card_width / 2 - suit_w / 2),
-        card_height * 0.55f,
+        (float)(-suit_w / 2),
+        card_height * 0.55f - half_h,
         suit_size,
         text_color
       );
 
-      // The 7 of Denari (Settebello) gets a small star marker so the player
-      // remembers where the headline point is.
+      // The 7 of Denari (Settebello) gets a small star marker near the
+      // top-left corner.
       if (card.rank == 7 && card.suit == scopa::Suit::DENARI) {
-        render_text("*", 8.0f, 8.0f, 28, Color{255, 215, 0, 255});
+        render_text("*", 8.0f - half_w, 8.0f - half_h, 28, Color{255, 215, 0, 255});
       }
 
       // Highlight border for legal-to-play / selectable cards.
       if (ui_state.highlighted_things.count(id) > 0) {
         DrawRectangleRoundedLinesEx(
-          Rectangle{0.0f, 0.0f, (float)card_width, (float)card_height},
+          Rectangle{-half_w, -half_h, (float)card_width, (float)card_height},
           0.18f,
           8,
           4.0f,

@@ -114,12 +114,14 @@ std::string get_image_path(const std::string& card_name) {
 }
 
 void draw_card_power_badge(const std::string& power, bool destroyed) {
+  // Drawn in card-local space where the card center is at (0, 0).
   int w = tt::CARD_WIDTH;
   int h = tt::CARD_HEIGHT;
   int r = tt::CARD_CORNER_RADIUS;
 
-  int badge_cx = (int)(0.88f * (float)w);
-  int badge_cy = (int)(0.12f * (float)w);
+  // Badge sits near the top-right corner — offsets are from the center.
+  int badge_cx = (int)(0.38f * (float)w);
+  int badge_cy = (int)(0.12f * (float)w - 0.5f * (float)h);
   int badge_r  = (int)(0.12f * (float)w);
   DrawCircle(badge_cx, badge_cy, (float)badge_r, ::Color{0, 0, 0, 255});
 
@@ -135,7 +137,7 @@ void draw_card_power_badge(const std::string& power, bool destroyed) {
 
   if (destroyed) {
     DrawRectangleRounded(
-      Rectangle{0.0f, 0.0f, (float)w, (float)h},
+      Rectangle{-(float)w / 2.0f, -(float)h / 2.0f, (float)w, (float)h},
       (float)r / (float)std::min(w, h),
       8,
       ::Color{0, 0, 0, 100}
