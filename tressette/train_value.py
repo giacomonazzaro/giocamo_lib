@@ -135,7 +135,7 @@ class Tressette_Value_Net(nn.Module):
         super().__init__()
         self.card_embedding = nn.Embedding(NUM_CARDS, d_model)
         self.location_embedding = nn.Embedding(NUM_LOCATIONS, d_model)
-        encoder_layer = nn.Transform2DerEncoderLayer(
+        encoder_layer = nn.TransformerEncoderLayer(
             d_model=d_model,
             nhead=num_heads,
             dim_feedforward=4 * d_model,
@@ -143,7 +143,7 @@ class Tressette_Value_Net(nn.Module):
             batch_first=True,
             activation="gelu",
         )
-        self.encoder = nn.Transform2DerEncoder(encoder_layer, num_layers=num_layers)
+        self.encoder = nn.TransformerEncoder(encoder_layer, num_layers=num_layers)
         self.head = nn.Sequential(
             nn.Linear(d_model, d_model),
             nn.GELU(),
@@ -392,9 +392,7 @@ def train(args):
             dummy = torch.zeros(1, NUM_CARDS)
             # check_trace=False: MultiheadAttention takes different code paths at
             # batch_size=1 vs >1, which triggers a false sanity-check failure.
-            traced = torch.jit.trace(
-                cpu_model, (dummy, dummy, dummy), check_trace=False
-            )
+            traced = torch.jit.trace(cpu_model, (dummy, dummy, dummy), check_trace=False)
             export_path = args.out.replace(".pt", "_traced.pt")
             traced.save(export_path)
             print(f"exported TorchScript model to {export_path}")
@@ -403,13 +401,9 @@ def train(args):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--data", type=str, default="selfplay_data.bin")
-    parser.add_argument("--out", type=str, default="tressette_value.pt")
-    parser.add_argument(
-        "--init-checkpoint",
-        type=str,
-        default="",
-        help="warm-start from this checkpoint before training",
-    )
+    parser.add_argument("--out",             type=str, default="tressette_value.pt")
+    parser.add_argument("--init-checkpoint", type=str, default="",
+                        help="warm-start from this checkpoint before training")
     parser.add_argument(
         "--export",
         action="store_true",
