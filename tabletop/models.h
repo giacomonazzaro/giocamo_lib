@@ -87,16 +87,21 @@ struct Drag_State {
   // Root-to-thing path captured when the drag started. Empty when no drag
   // is in progress.
   Thing_Location location;
-  int            current_parent      = -1;
-  int            last_hovered_parent = -1;
-  int            original_parent     = -1;
-  float          offset_x = 0.0f, offset_y = 0.0f;
-};
+  int            hovered_thing = -1;
+  // int            current_parent      = -1;
+  // int            last_hovered_parent = -1;
+  // int            original_parent     = -1;
+  float mouse_offset_x = 0.0f;
+  float mouse_offset_y = 0.0f;
 
-// Id of the thing currently being dragged, or -1 when no drag is active.
-inline int dragged_thing_id(const Drag_State& drag) {
-  return drag.location.empty() ? -1 : drag.location.back();
-}
+  // Id of the thing currently being dragged, or -1 when no drag is active.
+  inline int thing_id() const {
+    return location.empty() ? -1 : location.back();
+  }
+    inline int parent_id() const {
+      return location.size() > 2 ? location[location.size() - 2] : -1;
+    }
+};
 
 struct Table_Layout {
   std::vector<Thing> things;

@@ -75,13 +75,13 @@ void update_children_positions(int parent_id, Table_State& state, bool sort) {
   float start_x_local = -total_spread_x / 2.0f;
   float start_y_local = -total_spread_y / 2.0f;
 
-  int drag_id = dragged_thing_id(state.drag_state);
+  int drag_id = state.drag_state.thing_id();
   for (int i = 0; i < (int)n; i++) {
     int child_id = parent.children[i];
     if (child_id != drag_id) {
-      Thing& child       = state.things[child_id];
-      child.transform.x  = start_x_local + static_cast<float>(i) * spread_x;
-      child.transform.y  = start_y_local + static_cast<float>(i) * spread_y;
+      Thing& child      = state.things[child_id];
+      child.transform.x = start_x_local + static_cast<float>(i) * spread_x;
+      child.transform.y = start_y_local + static_cast<float>(i) * spread_y;
     }
   }
 }

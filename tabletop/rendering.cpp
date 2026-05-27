@@ -322,7 +322,7 @@ void animate(
   // First frame (or size change): snap so things do not lurch in from (0,0).
   if ((int)animated.size() != n) animated = target;
 
-  const int dragged = dragged_thing_id(state.drag_state);
+  const int dragged = state.drag_state.thing_id();
   for (int i = 0; i < n; ++i) {
     if (i == dragged) {
       animated[i] = target[i];  // Snap to cursor.
@@ -362,7 +362,7 @@ static void draw_thing_world(
 ) {
   const Thing& t       = state.things[id];
   const bool   face_up = parent_face_up && t.face_up;
-  if (id != dragged_thing_id(state.drag_state)) {
+  if (id != state.drag_state.thing_id()) {
     rlPushMatrix();
     apply_world_transform(state.animated_world[id]);
     draw_thing(t, face_up);
@@ -411,9 +411,8 @@ void draw_table(Table_State& state, const Input& input) {
   animate(state.animated_world, state, 0.1f);
 
   // Highlight the hovered drop target while dragging.
-  if (state.drag_state.current_parent != -1 &&
-      state.drag_state.current_parent != state.root) {
-    draw_drop_placeholder(state.drag_state.current_parent, state);
+  if (state.drag_state.hovered_thing != -1) {
+    draw_drop_placeholder(state.drag_state.hovered_thing, state);
   }
 
   // Depth-sort root's children so layered draw order is preserved.
@@ -427,10 +426,10 @@ void draw_table(Table_State& state, const Input& input) {
   }
 
   // Dragged thing overlay: drawn last so it sits above everything else.
-  int dragged = dragged_thing_id(state.drag_state);
+  int dragged = state.drag_state.thing_id();
   if (dragged >= 0) {
     bool face_up = true;
-    int  orig    = state.drag_state.original_parent;
+    int  orig    = state.drag_state.parent_id();
     if (orig >= 0 && orig != state.root) face_up = state.things[orig].face_up;
     rlPushMatrix();
     apply_world_transform(state.animated_world[dragged]);
