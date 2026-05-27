@@ -1,5 +1,7 @@
 #include "input.h"
 
+#include <struct/print.h>
+
 #include <algorithm>
 #include <cmath>
 #include <cstdio>
@@ -12,16 +14,62 @@
 // Keys we sample once per frame. Adding a new key here is all it takes to
 // make a hotkey recordable/replayable.
 static const int s_watched_pressed[] = {
-  KEY_A, KEY_B, KEY_C, KEY_D, KEY_E, KEY_F, KEY_G, KEY_H, KEY_I, KEY_J,
-  KEY_K, KEY_L, KEY_M, KEY_N, KEY_O, KEY_P, KEY_Q, KEY_R, KEY_S, KEY_T,
-  KEY_U, KEY_V, KEY_W, KEY_X, KEY_Y, KEY_Z,
-  KEY_ZERO, KEY_ONE, KEY_TWO, KEY_THREE, KEY_FOUR,
-  KEY_FIVE, KEY_SIX, KEY_SEVEN, KEY_EIGHT, KEY_NINE,
-  KEY_ENTER, KEY_BACKSPACE, KEY_TAB, KEY_ESCAPE, KEY_DELETE,
-  KEY_LEFT, KEY_RIGHT, KEY_UP, KEY_DOWN,
-  KEY_MINUS, KEY_EQUAL, KEY_LEFT_BRACKET, KEY_RIGHT_BRACKET,
-  KEY_SEMICOLON, KEY_APOSTROPHE, KEY_GRAVE, KEY_BACKSLASH,
-  KEY_COMMA, KEY_PERIOD, KEY_SLASH,
+  KEY_A,
+  KEY_B,
+  KEY_C,
+  KEY_D,
+  KEY_E,
+  KEY_F,
+  KEY_G,
+  KEY_H,
+  KEY_I,
+  KEY_J,
+  KEY_K,
+  KEY_L,
+  KEY_M,
+  KEY_N,
+  KEY_O,
+  KEY_P,
+  KEY_Q,
+  KEY_R,
+  KEY_S,
+  KEY_T,
+  KEY_U,
+  KEY_V,
+  KEY_W,
+  KEY_X,
+  KEY_Y,
+  KEY_Z,
+  KEY_ZERO,
+  KEY_ONE,
+  KEY_TWO,
+  KEY_THREE,
+  KEY_FOUR,
+  KEY_FIVE,
+  KEY_SIX,
+  KEY_SEVEN,
+  KEY_EIGHT,
+  KEY_NINE,
+  KEY_ENTER,
+  KEY_BACKSPACE,
+  KEY_TAB,
+  KEY_ESCAPE,
+  KEY_DELETE,
+  KEY_LEFT,
+  KEY_RIGHT,
+  KEY_UP,
+  KEY_DOWN,
+  KEY_MINUS,
+  KEY_EQUAL,
+  KEY_LEFT_BRACKET,
+  KEY_RIGHT_BRACKET,
+  KEY_SEMICOLON,
+  KEY_APOSTROPHE,
+  KEY_GRAVE,
+  KEY_BACKSLASH,
+  KEY_COMMA,
+  KEY_PERIOD,
+  KEY_SLASH,
 };
 static const int s_watched_down[] = {
   KEY_SPACE,
@@ -148,44 +196,49 @@ void handle_mouse_press(Table_State& state, const Input& input) {
   Drag_State& drag = state.drag_state;
 
   Thing_Location path = find_thing_at(mx, my, state);
-  // Need at least two elements (parent + child); clicking empty space returns an
-  // empty path which would make path[size-2] undefined behavior.
+  // Need at least two elements (parent + child); clicking empty space returns
+  // an empty path which would make path[size-2] undefined behavior.
   if (path.size() < 2) return;
 
   int thing_id  = path.back();
   int parent_id = path[path.size() - 2];
 
-  drag.location       = std::move(path);
+  drag.location      = std::move(path);
   drag.hovered_thing = parent_id;
-  
+
   // Drag offset in world coords so it's parent-agnostic during hover.
-  Vector2 world_pos = local_to_world(thing_id, state);
-  drag.mouse_offset_x      = mx - world_pos.x;
-  drag.mouse_offset_y      = my - world_pos.y;
+  Vector2 world_pos   = local_to_world(thing_id, state);
+  drag.mouse_offset_x = mx - world_pos.x;
+  drag.mouse_offset_y = my - world_pos.y;
 }
 
 void handle_mouse_release(Table_State& state) {
   // Mouse released — finalize the drop.
-  Drag_State& drag    = state.drag_state;
+  Drag_State& drag     = state.drag_state;
   int         thing_id = drag.thing_id();
   if (thing_id < 0) return;
+  assert(drag.hovered_thing != -1);
 
   // Capture the thing.s current world position (where the user let go) so the
   // animation can lerp from that point — not from a stale rect that's about to
   // be reinterpreted in a different parent's coordinate space.
   Vector2 world_at_release = local_to_world(thing_id, state);
-
-//  bool allowed = state.is_drop_allowed(
-//    drag.original_parent, drag.current_parent, thing_id
-//  );
-    bool allowed = true; // TODO(giacomo)
+  print(drag);
+  bool allowed =
+    state.is_drop_allowed(drag.parent_id(), drag.hovered_thing, thing_id);
+  if (is_full(state.things[drag.hovered_thing])) {
+    allowed = false;
+  }
+  //    bool allowed = true; // TODO(giacomo)
 
   if (!allowed) {
-      return;
-//    // Snap back: re-attach to original parent if we're floating without one.
-//    if (drag.current_parent == -1) {
-//      state.things[drag.original_parent].children.push_back(thing_id);
-//    }
+    update_children_positions(drag.parent_id(), state, /*sort=*/true);
+    state.drag_state = Drag_State();
+    return;
+    //    // Snap back: re-attach to original parent if we're floating without
+    //    one. if (drag.current_parent == -1) {
+    //      state.things[drag.original_parent].children.push_back(thing_id);
+    //    }
   }
 
   // Signal drop as (from_parent, to_parent, thing_id).
@@ -194,36 +247,36 @@ void handle_mouse_release(Table_State& state) {
 
   int original_parent = drag.parent_id();
   int current_parent  = drag.hovered_thing;
-  state.drag_state   = Drag_State();
+  state.drag_state    = Drag_State();
 
   // Re-layout the affected parents. Skip root: its "layout" would smush all
   // top-level zones together with its zero spread.
-if (original_parent >= 0 && original_parent != state.root) {
+  if (original_parent >= 0 && original_parent != state.root) {
     // Remove.
     auto& children = state.things[original_parent].children;
-    auto  it  = std::find(children.begin(), children.end(), thing_id);
+    auto  it       = std::find(children.begin(), children.end(), thing_id);
     if (it != children.end()) {
       children.erase(it);
       update_children_positions(original_parent, state, /*sort=*/true);
     }
-    
+
     // Add.
     state.things[current_parent].children.push_back(thing_id);
     update_children_positions(current_parent, state, /*sort=*/true);
-}
-  
-//  // Re-anchor the smoothed world transform to where the user released, so
-//  // the lerp glides from there into the new parent.s slot.
-//  if (thing_id >= 0 && thing_id < (int)state.animated_world.size()) {
-//    state.animated_world[thing_id].x = world_at_release.x;
-//    state.animated_world[thing_id].y = world_at_release.y;
-//  }
+  }
+
+  //  // Re-anchor the smoothed world transform to where the user released, so
+  //  // the lerp glides from there into the new parent.s slot.
+  //  if (thing_id >= 0 && thing_id < (int)state.animated_world.size()) {
+  //    state.animated_world[thing_id].x = world_at_release.x;
+  //    state.animated_world[thing_id].y = world_at_release.y;
+  //  }
 }
 
 void handle_mouse_move(Table_State& state, const Input& input) {
   // Continuously update the dragged thing.s position.
-  Drag_State& drag    = state.drag_state;
-    int         thing_id = drag.thing_id();
+  Drag_State& drag     = state.drag_state;
+  int         thing_id = drag.thing_id();
   if (thing_id < 0) return;
 
   float mx = (float)input.mouse_x;
@@ -233,49 +286,58 @@ void handle_mouse_move(Table_State& state, const Input& input) {
   float target_world_x = mx - drag.mouse_offset_x;
   float target_world_y = my - drag.mouse_offset_y;
 
-  auto location      = find_thing_at(mx, my, state);
-  int  hovered = location.empty() ? -1 : location.back();
-  // Don't reparent the dragged thing into itself — would create a cycle in
-  // the scene tree.
-  if (hovered == thing_id) hovered = -1;
-//
-//  if (hovered >= 0 && drag.last_hovered_parent != hovered) {
-//    // Reparent: detach from the old parent, optionally attach to the hovered one.
-//    if (drag.current_parent >= 0) {
-//      auto& cur = state.things[drag.current_parent].children;
-//      auto  it  = std::find(cur.begin(), cur.end(), thing_id);
-//      if (it != cur.end()) {
-//        cur.erase(it);
-//        update_children_positions(drag.current_parent, state, /*sort=*/true);
-//      }
-//    }
-//
-//    Thing& hovered_thing = state.things[hovered];
-//    bool   allowed =
-//      state.is_drop_allowed(drag.original_parent, hovered, thing_id);
-//    bool full = is_full(hovered_thing);
-//
-//    if (allowed && !full) {
-//      hovered_thing.children.push_back(thing_id);
-//      update_children_positions(hovered, state, /*sort=*/true);
-//      drag.current_parent = hovered;
-//    } else {
-//      drag.current_parent = -1;
-//    }
-//  }
+  int hovered = -1;
+  for (int i = 0; i < state.things.size(); i++) {
+    if (i == thing_id) continue;
+    auto rect = world_rect(i, state);
+    if (point_in_thing(mx, my, i, state)) {
+      hovered = i;
+      break;
+    }
+  }
 
-//  if (hovered >= 0) {
-//    update_children_positions(hovered, state, /*sort=*/true);
-//    drag.last_hovered_parent = hovered;
-//  }
+  assert(hovered != thing_id);
+  assert(hovered != -1);
+  drag.hovered_thing = hovered;
+  //
+  //  if (hovered >= 0 && drag.last_hovered_parent != hovered) {
+  //    // Reparent: detach from the old parent, optionally attach to the
+  //    hovered one. if (drag.current_parent >= 0) {
+  //      auto& cur = state.things[drag.current_parent].children;
+  //      auto  it  = std::find(cur.begin(), cur.end(), thing_id);
+  //      if (it != cur.end()) {
+  //        cur.erase(it);
+  //        update_children_positions(drag.current_parent, state,
+  //        /*sort=*/true);
+  //      }
+  //    }
+  //
+  //    Thing& hovered_thing = state.things[hovered];
+  //    bool   allowed =
+  //      state.is_drop_allowed(drag.original_parent, hovered, thing_id);
+  //    bool full = is_full(hovered_thing);
+  //
+  //    if (allowed && !full) {
+  //      hovered_thing.children.push_back(thing_id);
+  //      update_children_positions(hovered, state, /*sort=*/true);
+  //      drag.current_parent = hovered;
+  //    } else {
+  //      drag.current_parent = -1;
+  //    }
+  //  }
 
-  // Now position the dragged thing under the cursor — convert world → local of parent.
-  // Both target_world and parent_world are centers; subtracting gives the
-  // thing's center in the parent's local space.
-  Thing& thing      = state.things[thing_id];
+  //  if (hovered >= 0) {
+  //    update_children_positions(hovered, state, /*sort=*/true);
+  //    drag.last_hovered_parent = hovered;
+  //  }
+
+  // Now position the dragged thing under the cursor — convert world → local of
+  // parent. Both target_world and parent_world are centers; subtracting gives
+  // the thing's center in the parent's local space.
+  Thing&  thing        = state.things[thing_id];
   Vector2 parent_world = local_to_world(drag.parent_id(), state);
-  thing.transform.x = target_world_x - parent_world.x;
-  thing.transform.y = target_world_y - parent_world.y;
+  thing.transform.x    = target_world_x - parent_world.x;
+  thing.transform.y    = target_world_y - parent_world.y;
 }
 
 void handle_rotate_thing(

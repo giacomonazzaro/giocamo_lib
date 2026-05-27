@@ -188,8 +188,12 @@ void init_table_layout(
   root.name     = "root";
   // Root keeps transform at {0,0} so root-local space == world space.
   root.size     = {(float)window_width, (float)window_height};
+//    root.transform.x = window_width /2;
+//    root.transform.y = window_height /2;
   root.id       = (int)table_state.things.size();
   root.children = stack_ids_in_order;
+    root.capacity = 0;
+    root.color = {255,0,0, 255};
   table_state.things.push_back(root);
   table_state.root = root.id;
 

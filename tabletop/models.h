@@ -98,10 +98,13 @@ struct Drag_State {
   inline int thing_id() const {
     return location.empty() ? -1 : location.back();
   }
-    inline int parent_id() const {
-      return location.size() > 2 ? location[location.size() - 2] : -1;
-    }
+  inline int parent_id() const {
+    return location.size() > 2 ? location[location.size() - 2] : -1;
+  }
 };
+VISITABLE_STRUCT(
+  Drag_State, location, hovered_thing, mouse_offset_x, mouse_offset_y
+);
 
 struct Table_Layout {
   std::vector<Thing> things;
