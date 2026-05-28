@@ -232,6 +232,8 @@ void handle_mouse_release(Table_State& state) {
   //    bool allowed = true; // TODO(giacomo)
 
   if (!allowed) {
+    printf("Eccolo\n");
+    print(drag);
     update_children_positions(drag.parent_id(), state, /*sort=*/true);
     state.drag_state = Drag_State();
     return;

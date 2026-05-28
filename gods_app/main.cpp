@@ -17,7 +17,7 @@
 #include <gods/gameplay.h>
 #include <gods/models.h>
 #include <gods/setup.h>
-
+//
 #include <game/agent.h>
 #include <game/game.h>
 #include <giocamo/menu.h>
@@ -173,7 +173,8 @@ void init_table_layout(
   }
 
   // Stack things: assign ids by append order. Track the insertion order so
-  // root.children matches the original stack ordering.
+  // root.children matches the original stack ordering. make_gods_stacks
+  // returns stacks in root-local coords (root is centered on the screen).
   std::vector<Thing> stacks =
     make_gods_stacks(bottom_player, window_width, window_height);
   std::vector<int> stack_ids_in_order;
@@ -184,16 +185,16 @@ void init_table_layout(
   }
 
   // Root: sits at the end of `things`, owns all stacks as direct children.
+  // Centered on the screen so the root rect spans (0,0)-(W,H) in world.
   Thing root;
-  root.name     = "root";
-  // Root keeps transform at {0,0} so root-local space == world space.
-  root.size     = {(float)window_width, (float)window_height};
-//    root.transform.x = window_width /2;
-//    root.transform.y = window_height /2;
-  root.id       = (int)table_state.things.size();
-  root.children = stack_ids_in_order;
-    root.capacity = 0;
-    root.color = {255,0,0, 255};
+  root.name        = "root";
+  root.size        = {(float)window_width, (float)window_height};
+  root.transform.x = (float)window_width / 2.0f;
+  root.transform.y = (float)window_height / 2.0f;
+  root.id          = (int)table_state.things.size();
+  root.children    = stack_ids_in_order;
+  root.capacity    = 0;
+  root.color       = {255, 0, 0, 255};
   table_state.things.push_back(root);
   table_state.root = root.id;
 
@@ -329,17 +330,22 @@ static void draw_hud(
     }
   }
 
-  // Re-place the shared deck so it stays anchored.
+  // Re-place the shared deck so it stays anchored. The stack is a root-child
+  // so the placement is computed in root-local coords (root is centered, so
+  // the window spans (-W/2, -H/2) to (W/2, H/2) in that space).
+  float W = (float)table_state->width;
+  float Hf = (float)H;
+  Rectangle root_window = {-W / 2.0f, -Hf / 2.0f, W, Hf};
   for (int child_id : table_state->things[table_state->root].children) {
     Thing& s = table_state->things[child_id];
     if (s.name == "shared_deck") {
       Rectangle target =
         ui_state.playground
           ? place_inside(
-              window, tt::CARD_WIDTH, tt::CARD_HEIGHT, "right", "center", 10
+              root_window, tt::CARD_WIDTH, tt::CARD_HEIGHT, "right", "center", 10
             )
           : place_next(
-              window, tt::CARD_WIDTH, tt::CARD_HEIGHT, "right", "center", 10
+              root_window, tt::CARD_WIDTH, tt::CARD_HEIGHT, "right", "center", 10
             );
       set_local_rect(s, target);
       update_children_positions(child_id, *table_state, false);
@@ -492,9 +498,16 @@ static void play_gods(
         bool   inside =
           point_in_thing((float)mx, (float)my, stack_id, table_state);
         if (inside && !is_expanded) {
-          set_local_rect(s, ui_state.place(
+          // ui_state.place returns world coords; shift into root-local since
+          // s is a root child.
+          const Transform2D& root_world =
+            table_state.things[table_state.root].transform;
+          Rectangle target = ui_state.place(
             tt::CARD_WIDTH * 7, tt::CARD_HEIGHT, "center", "center"
-          ));
+          );
+          target.x -= root_world.x;
+          target.y -= root_world.y;
+          set_local_rect(s, target);
           s.spread_x = 150.0f;
           s.depth    = 1.0f;
           update_children_positions(stack_id, table_state, false);
@@ -724,13 +737,13 @@ static Agent* make_agent(
 }
 
 static void init_table_and_gods_states(
-  Game_State&         gods_state,
-  Table_State&        table_state,
-  int                 bottom_player,
-  int                 window_width,
-  int                 window_height,
-  bool                load_from_disk,
-  std::optional<int>  seed
+  Game_State&        gods_state,
+  Table_State&       table_state,
+  int                bottom_player,
+  int                window_width,
+  int                window_height,
+  bool               load_from_disk,
+  std::optional<int> seed
 ) {
   // Card hooks (Card::on_played etc.) dispatch through the global card_designs
   // registry, so it must be populated before any gameplay runs — regardless of

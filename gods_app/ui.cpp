@@ -30,7 +30,9 @@ std::vector<Thing> make_gods_stacks(
   int spread_wonders = 160;
   int spread_pile    = -3;
 
-  Rectangle window        = {0.0f, 0.0f, (float)W, (float)H};
+  // Layout in root-local coords: root is centered on the screen, so the
+  // window spans (-W/2, -H/2) to (W/2, H/2) in root-local space.
+  Rectangle window        = {-(float)W / 2.0f, -(float)H / 2.0f, (float)W, (float)H};
   int       hand_width    = (int)((float)w * 5.5f * (float)W / 1600.0f);
   int       peoples_width = 2 * w + spread_wonders;
 
@@ -44,8 +46,12 @@ std::vector<Thing> make_gods_stacks(
   Rectangle p0_discard = place_next(p0_deck, w, h, "left", "center", margin);
 
   int opponent_shift = (int)(h * 0.65f);
-  int top_y          = margin - opponent_shift;
-  int top_wonders_y  = H - (int)p0_wonders.y - h - opponent_shift;
+  // Opponent rows mirror the bottom rows across the screen's vertical
+  // midline. In root-local coords (origin at center), a mirror of y is -y;
+  // a row of height h that mirrors a row whose top is at Y has its top at
+  // -Y - h. opponent_shift nudges the whole top row slightly off-screen.
+  int top_y          = -(int)(H / 2) + margin - opponent_shift;
+  int top_wonders_y  = -(int)p0_wonders.y - h - opponent_shift;
 
   Rectangle shared_deck = place_next(window, w, h, "right", "center", 10);
   Rectangle p0_peoples =

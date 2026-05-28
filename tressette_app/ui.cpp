@@ -60,7 +60,14 @@ std::vector<Thing> make_tressette_stacks(
   const int spread_pile = -3;
   const int hand_width  = spread_hand * 9 + w;  // fits up to 10 cards.
 
-  auto window = Rectangle{0.0f, 0.0f, (float)W, (float)tt::WINDOW_HEIGHT};
+  // Layout in root-local coords: root is centered on the screen, so the
+  // window spans (-W/2, -H/2) to (W/2, H/2) in root-local space.
+  auto window = Rectangle{
+    -(float)W / 2.0f,
+    -(float)tt::WINDOW_HEIGHT / 2.0f,
+    (float)W,
+    (float)tt::WINDOW_HEIGHT,
+  };
 
   // Position the local seat at the bottom and the opponent at the top.
   Rectangle bottom_hand_r =

@@ -293,21 +293,16 @@ void draw_drop_placeholder(int thing_id, const Table_State& state) {
 
 // --- animate ---
 
-// World transform of every thing, computed by walking the tree and summing
-// (x, y, rotation) down each chain. Treating composition as plain addition
-// works here because no parent rotates in this codebase — only leaf things.
+// World transform of every thing, computed by walking the tree and
+// composing parent * child down each chain.
 static void compute_world(
   int                       id,
-  const Transform2D&        parent,
+  const Transform2D&        parent_transform,
   const std::vector<Thing>& things,
   std::vector<Transform2D>& output
 ) {
   const Thing& t = things[id];
-  output[id]     = {
-    parent.x + t.transform.x,
-    parent.y + t.transform.y,
-    parent.rotation + t.transform.rotation
-  };
+  output[id]     = parent_transform * t.transform;
   for (int child_id : t.children)
     compute_world(child_id, output[id], things, output);
 }
@@ -421,6 +416,7 @@ void draw_table(Table_State& state, const Input& input) {
   std::sort(draw_order.begin(), draw_order.end(), [&state](int a, int b) {
     return state.things[a].depth < state.things[b].depth;
   });
+  draw_thing_world(state.root, state, true, input);
   for (int child_id : draw_order) {
     draw_thing_world(child_id, state, root_thing.face_up, input);
   }

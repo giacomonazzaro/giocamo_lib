@@ -74,8 +74,11 @@ static Table_State init_table_state(
   // Root: owns all stacks as direct children.
   auto root = Thing();
   root.name = "root";
-  // Root keeps transform at {0,0} so root-local space == world space.
-  root.size = {(float)tt::WINDOW_WIDTH, (float)tt::WINDOW_HEIGHT};
+  // Root is centered on the screen, so its bounding rect spans (0,0)-(W,H)
+  // in world coords.
+  root.size        = {(float)tt::WINDOW_WIDTH, (float)tt::WINDOW_HEIGHT};
+  root.transform.x = (float)tt::WINDOW_WIDTH / 2.0f;
+  root.transform.y = (float)tt::WINDOW_HEIGHT / 2.0f;
   root.id   = (int)table.things.size();
   root.children = stack_ids;
   table.things.push_back(root);

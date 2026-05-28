@@ -7,9 +7,10 @@
 #include <vector>
 
 // Build the 11 standard stack things for a Gods table (deck/hand/discard/
-// wonders/peoples per player + shared_deck). Each returned Thing has its
-// layout fields set (rect, spread_x, spread_y, face_up, name); ids and
-// children are filled in by the caller when appending to state.things.
+// wonders/peoples per player + shared_deck). Stacks are returned in
+// root-local coords (origin at the screen center, so the stack rects sit
+// in a window of (-W/2, -H/2)-(W/2, H/2)). Caller fills in ids and
+// children before appending to state.things.
 std::vector<Thing> make_gods_stacks(
   int bottom_player, int window_width, int window_height
 );

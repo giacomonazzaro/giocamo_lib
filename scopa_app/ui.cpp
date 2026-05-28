@@ -66,8 +66,14 @@ std::vector<Thing> make_scopa_stacks(
   // Table can grow to a dozen-ish cards in extreme runs; size for 10.
   const int table_width = table_spread * 9 + card_width;
 
-  Rectangle window =
-    Rectangle{0.0f, 0.0f, (float)window_width, (float)window_height};
+  // Layout in root-local coords: root is centered on the screen, so the
+  // window spans (-W/2, -H/2) to (W/2, H/2) in root-local space.
+  Rectangle window = Rectangle{
+    -(float)window_width / 2.0f,
+    -(float)window_height / 2.0f,
+    (float)window_width,
+    (float)window_height,
+  };
 
   // Layout: bottom-hand, top-hand, both captured piles to the side, stock
   // off to one side and the table strip down the middle of the screen.

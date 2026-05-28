@@ -1,4 +1,5 @@
 #pragma once
+#include <cmath>
 #include <cstdint>
 #include <functional>
 #include <optional>
@@ -21,6 +22,24 @@ struct Transform2D {
   float rotation = 0.0f;
 };
 VISITABLE_STRUCT(Transform2D, x, y, rotation);
+
+// Compose two transforms: `parent * child` is the transform that applies
+// `child` first, then `parent`. The child's translation is rotated by the
+// parent's rotation before being added — without that, a child anchored
+// to a rotating parent would stay aligned to the parent's original axes.
+// Rotation is in degrees.
+inline Transform2D operator*(
+  const Transform2D& parent, const Transform2D& child
+) {
+  float angle = parent.rotation * (float)(M_PI / 180.0);
+  float cos_a = std::cos(angle);
+  float sin_a = std::sin(angle);
+  return Transform2D{
+    parent.x + cos_a * child.x - sin_a * child.y,
+    parent.y + sin_a * child.x + cos_a * child.y,
+    parent.rotation + child.rotation,
+  };
+}
 
 // Base visual entity with optional draw callback.
 struct Thing {
@@ -61,8 +80,9 @@ VISITABLE_STRUCT(
   spread_y
 );
 
-// Set a thing's local rectangle from top-left coords. transform.x/y
-// stores the center, so we offset by half the size.
+// Set a thing's local rectangle from a top-left rectangle expressed in the
+// parent's local space. transform.x/y stores the center, so we offset by
+// half the size.
 inline void set_local_rect(Thing& thing, Rectangle rect) {
   thing.size        = {rect.width, rect.height};
   thing.transform.x = rect.x + rect.width / 2.0f;
