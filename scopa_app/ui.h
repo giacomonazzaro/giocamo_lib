@@ -40,7 +40,3 @@ void draw_scopa_player_hud(
   int                      hud_y
 );
 
-// Game-over screen: blocks the main loop drawing until the window is closed.
-void draw_scopa_game_over_screen(
-  Table_State& table_state, const std::vector<int>& scores
-);

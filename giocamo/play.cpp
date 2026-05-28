@@ -1,8 +1,14 @@
 #include "play.h"
 
+#include <raylib.h>
+
 #include <online/agents.h>
 #include <online/protocol.h>
 #include <online/setup.h>
+#include <tabletop/config.h>
+#include <tabletop/rendering.h>
+
+#include <string>
 
 void update_zoomed_thing(Table_State& table_state, const Input& input) {
   if (key_down(input, KEY_SPACE)) {
@@ -72,4 +78,46 @@ Agent* make_duel(
   return new Agent_Duel(
     local_agent, opponent, /*swap=*/menu_result.player_index != 0
   );
+}
+
+void draw_game_over_screen(
+  Table_State&            table_state,
+  const std::string&      result_text,
+  const std::vector<int>& scores
+) {
+  const int   W          = tt::WINDOW_WIDTH;
+  const int   H          = tt::WINDOW_HEIGHT;
+  const char* title      = "GAME OVER";
+  std::string score_line = std::to_string(scores[0]) + " - " +
+                           std::to_string(scores[1]);
+
+  while (!WindowShouldClose()) {
+    Input input = capture_input();
+    BeginDrawing();
+    draw_background(input, 0.0f);
+    draw_table(table_state, input);
+    DrawRectangle(0, 0, W, H, Color{0, 0, 0, 160});
+    render_text(
+      title,
+      (float)(W / 2 - text_width(title, 60) / 2),
+      320.0f,
+      60,
+      Color{255, 255, 255, 255}
+    );
+    render_text(
+      result_text,
+      (float)(W / 2 - text_width(result_text, 36) / 2),
+      410.0f,
+      36,
+      Color{255, 215, 0, 255}
+    );
+    render_text(
+      score_line,
+      (float)(W / 2 - text_width(score_line, 30) / 2),
+      470.0f,
+      30,
+      Color{200, 200, 200, 255}
+    );
+    EndDrawing();
+  }
 }

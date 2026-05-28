@@ -52,3 +52,11 @@ Agent* make_duel(
   Agent*             opponent,
   const Menu_Result& menu_result
 );
+
+// Blocking game-over overlay: keeps redrawing the table dimmed and prints
+// `result_text` plus the two scores. Returns when the window is closed.
+void draw_game_over_screen(
+  Table_State&            table_state,
+  const std::string&      result_text,
+  const std::vector<int>& scores
+);

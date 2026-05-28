@@ -30,14 +30,6 @@ void draw_player_hud(
   int player_id, int score, int deck_count, bool is_current, int hud_y
 );
 
-// Game-over screen: blocks the main loop drawing until the window is closed.
-void draw_game_over_screen(
-  Table_State&                    table_state,
-  const std::string&              result_text,
-  const std::vector<std::string>& names,
-  const std::vector<int>&         scores
-);
-
 struct Gods_UI : UI_State {
   bool playground         = false;
   int  power_edit_card_id = -1;  // Card whose power is being edited.

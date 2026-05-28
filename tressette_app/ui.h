@@ -36,7 +36,3 @@ void draw_tressette_player_hud(
   int player_index, int score, bool is_current, int hud_y
 );
 
-// Game-over screen: blocks the main loop drawing until the window is closed.
-void draw_tressette_game_over_screen(
-  Table_State& table_state, const std::vector<int>& scores
-);

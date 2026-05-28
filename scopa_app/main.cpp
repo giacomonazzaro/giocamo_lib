@@ -6,10 +6,9 @@
 #include <scopa/gameplay.h>
 #include <scopa/models.h>
 #include <tabletop/config.h>
-#include <tabletop/tabletop.h>
 #include <tabletop/input_recorder.h>
-#include <tabletop/tabletop.h>
 #include <tabletop/rendering.h>
+#include <tabletop/tabletop.h>
 #include <tabletop/ui.h>
 
 // raylib last: its color macros (RED/GREEN/BLUE) would expand inside enums
@@ -74,8 +73,8 @@ static Table_State init_table_state(
   root.size        = {(float)tt::WINDOW_WIDTH, (float)tt::WINDOW_HEIGHT};
   root.transform.x = (float)tt::WINDOW_WIDTH / 2.0f;
   root.transform.y = (float)tt::WINDOW_HEIGHT / 2.0f;
-  root.id   = (int)table.things.size();
-  root.children = stack_ids;
+  root.id          = (int)table.things.size();
+  root.children    = stack_ids;
   table.things.push_back(root);
   table.root = root.id;
 
@@ -169,7 +168,10 @@ static void play_scopa(
       scopa::compute_player_score(state, 0),
       scopa::compute_player_score(state, 1),
     };
-    draw_scopa_game_over_screen(table, scores);
+    std::string result_text = (scores[0] > scores[1])   ? "Player 1 wins!"
+                              : (scores[1] > scores[0]) ? "Player 2 wins!"
+                                                        : "It's a tie.";
+    draw_game_over_screen(table, result_text, scores);
   }
 
   CloseWindow();
@@ -194,8 +196,13 @@ int main(int argc, char** argv) {
   Input_Feed inputs;
   init_input_recorder(inputs, Input_Mode::Live, "");
   Menu_Result menu_result = resolve_play_mode(
-    "Scopa Scientifica", tt::WINDOW_WIDTH, tt::WINDOW_HEIGHT,
-    inputs, argc, argv, skip_menu
+    "Scopa Scientifica",
+    tt::WINDOW_WIDTH,
+    tt::WINDOW_HEIGHT,
+    inputs,
+    argc,
+    argv,
+    skip_menu
   );
 
   // Online peers must deal the same hands — use the seed delivered by the
@@ -206,16 +213,16 @@ int main(int argc, char** argv) {
   const int         player_index = is_online ? menu_result.player_index : 0;
   scopa::Game_State state        = scopa::quick_setup(seed);
   auto              ui_state = UI_State(tt::WINDOW_WIDTH, tt::WINDOW_HEIGHT);
-  const int         bottom_player      = player_index;
+  const int         bottom_player = player_index;
   // Show the opponent's hand only in hot-seat (one screen is shared).
-  const bool        show_opponent_hand = !vs_ai && !is_online;
-  Table_State       table =
+  const bool  show_opponent_hand = !vs_ai && !is_online;
+  Table_State table =
     init_table_state(state, ui_state, bottom_player, show_opponent_hand);
 
-  auto   agent_ui = Scopa_Agent_UI(
+  auto agent_ui = Scopa_Agent_UI(
     &table, &ui_state, player_index, (int)state.all_cards.size()
   );
-  Agent* agent    = make_agent(&agent_ui, vs_ai, menu_result);
+  Agent* agent = make_agent(&agent_ui, vs_ai, menu_result);
 
   play_scopa(state, table, ui_state, *agent, bottom_player);
   return 0;

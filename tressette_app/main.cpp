@@ -187,7 +187,10 @@ static void play_tressette(
       tressette::compute_player_score(state, 0),
       tressette::compute_player_score(state, 1),
     };
-    draw_tressette_game_over_screen(table, scores);
+    std::string result_text = (scores[0] > scores[1])   ? "Player 1 wins!"
+                              : (scores[1] > scores[0]) ? "Player 2 wins!"
+                                                        : "It's a tie.";
+    draw_game_over_screen(table, result_text, scores);
   }
 
   CloseWindow();

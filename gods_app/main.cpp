@@ -661,15 +661,12 @@ static void play_gods(
     std::vector<int> scores = {
       compute_player_score(gods_state, 0), compute_player_score(gods_state, 1)
     };
-    std::vector<std::string> names = {
-      gods_state.players[0].name, gods_state.players[1].name
-    };
     std::string result_text = scores[player_index] > scores[1 - player_index]
                                 ? "You win!"
                               : scores[player_index] < scores[1 - player_index]
                                 ? "You lose!"
                                 : "It's a tie!";
-    draw_game_over_screen(table_state, result_text, names, scores);
+    draw_game_over_screen(table_state, result_text, scores);
   }
 
   CloseWindow();
