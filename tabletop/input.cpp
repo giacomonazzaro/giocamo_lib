@@ -207,9 +207,10 @@ void handle_mouse_press(Table_State& state, const Input& input) {
   drag.hovered_thing = parent_id;
 
   // Drag offset in world coords so it's parent-agnostic during hover.
-  Vector2 world_pos   = local_to_world(thing_id, state);
-  drag.mouse_offset_x = mx - world_pos.x;
-  drag.mouse_offset_y = my - world_pos.y;
+  float world_pos_x   = state.world_transforms[thing_id].x;
+  float world_pos_y   = state.world_transforms[thing_id].y;
+  drag.mouse_offset_x = mx - world_pos_x;
+  drag.mouse_offset_y = my - world_pos_y;
 }
 
 void handle_mouse_release(Table_State& state) {
@@ -222,7 +223,10 @@ void handle_mouse_release(Table_State& state) {
   // Capture the thing.s current world position (where the user let go) so the
   // animation can lerp from that point — not from a stale rect that's about to
   // be reinterpreted in a different parent's coordinate space.
-  Vector2 world_at_release = local_to_world(thing_id, state);
+  Vector2 world_at_release = {
+    state.world_transforms[thing_id].x,
+    state.world_transforms[thing_id].y,
+  };
   print(drag);
   bool allowed =
     state.is_drop_allowed(drag.parent_id(), drag.hovered_thing, thing_id);
@@ -237,10 +241,6 @@ void handle_mouse_release(Table_State& state) {
     update_children_positions(drag.parent_id(), state, /*sort=*/true);
     state.drag_state = Drag_State();
     return;
-    //    // Snap back: re-attach to original parent if we're floating without
-    //    one. if (drag.current_parent == -1) {
-    //      state.things[drag.original_parent].children.push_back(thing_id);
-    //    }
   }
 
   // Signal drop as (from_parent, to_parent, thing_id).
@@ -263,8 +263,8 @@ void handle_mouse_release(Table_State& state) {
     }
 
     // Add.
-    auto old_parent_world = state.world_transforms[drag.parent_id()];
-    auto new_parent_world = state.world_transforms[drag.hovered_thing];
+    auto old_parent_world = state.world_transforms[original_parent];
+    auto new_parent_world = state.world_transforms[current_parent];
     auto old_local        = state.things[thing_id].transform;
     // old_parent * old_local = new_parent * new_local
     auto new_local = inverse(new_parent_world) * (old_parent_world * old_local);

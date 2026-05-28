@@ -5,7 +5,6 @@
 // These walk the parent chain — prefer state.animated_transforms for cached
 // world-space lookups in hot paths.
 int       find_parent(int thing_id, const Table_State& state);
-Vector2   local_to_world(int thing_id, const Table_State& state);
 Rectangle world_rect(int thing_id, const Table_State& state);
 
 // Reflow a thing's children into their slot positions based on the parent's

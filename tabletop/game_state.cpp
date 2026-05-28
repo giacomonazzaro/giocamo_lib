@@ -15,28 +15,12 @@ int find_parent(int thing_id, const Table_State& state) {
   return -1;
 }
 
-Vector2 local_to_world(int thing_id, const Table_State& state) {
-  // Walk up the parent chain summing local centers; stop at root or detached.
-  // Returns the world-space CENTER of the thing.
-  float x = 0.0f, y = 0.0f;
-  int   cur = thing_id;
-  while (cur >= 0) {
-    const Thing& t = state.things[cur];
-    x += t.transform.x;
-    y += t.transform.y;
-    if (cur == state.root) break;
-    cur = find_parent(cur, state);
-  }
-  return Vector2{x, y};
-}
-
 Rectangle world_rect(int thing_id, const Table_State& state) {
-  // Top-left bounding rect in world coords. local_to_world returns the
-  // center, so subtract half the size to get the top-left corner.
-  Vector2      p = local_to_world(thing_id, state);
-  const Thing& t = state.things[thing_id];
+  float        px = state.world_transforms[thing_id].x;
+  float        py = state.world_transforms[thing_id].y;
+  const Thing& t  = state.things[thing_id];
   return Rectangle{
-    p.x - t.size.x / 2.0f, p.y - t.size.y / 2.0f, t.size.x, t.size.y
+    px - t.size.x / 2.0f, py - t.size.y / 2.0f, t.size.x, t.size.y
   };
 }
 
