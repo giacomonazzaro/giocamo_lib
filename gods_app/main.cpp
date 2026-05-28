@@ -21,13 +21,13 @@
 #include <game/agent.h>
 #include <game/game.h>
 #include <giocamo/menu.h>
+#include <giocamo/play.h>
 #include <online/agents.h>
 #include <online/protocol.h>
 #include <tabletop/config.h>
-#include <tabletop/tabletop.h>
 #include <tabletop/input_recorder.h>
-#include <tabletop/tabletop.h>
 #include <tabletop/rendering.h>
+#include <tabletop/tabletop.h>
 #include <tabletop/ui.h>
 
 #include <nlohmann/json.hpp>
@@ -332,37 +332,32 @@ static void draw_hud(
   // Re-place the shared deck so it stays anchored. The stack is a root-child
   // so the placement is computed in root-local coords (root is centered, so
   // the window spans (-W/2, -H/2) to (W/2, H/2) in that space).
-  float W = (float)table_state->width;
-  float Hf = (float)H;
+  float     W           = (float)table_state->width;
+  float     Hf          = (float)H;
   Rectangle root_window = {-W / 2.0f, -Hf / 2.0f, W, Hf};
   for (int child_id : table_state->things[table_state->root].children) {
     Thing& s = table_state->things[child_id];
     if (s.name == "shared_deck") {
-      Rectangle target =
-        ui_state.playground
-          ? place_inside(
-              root_window, tt::CARD_WIDTH, tt::CARD_HEIGHT, "right", "center", 10
-            )
-          : place_next(
-              root_window, tt::CARD_WIDTH, tt::CARD_HEIGHT, "right", "center", 10
-            );
+      Rectangle target = ui_state.playground ? place_inside(
+                                                 root_window,
+                                                 tt::CARD_WIDTH,
+                                                 tt::CARD_HEIGHT,
+                                                 "right",
+                                                 "center",
+                                                 10
+                                               )
+                                             : place_next(
+                                                 root_window,
+                                                 tt::CARD_WIDTH,
+                                                 tt::CARD_HEIGHT,
+                                                 "right",
+                                                 "center",
+                                                 10
+                                               );
       set_local_rect(s, target);
       update_children_positions(child_id, *table_state, false);
       break;
     }
-  }
-}
-
-// SPACE-to-zoom: handled by tabletop's update_input, but our outer loop
-// also peeks SPACE for the same gesture.
-static void update_zoomed_thing(Table_State& table_state, const Input& input) {
-  if (key_down(input, KEY_SPACE)) {
-    auto path = find_thing_at(
-      (float)input.mouse_x, (float)input.mouse_y, table_state
-    );
-    table_state.zoomed_thing_id = std::move(path);
-  } else {
-    table_state.zoomed_thing_id.clear();
   }
 }
 
@@ -376,9 +371,8 @@ static bool handle_power_editor(
   const Input& input
 ) {
   if (ui_state.playground && key_pressed(input, KEY_P)) {
-    auto path = find_thing_at(
-      (float)input.mouse_x, (float)input.mouse_y, table_state
-    );
+    auto path =
+      find_thing_at((float)input.mouse_x, (float)input.mouse_y, table_state);
     if (!path.empty()) {
       int hovered = path.back();
       ui_state.power_edit_card_id =
@@ -432,7 +426,9 @@ static void handle_debug_save(
 
 // Click-to-expand for the player's own and the opponent's discard stacks.
 static void handle_discard_expand(
-  Table_State& table_state, Gods_UI& ui_state, int player_index,
+  Table_State& table_state,
+  Gods_UI&     ui_state,
+  int          player_index,
   const Input& input
 ) {
   // Click-to-expand for discard stacks.
@@ -453,16 +449,14 @@ static void handle_discard_expand(
     if (stack_id < 0) continue;
     Thing& s           = table_state.things[stack_id];
     bool   is_expanded = s.spread_x > 0.0f;
-    bool   inside =
-      point_in_thing((float)mx, (float)my, stack_id, table_state);
+    bool   inside = point_in_thing((float)mx, (float)my, stack_id, table_state);
     if (inside && !is_expanded) {
       // ui_state.place returns world coords; shift into root-local since
       // s is a root child.
       const Transform2D& root_world =
         table_state.things[table_state.root].transform;
-      Rectangle target = ui_state.place(
-        tt::CARD_WIDTH * 7, tt::CARD_HEIGHT, "center", "center"
-      );
+      Rectangle target =
+        ui_state.place(tt::CARD_WIDTH * 7, tt::CARD_HEIGHT, "center", "center");
       target.x -= root_world.x;
       target.y -= root_world.y;
       set_local_rect(s, target);
@@ -473,9 +467,8 @@ static void handle_discard_expand(
       // Restore original rect from a fresh layout. Match by name since
       // ordinal positions in make_gods_stacks aren't aligned with
       // table_state thing ids.
-      auto fresh = make_gods_stacks(
-        player_index, table_state.width, table_state.height
-      );
+      auto fresh =
+        make_gods_stacks(player_index, table_state.width, table_state.height);
       for (const Thing& f : fresh) {
         if (f.name == s.name) {
           s.transform = f.transform;
@@ -490,18 +483,10 @@ static void handle_discard_expand(
   }
 }
 
-// Serialize each thing's children to a JSON array, in the order things were
-// appended to table_state (so indices stay stable across peers).
-static nlohmann::json serialize_stacks(const Table_State& table_state) {
-  nlohmann::json out = nlohmann::json::array();
-  for (const Thing& t : table_state.things) {
-    out.push_back(t.children);
-  }
-  return out;
-}
-
 // Broadcast all card state to the remote player.
-static void broadcast_cards(const Online& online, const Game_State& gods_state) {
+static void broadcast_cards(
+  const Online& online, const Game_State& gods_state
+) {
   nlohmann::json cards = nlohmann::json::array();
   for (const Card& c : gods_state.all_cards) {
     nlohmann::json j;
@@ -536,24 +521,17 @@ static void online_send_updates(
     msg["on"]   = ui_state.playground;
     send_message(online, msg);
     if (ui_state.playground) {
-      nlohmann::json sm;
-      sm["type"]   = "stacks";
-      sm["stacks"] = serialize_stacks(table_state);
-      send_message(online, sm);
+      send_stacks(online, table_state);
     }
   }
 
   // Send stacks if in playground/no-logic mode and something changed.
   if (!agent_present || ui_state.playground) {
     auto dropped     = table_state.poll_dropped_thing();
-    bool should_send = dropped.has_value() ||
-                       key_pressed(input, KEY_R) ||
+    bool should_send = dropped.has_value() || key_pressed(input, KEY_R) ||
                        key_pressed(input, KEY_S);
     if (should_send) {
-      nlohmann::json sm;
-      sm["type"]   = "stacks";
-      sm["stacks"] = serialize_stacks(table_state);
-      send_message(online, sm);
+      send_stacks(online, table_state);
     }
   }
 }
@@ -570,11 +548,7 @@ static void online_receive_updates(
   const auto& msg = *msg_opt;
   std::string t   = msg.value("type", "");
   if (t == "stacks") {
-    const auto& arr = msg["stacks"];
-    for (size_t i = 0; i < arr.size() && i < table_state.things.size(); ++i) {
-      table_state.things[i].children = arr[i].get<std::vector<int>>();
-      update_children_positions((int)i, table_state, false);
-    }
+    apply_stacks_message(table_state, msg["stacks"]);
   } else if (t == "playground") {
     ui_state.playground = msg.value("on", false);
     if (ui_state.playground) {
@@ -588,8 +562,7 @@ static void online_receive_updates(
     }
   } else if (t == "all_cards") {
     const auto& arr = msg["all_cards"];
-    for (size_t i = 0; i < arr.size() && i < gods_state.all_cards.size();
-         ++i) {
+    for (size_t i = 0; i < arr.size() && i < gods_state.all_cards.size(); ++i) {
       Card& c     = gods_state.all_cards[i];
       c.power     = arr[i].value("power", c.power);
       c.counters  = arr[i].value("counters", c.counters);

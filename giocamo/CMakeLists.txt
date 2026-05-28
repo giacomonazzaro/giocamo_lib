@@ -26,6 +26,7 @@ endif()
 
 add_library(giocamo STATIC
     menu.cpp
+    play.cpp
 )
 
 # PUBLIC so consumers (e.g. gods_app) can include "giocamo/menu.h" and
