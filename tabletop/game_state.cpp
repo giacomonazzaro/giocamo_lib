@@ -1,6 +1,7 @@
 #include "game_state.h"
 
 #include <algorithm>
+#include <cassert>
 
 #include "config.h"
 #include "raylib.h"
@@ -25,14 +26,33 @@ Rectangle world_rect(int thing_id, const Table_State& state) {
 }
 
 void update_children_positions(int parent_id, Table_State& state, bool sort) {
-  Thing& parent = state.things[parent_id];
-  size_t n      = parent.children.size();
+  Thing& parent   = state.things[parent_id];
+  auto   children = parent.children;
+  auto&  drag     = state.drag_state;
+  if (drag.thing_id() != -1) {
+    if (drag.parent_id() != parent_id && drag.hovered_thing == parent_id) {
+      // Dragging thing onto new parent.
+      children.push_back(drag.thing_id());
+    }
+    if (drag.parent_id() == parent_id) {
+      // Moving thing away from this parent.
+      auto it = std::find(children.begin(), children.end(), drag.thing_id());
+      assert(it != children.end());
+      children.erase(it);
+    }
+  }
+  size_t n = children.size();
+
+  auto local_transforms = std::vector<Transform2D>(children.size());
+  for (size_t i = 0; i < local_transforms.size(); i++) {
+    local_transforms[i] = state.things[children[i]].transform;
+  }
 
   if (sort && n > 0) {
     // Sort children by their current local x position (centers).
     std::sort(
-      parent.children.begin(), parent.children.end(), [&state](int a, int b) {
-        return state.things[a].transform.x < state.things[b].transform.x;
+      children.begin(), children.end(), [&local_transforms](int a, int b) {
+        return local_transforms[a].x < local_transforms[b].x;
       }
     );
   }
@@ -59,13 +79,23 @@ void update_children_positions(int parent_id, Table_State& state, bool sort) {
   float start_x_local = -total_spread_x / 2.0f;
   float start_y_local = -total_spread_y / 2.0f;
 
-  int drag_id = state.drag_state.thing_id();
+  int drag_id = drag.thing_id();
   for (int i = 0; i < (int)n; i++) {
-    int child_id = parent.children[i];
+    int    child_id = children[i];
+    Thing& child    = state.things[child_id];
     if (child_id != drag_id) {
-      Thing& child      = state.things[child_id];
       child.transform.x = start_x_local + static_cast<float>(i) * spread_x;
       child.transform.y = start_y_local + static_cast<float>(i) * spread_y;
+    } else {
+      float x                = start_x_local + static_cast<float>(i) * spread_x;
+      float y                = start_y_local + static_cast<float>(i) * spread_y;
+      auto  new_local        = Transform2D{x, y, child.transform.rotation};
+      auto  old_parent_world = state.world_transforms[drag.parent_id()];
+      auto  new_parent_world = state.world_transforms[drag.hovered_thing];
+      // old_parent_world * old_local = new_parent_world * new_local
+      auto old_local = inverse(old_parent_world) *
+                       (new_parent_world * new_local);
+      child.transform = old_local;
     }
   }
 }
