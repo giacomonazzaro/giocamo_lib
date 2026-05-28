@@ -1,8 +1,7 @@
 #include <game/agent.h>
 #include <game/game.h>
 #include <giocamo/menu.h>
-#include <online/agents.h>
-#include <online/setup.h>
+#include <giocamo/play.h>
 #include <tabletop/config.h>
 #include <tabletop/tabletop.h>
 #include <tabletop/input_recorder.h>
@@ -125,20 +124,14 @@ static Agent* make_ai_opponent() {
 #endif
 }
 
-// Build the duel for the chosen mode. Mirrors gods_app::make_agent — UI agent
-// is always the local seat; the opponent + duel wrapping depend on whether
-// `online` is set (peer play), or whether we're in vs-AI vs hot-seat.
+// Build the duel for the chosen mode. The opponent slot is the AI when
+// vs_ai is set, otherwise hot-seat (the local agent_ui plays both seats).
+// make_duel handles the ONLINE branch.
 static Agent* make_agent(
-  Tressette_Agent_UI* agent_ui,
-  bool                vs_ai,
-  const Online*       online,
-  int                 player_index
+  Tressette_Agent_UI* agent_ui, bool vs_ai, const Menu_Result& menu_result
 ) {
-  if (online) {
-    return make_online_duel(agent_ui, *online, player_index);
-  }
-  Agent* opponent = vs_ai ? make_ai_opponent() : (Agent*)agent_ui;  // hot-seat.
-  return new Agent_Duel(agent_ui, opponent, /*swap=*/player_index != 0);
+  Agent* opponent = vs_ai ? make_ai_opponent() : (Agent*)agent_ui;
+  return make_duel(agent_ui, opponent, menu_result);
 }
 
 static void play_tressette(
@@ -216,29 +209,18 @@ int main(int argc, char** argv) {
     }
   }
 
-  // Local-testing shortcut: `--local-host` / `--local-join` on the command
-  // line bypasses the menu and STUN/ntfy entirely. All parsing lives inside
-  // online_lib so main doesn't have to know about those flags.
-  auto local_conn = setup_local_from_argv(argc, argv);
-
   // Menu opens its own window; play_tressette reuses it (its InitWindow guard
-  // skips when IsWindowReady() returns true).
+  // skips when IsWindowReady() returns true). resolve_play_mode handles
+  // --local-host / --local-join, skip-menu fallback, and the menu itself.
   Input_Feed inputs;
   init_input_recorder(inputs, Input_Mode::Live, "");
-  Menu_Result menu_result;
-  if (local_conn) {
-    menu_result.mode         = Menu_Result::ONLINE;
-    menu_result.online       = local_conn->online;
-    menu_result.player_index = local_conn->player_index;
-    menu_result.seed         = local_conn->seed;
-  } else if (!skip_menu) {
-    menu_result =
-      run_menu("Tressette", tt::WINDOW_WIDTH, tt::WINDOW_HEIGHT, inputs);
-  }
+  Menu_Result menu_result = resolve_play_mode(
+    "Tressette", tt::WINDOW_WIDTH, tt::WINDOW_HEIGHT,
+    inputs, argc, argv, skip_menu
+  );
 
-  const bool    is_online    = (menu_result.mode == Menu_Result::ONLINE);
-  const Online* online       = is_online ? &menu_result.online : nullptr;
-  const int     player_index = is_online ? menu_result.player_index : 0;
+  const bool is_online    = (menu_result.mode == Menu_Result::ONLINE);
+  const int  player_index = is_online ? menu_result.player_index : 0;
 
   // Online peers must deal the same hands — use the seed delivered by the
   // matchmaker. CLI --seed wins for solo play.
@@ -258,7 +240,7 @@ int main(int argc, char** argv) {
     &table, &ui_state, player_index, (int)state.all_cards.size()
   );
 
-  Agent* agent = make_agent(&agent_ui, vs_ai, online, player_index);
+  Agent* agent = make_agent(&agent_ui, vs_ai, menu_result);
 
   play_tressette(state, table, ui_state, *agent, bottom_player);
 

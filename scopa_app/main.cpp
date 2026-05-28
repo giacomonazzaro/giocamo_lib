@@ -1,6 +1,7 @@
 #include <game/agent.h>
 #include <game/game.h>
 #include <giocamo/menu.h>
+#include <giocamo/play.h>
 #include <scopa/ai.h>
 #include <scopa/gameplay.h>
 #include <scopa/models.h>
@@ -111,14 +112,14 @@ static Agent* make_ai_opponent() {
 }
 
 static Agent* make_agent(
-  Scopa_Agent_UI* agent_ui, bool vs_ai, int player_index
+  Scopa_Agent_UI* agent_ui, bool vs_ai, const Menu_Result& menu_result
 ) {
   // Run the AI on a worker thread so the main loop keeps rendering at full
   // FPS while it searches. The UI agent stays on the main thread because it
   // already returns -1 each frame until the player commits.
   Agent* opponent = vs_ai ? (Agent*)new Agent_Async(make_ai_opponent())
                           : (Agent*)agent_ui;  // hot-seat.
-  return new Agent_Duel(agent_ui, opponent, /*swap=*/player_index != 0);
+  return make_duel(agent_ui, opponent, menu_result);
 }
 
 static void play_scopa(
@@ -192,25 +193,29 @@ int main(int argc, char** argv) {
 
   Input_Feed inputs;
   init_input_recorder(inputs, Input_Mode::Live, "");
-  Menu_Result menu_result;
-  if (!skip_menu) {
-    menu_result = run_menu(
-      "Scopa Scientifica", tt::WINDOW_WIDTH, tt::WINDOW_HEIGHT, inputs
-    );
-  }
+  Menu_Result menu_result = resolve_play_mode(
+    "Scopa Scientifica", tt::WINDOW_WIDTH, tt::WINDOW_HEIGHT,
+    inputs, argc, argv, skip_menu
+  );
 
-  const int         player_index = 0;
+  // Online peers must deal the same hands — use the seed delivered by the
+  // matchmaker. CLI --seed wins for solo play.
+  const bool is_online = (menu_result.mode == Menu_Result::ONLINE);
+  if (is_online) seed = menu_result.seed;
+
+  const int         player_index = is_online ? menu_result.player_index : 0;
   scopa::Game_State state        = scopa::quick_setup(seed);
   auto              ui_state = UI_State(tt::WINDOW_WIDTH, tt::WINDOW_HEIGHT);
   const int         bottom_player      = player_index;
-  const bool        show_opponent_hand = !vs_ai;
+  // Show the opponent's hand only in hot-seat (one screen is shared).
+  const bool        show_opponent_hand = !vs_ai && !is_online;
   Table_State       table =
     init_table_state(state, ui_state, bottom_player, show_opponent_hand);
 
   auto   agent_ui = Scopa_Agent_UI(
     &table, &ui_state, player_index, (int)state.all_cards.size()
   );
-  Agent* agent    = make_agent(&agent_ui, vs_ai, player_index);
+  Agent* agent    = make_agent(&agent_ui, vs_ai, menu_result);
 
   play_scopa(state, table, ui_state, *agent, bottom_player);
   return 0;
