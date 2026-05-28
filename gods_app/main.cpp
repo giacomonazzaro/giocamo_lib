@@ -490,14 +490,12 @@ static void handle_discard_expand(
   }
 }
 
-// Serialize each stack's children to a JSON array, in the order stacks were
-// appended to state.things (so indices stay stable across peers).
-static nlohmann::json serialize_stacks(
-  const Table_State& table_state, int num_cards
-) {
+// Serialize each thing's children to a JSON array, in the order things were
+// appended to table_state (so indices stay stable across peers).
+static nlohmann::json serialize_stacks(const Table_State& table_state) {
   nlohmann::json out = nlohmann::json::array();
-  for (int i = num_cards; i < table_state.root; ++i) {
-    out.push_back(table_state.things[i].children);
+  for (const Thing& t : table_state.things) {
+    out.push_back(t.children);
   }
   return out;
 }
@@ -540,8 +538,7 @@ static void online_send_updates(
     if (ui_state.playground) {
       nlohmann::json sm;
       sm["type"]   = "stacks";
-      sm["stacks"] =
-        serialize_stacks(table_state, (int)gods_state.all_cards.size());
+      sm["stacks"] = serialize_stacks(table_state);
       send_message(online, sm);
     }
   }
@@ -555,8 +552,7 @@ static void online_send_updates(
     if (should_send) {
       nlohmann::json sm;
       sm["type"]   = "stacks";
-      sm["stacks"] =
-        serialize_stacks(table_state, (int)gods_state.all_cards.size());
+      sm["stacks"] = serialize_stacks(table_state);
       send_message(online, sm);
     }
   }
@@ -575,12 +571,9 @@ static void online_receive_updates(
   std::string t   = msg.value("type", "");
   if (t == "stacks") {
     const auto& arr = msg["stacks"];
-    int num_stacks  = table_state.root - (int)gods_state.all_cards.size();
-    for (size_t i = 0; i < arr.size() && (int)i < num_stacks; ++i) {
-      int stack_id = (int)gods_state.all_cards.size() + (int)i;
-      table_state.things[stack_id].children =
-        arr[i].get<std::vector<int>>();
-      update_children_positions(stack_id, table_state, false);
+    for (size_t i = 0; i < arr.size() && i < table_state.things.size(); ++i) {
+      table_state.things[i].children = arr[i].get<std::vector<int>>();
+      update_children_positions((int)i, table_state, false);
     }
   } else if (t == "playground") {
     ui_state.playground = msg.value("on", false);
