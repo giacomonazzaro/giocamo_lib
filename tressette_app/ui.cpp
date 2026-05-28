@@ -1,7 +1,7 @@
 #include "ui.h"
 
 #include <tabletop/config.h>
-#include <tabletop/input.h>
+#include <tabletop/tabletop.h>
 #include <tabletop/rendering.h>
 
 #include <string>

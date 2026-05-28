@@ -5,8 +5,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 set(TABLETOP_SOURCES
     config.cpp
-    game_state.cpp
-    input.cpp
+    tabletop.cpp
     input_recorder.cpp
     rendering.cpp
     ui.cpp

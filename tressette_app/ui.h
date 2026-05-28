@@ -3,8 +3,7 @@
 #include <functional>
 #include <vector>
 
-#include <tabletop/input.h>
-#include <tabletop/models.h>
+#include <tabletop/tabletop.h>
 #include <tabletop/ui.h>
 #include <tressette/models.h>
 

@@ -24,10 +24,9 @@
 #include <online/agents.h>
 #include <online/protocol.h>
 #include <tabletop/config.h>
-#include <tabletop/game_state.h>
-#include <tabletop/input.h>
+#include <tabletop/tabletop.h>
 #include <tabletop/input_recorder.h>
-#include <tabletop/models.h>
+#include <tabletop/tabletop.h>
 #include <tabletop/rendering.h>
 #include <tabletop/ui.h>
 

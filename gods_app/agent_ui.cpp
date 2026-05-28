@@ -2,8 +2,7 @@
 
 #include <raylib.h>
 #include <tabletop/config.h>
-#include <tabletop/game_state.h>
-#include <tabletop/input.h>
+#include <tabletop/tabletop.h>
 
 #include <variant>
 

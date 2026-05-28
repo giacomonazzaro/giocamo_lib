@@ -3,8 +3,7 @@
 #include <string>
 #include <unordered_map>
 
-#include "input.h"
-#include "models.h"
+#include "tabletop.h"
 
 bool      point_in_rect(float px, float py, const Rectangle& rect);
 Rectangle place_next(

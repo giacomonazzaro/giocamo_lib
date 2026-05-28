@@ -6,8 +6,7 @@
 #include <unordered_map>
 
 #include "config.h"
-#include "game_state.h"
-#include "input.h"
+#include "tabletop.h"
 #include "raylib.h"
 #include "rlgl.h"  // for rlPushMatrix, rlPopMatrix, rlTranslatef, rlRotatef, rlScalef
 

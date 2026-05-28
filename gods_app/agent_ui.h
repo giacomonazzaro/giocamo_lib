@@ -2,8 +2,8 @@
 
 #include <game/agent.h>
 #include <gods/models.h>
-#include <tabletop/input.h>
-#include <tabletop/models.h>
+#include <tabletop/tabletop.h>
+#include <tabletop/tabletop.h>
 #include <tabletop/ui.h>
 
 #include <set>

@@ -1,7 +1,7 @@
 #pragma once
 
 #include <game/agent.h>
-#include <tabletop/models.h>
+#include <tabletop/tabletop.h>
 #include <tabletop/ui.h>
 
 // UI-driven agent for Tressette: highlights legal cards in the active player's

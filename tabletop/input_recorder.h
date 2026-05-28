@@ -2,7 +2,7 @@
 #include <string>
 #include <vector>
 
-#include "input.h"
+#include "tabletop.h"
 
 // Mode of the input pipeline. Live = read raylib every frame.
 // Record = read raylib AND accumulate the frame into memory; flush on exit.

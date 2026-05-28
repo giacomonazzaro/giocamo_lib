@@ -4,8 +4,7 @@
 #include <vector>
 
 #include <scopa/models.h>
-#include <tabletop/input.h>
-#include <tabletop/models.h>
+#include <tabletop/tabletop.h>
 #include <tabletop/ui.h>
 
 // Stack offsets from the first stack thing-id (add the stacks_offset to get

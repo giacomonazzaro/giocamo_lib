@@ -2,7 +2,7 @@
 
 #include <game/agent.h>
 #include <scopa/models.h>
-#include <tabletop/models.h>
+#include <tabletop/tabletop.h>
 #include <tabletop/ui.h>
 
 #include <vector>

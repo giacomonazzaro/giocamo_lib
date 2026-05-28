@@ -1,7 +1,7 @@
 #pragma once
 #include <string>
 
-#include "models.h"
+#include "tabletop.h"
 
 struct Input;
 void draw_background(const Input& input, float turn = 0.0f);

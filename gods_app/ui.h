@@ -1,6 +1,6 @@
 #pragma once
 
-#include <tabletop/models.h>
+#include <tabletop/tabletop.h>
 #include <tabletop/ui.h>
 
 #include <string>
