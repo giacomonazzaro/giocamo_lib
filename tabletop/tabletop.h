@@ -1,4 +1,5 @@
 #pragma once
+#include <algorithm>
 #include <cmath>
 #include <cstdint>
 #include <functional>
@@ -181,12 +182,6 @@ struct Table_State : Table_Layout {
       , height(height)
       , is_drop_allowed([](int, int, int) { return true; }) {}
 };
-#pragma once
-#include <algorithm>
-#include <string>
-#include <vector>
-
-#include "../struct/visit.hpp"
 
 // Per-frame snapshot of every input that `tabletop/` code consumes.
 // Built once at the top of each frame either by capture_input() (live mode)
