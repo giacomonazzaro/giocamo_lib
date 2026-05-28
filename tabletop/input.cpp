@@ -236,10 +236,13 @@ void handle_mouse_release(Table_State& state) {
   //    bool allowed = true; // TODO(giacomo)
 
   if (!allowed) {
-    printf("Eccolo\n");
-    print(drag);
-    update_children_positions(drag.parent_id(), state, /*sort=*/true);
-    state.drag_state = Drag_State();
+    // Snap-back: reset drag first so update_children_positions doesn't skip
+    // the (still-dragged) card and leave it at the drop position. The card's
+    // animated_transforms still holds the drop pose, so animate() will glide
+    // it back to its slot.
+    int original_parent = drag.parent_id();
+    state.drag_state    = Drag_State();
+    update_children_positions(original_parent, state, /*sort=*/true);
     return;
   }
 
