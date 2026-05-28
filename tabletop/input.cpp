@@ -353,6 +353,11 @@ void handle_mouse_move(Table_State& state, const Input& input) {
   // parent_world * local = target_world
   auto local      = inverse(parent_world) * target_world;
   thing.transform = local;
+
+  update_children_positions(drag.parent_id(), state, /*sort=*/false);
+  if (hovered != state.root) {
+    update_children_positions(hovered, state, /*sort=*/true);
+  }
 }
 
 void handle_rotate_thing(

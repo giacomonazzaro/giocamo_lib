@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <cassert>
+#include <unordered_map>
 
 #include "config.h"
 #include "raylib.h"
@@ -34,7 +35,7 @@ void update_children_positions(int parent_id, Table_State& state, bool sort) {
       // Dragging thing onto new parent.
       children.push_back(drag.thing_id());
     }
-    if (drag.parent_id() == parent_id) {
+    if (drag.parent_id() == parent_id && drag.hovered_thing != parent_id) {
       // Moving thing away from this parent.
       auto it = std::find(children.begin(), children.end(), drag.thing_id());
       assert(it != children.end());
@@ -43,18 +44,26 @@ void update_children_positions(int parent_id, Table_State& state, bool sort) {
   }
   size_t n = children.size();
 
-  auto local_transforms = std::vector<Transform2D>(children.size());
-  for (size_t i = 0; i < local_transforms.size(); i++) {
-    local_transforms[i] = state.things[children[i]].transform;
+  // Cache each child's x in THIS parent's local space, keyed by thing id.
+  // The dragged card's stored transform is in its old parent's local space,
+  // so for it we translate its world position into this parent's space.
+  auto local_x = std::unordered_map<int, float>();
+  for (int child_id : children) {
+    if (child_id == drag.thing_id() && drag.parent_id() != parent_id) {
+      auto parent_world = state.world_transforms[parent_id];
+      auto card_world   = state.world_transforms[child_id];
+      auto card_in_this = inverse(parent_world) * card_world;
+      local_x[child_id] = card_in_this.x;
+    } else {
+      local_x[child_id] = state.things[child_id].transform.x;
+    }
   }
 
   if (sort && n > 0) {
-    // Sort children by their current local x position (centers).
-    std::sort(
-      children.begin(), children.end(), [&local_transforms](int a, int b) {
-        return local_transforms[a].x < local_transforms[b].x;
-      }
-    );
+    // Sort by the cached x so the dragged card slots in at the right index.
+    std::sort(children.begin(), children.end(), [&local_x](int a, int b) {
+      return local_x.at(a) < local_x.at(b);
+    });
   }
 
   if (n == 0) return;
@@ -86,17 +95,19 @@ void update_children_positions(int parent_id, Table_State& state, bool sort) {
     if (child_id != drag_id) {
       child.transform.x = start_x_local + static_cast<float>(i) * spread_x;
       child.transform.y = start_y_local + static_cast<float>(i) * spread_y;
-    } else {
-      float x                = start_x_local + static_cast<float>(i) * spread_x;
-      float y                = start_y_local + static_cast<float>(i) * spread_y;
-      auto  new_local        = Transform2D{x, y, child.transform.rotation};
-      auto  old_parent_world = state.world_transforms[drag.parent_id()];
-      auto  new_parent_world = state.world_transforms[drag.hovered_thing];
-      // old_parent_world * old_local = new_parent_world * new_local
-      auto old_local = inverse(old_parent_world) *
-                       (new_parent_world * new_local);
-      child.transform = old_local;
     }
+    //  else {
+    //   float x                = start_x_local + static_cast<float>(i) *
+    //   spread_x; float y                = start_y_local +
+    //   static_cast<float>(i) * spread_y; auto  new_local        =
+    //   Transform2D{x, y, child.transform.rotation}; auto  old_parent_world =
+    //   state.world_transforms[drag.parent_id()]; auto  new_parent_world =
+    //   state.world_transforms[drag.hovered_thing];
+    //   // old_parent_world * old_local = new_parent_world * new_local
+    //   auto old_local = inverse(old_parent_world) *
+    //                    (new_parent_world * new_local);
+    //   child.transform = old_local;
+    // }
   }
 }
 
