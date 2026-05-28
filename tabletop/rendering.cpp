@@ -426,7 +426,7 @@ void draw_table(Table_State& state, const Input& input) {
   std::sort(draw_order.begin(), draw_order.end(), [&state](int a, int b) {
     return state.things[a].depth < state.things[b].depth;
   });
-  draw_thing_world(state.root, state, true, input);
+  // draw_thing_world(state.root, state, true, input);
   for (int child_id : draw_order) {
     draw_thing_world(child_id, state, root_thing.face_up, input);
   }

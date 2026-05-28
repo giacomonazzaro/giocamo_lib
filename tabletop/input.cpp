@@ -121,71 +121,22 @@ bool thing_pressed(int thing_id, const Table_State& state, const Input& input) {
   );
 }
 
-// Reverse-DFS so the visually topmost (last-drawn) thing under (px, py) wins.
-// (px, py) enters in the parent's local space; we invert this thing's render
-// transform to express the point in its own local space, then test
-// containment and recurse with that local point. Children are contained in
-// their parent so a containment miss prunes the whole subtree. Root spans
-// the whole window and is only used as the recursion entry, never as a hit
-// target. On success, `path` ends with the hit thing; root is path[0].
-static bool find_thing_at_rec(
-  float              px,
-  float              py,
-  int                thing_id,
-  const Table_State& state,
-  Thing_Location&    path
-) {
-  const Thing& t = state.things[thing_id];
-  float        w = t.size.x;
-  float        h = t.size.y;
-  // (px, py) is in the parent's local space, whose origin is the parent's
-  // center. Express it in this thing's local space, whose origin is this
-  // thing's center.
-  float dx = px - t.transform.x;
-  float dy = py - t.transform.y;
-  float local_px, local_py;
-  if (t.transform.rotation == 0.0f) {
-    local_px = dx;
-    local_py = dy;
-  } else {
-    // Renderer rotates around the thing's center by t.transform.rotation
-    // degrees. Inverse: rotate by -t.transform.rotation.
-    float angle_rad = t.transform.rotation * (float)(M_PI / 180.0);
-    float cos_a     = std::cos(angle_rad);
-    float sin_a     = std::sin(angle_rad);
-    local_px        = cos_a * dx + sin_a * dy;
-    local_py        = -sin_a * dx + cos_a * dy;
-  }
-
-  // Prune: containment in thing-local space (centered at origin). Root is
-  // exempt — it covers the entire window, so the check would always pass.
-  if (thing_id != state.root) {
-    if (std::abs(local_px) > w / 2.0f || std::abs(local_py) > h / 2.0f)
-      return false;
-  }
-
-  path.push_back(thing_id);
-
-  // Descend with the point expressed in this thing's local space.
-  const auto& children = t.children;
-  for (int i = (int)children.size() - 1; i >= 0; --i) {
-    if (find_thing_at_rec(local_px, local_py, children[i], state, path))
-      return true;
-  }
-
-  // No descendant matched. Self is the hit — unless we're the root, which
-  // isn't a meaningful hit target on its own.
-  if (thing_id == state.root) {
-    path.pop_back();
-    return false;
-  }
-  return true;
-}
-
 Thing_Location find_thing_at(float px, float py, const Table_State& state) {
+  int            node_id = state.root;
   Thing_Location path;
-  // Root's local space coincides with world space (rect at origin).
-  find_thing_at_rec(px, py, state.root, state, path);
+  path.push_back(state.root);
+  while (true) {
+    auto found = false;
+    for (size_t i = 0; i < state.things[node_id].children.size(); i++) {
+      if (point_in_thing(px, py, state.things[node_id].children[i], state)) {
+        node_id = state.things[node_id].children[i];
+        path.push_back(node_id);
+        found = true;
+        break;
+      }
+    }
+    if (!found) break;
+  }
   return path;
 }
 

@@ -130,7 +130,7 @@ struct Drag_State {
     return location.empty() ? -1 : location.back();
   }
   inline int parent_id() const {
-    return location.size() > 2 ? location[location.size() - 2] : -1;
+    return location.size() > 1 ? location[location.size() - 2] : -1;
   }
 };
 VISITABLE_STRUCT(

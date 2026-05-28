@@ -27,6 +27,7 @@ Rectangle world_rect(int thing_id, const Table_State& state) {
 }
 
 void update_children_positions(int parent_id, Table_State& state, bool sort) {
+  if (parent_id == state.root) return;
   Thing& parent   = state.things[parent_id];
   auto   children = parent.children;
   auto&  drag     = state.drag_state;
@@ -96,18 +97,6 @@ void update_children_positions(int parent_id, Table_State& state, bool sort) {
       child.transform.x = start_x_local + static_cast<float>(i) * spread_x;
       child.transform.y = start_y_local + static_cast<float>(i) * spread_y;
     }
-    //  else {
-    //   float x                = start_x_local + static_cast<float>(i) *
-    //   spread_x; float y                = start_y_local +
-    //   static_cast<float>(i) * spread_y; auto  new_local        =
-    //   Transform2D{x, y, child.transform.rotation}; auto  old_parent_world =
-    //   state.world_transforms[drag.parent_id()]; auto  new_parent_world =
-    //   state.world_transforms[drag.hovered_thing];
-    //   // old_parent_world * old_local = new_parent_world * new_local
-    //   auto old_local = inverse(old_parent_world) *
-    //                    (new_parent_world * new_local);
-    //   child.transform = old_local;
-    // }
   }
 }
 
