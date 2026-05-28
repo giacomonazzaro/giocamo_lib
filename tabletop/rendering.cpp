@@ -293,51 +293,44 @@ void draw_drop_placeholder(int thing_id, const Table_State& state) {
 
 // --- animate ---
 
-// World transform of every thing, computed by walking the tree and
-// composing parent * child down each chain.
-static void compute_world(
-  int                       id,
-  const Transform2D&        parent_transform,
-  const std::vector<Thing>& things,
-  std::vector<Transform2D>& output
+static void update_world_transforms(
+  int                             id,
+  const Transform2D&              parent_transform,
+  const std::vector<Thing>&       things,
+  const std::vector<Transform2D>& local_transforms,
+  std::vector<Transform2D>&       world_transforms
 ) {
-  const Thing& t = things[id];
-  output[id]     = parent_transform * t.transform;
-  for (int child_id : t.children)
-    compute_world(child_id, output[id], things, output);
+  world_transforms[id] = parent_transform * local_transforms[id];
+  for (int child_id : things[id].children)
+    update_world_transforms(
+      child_id, world_transforms[id], things, local_transforms, world_transforms
+    );
 }
 
 void animate(
   std::vector<Transform2D>& animated, const Table_State& state, float dt
 ) {
-  const int                n = (int)state.things.size();
-  std::vector<Transform2D> target(n);
-  compute_world(state.root, Transform2D{}, state.things, target);
-
-  // First frame (or size change): snap so things do not lurch in from (0,0).
-  if ((int)animated.size() != n) animated = target;
-
-  const int dragged = state.drag_state.thing_id();
-  for (int i = 0; i < n; ++i) {
-    if (i == dragged) {
-      animated[i] = target[i];  // Snap to cursor.
+  for (int i = 0; i < state.things.size(); ++i) {
+    if (i == state.drag_state.thing_id()) {
+      animated[i] = state.things[i].transform;  // Snap to cursor.
       continue;
     }
-    float vx = (target[i].x - animated[i].x) * dt;
-    float vy = (target[i].y - animated[i].y) * dt;
+    float vx = (state.things[i].transform.x - animated[i].x) * dt;
+    float vy = (state.things[i].transform.y - animated[i].y) * dt;
     // Cap per-frame travel so big jumps (e.g. trick → captured pile) glide
     // instead of teleporting.
-    const float speed = std::sqrt(vx * vx + vy * vy);
-    const float cap   = 40.0f;
-    if (speed > cap) {
-      vx *= cap / speed;
-      vy *= cap / speed;
+    const float speed     = std::sqrt(vx * vx + vy * vy);
+    const float max_speed = 40.0f;
+    if (speed > max_speed) {
+      vx *= max_speed / speed;
+      vy *= max_speed / speed;
     }
     animated[i].x += vx;
     animated[i].y += vy;
-    // Rotation eases toward target with a small swing from x velocity.
     animated[i].rotation = animated[i].rotation * (1.0f - dt) +
-                           target[i].rotation * dt + vx * 0.1f;
+                           state.things[i].transform.rotation * dt;
+    // Rotation eases toward target with a small swing that tilts the thing.
+    animated[i].rotation += vx * 0.1f;
   }
 }
 
@@ -359,7 +352,7 @@ static void draw_thing_world(
   const bool   face_up = parent_face_up && t.face_up;
   if (id != state.drag_state.thing_id()) {
     rlPushMatrix();
-    apply_world_transform(state.animated_world[id]);
+    apply_world_transform(state.world_transforms[id]);
     draw_thing(t, face_up);
     auto cb = state.draw_callbacks.find(id);
     if (cb != state.draw_callbacks.end()) cb->second(state, input, face_up);
@@ -403,7 +396,24 @@ void draw_zoomed_thing(const Thing& thing, bool face_up) {
 // --- draw_table ---
 
 void draw_table(Table_State& state, const Input& input) {
-  animate(state.animated_world, state, 0.1f);
+  if (state.animated_transforms.size() != state.things.size()) {
+    state.animated_transforms.resize(state.things.size());
+    for (int i = 0; i < state.things.size(); i++) {
+      state.animated_transforms[i] = state.things[i].transform;
+    }
+  }
+  animate(state.animated_transforms, state, 0.1f);
+
+  if (state.world_transforms.size() != state.things.size()) {
+    state.world_transforms.resize(state.things.size());
+  }
+  update_world_transforms(
+    state.root,
+    Transform2D{},
+    state.things,
+    state.animated_transforms,
+    state.world_transforms
+  );
 
   // Highlight the hovered drop target while dragging.
   if (state.drag_state.hovered_thing != -1) {
@@ -428,7 +438,7 @@ void draw_table(Table_State& state, const Input& input) {
     int  orig    = state.drag_state.parent_id();
     if (orig >= 0 && orig != state.root) face_up = state.things[orig].face_up;
     rlPushMatrix();
-    apply_world_transform(state.animated_world[dragged]);
+    apply_world_transform(state.world_transforms[dragged]);
     draw_thing(state.things[dragged], face_up);
     auto cb = state.draw_callbacks.find(dragged);
     if (cb != state.draw_callbacks.end()) cb->second(state, input, face_up);

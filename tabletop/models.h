@@ -41,6 +41,17 @@ inline Transform2D operator*(
   };
 }
 
+inline Transform2D inverse(const Transform2D& t) {
+  float angle = -t.rotation * (float)(M_PI / 180.0);
+  float cos_a = std::cos(angle);
+  float sin_a = std::sin(angle);
+  return Transform2D{
+    -(cos_a * t.x - sin_a * t.y),
+    -(sin_a * t.x + cos_a * t.y),
+    -t.rotation,
+  };
+}
+
 // Base visual entity with optional draw callback.
 struct Thing {
   // Info.
@@ -139,10 +150,10 @@ struct Table_State : Table_Layout {
   int width  = 0;
   int height = 0;
 
-  Drag_State drag_state;
-  // Smoothed world transform per thing, same indexing as `things`. The
-  // renderer reads these directly.
-  std::vector<Transform2D> animated_world;
+  Drag_State               drag_state;
+  std::vector<Transform2D> animated_transforms;
+  std::vector<Transform2D> world_transforms;
+
   // HUD/per-thing draw callbacks. Receive Input so they can run immediate-mode
   // buttons against the recorded/replayed input stream. The bool argument is
   // the face_up flag of the thing being decorated (true for the HUD slot).

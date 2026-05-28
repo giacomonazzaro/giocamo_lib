@@ -263,15 +263,22 @@ void handle_mouse_release(Table_State& state) {
     }
 
     // Add.
+    auto old_parent_world = state.world_transforms[drag.parent_id()];
+    auto new_parent_world = state.world_transforms[drag.hovered_thing];
+    auto old_local        = state.things[thing_id].transform;
+    // old_parent * old_local = new_parent * new_local
+    auto new_local = inverse(new_parent_world) * (old_parent_world * old_local);
+    state.things[thing_id].transform    = new_local;
+    state.animated_transforms[thing_id] = new_local;
     state.things[current_parent].children.push_back(thing_id);
     update_children_positions(current_parent, state, /*sort=*/true);
   }
 
   //  // Re-anchor the smoothed world transform to where the user released, so
   //  // the lerp glides from there into the new parent.s slot.
-  //  if (thing_id >= 0 && thing_id < (int)state.animated_world.size()) {
-  //    state.animated_world[thing_id].x = world_at_release.x;
-  //    state.animated_world[thing_id].y = world_at_release.y;
+  //  if (thing_id >= 0 && thing_id < (int)state.animated_transforms.size()) {
+  //    state.animated_transforms[thing_id].x = world_at_release.x;
+  //    state.animated_transforms[thing_id].y = world_at_release.y;
   //  }
 }
 
@@ -283,10 +290,6 @@ void handle_mouse_move(Table_State& state, const Input& input) {
 
   float mx = (float)input.mouse_x;
   float my = (float)input.mouse_y;
-
-  // Target world position for the dragged thing.
-  float target_world_x = mx - drag.mouse_offset_x;
-  float target_world_y = my - drag.mouse_offset_y;
 
   int hovered = -1;
   for (int i = 0; i < state.things.size(); i++) {
@@ -333,13 +336,20 @@ void handle_mouse_move(Table_State& state, const Input& input) {
   //    drag.last_hovered_parent = hovered;
   //  }
 
+  // Target world position for the dragged thing.
+  float target_world_x = mx - drag.mouse_offset_x;
+  float target_world_y = my - drag.mouse_offset_y;
+
   // Now position the dragged thing under the cursor — convert world → local of
   // parent. Both target_world and parent_world are centers; subtracting gives
   // the thing's center in the parent's local space.
-  Thing&  thing        = state.things[thing_id];
-  Vector2 parent_world = local_to_world(drag.parent_id(), state);
-  thing.transform.x    = target_world_x - parent_world.x;
-  thing.transform.y    = target_world_y - parent_world.y;
+
+  Thing& thing        = state.things[thing_id];
+  auto   parent_world = state.world_transforms[drag.parent_id()];
+  auto   target_world = Transform2D{target_world_x, target_world_y, 0.0f};
+  // parent_world * local = target_world
+  auto local      = inverse(parent_world) * target_world;
+  thing.transform = local;
 }
 
 void handle_rotate_thing(
