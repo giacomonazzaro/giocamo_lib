@@ -1,10 +1,6 @@
 #pragma once
 #include "models.h"
 
-// Tree navigation helpers (scene tree is rooted at state.things[state.root]).
-// These walk the parent chain — prefer state.animated_transforms for cached
-// world-space lookups in hot paths.
-int       find_parent(int thing_id, const Table_State& state);
 Rectangle world_rect(int thing_id, const Table_State& state);
 
 // Reflow a thing's children into their slot positions based on the parent's

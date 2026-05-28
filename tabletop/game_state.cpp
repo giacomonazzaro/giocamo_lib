@@ -7,16 +7,6 @@
 #include "config.h"
 #include "raylib.h"
 
-int find_parent(int thing_id, const Table_State& state) {
-  // Linear scan: tree depth is small and total things is in the hundreds.
-  for (int i = 0; i < (int)state.things.size(); ++i) {
-    const auto& children = state.things[i].children;
-    if (std::find(children.begin(), children.end(), thing_id) != children.end())
-      return i;
-  }
-  return -1;
-}
-
 Rectangle world_rect(int thing_id, const Table_State& state) {
   float        px = state.world_transforms[thing_id].x;
   float        py = state.world_transforms[thing_id].y;
