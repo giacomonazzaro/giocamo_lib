@@ -3,10 +3,9 @@
 #include <giocamo/menu.h>
 #include <giocamo/play.h>
 #include <tabletop/config.h>
-#include <tabletop/tabletop.h>
 #include <tabletop/input_recorder.h>
-#include <tabletop/tabletop.h>
 #include <tabletop/rendering.h>
+#include <tabletop/tabletop.h>
 #include <tabletop/ui.h>
 #include <tressette/ai.h>
 #include <tressette/gameplay.h>
@@ -31,7 +30,7 @@ static Table_State init_table_state(
   int                    bottom_player,
   bool                   show_opponent_hand
 ) {
-  auto table                 = Table_State();
+  auto table            = Table_State();
   table.is_drop_allowed = [](int, int, int) { return false; };
 
   // One Thing per card; ids 0..39 match all_cards indices.
@@ -77,8 +76,8 @@ static Table_State init_table_state(
   root.size        = {(float)tt::WINDOW_WIDTH, (float)tt::WINDOW_HEIGHT};
   root.transform.x = (float)tt::WINDOW_WIDTH / 2.0f;
   root.transform.y = (float)tt::WINDOW_HEIGHT / 2.0f;
-  root.id   = (int)table.things.size();
-  root.children = stack_ids;
+  root.id          = (int)table.things.size();
+  root.children    = stack_ids;
   table.things.push_back(root);
   table.root = root.id;
 
@@ -130,8 +129,56 @@ static Agent* make_ai_opponent() {
 static Agent* make_agent(
   Tressette_Agent_UI* agent_ui, bool vs_ai, const Menu_Result& menu_result
 ) {
-  Agent* opponent = vs_ai ? make_ai_opponent() : (Agent*)agent_ui;
+  // Wrap the AI in Agent_Async so the main loop keeps rendering while it
+  // searches; otherwise the window freezes for the whole MCTS budget.
+  Agent* opponent = vs_ai ? (Agent*)new Agent_Async(make_ai_opponent())
+                          : (Agent*)agent_ui;
   return make_duel(agent_ui, opponent, menu_result);
+}
+
+std::optional<Choice> game_frame_tressette(
+  Table_State&           table,
+  tressette::Game_State& state,
+  Agent&                 agent,
+  std::optional<Choice>  choice
+) {
+  static std::optional<int> pending_action;
+  static double             resolve_at = 0.0;
+
+  if (!choice) choice = state.next_choice();
+  if (!choice) return std::nullopt;
+
+  if (pending_action) {
+    if (GetTime() < resolve_at) return choice;
+    resolve_choice(state, *choice, *pending_action);
+    pending_action = std::nullopt;
+    return std::nullopt;
+  }
+
+  if (action_options_count(choice->actions(state)) == 0) return std::nullopt;
+  int action_index = agent.choose_action(state, *choice);
+  if (action_index == -1) return choice;
+
+  // Hold the played card on the trick for 2s before resolving. The local
+  // player's drag already put it on the trick stack; for the AI we move it
+  // there ourselves so the opponent's play is visible during the wait.
+  int card_id = tressette::legal_cards(state)[action_index];
+  int base    = (int)state.all_cards.size();
+  int hand_id =
+    base + (state.current_player == 0 ? TRESSETTE_HAND_0 : TRESSETTE_HAND_1);
+  int   trick_id = base + TRESSETTE_TABLE_IDX;
+  auto& hand     = table.things[hand_id].children;
+  auto& trick    = table.things[trick_id].children;
+  hand.erase(std::remove(hand.begin(), hand.end(), card_id), hand.end());
+  if (std::find(trick.begin(), trick.end(), card_id) == trick.end()) {
+    trick.push_back(card_id);
+  }
+  update_children_positions(hand_id, table, false);
+  update_children_positions(trick_id, table, false);
+
+  pending_action = action_index;
+  resolve_at     = GetTime() + 2.0;
+  return choice;
 }
 
 static void play_tressette(
@@ -175,7 +222,7 @@ static void play_tressette(
     draw_background(input, 0.0f);
     draw_table(table, input);
 
-    current_choice = game_frame(state, agent, current_choice);
+    current_choice = game_frame_tressette(table, state, agent, current_choice);
     if (current_choice == std::nullopt) {
       update_stacks(table, state);
     }
@@ -218,8 +265,13 @@ int main(int argc, char** argv) {
   Input_Feed inputs;
   init_input_recorder(inputs, Input_Mode::Live, "");
   Menu_Result menu_result = resolve_play_mode(
-    "Tressette", tt::WINDOW_WIDTH, tt::WINDOW_HEIGHT,
-    inputs, argc, argv, skip_menu
+    "Tressette",
+    tt::WINDOW_WIDTH,
+    tt::WINDOW_HEIGHT,
+    inputs,
+    argc,
+    argv,
+    skip_menu
   );
 
   const bool is_online    = (menu_result.mode == Menu_Result::ONLINE);
