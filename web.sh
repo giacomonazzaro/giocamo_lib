@@ -1,8 +1,16 @@
 #!/bin/bash
 set -e
 
+GAME="${1:-gods}"
+SOURCE_DIR="${GAME}_app"
+
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 cd "$SCRIPT_DIR"
+
+if [ ! -d "$SOURCE_DIR" ]; then
+    echo "ERROR: no source directory '$SOURCE_DIR' (try: sh web.sh gods|scopa|tressette)"
+    exit 1
+fi
 
 # Activate Emscripten from the standard install location.
 EMSDK_ENV="$HOME/emsdk/emsdk_env.sh"
@@ -15,12 +23,12 @@ fi
 # shellcheck disable=SC1090
 source "$EMSDK_ENV"
 
-BUILD_DIR="build/gods_app_wasm"
+BUILD_DIR="build/${SOURCE_DIR}_wasm"
 
-emcmake cmake -S gods_app -B "$BUILD_DIR" -DCMAKE_BUILD_TYPE=Release
+emcmake cmake -S "$SOURCE_DIR" -B "$BUILD_DIR" -DCMAKE_BUILD_TYPE=Release
 cmake --build "$BUILD_DIR" --parallel 8
 
-URL="http://localhost:8080/gods_app.html"
+URL="http://localhost:8080/${SOURCE_DIR}.html"
 echo ""
 echo "Starting server at $URL"
 

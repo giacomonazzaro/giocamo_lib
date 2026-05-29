@@ -6,9 +6,9 @@
 #include <unordered_map>
 
 #include "config.h"
-#include "tabletop.h"
 #include "raylib.h"
 #include "rlgl.h"  // for rlPushMatrix, rlPopMatrix, rlTranslatef, rlRotatef, rlScalef
+#include "tabletop.h"
 
 #ifdef __EMSCRIPTEN__
 #include <emscripten.h>
@@ -183,10 +183,17 @@ void draw_background(const Input& input, float turn) {
   SetShaderValue(
     s_background_shader, s_bg_turn_loc, &s_bg_turn_value, SHADER_UNIFORM_FLOAT
   );
-  float mouse[2] = {(float)input.mouse_x, (float)input.mouse_y};
+  float        mouse[2]          = {(float)input.mouse_x, (float)input.mouse_y};
+  static float mouse_animated[2] = {0, 0};
+  if (mouse_animated[0] == 0 && mouse_animated[1] == 0) {
+    mouse_animated[0] = mouse[0];
+    mouse_animated[1] = mouse[1];
+  }
+  mouse_animated[0] = (1.0 - dt) * mouse_animated[0] + dt * mouse[0];
+  mouse_animated[1] = (1.0 - dt) * mouse_animated[1] + dt * mouse[1];
 
   SetShaderValue(
-    s_background_shader, s_bg_mouse_loc, mouse, SHADER_UNIFORM_VEC2
+    s_background_shader, s_bg_mouse_loc, mouse_animated, SHADER_UNIFORM_VEC2
   );
   BeginShaderMode(s_background_shader);
   DrawRectangle(0, 0, tt::WINDOW_WIDTH, tt::WINDOW_HEIGHT, WHITE);

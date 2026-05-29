@@ -12,28 +12,41 @@
 
 #include "http.h"
 
+#ifdef __EMSCRIPTEN__
+#include <emscripten.h>
+#endif
+
 namespace {
 
-// Relay base URL.
-//   - Wasm defaults to "/ntfy/" — a same-origin path served by
-//     web_server.py, so two browser tabs always reach the same relay with
-//     no external network dependency.
-//   - Native defaults to the public ntfy.sh service.
-// Either platform can override via the NTFY_URL environment variable
-// (e.g. to point native peers at a local web_server.py).
+// Relay base URL. Both wasm and native default to the public ntfy.sh
+// service so two peers — on different machines, different networks, or
+// across the desktop/browser line — can find each other without anyone
+// running a server. Either platform can override via the NTFY_URL
+// environment variable (or, in the browser, by appending `?ntfy=...` to
+// the page URL) — handy when ntfy.sh is unreachable and you want to point
+// at a local web_server.py instead.
 std::string ntfy_base_url() {
   static std::string base = []() {
-    const char* env = std::getenv("NTFY_URL");
     std::string s;
-    if (env && *env) {
-      s = env;
-    } else {
+    const char* env = std::getenv("NTFY_URL");
+    if (env && *env) s = env;
 #ifdef __EMSCRIPTEN__
-      s = "/ntfy";
-#else
-      s = "https://ntfy.sh";
-#endif
+    if (s.empty()) {
+      char* override_url = (char*)EM_ASM_PTR({
+        var p = new URLSearchParams(window.location.search).get('ntfy');
+        if (!p) return 0;
+        var len = lengthBytesUTF8(p) + 1;
+        var buf = _malloc(len);
+        stringToUTF8(p, buf, len);
+        return buf;
+      });
+      if (override_url) {
+        s = override_url;
+        free(override_url);
+      }
     }
+#endif
+    if (s.empty()) s = "https://ntfy.sh";
     if (s.empty() || s.back() != '/') s += "/";
     return s;
   }();

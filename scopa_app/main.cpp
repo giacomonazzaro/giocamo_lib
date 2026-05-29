@@ -84,6 +84,15 @@ static Table_State init_table_state(
   return table;
 }
 
+static void create_coupling_between_table_and_game(
+  const Table_State& table, scopa::Game_State& state
+) {
+  auto thing_from_card = std::unordered_map<int, int>{};
+  auto card_from_thing = std::unordered_map<int, int>{};
+  for (int i = 0; i < (int)state.all_cards.size(); i++) {
+    /* code */
+  }
+}
 static void update_stacks(Table_State& table, scopa::Game_State& state) {
   int  base    = (int)state.all_cards.size();
   auto refresh = [&](int idx, const std::vector<int>& cards) {

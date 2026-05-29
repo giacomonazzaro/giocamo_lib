@@ -1,52 +1,94 @@
 #!/bin/bash
+set -e
 
-# Configuration
-OUTPUT_ZIP="gods_app_package.zip"
-TEMP_DIR="staging_area"
+# Usage: sh pack.sh <game>   (default: gods)
+GAME="${1:-gods}"
+SOURCE_DIR="${GAME}_app"
+BUILD_DIR="build/${SOURCE_DIR}_wasm"
+OUTPUT_ZIP="${SOURCE_DIR}_package.zip"
+TEMP_DIR="staging_${SOURCE_DIR}"
 
-echo "Preparing distribution package..."
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+cd "$SCRIPT_DIR"
 
-# 1. Create a temporary staging folder
-mkdir -p $TEMP_DIR
+if [ ! -d "$SOURCE_DIR" ]; then
+    echo "ERROR: no source directory '$SOURCE_DIR' (try: sh pack.sh gods|scopa|tressette)"
+    exit 1
+fi
 
-# 2. Copy and rename files
-# We rename gods_app.html to index.html so the server finds it automatically
-cp build/gods_app_wasm/gods_app.html "$TEMP_DIR/index.html"
-cp build/gods_app_wasm/gods_app.js "$TEMP_DIR/"
-cp build/gods_app_wasm/gods_app.wasm "$TEMP_DIR/"
-cp build/gods_app_wasm/gods_app.data "$TEMP_DIR/"
+# Activate Emscripten from the standard install location.
+EMSDK_ENV="$HOME/emsdk/emsdk_env.sh"
+if [ ! -f "$EMSDK_ENV" ]; then
+    echo "ERROR: $EMSDK_ENV not found."
+    echo "Install emsdk first:"
+    echo "  cd ~/emsdk && ./emsdk install latest && ./emsdk activate latest"
+    exit 1
+fi
+# shellcheck disable=SC1090
+source "$EMSDK_ENV"
 
-# 3. Create the 'run_app.sh' launcher inside the package
+# Build the wasm artifacts.
+emcmake cmake -S "$SOURCE_DIR" -B "$BUILD_DIR" -DCMAKE_BUILD_TYPE=Release
+cmake --build "$BUILD_DIR" --parallel 8
+
+for ext in html js wasm data; do
+    if [ ! -f "$BUILD_DIR/${SOURCE_DIR}.${ext}" ]; then
+        echo "ERROR: build produced no $BUILD_DIR/${SOURCE_DIR}.${ext}"
+        exit 1
+    fi
+done
+
+echo "Preparing distribution package for $GAME..."
+
+# 1. Clean staging folder.
+rm -rf "$TEMP_DIR"
+mkdir -p "$TEMP_DIR"
+
+# 2. Copy artifacts. The .html is renamed to index.html so the launcher's
+#    bare URL (no filename) finds it automatically.
+cp "$BUILD_DIR/${SOURCE_DIR}.html" "$TEMP_DIR/index.html"
+cp "$BUILD_DIR/${SOURCE_DIR}.js"   "$TEMP_DIR/"
+cp "$BUILD_DIR/${SOURCE_DIR}.wasm" "$TEMP_DIR/"
+cp "$BUILD_DIR/${SOURCE_DIR}.data" "$TEMP_DIR/"
+
+# 3. Launcher script: starts a local server and opens the browser. The wasm
+#    build talks to ntfy.sh for online matchmaking, so no relay is needed
+#    here — only a local HTTP server to serve the page.
 cat << 'EOF' > "$TEMP_DIR/run_app.sh"
 #!/bin/bash
 PORT=8000
-# Since we renamed the file to index.html, we don't need the filename in the URL
 URL="http://localhost:$PORT"
 
-if command -v python3 &>/dev/null; then
-    echo "Starting server at $URL"
-    (sleep 1 && open "$URL" || xdg-open "$URL" || start "$URL") &
-    python3 -m http.server $PORT
-elif command -v python &>/dev/null; then
-    echo "Starting server at $URL"
-    (sleep 1 && open "$URL" || xdg-open "$URL" || start "$URL") &
-    python -m http.server $PORT
+open_browser() {
+    sleep 1
+    if command -v open >/dev/null 2>&1; then open "$URL"
+    elif command -v xdg-open >/dev/null 2>&1; then xdg-open "$URL"
+    elif command -v start >/dev/null 2>&1; then start "$URL"
+    fi
+}
+
+if command -v python3 >/dev/null 2>&1; then
+    PY=python3
+elif command -v python >/dev/null 2>&1; then
+    PY=python
 else
     echo "Error: Python is not installed. Please install Python to run this app."
     exit 1
 fi
-EOF
 
-# 4. Make the launcher executable
+echo "Starting server at $URL"
+open_browser &
+"$PY" -m http.server "$PORT"
+EOF
 chmod +x "$TEMP_DIR/run_app.sh"
 
-# 5. Zip the contents of the staging area
-# -j (junk paths) ensures the files are at the root of the zip
+# 4. Zip flat (-j) so the files sit at the root of the archive.
+rm -f "$OUTPUT_ZIP"
 zip -rj "$OUTPUT_ZIP" "$TEMP_DIR/"*
 
-# 6. Clean up the temporary folder
+# 5. Clean up.
 rm -rf "$TEMP_DIR"
 
 echo "------------------------------------------------"
-echo "✅ Success! Archive created: $OUTPUT_ZIP"
-echo "Send this zip file to your friend."
+echo "Success! Archive created: $OUTPUT_ZIP"
+echo "Send this zip to your friend; unzip and run ./run_app.sh."
