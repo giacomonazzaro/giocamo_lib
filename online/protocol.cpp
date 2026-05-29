@@ -71,6 +71,12 @@ struct Inbox {
   // id so we don't process them twice.
   std::set<std::string>      seen_ids;
   Async_Get                  fetch;
+  // Wall-clock time of the next allowed poll. ntfy.sh rate-limits each
+  // subscriber IP (~30 req/min sustained); without throttling the per-
+  // frame pump() would burn through that budget in seconds and get the
+  // whole IP blocked for the rest of the session.
+  std::chrono::steady_clock::time_point next_poll_at =
+    std::chrono::steady_clock::now();
 };
 
 // Heap-allocated and leaked at process exit so Async_Get worker threads
@@ -122,17 +128,26 @@ void parse_into_inbox(const std::string& body, Inbox& inbox) {
   }
 }
 
-// Drain a completed fetch (if any) into the inbox, then start the next.
-// Called every time anyone polls the inbox so the chain keeps running.
+// Minimum gap between consecutive polls. ntfy.sh's public service caps
+// subscribers at ~30 req/min sustained; 2 seconds keeps us comfortably
+// under that (peak 30 req/min) for two concurrent inboxes (one per topic
+// direction) and still feels instant in-game.
+static constexpr std::chrono::milliseconds POLL_INTERVAL{2000};
+
+// Drain a completed fetch (if any) into the inbox, then start the next —
+// but at most once per POLL_INTERVAL so we don't blow through the relay's
+// rate limit.
 void pump(Inbox& inbox, const std::string& topic) {
   std::string body = inbox.fetch.consume();
   if (!body.empty()) parse_into_inbox(body, inbox);
-  if (!inbox.fetch.busy()) {
-    std::string url = ntfy_base_url() + topic + "/json?poll=1";
-    if (inbox.since_marker > 0)
-      url += "&since=" + std::to_string(inbox.since_marker);
-    inbox.fetch.start(url);
-  }
+  if (inbox.fetch.busy()) return;
+  auto now = std::chrono::steady_clock::now();
+  if (now < inbox.next_poll_at) return;
+  inbox.next_poll_at = now + POLL_INTERVAL;
+  std::string url    = ntfy_base_url() + topic + "/json?poll=1";
+  if (inbox.since_marker > 0)
+    url += "&since=" + std::to_string(inbox.since_marker);
+  inbox.fetch.start(url);
 }
 
 }  // namespace
