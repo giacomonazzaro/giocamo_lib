@@ -17,3 +17,18 @@ if(TARGET raylib AND NOT TARGET tabletop_lib)
     target_include_directories(tabletop_lib PUBLIC . "${CMAKE_CURRENT_SOURCE_DIR}/..")
     target_link_libraries(tabletop_lib PUBLIC raylib)
 endif()
+
+# When built as the top-level project, also compile the demo executable.
+if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
+    set(BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
+    set(BUILD_GAMES    OFF CACHE BOOL "" FORCE)
+    add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/../raylib ${CMAKE_BINARY_DIR}/raylib_build)
+
+    add_library(tabletop_lib STATIC ${TABLETOP_SOURCES})
+    target_include_directories(tabletop_lib PUBLIC . "${CMAKE_CURRENT_SOURCE_DIR}/..")
+    target_link_libraries(tabletop_lib PUBLIC raylib)
+
+    add_executable(tabletop_demo main.cpp)
+    target_include_directories(tabletop_demo PRIVATE . "${CMAKE_CURRENT_SOURCE_DIR}/..")
+    target_link_libraries(tabletop_demo PRIVATE tabletop_lib raylib)
+endif()
