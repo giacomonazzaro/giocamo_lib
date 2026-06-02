@@ -216,13 +216,16 @@ void handle_mouse_release(Table_State& state) {
     }
 
     // Add.
-    auto old_parent_world = state.world_transforms[original_parent];
-    auto new_parent_world = state.world_transforms[current_parent];
-    auto old_local        = state.things[thing_id].transform;
-    // old_parent * old_local = new_parent * new_local
-    auto new_local = inverse(new_parent_world) * (old_parent_world * old_local);
-    state.things[thing_id].transform    = new_local;
-    state.animated_transforms[thing_id] = new_local;
+    // auto old_parent_world = state.world_transforms[original_parent];
+    // auto new_parent_world = state.world_transforms[current_parent];
+    // auto old_local        = state.things[thing_id].transform;
+    // // old_parent * old_local = new_parent * new_local
+    // auto new_local = inverse(new_parent_world) * (old_parent_world *
+    // old_local);
+    update_local_transform_to_match_world_transform(
+      state, current_parent, thing_id
+    );
+    state.animated_transforms[thing_id] = state.world_transforms[thing_id];
     state.things[current_parent].children.push_back(thing_id);
     update_children_positions(current_parent, state, /*sort=*/true);
   }

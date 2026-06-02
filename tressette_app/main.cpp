@@ -90,9 +90,8 @@ static Table_State init_table_state(
 static void update_stacks(Table_State& table, tressette::Game_State& state) {
   int  base    = (int)state.all_cards.size();
   auto refresh = [&](int idx, const std::vector<int>& cards) {
-    int sid                    = base + idx;
-    table.things[sid].children = cards;
-    update_children_positions(sid, table, false);
+    int thing_id                    = base + idx;
+    table.things[thing_id].children = cards;
   };
   refresh(TRESSETTE_HAND_0, state.players[0].hand);
   refresh(TRESSETTE_HAND_1, state.players[1].hand);
@@ -100,6 +99,11 @@ static void update_stacks(Table_State& table, tressette::Game_State& state) {
   refresh(TRESSETTE_TRICKS_1, state.players[1].tricks_won);
   refresh(TRESSETTE_STOCK_IDX, state.stock);
   refresh(TRESSETTE_TABLE_IDX, state.trick);
+
+  update_local_transforms_to_match_world_transforms(table);
+  for (size_t i = 0; i < table.things.size(); i++) {
+    update_children_positions(i, table, true);
+  }
 }
 
 // The opponent agent picked for solo (vs-AI) play. Hides the TORCH_AVAILABLE
@@ -222,7 +226,7 @@ static void play_tressette(
     draw_background(input, 0.0f);
     draw_table(table, input);
 
-    current_choice = game_frame_tressette(table, state, agent, current_choice);
+    current_choice = game_frame(state, agent, current_choice);
     if (current_choice == std::nullopt) {
       update_stacks(table, state);
     }

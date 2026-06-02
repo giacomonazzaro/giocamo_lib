@@ -239,12 +239,12 @@ bool thing_pressed(int thing_id, const Table_State& state, const Input& input);
 // rect contains (px, py). Topmost is determined by reverse-DFS (the
 // last-drawn / visually frontmost thing wins). Empty when nothing matched.
 Thing_Location find_thing_at(float px, float py, const Table_State& state);
-void handle_mouse_press(Table_State& state, const Input& input);
-void handle_mouse_release(Table_State& state);
-void handle_mouse_move(Table_State& state, const Input& input);
-void handle_rotate_thing(
-  Table_State& state, const Input& input, bool clockwise = true
-);
+void           handle_mouse_press(Table_State& state, const Input& input);
+void           handle_mouse_release(Table_State& state);
+void           handle_mouse_move(Table_State& state, const Input& input);
+void           handle_rotate_thing(
+            Table_State& state, const Input& input, bool clockwise = true
+          );
 void shuffle_thing(Table_State& state, int thing_id);
 void process_input(Table_State& state, const Input& input);
 
@@ -255,3 +255,37 @@ Rectangle world_rect(int thing_id, const Table_State& state);
 void update_children_positions(int parent_id, Table_State& state, bool sort);
 
 Thing make_card(int id, const std::string& image_path = "");
+
+template <typename F>
+void visit_things_recursive(
+  Table_State& table, int parent_id, int thing_id, F&& f
+) {
+  f(table, parent_id, thing_id);
+  for (int child_id : table.things[thing_id].children)
+    visit_things_recursive(table, thing_id, child_id, f);
+}
+
+template <typename F>
+void visit_things(Table_State& table, F&& f) {
+  visit_things_recursive(table, -1, table.root, f);
+}
+
+inline void update_local_transform_to_match_world_transform(
+  Table_State& table, int parent_id, int thing_id
+) {
+  // old_world_transform = new_parent_world * new_local
+  // new_local = inverse(new_parent_world) * old_world_transform
+  table.things[thing_id].transform =
+    inverse(table.world_transforms[parent_id]) *
+    table.world_transforms[thing_id];
+}
+
+inline void update_local_transforms_to_match_world_transforms(
+  Table_State& table
+) {
+  auto f = [&](Table_State& table, int parent_id, int thing_id) {
+    if (parent_id == -1) return;
+    update_local_transform_to_match_world_transform(table, parent_id, thing_id);
+  };
+  visit_things(table, f);
+}
