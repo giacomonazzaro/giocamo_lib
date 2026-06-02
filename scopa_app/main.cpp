@@ -202,8 +202,7 @@ int main(int argc, char** argv) {
     }
   }
 
-  Input_Feed inputs;
-  init_input_recorder(inputs, Input_Mode::Live, "");
+  auto inputs = Input_Feed(Input_Mode::Live, "");
   Menu_Result menu_result = resolve_play_mode(
     "Scopa Scientifica",
     tt::WINDOW_WIDTH,

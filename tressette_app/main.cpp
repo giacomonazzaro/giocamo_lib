@@ -115,7 +115,6 @@ static Agent* make_ai_opponent() {
     "tressette/tressette_value_traced.pt", 3, 20
   );
 #else
-  // return new tressette::Tressette_Agent(11, 10);
   return new Agent_MCTS_Stochastic<tressette::Game_State>(
     /* num_iterations       */ 100000,
     /* rollout_depth        */ 40,
@@ -123,84 +122,44 @@ static Agent* make_ai_opponent() {
     /* exploration_constant */ 1.41421356f,
     /* time_budget_seconds  */ 5.0f
   );
-
 #endif
 }
 
-// Build the duel for the chosen mode. The opponent slot is the AI when
-// vs_ai is set, otherwise hot-seat (the local agent_ui plays both seats).
-// make_duel handles the ONLINE branch.
-static Agent* make_agent(
-  Tressette_Agent_UI* agent_ui, bool vs_ai, const Menu_Result& menu_result
-) {
-  // Wrap the AI in Agent_Async so the main loop keeps rendering while it
-  // searches; otherwise the window freezes for the whole MCTS budget.
-  Agent* opponent = vs_ai ? (Agent*)new Agent_Async(make_ai_opponent())
-                          : (Agent*)agent_ui;
-  return make_duel(agent_ui, opponent, menu_result);
-}
+int main(int argc, char** argv) {
+  auto options = parse_play_args(argc, argv);
 
-std::optional<Choice> game_frame_tressette(
-  Table_State&           table,
-  tressette::Game_State& state,
-  Agent&                 agent,
-  std::optional<Choice>  choice
-) {
-  static std::optional<int> pending_action;
-  static double             resolve_at = 0.0;
+  // Menu opens its own window; play_game reuses it via run_tabletop's
+  // IsWindowReady() guard. resolve_play_mode handles --local-host /
+  // --local-join, skip-menu fallback, and the menu itself.
+  auto inputs      = Input_Feed(Input_Mode::Live, "");
+  auto menu_result = resolve_play_mode(
+    "Tressette",
+    tt::WINDOW_WIDTH,
+    tt::WINDOW_HEIGHT,
+    inputs,
+    argc,
+    argv,
+    options.skip_menu
+  );
 
-  if (!choice) choice = state.next_choice();
-  if (!choice) return std::nullopt;
+  const bool is_online    = (menu_result.mode == Menu_Result::ONLINE);
+  const int  player_index = is_online ? menu_result.player_index : 0;
 
-  if (pending_action) {
-    if (GetTime() < resolve_at) return choice;
-    resolve_choice(state, *choice, *pending_action);
-    pending_action = std::nullopt;
-    return std::nullopt;
-  }
+  // Online peers must deal the same hands — use the seed from the matchmaker.
+  // CLI --seed wins for solo play.
+  auto seed = is_online ? menu_result.seed : options.seed;
 
-  if (action_options_count(choice->actions(state)) == 0) return std::nullopt;
-  int action_index = agent.choose_action(state, *choice);
-  if (action_index == -1) return choice;
+  auto state    = tressette::quick_setup(seed);
+  auto ui_state = UI_State(tt::WINDOW_WIDTH, tt::WINDOW_HEIGHT);
+  // The local player always sits at the bottom of the screen; in online play
+  // that may be seat 1, in solo it's always seat 0. Show the opponent's hand
+  // only in hot-seat (where one screen is shared).
+  const int  bottom_player      = player_index;
+  const bool show_opponent_hand = !options.vs_ai && !is_online;
+  auto       table =
+    init_table_state(state, ui_state, bottom_player, show_opponent_hand);
 
-  // Hold the played card on the trick for 2s before resolving. The local
-  // player's drag already put it on the trick stack; for the AI we move it
-  // there ourselves so the opponent's play is visible during the wait.
-  int card_id = tressette::legal_cards(state)[action_index];
-  int base    = (int)state.all_cards.size();
-  int hand_id =
-    base + (state.current_player == 0 ? TRESSETTE_HAND_0 : TRESSETTE_HAND_1);
-  int   trick_id = base + TRESSETTE_TABLE_IDX;
-  auto& hand     = table.things[hand_id].children;
-  auto& trick    = table.things[trick_id].children;
-  hand.erase(std::remove(hand.begin(), hand.end(), card_id), hand.end());
-  if (std::find(trick.begin(), trick.end(), card_id) == trick.end()) {
-    trick.push_back(card_id);
-  }
-  update_children_positions(hand_id, table, false);
-  update_children_positions(trick_id, table, false);
-
-  pending_action = action_index;
-  resolve_at     = GetTime() + 2.0;
-  return choice;
-}
-
-static void play_tressette(
-  tressette::Game_State& state,
-  Table_State&           table,
-  UI_State&              ui_state,
-  Agent&                 agent,
-  int                    bottom_player,
-  Input_Feed&            input_feed
-) {
-  std::optional<Choice> current_choice;
-
-  // Sync stacks only when the game state actually changes (play_card fires
-  // this). Calling update_stacks every frame would overwrite children managed
-  // by the drag system while a card is mid-drag, causing cards to appear in two
-  // stacks.
-  // state.on_cards_changed = [&]() { update_stacks(table, state); };
-
+  // Per-player HUD overlay. Drawn on top of every frame via the -1 callback.
   table.draw_callbacks[-1] =
     [&, bottom_player](const Table_State&, const Input&, bool) {
       for (int i = 0; i < 2; ++i) {
@@ -211,84 +170,26 @@ static void play_tressette(
       }
     };
 
-  auto update = [&](Table_State& table, const Input& input) {
-    current_choice = game_frame(state, agent, current_choice);
-    if (current_choice == std::nullopt) {
-      update_stacks(table, state);
-    }
-  };
-  run_tabletop(
-    table, update, input_feed, tt::WINDOW_WIDTH, tt::WINDOW_HEIGHT, "Tressette"
-  );
-
-  if (state.game_over) {
-    std::vector<int> scores = {
-      tressette::compute_player_score(state, 0),
-      tressette::compute_player_score(state, 1),
-    };
-    std::string result_text = (scores[0] > scores[1])   ? "Player 1 wins!"
-                              : (scores[1] > scores[0]) ? "Player 2 wins!"
-                                                        : "It's a tie.";
-    draw_game_over_screen(table, result_text, scores);
-  }
-
-  CloseWindow();
-}
-
-int main(int argc, char** argv) {
-  bool vs_ai     = true;
-  bool skip_menu = false;
-  auto seed      = std::optional<int>();
-  for (int i = 1; i < argc; ++i) {
-    auto a = std::string(argv[i]);
-    if (a == "--hot-seat") {
-      vs_ai     = false;
-      skip_menu = true;
-    } else if (a == "--skip-menu") {
-      skip_menu = true;
-    } else if (a.rfind("--seed=", 0) == 0) {
-      seed = std::atoi(a.c_str() + 7);
-    }
-  }
-
-  // Menu opens its own window; play_tressette reuses it (its InitWindow guard
-  // skips when IsWindowReady() returns true). resolve_play_mode handles
-  // --local-host / --local-join, skip-menu fallback, and the menu itself.
-  auto        inputs      = Input_Feed(Input_Mode::Live, "");
-  Menu_Result menu_result = resolve_play_mode(
-    "Tressette",
-    tt::WINDOW_WIDTH,
-    tt::WINDOW_HEIGHT,
-    inputs,
-    argc,
-    argv,
-    skip_menu
-  );
-
-  const bool is_online    = (menu_result.mode == Menu_Result::ONLINE);
-  const int  player_index = is_online ? menu_result.player_index : 0;
-
-  // Online peers must deal the same hands — use the seed delivered by the
-  // matchmaker. CLI --seed wins for solo play.
-  if (is_online) seed = menu_result.seed;
-
-  tressette::Game_State state = tressette::quick_setup(seed);
-  auto ui_state               = UI_State(tt::WINDOW_WIDTH, tt::WINDOW_HEIGHT);
-  // The local player always sits at the bottom of the screen; in online play
-  // that may be seat 1, in solo it's always seat 0. Show the opponent's hand
-  // only in hot-seat (where one screen is shared).
-  const int   bottom_player      = player_index;
-  const bool  show_opponent_hand = !vs_ai && !is_online;
-  Table_State table =
-    init_table_state(state, ui_state, bottom_player, show_opponent_hand);
-
   auto agent_ui = Tressette_Agent_UI(
     &table, &ui_state, player_index, (int)state.all_cards.size()
   );
+  Agent* agent = make_agent_pair(
+    &agent_ui, make_ai_opponent(), menu_result, options.vs_ai
+  );
 
-  Agent* agent = make_agent(&agent_ui, vs_ai, menu_result);
-
-  play_tressette(state, table, ui_state, *agent, bottom_player, inputs);
-
+  play_game(
+    state,
+    table,
+    *agent,
+    inputs,
+    "Tressette",
+    [&] { update_stacks(table, state); },
+    [&] {
+      return std::vector<int>{
+        tressette::compute_player_score(state, 0),
+        tressette::compute_player_score(state, 1),
+      };
+    }
+  );
   return 0;
 }
