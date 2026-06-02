@@ -34,13 +34,11 @@ static Table_State init_table_state(
 
   // One Thing per card; ids 0..39 match all_cards indices.
   for (const auto& card : state.all_cards) {
-    Thing thing;
-    thing.id = card.id;
+    Thing thing = make_card(card.id);
     if (card.suit == scopa::Suit::COPPE) thing.color = {50, 100, 50, 255};
     if (card.suit == scopa::Suit::DENARI) thing.color = {150, 120, 20, 255};
     if (card.suit == scopa::Suit::BASTONI) thing.color = {80, 50, 50, 255};
     if (card.suit == scopa::Suit::SPADE) thing.color = {70, 80, 150, 255};
-    thing.image_path = "scopa_card";  // Non-existent path -> white bg fallback.
     table.things.push_back(thing);
     table.draw_callbacks[card.id] =
       make_card_draw_callback(state, ui_state, card.id);
@@ -119,78 +117,11 @@ static Agent* make_ai_opponent() {
   );
 }
 
-static Agent* make_agent(
-  Scopa_Agent_UI* agent_ui, bool vs_ai, const Menu_Result& menu_result
-) {
-  // Run the AI on a worker thread so the main loop keeps rendering at full
-  // FPS while it searches. The UI agent stays on the main thread because it
-  // already returns -1 each frame until the player commits.
-  Agent* opponent = vs_ai ? (Agent*)new Agent_Async(make_ai_opponent())
-                          : (Agent*)agent_ui;  // hot-seat.
-  return make_duel(agent_ui, opponent, menu_result);
-}
-
-static void play_scopa(
-  scopa::Game_State& state,
-  Table_State&       table,
-  UI_State&          ui_state,
-  Agent&             agent,
-  int                bottom_player
-) {
-  if (!IsWindowReady()) {
-    SetConfigFlags(FLAG_WINDOW_HIGHDPI);
-    InitWindow(tt::WINDOW_WIDTH, tt::WINDOW_HEIGHT, "Scopa Scientifica");
-    SetTargetFPS(tt::TARGET_FPS);
-  }
-
-  std::optional<Choice> current_choice;
-
-  table.draw_callbacks[-1] =
-    [&, bottom_player](const Table_State&, const Input&, bool) {
-      for (int i = 0; i < 2; ++i) {
-        bool is_current = (i == state.current_player);
-        int  hud_y      = (i == bottom_player) ? (tt::WINDOW_HEIGHT - 56) : 16;
-        draw_scopa_player_hud(state, i, is_current, hud_y);
-      }
-    };
-
-  while (!WindowShouldClose()) {
-    if (state.game_over) break;
-
-    Input input    = capture_input();
-    ui_state.input = &input;
-    process_input(table, input);
-
-    BeginDrawing();
-    draw_background(input, 0.0f);
-    draw_table(table, input);
-
-    current_choice = game_frame(state, agent, current_choice);
-    if (current_choice == std::nullopt) {
-      update_stacks(table, state);
-    }
-    EndDrawing();
-  }
-
-  if (state.game_over) {
-    std::vector<int> scores = {
-      scopa::compute_player_score(state, 0),
-      scopa::compute_player_score(state, 1),
-    };
-    std::string result_text = (scores[0] > scores[1])   ? "Player 1 wins!"
-                              : (scores[1] > scores[0]) ? "Player 2 wins!"
-                                                        : "It's a tie.";
-    draw_game_over_screen(table, result_text, scores);
-  }
-
-  CloseWindow();
-}
-
 int main(int argc, char** argv) {
   auto options = parse_play_args(argc, argv);
 
   auto        inputs      = Input_Feed(Input_Mode::Live, "");
-  Menu_Result menu_result = resolve_play_mode(
+  Menu_Result menu_result = run_menu(
     "Scopa Scientifica",
     tt::WINDOW_WIDTH,
     tt::WINDOW_HEIGHT,
@@ -209,11 +140,37 @@ int main(int argc, char** argv) {
   Table_State table =
     init_table_state(state, ui_state, bottom_player, show_opponent_hand);
 
+  // Per-player HUD overlay. Drawn on top of every frame via the -1 callback.
+  table.draw_callbacks[-1] =
+    [&, bottom_player](const Table_State&, const Input&, bool) {
+      for (int i = 0; i < 2; ++i) {
+        bool is_current = (i == state.current_player);
+        int  hud_y      = (i == bottom_player) ? (tt::WINDOW_HEIGHT - 56) : 16;
+        draw_scopa_player_hud(state, i, is_current, hud_y);
+      }
+    };
+
   auto agent_ui = Scopa_Agent_UI(
     &table, &ui_state, menu_result.player_index, (int)state.all_cards.size()
   );
-  Agent* agent = make_agent(&agent_ui, options.vs_ai, menu_result);
+  Agent* agent =
+    make_agent_pair(&agent_ui, make_ai_opponent(), menu_result, options.vs_ai);
 
-  play_scopa(state, table, ui_state, *agent, bottom_player);
+  play_game(
+    state,
+    table,
+    ui_state,
+    *agent,
+    inputs,
+    menu_result,
+    "Scopa Scientifica",
+    [&] { update_stacks(table, state); },
+    [&] {
+      return std::vector<int>{
+        scopa::compute_player_score(state, 0),
+        scopa::compute_player_score(state, 1),
+      };
+    }
+  );
   return 0;
 }

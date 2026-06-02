@@ -521,7 +521,7 @@ static void online_send_updates(
     msg["on"]   = ui_state.playground;
     send_message(online, msg);
     if (ui_state.playground) {
-      send_stacks(online, table_state);
+      send_table_state(online, table_state);
     }
   }
 
@@ -531,7 +531,7 @@ static void online_send_updates(
     bool should_send = dropped.has_value() || key_pressed(input, KEY_R) ||
                        key_pressed(input, KEY_S);
     if (should_send) {
-      send_stacks(online, table_state);
+      send_table_state(online, table_state);
     }
   }
 }

@@ -129,11 +129,11 @@ int main(int argc, char** argv) {
   auto options = parse_play_args(argc, argv);
 
   // Menu opens its own window; play_game reuses it via run_tabletop's
-  // IsWindowReady() guard. resolve_play_mode handles --local-host /
+  // IsWindowReady() guard. run_menu handles --local-host /
   // --local-join, skip-menu fallback, and the menu itself, and folds the
   // CLI seed into the result for solo play.
   auto inputs      = Input_Feed(Input_Mode::Live, "");
-  auto menu_result = resolve_play_mode(
+  auto menu_result = run_menu(
     "Tressette",
     tt::WINDOW_WIDTH,
     tt::WINDOW_HEIGHT,
@@ -168,15 +168,16 @@ int main(int argc, char** argv) {
   auto agent_ui = Tressette_Agent_UI(
     &table, &ui_state, menu_result.player_index, (int)state.all_cards.size()
   );
-  Agent* agent = make_agent_pair(
-    &agent_ui, make_ai_opponent(), menu_result, options.vs_ai
-  );
+  Agent* agent =
+    make_agent_pair(&agent_ui, make_ai_opponent(), menu_result, options.vs_ai);
 
   play_game(
     state,
     table,
+    ui_state,
     *agent,
     inputs,
+    menu_result,
     "Tressette",
     [&] { update_stacks(table, state); },
     [&] {

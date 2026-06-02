@@ -1,14 +1,14 @@
 #pragma once
 
-#include <nlohmann/json.hpp>
+#include <game/agent.h>
 #include <online/models.h>
 #include <tabletop/input_recorder.h>
 #include <tabletop/tabletop.h>
+#include <tabletop/ui.h>
 
 #include <functional>
+#include <nlohmann/json.hpp>
 #include <optional>
-
-#include <game/agent.h>
 
 #include "menu.h"
 
@@ -20,15 +20,17 @@ void update_zoomed_thing(Table_State& table_state, const Input& input);
 // Snapshot the children of every thing in `table_state` to a JSON array
 // (indexed by thing id). Used by the online sync to replicate the scene
 // tree across peers.
-nlohmann::json serialize_stacks(const Table_State& table_state);
+nlohmann::json serialize_table_state(const Table_State& table_state);
 
-// Apply a previously-serialized stacks array onto `table_state`, updating
+// Apply a previously-serialized table_state array onto `table_state`, updating
 // each affected thing's children and re-laying out its slots.
-void apply_stacks_message(Table_State& table_state, const nlohmann::json& arr);
+void apply_table_state_message(
+  Table_State& table_state, const nlohmann::json& arr
+);
 
-// Wrap serialize_stacks in a {"type": "stacks", "stacks": [...]} envelope
-// and send it on `online`.
-void send_stacks(const Online& online, const Table_State& table_state);
+// Wrap serialize_table_state in a {"type": "table_state", "table_state": [...]}
+// envelope and send it on `online`.
+void send_table_state(const Online& online, const Table_State& table_state);
 
 // Resolve the play mode in priority order:
 //   1. `--local-host` / `--local-join` on argv → loopback handshake; no menu.
@@ -37,7 +39,7 @@ void send_stacks(const Online& online, const Table_State& table_state);
 // The returned Menu_Result owns its `online` field (valid only when
 // mode == ONLINE). `cli_seed` is folded into the result's seed for solo
 // play; online uses the matchmaker's seed instead.
-Menu_Result resolve_play_mode(
+Menu_Result run_menu(
   const std::string& title,
   int                window_width,
   int                window_height,
@@ -54,9 +56,7 @@ Menu_Result resolve_play_mode(
 // For hot-seat callers pass `opponent == local_agent`; for vs-AI pass the
 // already-built AI agent (caller decides any Agent_Async wrapping).
 Agent* make_duel(
-  Agent*             local_agent,
-  Agent*             opponent,
-  const Menu_Result& menu_result
+  Agent* local_agent, Agent* opponent, const Menu_Result& menu_result
 );
 
 // Blocking game-over overlay: keeps redrawing the table dimmed and prints
@@ -93,20 +93,25 @@ Agent* make_agent_pair(
 // closes or the game ends; on game-over draws the result screen.
 //
 // `state`          — game state (subclass of Game).
-// `table`          — fully built Table_State (cards + stacks + root).
+// `table`          — fully built Table_State (cards + table_state + root).
+// `ui_state`       — shared UI state; play_game clears its highlighted_things
+//                    when toggling playground mode on so stale "legal move"
+//                    borders don't linger over a paused game.
 // `agent`          — the agent driving both seats (typically via Agent_Duel).
 // `input_feed`     — input source (live, record, or playback).
 // `window_title`   — used if `run_tabletop` needs to open the window itself.
 // `sync_table`     — invoked after every resolved Choice; the game-specific
-//                    callback typically copies the game's stacks into the
+//                    callback typically copies the game's table_state into the
 //                    matching `table.things[...].children`.
 // `compute_scores` — returns the per-player final score for the game-over
 //                    screen. Skipped (no screen) if null.
 void play_game(
   Game&                             state,
   Table_State&                      table,
+  UI_State&                         ui_state,
   Agent&                            agent,
   Input_Feed&                       input_feed,
+  const Menu_Result&                menu_result,
   const std::string&                window_title,
   std::function<void()>             sync_table,
   std::function<std::vector<int>()> compute_scores

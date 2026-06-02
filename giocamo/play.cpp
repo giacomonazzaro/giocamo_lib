@@ -6,6 +6,7 @@
 #include <raylib.h>
 #include <tabletop/config.h>
 #include <tabletop/rendering.h>
+#include <tabletop/ui.h>
 
 #include <cstdlib>
 #include <random>
@@ -21,7 +22,7 @@ void update_zoomed_thing(Table_State& table_state, const Input& input) {
   }
 }
 
-nlohmann::json serialize_stacks(const Table_State& table_state) {
+nlohmann::json serialize_table_state(const Table_State& table_state) {
   nlohmann::json out = nlohmann::json::array();
   for (const Thing& t : table_state.things) {
     out.push_back(t.children);
@@ -29,21 +30,23 @@ nlohmann::json serialize_stacks(const Table_State& table_state) {
   return out;
 }
 
-void apply_stacks_message(Table_State& table_state, const nlohmann::json& arr) {
+void apply_table_state_message(
+  Table_State& table_state, const nlohmann::json& arr
+) {
   for (size_t i = 0; i < arr.size() && i < table_state.things.size(); ++i) {
     table_state.things[i].children = arr[i].get<std::vector<int>>();
     update_children_positions((int)i, table_state, false);
   }
 }
 
-void send_stacks(const Online& online, const Table_State& table_state) {
+void send_table_state(const Online& online, const Table_State& table_state) {
   nlohmann::json msg;
-  msg["type"]   = "stacks";
-  msg["stacks"] = serialize_stacks(table_state);
+  msg["type"]        = "table_state";
+  msg["table_state"] = serialize_table_state(table_state);
   send_message(online, msg);
 }
 
-Menu_Result resolve_play_mode(
+Menu_Result run_menu(
   const std::string& title,
   int                window_width,
   int                window_height,
@@ -167,20 +170,100 @@ Agent* make_agent_pair(
 void play_game(
   Game&                             state,
   Table_State&                      table,
+  UI_State&                         ui_state,
   Agent&                            agent,
   Input_Feed&                       input_feed,
+  const Menu_Result&                menu_result,
   const std::string&                window_title,
   std::function<void()>             sync_table,
   std::function<std::vector<int>()> compute_scores
 ) {
   auto current_choice = std::optional<Choice>();
+  bool playground     = false;
+
+  // Nullable handle to the remote peer. Outside online mode this stays null
+  // and every send/recv branch below short-circuits.
+  const Online* online = menu_result.is_online() ? &menu_result.online
+                                                 : nullptr;
 
   // Each frame: ask game_frame for the next move. When it resolves a choice
   // (returns nullopt), let the game-specific code refresh the table from the
   // updated game state.
+  //
+  // Playground mode pauses the game loop and lets the user rearrange the
+  // table freely; the toggle button in the top-right corner flips it. While
+  // ON the agent never sees drag/drop events, so games can't progress —
+  // useful for inspecting and tinkering with state. Toggling OFF resyncs
+  // the table from the canonical game state, discarding any layout edits.
+  //
   // Returning true tells run_tabletop to exit the loop — we use that to
   // stop as soon as the game ends so the game-over screen can take over.
-  auto update = [&](Table_State&, const Input&) {
+  auto update = [&](Table_State& table, const Input& input) {
+    // Drain any messages the remote sent us this frame. Two kinds matter:
+    // a "playground" flip from the other peer (mirror it locally) and a
+    // "table_state" snapshot (apply it so both screens stay in sync).
+    if (online) {
+      while (auto incoming = try_recv_message(*online)) {
+        std::string type = incoming->value("type", "");
+        if (type == "playground") {
+          bool remote_on = incoming->value("on", false);
+          if (remote_on != playground) {
+            playground = remote_on;
+            if (playground) {
+              table.is_drop_allowed = [](int, int, int) { return true; };
+              ui_state.highlighted_things.clear();
+            } else if (sync_table) {
+              sync_table();
+            }
+          }
+        } else if (type == "table_state") {
+          apply_table_state_message(table, (*incoming)["table_state"]);
+        }
+      }
+    }
+
+    // Playground toggle button (top-right).
+    Rectangle screen_rect = {
+      0.0f, 0.0f, (float)tt::WINDOW_WIDTH, (float)tt::WINDOW_HEIGHT
+    };
+    Rectangle button_rect =
+      place_inside(screen_rect, 160, 32, "right", "top", 20);
+    std::string label = playground ? "Playground: ON" : "Playground: OFF";
+    if (immediate_button(button_rect, label, input, Color{20, 20, 20, 100})) {
+      playground = !playground;
+      if (playground) {
+        // Anything goes while playing around. Wipe the "legal move" borders
+        // the agent left over the player's hand — they're misleading while
+        // the game loop is paused.
+        table.is_drop_allowed = [](int, int, int) { return true; };
+        ui_state.highlighted_things.clear();
+      } else if (sync_table) {
+        // Discard playground edits; restore the canonical layout. The next
+        // game_frame call will re-install is_drop_allowed via the agent.
+        sync_table();
+      }
+      // Tell the remote peer about the toggle. On entry we also blast a
+      // full table snapshot so the other side starts from the same layout.
+      if (online) {
+        nlohmann::json msg;
+        msg["type"] = "playground";
+        msg["on"]   = playground;
+        send_message(*online, msg);
+        if (playground) send_table_state(*online, table);
+      }
+    }
+
+    if (playground) {
+      // Replicate drop / rotate / shuffle to the remote so playground edits
+      // appear on both screens. Polling the drop also drains the event so it
+      // doesn't get replayed as a real move when we toggle off.
+      auto dropped     = table.poll_dropped_thing();
+      bool table_dirty = dropped.has_value() || key_pressed(input, KEY_R) ||
+                         key_pressed(input, KEY_S);
+      if (online && table_dirty) send_table_state(*online, table);
+      return false;
+    }
+
     current_choice = game_frame(state, agent, current_choice);
     if (current_choice == std::nullopt && sync_table) {
       sync_table();
