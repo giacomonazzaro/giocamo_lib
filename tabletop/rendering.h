@@ -18,3 +18,10 @@ void render_text(
   const std::string& text, float x, float y, int size, Color color
 );
 int text_width(const std::string& text, int size);
+
+void run_tabletop(
+  Table_State&       table,
+  int                window_width,
+  int                window_height,
+  const std::string& window_name
+);

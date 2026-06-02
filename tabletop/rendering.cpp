@@ -329,12 +329,12 @@ void animate(
     float vy = (target[i].y - animated[i].y) * dt;
     // Cap per-frame travel so big jumps (e.g. trick → captured pile) glide
     // instead of teleporting.
-    const float speed     = std::sqrt(vx * vx + vy * vy);
-    const float max_speed = 10.0f;
-    if (speed > max_speed) {
-      vx *= max_speed / speed;
-      vy *= max_speed / speed;
-    }
+    // const float speed     = std::sqrt(vx * vx + vy * vy);
+    // const float max_speed = 10.0f;
+    // if (speed > max_speed) {
+    //   vx *= max_speed / speed;
+    //   vy *= max_speed / speed;
+    // }
     animated[i].x += vx;
     animated[i].y += vy;
     animated[i].rotation = animated[i].rotation * (1.0f - dt) +
@@ -345,7 +345,7 @@ void animate(
 }
 
 // Translate to (wt.x, wt.y) — which is the thing's center — and rotate
-// around it. draw_thing draws centered at origin so no further offset.
+// around it.
 static void apply_world_transform(const Transform2D& wt) {
   rlTranslatef(wt.x, wt.y, 0.0f);
   if (wt.rotation != 0.0f) {
@@ -425,12 +425,13 @@ void draw_table(Table_State& state, const Input& input) {
   if (state.world_transforms_animated.size() != state.things.size()) {
     state.world_transforms_animated = state.world_transforms;
   }
-  animate(
-    state.world_transforms_animated,
-    state.world_transforms,
-    state,
-    input.delta_time
-  );
+  state.world_transforms_animated = state.world_transforms;
+  // animate(
+  //   state.world_transforms_animated,
+  //   state.world_transforms,
+  //   state,
+  //   input.delta_time
+  // );
 
   // Highlight the hovered drop target while dragging.
   if (state.drag_state.hovered_thing != -1) {
@@ -438,15 +439,21 @@ void draw_table(Table_State& state, const Input& input) {
   }
 
   // Depth-sort root's children so layered draw order is preserved.
-  const Thing&     root_thing = state.things[state.root];
-  std::vector<int> draw_order = root_thing.children;
-  std::sort(draw_order.begin(), draw_order.end(), [&state](int a, int b) {
-    return state.things[a].depth < state.things[b].depth;
-  });
-  // draw_thing_world(state.root, state, true, input);
-  for (int child_id : draw_order) {
-    draw_thing_world(child_id, state, root_thing.face_up, input);
-  }
+  // const Thing&     root_thing = state.things[state.root];
+  // std::vector<int> draw_order = root_thing.children;
+  // std::sort(draw_order.begin(), draw_order.end(), [&state](int a, int b) {
+  //   return state.things[a].depth < state.things[b].depth;
+  // });
+
+  // Optional root draw callback — runs before any child, so it paints behind
+  // everything (useful as a table background / playmat). face_up is reported
+  // as true since the root is the scene container, not a card.
+  // auto root_cb = state.draw_callbacks.find(state.root);
+  // if (root_cb != state.draw_callbacks.end()) {
+  //   root_cb->second(state, input, true);
+  // }
+
+  draw_thing_world(state.root, state, state.things[state.root].face_up, input);
 
   // Dragged thing overlay: drawn last so it sits above everything else.
   int dragged = state.drag_state.thing_id();
@@ -480,4 +487,30 @@ void draw_table(Table_State& state, const Input& input) {
     }
     draw_zoomed_thing(state.things[thing_id], face_up);
   }
+}
+
+void run_tabletop(
+  Table_State&       table,
+  int                window_width,
+  int                window_height,
+  const std::string& window_name
+) {
+  // Request 4x multisampling and high-DPI so on Retina displays the GL
+  // framebuffer is created at physical pixel resolution (2x logical) —
+  // effectively free supersampling on top of MSAA.
+  SetConfigFlags(FLAG_MSAA_4X_HINT | FLAG_WINDOW_HIGHDPI);
+  InitWindow(window_width, window_height, window_name.c_str());
+  SetTargetFPS(tt::TARGET_FPS);
+
+  while (!WindowShouldClose()) {
+    auto input = capture_input();
+    process_input(table, input);
+
+    BeginDrawing();
+    draw_background(input);
+    draw_table(table, input);
+    EndDrawing();
+  }
+
+  CloseWindow();
 }
