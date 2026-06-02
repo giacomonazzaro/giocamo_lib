@@ -116,14 +116,13 @@ using Thing_Location = std::vector<int>;
 
 // Drag operation in progress.
 struct Drag_State {
-  // Root-to-thing path of the thing currently being dragged. Empty when no
-  // drag is in progress.
+  // Root-to-thing path of the thing currently being dragged.
   Thing_Location dragged_thing;
   // Root-to-thing path of the candidate drop target under the cursor.
-  // Empty when no drag is in progress.
   Thing_Location hovered_thing;
   float          mouse_offset_x = 0.0f;
   float          mouse_offset_y = 0.0f;
+  bool           allowed        = false;
 
   // Id of the thing currently being dragged, or -1 when no drag is active.
   inline int thing_id() const {
@@ -132,9 +131,8 @@ struct Drag_State {
   // Id of the dragged thing's parent, or -1 when there's no drag / the
   // dragged thing has no parent in the path.
   inline int parent_id() const {
-    return dragged_thing.size() > 1
-             ? dragged_thing[dragged_thing.size() - 2]
-             : -1;
+    return dragged_thing.size() > 1 ? dragged_thing[dragged_thing.size() - 2]
+                                    : -1;
   }
   // Id of the candidate drop target under the cursor, or -1 when nothing
   // is being hovered.
@@ -143,7 +141,12 @@ struct Drag_State {
   }
 };
 VISITABLE_STRUCT(
-  Drag_State, dragged_thing, hovered_thing, mouse_offset_x, mouse_offset_y
+  Drag_State,
+  dragged_thing,
+  hovered_thing,
+  mouse_offset_x,
+  mouse_offset_y,
+  allowed
 );
 
 struct Table_Layout {
@@ -286,8 +289,8 @@ void visit_things(Table_State& table, F&& f) {
 inline void update_local_transform_to_match_world_transform(
   Table_State& table, int parent_id, int thing_id
 ) {
-  // old_world_transform = new_parent_world * new_local
-  // new_local = inverse(new_parent_world) * old_world_transform
+  // world_transform = new_parent_world * new_local
+  // new_local = inverse(new_parent_world) * world_transform
   table.things[thing_id].transform =
     inverse(table.world_transforms[parent_id]) *
     table.world_transforms[thing_id];

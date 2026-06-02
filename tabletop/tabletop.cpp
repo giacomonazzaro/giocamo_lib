@@ -182,15 +182,8 @@ void handle_mouse_release(Table_State& state) {
     state.world_transforms[thing_id].x,
     state.world_transforms[thing_id].y,
   };
-  print(drag);
-  bool allowed =
-    state.is_drop_allowed(drag.parent_id(), drag.hovered_id(), thing_id);
-  if (is_full(state.things[drag.hovered_id()])) {
-    allowed = false;
-  }
-  //    bool allowed = true; // TODO(giacomo)
 
-  if (!allowed) {
+  if (!drag.allowed) {
     // Snap-back: reset drag first so update_children_positions doesn't skip
     // the (still-dragged) card and leave it at the drop position. The card's
     // world_transforms_animated still holds the drop pose, so animate() will
@@ -206,7 +199,7 @@ void handle_mouse_release(Table_State& state) {
     std::make_tuple(drag.parent_id(), drag.hovered_id(), thing_id);
 
   int original_parent = drag.parent_id();
-  int current_parent  = drag.hovered_id();
+  int new_parent      = drag.hovered_id();
   state.drag_state    = Drag_State();
 
   // Re-layout the affected parents. Skip root: its "layout" would smush all
@@ -221,92 +214,60 @@ void handle_mouse_release(Table_State& state) {
     }
 
     // Add.
-    // auto old_parent_world = state.world_transforms[original_parent];
-    // auto new_parent_world = state.world_transforms[current_parent];
-    // auto old_local        = state.things[thing_id].transform;
-    // // old_parent * old_local = new_parent * new_local
-    // auto new_local = inverse(new_parent_world) * (old_parent_world *
-    // old_local);
     update_local_transform_to_match_world_transform(
-      state, current_parent, thing_id
+      state, new_parent, thing_id
     );
     state.world_transforms_animated[thing_id] =
       state.world_transforms[thing_id];
-    state.things[current_parent].children.push_back(thing_id);
-    update_children_positions(current_parent, state, /*sort=*/true);
+    state.things[new_parent].children.push_back(thing_id);
+    update_children_positions(new_parent, state, /*sort=*/true);
   }
-
-  //  // Re-anchor the smoothed world transform to where the user released, so
-  //  // the lerp glides from there into the new parent.s slot.
-  //  if (thing_id >= 0 && thing_id <
-  //  (int)state.world_transforms_animated.size()) {
-  //    state.world_transforms_animated[thing_id].x = world_at_release.x;
-  //    state.world_transforms_animated[thing_id].y = world_at_release.y;
-  //  }
 }
 
 void handle_mouse_move(Table_State& state, const Input& input) {
   // Continuously update the dragged thing.s position.
-  Drag_State& drag     = state.drag_state;
-  int         thing_id = drag.thing_id();
-  if (thing_id < 0) return;
+  Drag_State& drag = state.drag_state;
+  if (drag.thing_id() < 0) return;
 
-  float mx = (float)input.mouse_x;
-  float my = (float)input.mouse_y;
+  // Avoid that dragging away from a new parent doesn't leave a hole.
+  if (drag.hovered_id() != state.root) {
+    update_children_positions(drag.hovered_id(), state, /*sort=*/true);
+  }
 
-  // Walk the scene tree to find the topmost thing under the cursor. If that's
-  // the dragged thing itself (the user hasn't moved off it yet), peel it off
-  // so the hovered target is its parent.
-  Thing_Location path = find_thing_at(mx, my, state);
-  if (!path.empty() && path.back() == thing_id) path.pop_back();
-  assert(!path.empty());
-  drag.hovered_thing = std::move(path);
-  //
-  //  if (hovered >= 0 && drag.last_hovered_parent != hovered) {
-  //    // Reparent: detach from the old parent, optionally attach to the
-  //    hovered one. if (drag.current_parent >= 0) {
-  //      auto& cur = state.things[drag.current_parent].children;
-  //      auto  it  = std::find(cur.begin(), cur.end(), thing_id);
-  //      if (it != cur.end()) {
-  //        cur.erase(it);
-  //        update_children_positions(drag.current_parent, state,
-  //        /*sort=*/true);
-  //      }
-  //    }
-  //
-  //    Thing& hovered_thing = state.things[hovered];
-  //    bool   allowed =
-  //      state.is_drop_allowed(drag.original_parent, hovered, thing_id);
-  //    bool full = is_full(hovered_thing);
-  //
-  //    if (allowed && !full) {
-  //      hovered_thing.children.push_back(thing_id);
-  //      update_children_positions(hovered, state, /*sort=*/true);
-  //      drag.current_parent = hovered;
-  //    } else {
-  //      drag.current_parent = -1;
-  //    }
-  //  }
+  float mx           = (float)input.mouse_x;
+  float my           = (float)input.mouse_y;
+  drag.hovered_thing = find_thing_at(mx, my, state);
 
-  //  if (hovered >= 0) {
-  //    update_children_positions(hovered, state, /*sort=*/true);
-  //    drag.last_hovered_parent = hovered;
-  //  }
+  drag.allowed = false;
+  printf("start!\n");
+  while (drag.hovered_thing.size() > 0) {
+    print(drag.hovered_thing);
+    drag.allowed = state.is_drop_allowed(
+      drag.parent_id(), drag.hovered_id(), drag.thing_id()
+    );
+    if (is_full(state.things[drag.hovered_id()])) {
+      drag.allowed = false;
+    }
+    if (!drag.allowed) {
+      drag.hovered_thing.pop_back();
+    } else {
+      break;
+    }
+  }
+  if (!drag.allowed) {
+    return;
+  }
 
   // Target world position for the dragged thing.
   float target_world_x = mx - drag.mouse_offset_x;
   float target_world_y = my - drag.mouse_offset_y;
 
-  // Now position the dragged thing under the cursor — convert world → local of
-  // parent. Both target_world and parent_world are centers; subtracting gives
-  // the thing's center in the parent's local space.
-
-  Thing& thing        = state.things[thing_id];
-  auto   parent_world = state.world_transforms[drag.parent_id()];
-  auto   target_world = Transform2D{target_world_x, target_world_y, 0.0f};
-  // parent_world * local = target_world
-  auto local      = inverse(parent_world) * target_world;
-  thing.transform = local;
+  // Update world and local transforms so the thing follows the cursor.
+  state.world_transforms[drag.thing_id()] =
+    Transform2D{target_world_x, target_world_y, 0.0f};
+  update_local_transform_to_match_world_transform(
+    state, drag.parent_id(), drag.thing_id()
+  );
 
   update_children_positions(drag.parent_id(), state, /*sort=*/true);
   if (drag.hovered_id() != state.root) {
