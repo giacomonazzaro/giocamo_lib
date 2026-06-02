@@ -152,7 +152,7 @@ struct Table_State : Table_Layout {
   int height = 0;
 
   Drag_State               drag_state;
-  std::vector<Transform2D> animated_transforms;
+  std::vector<Transform2D> world_transforms_animated;
   std::vector<Transform2D> world_transforms;
 
   // HUD/per-thing draw callbacks. Receive Input so they can run immediate-mode
@@ -204,6 +204,9 @@ struct Input {
   std::vector<int> keys_down;
   // Characters produced this frame (GetCharPressed loop result).
   std::string chars_typed;
+
+  float time       = 0.0f;  // Seconds since the start of the app.
+  float delta_time = 0.0f;  // Seconds since the previous frame.
 };
 VISITABLE_STRUCT(
   Input,
@@ -213,7 +216,9 @@ VISITABLE_STRUCT(
   left_released,
   keys_pressed,
   keys_down,
-  chars_typed
+  chars_typed,
+  time,
+  delta_time
 );
 
 // Reads the current frame's input from raylib. This is the ONLY place in

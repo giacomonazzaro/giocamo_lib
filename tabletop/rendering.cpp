@@ -319,6 +319,7 @@ void animate(
   const Table_State&              state,
   float                           dt
 ) {
+  dt *= 10.0f;  // Speed multiplier: higher = snappier but more CPU.
   for (int i = 0; i < state.things.size(); ++i) {
     if (i == state.drag_state.thing_id()) {
       animated[i] = target[i];  // Snap to cursor.
@@ -361,7 +362,7 @@ static void draw_thing_world(
   const bool   face_up = parent_face_up && t.face_up;
   if (id != state.drag_state.thing_id()) {
     rlPushMatrix();
-    apply_world_transform(state.animated_transforms[id]);
+    apply_world_transform(state.world_transforms_animated[id]);
     draw_thing(t, face_up);
     auto cb = state.draw_callbacks.find(id);
     if (cb != state.draw_callbacks.end()) cb->second(state, input, face_up);
@@ -421,10 +422,15 @@ void draw_table(Table_State& state, const Input& input) {
     state.world_transforms
   );
 
-  if (state.animated_transforms.size() != state.things.size()) {
-    state.animated_transforms = state.world_transforms;
+  if (state.world_transforms_animated.size() != state.things.size()) {
+    state.world_transforms_animated = state.world_transforms;
   }
-  animate(state.animated_transforms, state.world_transforms, state, 0.1f);
+  animate(
+    state.world_transforms_animated,
+    state.world_transforms,
+    state,
+    input.delta_time
+  );
 
   // Highlight the hovered drop target while dragging.
   if (state.drag_state.hovered_thing != -1) {

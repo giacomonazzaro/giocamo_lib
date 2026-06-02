@@ -97,6 +97,8 @@ Input capture_input() {
   while ((c = GetCharPressed()) != 0) {
     if (c >= 32 && c < 127) input.chars_typed.push_back((char)c);
   }
+  input.time       = GetTime();
+  input.delta_time = GetFrameTime();
   return input;
 }
 
@@ -188,8 +190,8 @@ void handle_mouse_release(Table_State& state) {
   if (!allowed) {
     // Snap-back: reset drag first so update_children_positions doesn't skip
     // the (still-dragged) card and leave it at the drop position. The card's
-    // animated_transforms still holds the drop pose, so animate() will glide
-    // it back to its slot.
+    // world_transforms_animated still holds the drop pose, so animate() will
+    // glide it back to its slot.
     int original_parent = drag.parent_id();
     state.drag_state    = Drag_State();
     update_children_positions(original_parent, state, /*sort=*/true);
@@ -225,16 +227,18 @@ void handle_mouse_release(Table_State& state) {
     update_local_transform_to_match_world_transform(
       state, current_parent, thing_id
     );
-    state.animated_transforms[thing_id] = state.world_transforms[thing_id];
+    state.world_transforms_animated[thing_id] =
+      state.world_transforms[thing_id];
     state.things[current_parent].children.push_back(thing_id);
     update_children_positions(current_parent, state, /*sort=*/true);
   }
 
   //  // Re-anchor the smoothed world transform to where the user released, so
   //  // the lerp glides from there into the new parent.s slot.
-  //  if (thing_id >= 0 && thing_id < (int)state.animated_transforms.size()) {
-  //    state.animated_transforms[thing_id].x = world_at_release.x;
-  //    state.animated_transforms[thing_id].y = world_at_release.y;
+  //  if (thing_id >= 0 && thing_id <
+  //  (int)state.world_transforms_animated.size()) {
+  //    state.world_transforms_animated[thing_id].x = world_at_release.x;
+  //    state.world_transforms_animated[thing_id].y = world_at_release.y;
   //  }
 }
 
