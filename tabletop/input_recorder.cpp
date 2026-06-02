@@ -5,21 +5,19 @@
 
 #include "../struct/serialize.h"
 
-void init_input_recorder(
-  Input_Feed& rec, Input_Mode mode, const std::string& path
-) {
-  rec.mode = mode;
-  rec.path = path;
-  rec.frames.clear();
-  rec.playback_index = 0;
-  rec.exhausted      = false;
+Input_Feed::Input_Feed(Input_Mode mode, const std::string& path) {
+  this->mode = mode;
+  this->path = path;
+  this->frames.clear();
+  this->playback_index = 0;
+  this->exhausted      = false;
 
   if (mode == Input_Mode::Playback) {
-    rec.frames = load_struct<std::vector<Input>>(path);
+    this->frames = load_struct<std::vector<Input>>(path);
     fprintf(
       stderr,
       "[input_recorder] playback loaded %zu frames from %s\n",
-      rec.frames.size(),
+      this->frames.size(),
       path.c_str()
     );
   } else if (mode == Input_Mode::Record) {
@@ -29,7 +27,9 @@ void init_input_recorder(
 
 Input next_input(Input_Feed& rec) {
   switch (rec.mode) {
-    case Input_Mode::Live: return capture_input();
+    case Input_Mode::Live: {
+      return capture_input();
+    }
     case Input_Mode::Record: {
       Input in = capture_input();
       rec.frames.push_back(in);

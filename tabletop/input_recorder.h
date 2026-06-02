@@ -17,13 +17,12 @@ struct Input_Feed {
   std::size_t playback_index = 0;
   // True when playback has consumed every frame — main loop should exit.
   bool exhausted = false;
+
+  Input_Feed(Input_Mode mode, const std::string& path);
 };
 
 // Populates `rec` for the requested mode. In Playback mode, loads the JSON
 // file into `frames` immediately so the loop can stream from memory.
-void init_input_recorder(
-  Input_Feed& rec, Input_Mode mode, const std::string& path
-);
 
 // Returns the input for this frame:
 //   Live     → capture_input() pass-through.

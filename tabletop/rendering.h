@@ -4,6 +4,7 @@
 #include "tabletop.h"
 
 struct Input;
+struct Input_Feed;
 void draw_background(const Input& input, float turn = 0.0f);
 void draw_table(Table_State& state, const Input& input);
 void draw_thing_back();
@@ -19,6 +20,17 @@ void render_text(
 );
 int text_width(const std::string& text, int size);
 
+void run_tabletop(
+  Table_State&                                    table,
+  std::function<void(Table_State&, const Input&)> update,
+  Input_Feed&                                     input_feed,
+  int                                             window_width,
+  int                                             window_height,
+  const std::string&                              window_name
+);
+
+// Convenience overload: creates a live-input feed internally. Use this when
+// the caller doesn't need to record or replay the input stream.
 void run_tabletop(
   Table_State&                                    table,
   std::function<void(Table_State&, const Input&)> update,

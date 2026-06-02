@@ -6,6 +6,7 @@
 #include <unordered_map>
 
 #include "config.h"
+#include "input_recorder.h"
 #include "raylib.h"
 #include "rlgl.h"  // for rlPushMatrix, rlPopMatrix, rlTranslatef, rlRotatef, rlScalef
 #include "tabletop.h"
@@ -492,6 +493,7 @@ void draw_table(Table_State& state, const Input& input) {
 void run_tabletop(
   Table_State&                                    table,
   std::function<void(Table_State&, const Input&)> update,
+  Input_Feed&                                     input_feed,
   int                                             window_width,
   int                                             window_height,
   const std::string&                              window_name
@@ -507,16 +509,32 @@ void run_tabletop(
   }
 
   while (!WindowShouldClose()) {
-    auto input = capture_input();
+    auto input = next_input(input_feed);
     process_input(table, input);
-
-    update(table, input);
 
     BeginDrawing();
     draw_background(input);
     draw_table(table, input);
+
+    // Game logic runs after rendering so that world_transforms (refreshed
+    // inside draw_table) are current when the update needs them — e.g. to
+    // recompute local transforms after re-parenting a card.
+    update(table, input);
     EndDrawing();
   }
 
   if (owns_window) CloseWindow();
+}
+
+void run_tabletop(
+  Table_State&                                    table,
+  std::function<void(Table_State&, const Input&)> update,
+  int                                             window_width,
+  int                                             window_height,
+  const std::string&                              window_name
+) {
+  auto live_feed = Input_Feed{Input_Mode::Live, ""};
+  run_tabletop(
+    table, update, live_feed, window_width, window_height, window_name
+  );
 }

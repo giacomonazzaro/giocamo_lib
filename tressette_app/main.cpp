@@ -190,7 +190,8 @@ static void play_tressette(
   Table_State&           table,
   UI_State&              ui_state,
   Agent&                 agent,
-  int                    bottom_player
+  int                    bottom_player,
+  Input_Feed&            input_feed
 ) {
   std::optional<Choice> current_choice;
 
@@ -216,7 +217,9 @@ static void play_tressette(
       update_stacks(table, state);
     }
   };
-  run_tabletop(table, update, tt::WINDOW_WIDTH, tt::WINDOW_HEIGHT, "Tressette");
+  run_tabletop(
+    table, update, input_feed, tt::WINDOW_WIDTH, tt::WINDOW_HEIGHT, "Tressette"
+  );
 
   if (state.game_over) {
     std::vector<int> scores = {
@@ -251,8 +254,7 @@ int main(int argc, char** argv) {
   // Menu opens its own window; play_tressette reuses it (its InitWindow guard
   // skips when IsWindowReady() returns true). resolve_play_mode handles
   // --local-host / --local-join, skip-menu fallback, and the menu itself.
-  Input_Feed inputs;
-  init_input_recorder(inputs, Input_Mode::Live, "");
+  auto        inputs      = Input_Feed(Input_Mode::Live, "");
   Menu_Result menu_result = resolve_play_mode(
     "Tressette",
     tt::WINDOW_WIDTH,
@@ -286,7 +288,7 @@ int main(int argc, char** argv) {
 
   Agent* agent = make_agent(&agent_ui, vs_ai, menu_result);
 
-  play_tressette(state, table, ui_state, *agent, bottom_player);
+  play_tressette(state, table, ui_state, *agent, bottom_player, inputs);
 
   return 0;
 }

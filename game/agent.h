@@ -98,42 +98,42 @@ struct Timing_Agent : Agent {
 // non-negative index.
 #ifndef __EMSCRIPTEN__
 struct Agent_Async : Agent {
-  Agent*           inner;
-  std::future<int> pending;
-  bool             in_flight = false;
+  Agent*           agent;
+  std::future<int> result;
+  bool             is_thinking = false;
 
-  explicit Agent_Async(Agent* inner) : inner(inner) {}
+  explicit Agent_Async(Agent* agent) : agent(agent) {}
 
   ~Agent_Async() override {
     // Make sure the worker has finished before our state goes away,
     // otherwise it would be left holding dangling references.
-    if (in_flight && pending.valid()) pending.wait();
+    if (is_thinking && result.valid()) result.wait();
   }
 
   void message(const std::string&) override {}
 
   int choose_action(Game& game, const Choice& choice) override {
-    if (!in_flight) {
-      // First frame for this choice: spawn the worker. We capture `game`
-      // and `choice` by reference because the caller guarantees they stay
-      // alive (and immutable from our perspective) until we return a real
-      // index.
-      Agent* worker_agent = inner;
-      pending =
-        std::async(std::launch::async, [worker_agent, &game, &choice]() {
-          return worker_agent->choose_action(game, choice);
+    if (!is_thinking) {
+      // First frame for this choice: spawn the worker. Game is captured by
+      // reference because the caller keeps it alive on the main thread and
+      // promises not to mutate it. Choice is captured by value as a copy keeps
+      // the worker safe for the whole duration of the async computation.
+      Agent* worker_agent = agent;
+      Choice choice_copy  = choice;
+      result =
+        std::async(std::launch::async, [worker_agent, &game, choice_copy]() {
+          return worker_agent->choose_action(game, choice_copy);
         });
-      in_flight = true;
+      is_thinking = true;
       return -1;
     }
     // Not done yet -> tell the game loop to come back next frame.
-    if (pending.wait_for(std::chrono::seconds(0)) !=
-        std::future_status::ready) {
+    if (result.wait_for(std::chrono::seconds(0)) != std::future_status::ready) {
       return -1;
     }
     // Worker finished: deliver its action and re-arm for the next choice.
-    int action_index = pending.get();
-    in_flight        = false;
+    int action_index = result.get();
+    is_thinking      = false;
     return action_index;
   }
 };
