@@ -35,7 +35,8 @@ void send_stacks(const Online& online, const Table_State& table_state);
 //   2. `skip_menu == true` → default Menu_Result (mode = VS_AI, no online).
 //   3. Otherwise opens the menu and returns the user's choice.
 // The returned Menu_Result owns its `online` field (valid only when
-// mode == ONLINE).
+// mode == ONLINE). `cli_seed` is folded into the result's seed for solo
+// play; online uses the matchmaker's seed instead.
 Menu_Result resolve_play_mode(
   const std::string& title,
   int                window_width,
@@ -43,7 +44,8 @@ Menu_Result resolve_play_mode(
   Input_Feed&        inputs,
   int                argc,
   char**             argv,
-  bool               skip_menu
+  bool               skip_menu,
+  int                cli_seed
 );
 
 // Wrap a local Agent into the right duel for the chosen mode:
@@ -68,11 +70,12 @@ void draw_game_over_screen(
 // Parsed command-line options shared by every game app.
 //   --hot-seat   → vs_ai=false, skip_menu=true (one screen, two players).
 //   --skip-menu  → skip the menu, default to vs-AI.
-//   --seed=N     → deterministic deal for solo play.
+//   --seed=N     → deterministic deal for solo play. When omitted, the parser
+//                  generates a random seed so the field always has a value.
 struct Play_Options {
-  bool               vs_ai     = true;
-  bool               skip_menu = false;
-  std::optional<int> seed;
+  bool vs_ai     = true;
+  bool skip_menu = false;
+  int  seed      = 0;
 };
 Play_Options parse_play_args(int argc, char** argv);
 

@@ -1,21 +1,20 @@
 #include "play.h"
 
-#include <raylib.h>
-
 #include <online/agents.h>
 #include <online/protocol.h>
 #include <online/setup.h>
+#include <raylib.h>
 #include <tabletop/config.h>
 #include <tabletop/rendering.h>
 
 #include <cstdlib>
+#include <random>
 #include <string>
 
 void update_zoomed_thing(Table_State& table_state, const Input& input) {
   if (key_down(input, KEY_SPACE)) {
-    auto path = find_thing_at(
-      (float)input.mouse_x, (float)input.mouse_y, table_state
-    );
+    auto path =
+      find_thing_at((float)input.mouse_x, (float)input.mouse_y, table_state);
     table_state.zoomed_thing_id = std::move(path);
   } else {
     table_state.zoomed_thing_id.clear();
@@ -30,9 +29,7 @@ nlohmann::json serialize_stacks(const Table_State& table_state) {
   return out;
 }
 
-void apply_stacks_message(
-  Table_State& table_state, const nlohmann::json& arr
-) {
+void apply_stacks_message(Table_State& table_state, const nlohmann::json& arr) {
   for (size_t i = 0; i < arr.size() && i < table_state.things.size(); ++i) {
     table_state.things[i].children = arr[i].get<std::vector<int>>();
     update_children_positions((int)i, table_state, false);
@@ -53,19 +50,26 @@ Menu_Result resolve_play_mode(
   Input_Feed&        inputs,
   int                argc,
   char**             argv,
-  bool               skip_menu
+  bool               skip_menu,
+  int                cli_seed
 ) {
   // --local-host / --local-join bypass the menu and STUN/ntfy entirely.
   if (auto local_conn = setup_local_from_argv(argc, argv)) {
-    Menu_Result r;
-    r.mode         = Menu_Result::ONLINE;
-    r.online       = local_conn->online;
-    r.player_index = local_conn->player_index;
-    r.seed         = local_conn->seed;
-    return r;
+    Menu_Result result;
+    result.mode         = Menu_Result::ONLINE;
+    result.online       = local_conn->online;
+    result.player_index = local_conn->player_index;
+    result.seed         = local_conn->seed;
+    return result;
   }
-  if (skip_menu) return Menu_Result{};
-  return run_menu(title, window_width, window_height, inputs);
+  if (skip_menu) {
+    auto result = Menu_Result{};
+    result.seed = cli_seed;  // Solo play; honor --seed=N from the command line.
+    return result;
+  }
+  auto result = run_menu(title, window_width, window_height, inputs);
+  if (!result.is_online()) result.seed = cli_seed;
+  return result;
 }
 
 Agent* make_duel(
@@ -124,7 +128,8 @@ void draw_game_over_screen(
 }
 
 Play_Options parse_play_args(int argc, char** argv) {
-  auto options = Play_Options{};
+  auto options    = Play_Options{};
+  bool seed_given = false;
   for (int i = 1; i < argc; ++i) {
     auto arg = std::string(argv[i]);
     if (arg == "--hot-seat") {
@@ -136,7 +141,13 @@ Play_Options parse_play_args(int argc, char** argv) {
       options.skip_menu = true;
     } else if (arg.rfind("--seed=", 0) == 0) {
       options.seed = std::atoi(arg.c_str() + 7);
+      seed_given   = true;
     }
+  }
+  // Make seed always carry a real value so callers never have to think about
+  // "is this set?". A fresh random one is picked when --seed isn't passed.
+  if (!seed_given) {
+    options.seed = (int)std::random_device{}();
   }
   return options;
 }
@@ -167,11 +178,14 @@ void play_game(
   // Each frame: ask game_frame for the next move. When it resolves a choice
   // (returns nullopt), let the game-specific code refresh the table from the
   // updated game state.
+  // Returning true tells run_tabletop to exit the loop — we use that to
+  // stop as soon as the game ends so the game-over screen can take over.
   auto update = [&](Table_State&, const Input&) {
     current_choice = game_frame(state, agent, current_choice);
     if (current_choice == std::nullopt && sync_table) {
       sync_table();
     }
+    return state.is_game_over();
   };
 
   run_tabletop(
@@ -179,11 +193,14 @@ void play_game(
   );
 
   if (state.is_game_over() && compute_scores) {
-    auto scores = compute_scores();
+    auto scores      = compute_scores();
     auto result_text = std::string();
-    if (scores[0] > scores[1]) result_text = "Player 1 wins!";
-    else if (scores[1] > scores[0]) result_text = "Player 2 wins!";
-    else result_text = "It's a tie.";
+    if (scores[0] > scores[1])
+      result_text = "Player 1 wins!";
+    else if (scores[1] > scores[0])
+      result_text = "Player 2 wins!";
+    else
+      result_text = "It's a tie.";
     draw_game_over_screen(table, result_text, scores);
   }
 

@@ -187,22 +187,9 @@ static void play_scopa(
 }
 
 int main(int argc, char** argv) {
-  bool vs_ai     = true;
-  bool skip_menu = false;
-  auto seed      = std::optional<int>();
-  for (int i = 1; i < argc; ++i) {
-    auto arg = std::string(argv[i]);
-    if (arg == "--hot-seat") {
-      vs_ai     = false;
-      skip_menu = true;
-    } else if (arg == "--skip-menu") {
-      skip_menu = true;
-    } else if (arg.rfind("--seed=", 0) == 0) {
-      seed = std::atoi(arg.c_str() + 7);
-    }
-  }
+  auto options = parse_play_args(argc, argv);
 
-  auto inputs = Input_Feed(Input_Mode::Live, "");
+  auto        inputs      = Input_Feed(Input_Mode::Live, "");
   Menu_Result menu_result = resolve_play_mode(
     "Scopa Scientifica",
     tt::WINDOW_WIDTH,
@@ -210,27 +197,22 @@ int main(int argc, char** argv) {
     inputs,
     argc,
     argv,
-    skip_menu
+    options.skip_menu,
+    options.seed
   );
 
-  // Online peers must deal the same hands — use the seed delivered by the
-  // matchmaker. CLI --seed wins for solo play.
-  const bool is_online = (menu_result.mode == Menu_Result::ONLINE);
-  if (is_online) seed = menu_result.seed;
-
-  const int         player_index = is_online ? menu_result.player_index : 0;
-  scopa::Game_State state        = scopa::quick_setup(seed);
+  scopa::Game_State state    = scopa::quick_setup(menu_result.seed);
   auto              ui_state = UI_State(tt::WINDOW_WIDTH, tt::WINDOW_HEIGHT);
-  const int         bottom_player = player_index;
+  const int         bottom_player = menu_result.player_index;
   // Show the opponent's hand only in hot-seat (one screen is shared).
-  const bool  show_opponent_hand = !vs_ai && !is_online;
+  const bool  show_opponent_hand = !options.vs_ai && !menu_result.is_online();
   Table_State table =
     init_table_state(state, ui_state, bottom_player, show_opponent_hand);
 
   auto agent_ui = Scopa_Agent_UI(
-    &table, &ui_state, player_index, (int)state.all_cards.size()
+    &table, &ui_state, menu_result.player_index, (int)state.all_cards.size()
   );
-  Agent* agent = make_agent(&agent_ui, vs_ai, menu_result);
+  Agent* agent = make_agent(&agent_ui, options.vs_ai, menu_result);
 
   play_scopa(state, table, ui_state, *agent, bottom_player);
   return 0;

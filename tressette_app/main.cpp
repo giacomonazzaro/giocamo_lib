@@ -130,7 +130,8 @@ int main(int argc, char** argv) {
 
   // Menu opens its own window; play_game reuses it via run_tabletop's
   // IsWindowReady() guard. resolve_play_mode handles --local-host /
-  // --local-join, skip-menu fallback, and the menu itself.
+  // --local-join, skip-menu fallback, and the menu itself, and folds the
+  // CLI seed into the result for solo play.
   auto inputs      = Input_Feed(Input_Mode::Live, "");
   auto menu_result = resolve_play_mode(
     "Tressette",
@@ -139,23 +140,17 @@ int main(int argc, char** argv) {
     inputs,
     argc,
     argv,
-    options.skip_menu
+    options.skip_menu,
+    options.seed
   );
 
-  const bool is_online    = (menu_result.mode == Menu_Result::ONLINE);
-  const int  player_index = is_online ? menu_result.player_index : 0;
-
-  // Online peers must deal the same hands — use the seed from the matchmaker.
-  // CLI --seed wins for solo play.
-  auto seed = is_online ? menu_result.seed : options.seed;
-
-  auto state    = tressette::quick_setup(seed);
+  auto state    = tressette::quick_setup(menu_result.seed);
   auto ui_state = UI_State(tt::WINDOW_WIDTH, tt::WINDOW_HEIGHT);
   // The local player always sits at the bottom of the screen; in online play
   // that may be seat 1, in solo it's always seat 0. Show the opponent's hand
   // only in hot-seat (where one screen is shared).
-  const int  bottom_player      = player_index;
-  const bool show_opponent_hand = !options.vs_ai && !is_online;
+  const int  bottom_player      = menu_result.player_index;
+  const bool show_opponent_hand = !options.vs_ai && !menu_result.is_online();
   auto       table =
     init_table_state(state, ui_state, bottom_player, show_opponent_hand);
 
@@ -171,7 +166,7 @@ int main(int argc, char** argv) {
     };
 
   auto agent_ui = Tressette_Agent_UI(
-    &table, &ui_state, player_index, (int)state.all_cards.size()
+    &table, &ui_state, menu_result.player_index, (int)state.all_cards.size()
   );
   Agent* agent = make_agent_pair(
     &agent_ui, make_ai_opponent(), menu_result, options.vs_ai

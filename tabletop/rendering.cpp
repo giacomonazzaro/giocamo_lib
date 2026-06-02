@@ -492,7 +492,7 @@ void draw_table(Table_State& state, const Input& input) {
 
 void run_tabletop(
   Table_State&                                    table,
-  std::function<void(Table_State&, const Input&)> update,
+  std::function<bool(Table_State&, const Input&)> update,
   Input_Feed&                                     input_feed,
   int                                             window_width,
   int                                             window_height,
@@ -519,7 +519,8 @@ void run_tabletop(
     // Game logic runs after rendering so that world_transforms (refreshed
     // inside draw_table) are current when the update needs them — e.g. to
     // recompute local transforms after re-parenting a card.
-    update(table, input);
+    bool end = update(table, input);
+    if (end) break;
     EndDrawing();
   }
 
@@ -528,7 +529,7 @@ void run_tabletop(
 
 void run_tabletop(
   Table_State&                                    table,
-  std::function<void(Table_State&, const Input&)> update,
+  std::function<bool(Table_State&, const Input&)> update,
   int                                             window_width,
   int                                             window_height,
   const std::string&                              window_name
