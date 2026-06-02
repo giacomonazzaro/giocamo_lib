@@ -490,21 +490,27 @@ void draw_table(Table_State& state, const Input& input) {
 }
 
 void run_tabletop(
-  Table_State&       table,
-  int                window_width,
-  int                window_height,
-  const std::string& window_name
+  Table_State&                                    table,
+  std::function<void(Table_State&, const Input&)> update,
+  int                                             window_width,
+  int                                             window_height,
+  const std::string&                              window_name
 ) {
-  // Request 4x multisampling and high-DPI so on Retina displays the GL
-  // framebuffer is created at physical pixel resolution (2x logical) —
-  // effectively free supersampling on top of MSAA.
-  SetConfigFlags(FLAG_MSAA_4X_HINT | FLAG_WINDOW_HIGHDPI);
-  InitWindow(window_width, window_height, window_name.c_str());
-  SetTargetFPS(tt::TARGET_FPS);
+  bool owns_window = !IsWindowReady();
+  if (owns_window) {
+    // Request 4x multisampling and high-DPI so on Retina displays the GL
+    // framebuffer is created at physical pixel resolution (2x logical) —
+    // effectively free supersampling on top of MSAA.
+    SetConfigFlags(FLAG_MSAA_4X_HINT | FLAG_WINDOW_HIGHDPI);
+    InitWindow(window_width, window_height, window_name.c_str());
+    SetTargetFPS(tt::TARGET_FPS);
+  }
 
   while (!WindowShouldClose()) {
     auto input = capture_input();
     process_input(table, input);
+
+    update(table, input);
 
     BeginDrawing();
     draw_background(input);
@@ -512,5 +518,5 @@ void run_tabletop(
     EndDrawing();
   }
 
-  CloseWindow();
+  if (owns_window) CloseWindow();
 }

@@ -192,12 +192,6 @@ static void play_tressette(
   Agent&                 agent,
   int                    bottom_player
 ) {
-  if (!IsWindowReady()) {
-    SetConfigFlags(FLAG_WINDOW_HIGHDPI);
-    InitWindow(tt::WINDOW_WIDTH, tt::WINDOW_HEIGHT, "Tressette");
-    SetTargetFPS(tt::TARGET_FPS);
-  }
-
   std::optional<Choice> current_choice;
 
   // Sync stacks only when the game state actually changes (play_card fires
@@ -216,22 +210,13 @@ static void play_tressette(
       }
     };
 
-  while (!WindowShouldClose()) {
-    if (state.game_over) break;
-
-    Input input = capture_input();
-    process_input(table, input);
-
-    BeginDrawing();
-    draw_background(input, 0.0f);
-    draw_table(table, input);
-
+  auto update = [&](Table_State& table, const Input& input) {
     current_choice = game_frame(state, agent, current_choice);
     if (current_choice == std::nullopt) {
       update_stacks(table, state);
     }
-    EndDrawing();
-  }
+  };
+  run_tabletop(table, update, tt::WINDOW_WIDTH, tt::WINDOW_HEIGHT, "Tressette");
 
   if (state.game_over) {
     std::vector<int> scores = {

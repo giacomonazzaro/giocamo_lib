@@ -20,8 +20,9 @@ void render_text(
 int text_width(const std::string& text, int size);
 
 void run_tabletop(
-  Table_State&       table,
-  int                window_width,
-  int                window_height,
-  const std::string& window_name
+  Table_State&                                    table,
+  std::function<void(Table_State&, const Input&)> update,
+  int                                             window_width,
+  int                                             window_height,
+  const std::string&                              window_name
 );

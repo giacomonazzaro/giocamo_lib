@@ -182,5 +182,11 @@ static Table_State make_demo_table() {
 
 int main() {
   auto table = make_demo_table();
-  run_tabletop(table, tt::WINDOW_WIDTH, tt::WINDOW_HEIGHT, "Tabletop Demo");
+  run_tabletop(
+    table,
+    [](Table_State&, const Input&) {},
+    tt::WINDOW_WIDTH,
+    tt::WINDOW_HEIGHT,
+    "Tabletop Demo"
+  );
 }
