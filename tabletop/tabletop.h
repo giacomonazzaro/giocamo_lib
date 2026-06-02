@@ -116,26 +116,34 @@ using Thing_Location = std::vector<int>;
 
 // Drag operation in progress.
 struct Drag_State {
-  // Root-to-thing path captured when the drag started. Empty when no drag
-  // is in progress.
-  Thing_Location location;
-  int            hovered_thing = -1;
-  // int            current_parent      = -1;
-  // int            last_hovered_parent = -1;
-  // int            original_parent     = -1;
-  float mouse_offset_x = 0.0f;
-  float mouse_offset_y = 0.0f;
+  // Root-to-thing path of the thing currently being dragged. Empty when no
+  // drag is in progress.
+  Thing_Location dragged_thing;
+  // Root-to-thing path of the candidate drop target under the cursor.
+  // Empty when no drag is in progress.
+  Thing_Location hovered_thing;
+  float          mouse_offset_x = 0.0f;
+  float          mouse_offset_y = 0.0f;
 
   // Id of the thing currently being dragged, or -1 when no drag is active.
   inline int thing_id() const {
-    return location.empty() ? -1 : location.back();
+    return dragged_thing.empty() ? -1 : dragged_thing.back();
   }
+  // Id of the dragged thing's parent, or -1 when there's no drag / the
+  // dragged thing has no parent in the path.
   inline int parent_id() const {
-    return location.size() > 1 ? location[location.size() - 2] : -1;
+    return dragged_thing.size() > 1
+             ? dragged_thing[dragged_thing.size() - 2]
+             : -1;
+  }
+  // Id of the candidate drop target under the cursor, or -1 when nothing
+  // is being hovered.
+  inline int hovered_id() const {
+    return hovered_thing.empty() ? -1 : hovered_thing.back();
   }
 };
 VISITABLE_STRUCT(
-  Drag_State, location, hovered_thing, mouse_offset_x, mouse_offset_y
+  Drag_State, dragged_thing, hovered_thing, mouse_offset_x, mouse_offset_y
 );
 
 struct Table_Layout {

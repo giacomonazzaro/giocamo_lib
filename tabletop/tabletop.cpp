@@ -155,8 +155,11 @@ void handle_mouse_press(Table_State& state, const Input& input) {
   int thing_id  = path.back();
   int parent_id = path[path.size() - 2];
 
-  drag.location      = std::move(path);
-  drag.hovered_thing = parent_id;
+  // Hovered target starts out as the dragged thing's own parent — that's the
+  // root-to-parent prefix of `path`. Build it before moving `path` away.
+  Thing_Location parent_path(path.begin(), path.end() - 1);
+  drag.dragged_thing = std::move(path);
+  drag.hovered_thing = std::move(parent_path);
 
   // Drag offset in world coords so it's parent-agnostic during hover.
   float world_pos_x   = state.world_transforms[thing_id].x;
@@ -170,7 +173,7 @@ void handle_mouse_release(Table_State& state) {
   Drag_State& drag     = state.drag_state;
   int         thing_id = drag.thing_id();
   if (thing_id < 0) return;
-  assert(drag.hovered_thing != -1);
+  assert(!drag.hovered_thing.empty());
 
   // Capture the thing.s current world position (where the user let go) so the
   // animation can lerp from that point — not from a stale rect that's about to
@@ -181,8 +184,8 @@ void handle_mouse_release(Table_State& state) {
   };
   print(drag);
   bool allowed =
-    state.is_drop_allowed(drag.parent_id(), drag.hovered_thing, thing_id);
-  if (is_full(state.things[drag.hovered_thing])) {
+    state.is_drop_allowed(drag.parent_id(), drag.hovered_id(), thing_id);
+  if (is_full(state.things[drag.hovered_id()])) {
     allowed = false;
   }
   //    bool allowed = true; // TODO(giacomo)
@@ -200,10 +203,10 @@ void handle_mouse_release(Table_State& state) {
 
   // Signal drop as (from_parent, to_parent, thing_id).
   state.dropped_thing =
-    std::make_tuple(drag.parent_id(), drag.hovered_thing, thing_id);
+    std::make_tuple(drag.parent_id(), drag.hovered_id(), thing_id);
 
   int original_parent = drag.parent_id();
-  int current_parent  = drag.hovered_thing;
+  int current_parent  = drag.hovered_id();
   state.drag_state    = Drag_State();
 
   // Re-layout the affected parents. Skip root: its "layout" would smush all
@@ -251,19 +254,13 @@ void handle_mouse_move(Table_State& state, const Input& input) {
   float mx = (float)input.mouse_x;
   float my = (float)input.mouse_y;
 
-  int hovered = -1;
-  for (int i = 0; i < state.things.size(); i++) {
-    if (i == thing_id) continue;
-    auto rect = world_rect(i, state);
-    if (point_in_thing(mx, my, i, state)) {
-      hovered = i;
-      break;
-    }
-  }
-
-  assert(hovered != thing_id);
-  assert(hovered != -1);
-  drag.hovered_thing = hovered;
+  // Walk the scene tree to find the topmost thing under the cursor. If that's
+  // the dragged thing itself (the user hasn't moved off it yet), peel it off
+  // so the hovered target is its parent.
+  Thing_Location path = find_thing_at(mx, my, state);
+  if (!path.empty() && path.back() == thing_id) path.pop_back();
+  assert(!path.empty());
+  drag.hovered_thing = std::move(path);
   //
   //  if (hovered >= 0 && drag.last_hovered_parent != hovered) {
   //    // Reparent: detach from the old parent, optionally attach to the
@@ -311,9 +308,9 @@ void handle_mouse_move(Table_State& state, const Input& input) {
   auto local      = inverse(parent_world) * target_world;
   thing.transform = local;
 
-  update_children_positions(drag.parent_id(), state, /*sort=*/false);
-  if (hovered != state.root) {
-    update_children_positions(hovered, state, /*sort=*/true);
+  update_children_positions(drag.parent_id(), state, /*sort=*/true);
+  if (drag.hovered_id() != state.root) {
+    update_children_positions(drag.hovered_id(), state, /*sort=*/true);
   }
 }
 
@@ -401,11 +398,11 @@ void update_children_positions(int parent_id, Table_State& state, bool sort) {
   auto   children = parent.children;
   auto&  drag     = state.drag_state;
   if (drag.thing_id() != -1) {
-    if (drag.parent_id() != parent_id && drag.hovered_thing == parent_id) {
+    if (drag.parent_id() != parent_id && drag.hovered_id() == parent_id) {
       // Dragging thing onto new parent.
       children.push_back(drag.thing_id());
     }
-    if (drag.parent_id() == parent_id && drag.hovered_thing != parent_id) {
+    if (drag.parent_id() == parent_id && drag.hovered_id() != parent_id) {
       // Moving thing away from this parent.
       auto it = std::find(children.begin(), children.end(), drag.thing_id());
       assert(it != children.end());

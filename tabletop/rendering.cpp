@@ -426,17 +426,20 @@ void draw_table(Table_State& state, const Input& input) {
   if (state.world_transforms_animated.size() != state.things.size()) {
     state.world_transforms_animated = state.world_transforms;
   }
+#if 0
   state.world_transforms_animated = state.world_transforms;
-  // animate(
-  //   state.world_transforms_animated,
-  //   state.world_transforms,
-  //   state,
-  //   input.delta_time
-  // );
+#else
+  animate(
+    state.world_transforms_animated,
+    state.world_transforms,
+    state,
+    input.delta_time
+  );
+#endif
 
   // Highlight the hovered drop target while dragging.
-  if (state.drag_state.hovered_thing != -1) {
-    draw_drop_placeholder(state.drag_state.hovered_thing, state);
+  if (!state.drag_state.hovered_thing.empty()) {
+    draw_drop_placeholder(state.drag_state.hovered_id(), state);
   }
 
   // Depth-sort root's children so layered draw order is preserved.
