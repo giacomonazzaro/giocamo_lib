@@ -193,7 +193,8 @@ void init_table_layout(
   root.id          = (int)table_state.things.size();
   root.children    = stack_ids_in_order;
   root.capacity    = 0;
-  root.color       = {255, 0, 0, 255};
+  // Transparent so the shader background drawn behind the table shows through.
+  root.color       = {0, 0, 0, 0};
   table_state.things.push_back(root);
   table_state.root = root.id;
 
@@ -547,8 +548,8 @@ static void online_receive_updates(
   if (!msg_opt) return;
   const auto& msg = *msg_opt;
   std::string t   = msg.value("type", "");
-  if (t == "stacks") {
-    apply_stacks_message(table_state, msg["stacks"]);
+  if (t == "table_state") {
+    apply_table_state_message(table_state, msg["table_state"]);
   } else if (t == "playground") {
     ui_state.playground = msg.value("on", false);
     if (ui_state.playground) {
@@ -790,8 +791,7 @@ static void init_table_and_gods_states(
 int main(int argc, char** argv) {
   Cli_Args args = parse_cli_args(argc, argv);
 
-  Input_Feed inputs;
-  init_input_recorder(inputs, args.input_mode, args.input_file_path);
+  auto inputs = Input_Feed(args.input_mode, args.input_file_path);
 
   // --local-host / --local-join shortcut: skip the menu entirely and run the
   // synchronous loopback handshake. Lets two terminals on one machine play

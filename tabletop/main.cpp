@@ -146,8 +146,9 @@ static Table_State make_demo_table() {
     root.size      = {(float)tt::WINDOW_WIDTH, (float)tt::WINDOW_HEIGHT};
     root.transform = {tt::WINDOW_WIDTH / 2.0f, tt::WINDOW_HEIGHT / 2.0f, 0.0f};
     root.children  = {deck_id, hand_id, discard_id};
-    // Wooden table surface stretched across the full window.
-    root.image_path = "tabletop/data/wood.png";
+    // Wooden table surface filling the whole window (no rounded corners).
+    root.image_path      = "tabletop/data/wood.png";
+    root.rounded_corners = false;
     table.things.push_back(root);
     table.root = root_id;
   }
@@ -163,7 +164,9 @@ int main() {
   auto table = make_demo_table();
   run_tabletop(
     table,
-    [](Table_State&, const Input&) {},
+    // Return false every frame: the demo never ends itself; closing the
+    // window stops the loop.
+    [](Table_State&, const Input&) { return false; },
     tt::WINDOW_WIDTH,
     tt::WINDOW_HEIGHT,
     "Tabletop Demo"

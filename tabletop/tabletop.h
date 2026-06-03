@@ -62,6 +62,7 @@ struct Thing {
   // Appearance.
   Color       color = {255, 255, 255, 50};
   std::string image_path;
+  bool        rounded_corners = true;  // Round image corners (off for backgrounds).
 
   // Geometry. A thing is assumed to be a rectangle for now, centered at (0,0).
   Transform2D transform;
@@ -81,6 +82,7 @@ VISITABLE_STRUCT(
   name,
   id,
   image_path,
+  rounded_corners,
   color,
   size,
   transform,
@@ -110,6 +112,11 @@ inline Rectangle local_rect(const Thing& thing) {
     thing.size.y,
   };
 }
+
+// Build a full-window root thing centered on a width×height screen, textured
+// with the given table surface and with square corners so it fills the screen.
+// The caller assigns its id and children, then adds it to the table.
+Thing create_table_root(int width, int height, const std::string& texture_path);
 
 // Path of thing IDs from root to the thing.
 using Thing_Location = std::vector<int>;

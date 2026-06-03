@@ -351,6 +351,19 @@ Rectangle world_rect(int thing_id, const Table_State& state) {
   };
 }
 
+Thing create_table_root(int width, int height, const std::string& texture_path) {
+  auto root = Thing();
+  root.name = "root";
+  // Centered on the screen, so its rect spans (0,0)-(width,height) in world.
+  root.size        = {(float)width, (float)height};
+  root.transform.x = (float)width / 2.0f;
+  root.transform.y = (float)height / 2.0f;
+  // Table surface filling the whole window (square, no rounded corners).
+  root.image_path      = texture_path;
+  root.rounded_corners = false;
+  return root;
+}
+
 void update_children_positions(int parent_id, Table_State& state, bool sort) {
   if (parent_id == state.root) return;
   Thing& parent   = state.things[parent_id];

@@ -27,7 +27,7 @@ static float  s_bg_turn_value     = 0.0f;
 static Font s_font        = {0};
 static bool s_font_loaded = false;
 
-static std::unordered_map<std::string, Texture2D> s_rounded_texture_cache;
+static std::unordered_map<std::string, Texture2D> s_texture_cache;
 
 // --- Background shader loading ---
 
@@ -72,15 +72,15 @@ static Font& get_font() {
 
 // --- Texture cache helpers ---
 
-static Texture2D* get_rounded_texture(const std::string& image_path) {
-  auto it = s_rounded_texture_cache.find(image_path);
-  if (it != s_rounded_texture_cache.end()) {
+static Texture2D* get_texture(
+  const std::string& image_path, bool rounded_corners
+) {
+  // Rounded and plain versions of the same file are cached under distinct keys.
+  std::string key = rounded_corners ? image_path : image_path + "#plain";
+  auto        it  = s_texture_cache.find(key);
+  if (it != s_texture_cache.end()) {
     return &it->second;
   }
-
-  float w = (float)tt::CARD_WIDTH;
-  float h = (float)tt::CARD_HEIGHT;
-  float r = (float)tt::CARD_CORNER_RADIUS;
 
   // Load image at original resolution (GPU scales when drawing). raylib
   // returns an image with width==0 when the file is missing — bail in that
@@ -93,27 +93,33 @@ static Texture2D* get_rounded_texture(const std::string& image_path) {
     return nullptr;
   }
 
-  // Scale corner radius to match image resolution.
-  int sr = (int)(r * std::min((float)iw / w, (float)ih / h));
+  if (rounded_corners) {
+    float w = (float)tt::CARD_WIDTH;
+    float h = (float)tt::CARD_HEIGHT;
+    float r = (float)tt::CARD_CORNER_RADIUS;
 
-  // Create rounded rectangle mask at image resolution.
-  Image mask = GenImageColor(iw, ih, Color{0, 0, 0, 0});
-  ImageDrawRectangle(&mask, sr, 0, iw - 2 * sr, ih, WHITE);
-  ImageDrawRectangle(&mask, 0, sr, iw, ih - 2 * sr, WHITE);
-  ImageDrawCircle(&mask, sr, sr, sr, WHITE);
-  ImageDrawCircle(&mask, iw - sr, sr, sr, WHITE);
-  ImageDrawCircle(&mask, sr, ih - sr, sr, WHITE);
-  ImageDrawCircle(&mask, iw - sr, ih - sr, sr, WHITE);
+    // Scale corner radius to match image resolution.
+    int sr = (int)(r * std::min((float)iw / w, (float)ih / h));
 
-  // Apply mask and convert to GPU texture.
-  ImageAlphaMask(&image, mask);
+    // Create rounded rectangle mask at image resolution.
+    Image mask = GenImageColor(iw, ih, Color{0, 0, 0, 0});
+    ImageDrawRectangle(&mask, sr, 0, iw - 2 * sr, ih, WHITE);
+    ImageDrawRectangle(&mask, 0, sr, iw, ih - 2 * sr, WHITE);
+    ImageDrawCircle(&mask, sr, sr, sr, WHITE);
+    ImageDrawCircle(&mask, iw - sr, sr, sr, WHITE);
+    ImageDrawCircle(&mask, sr, ih - sr, sr, WHITE);
+    ImageDrawCircle(&mask, iw - sr, ih - sr, sr, WHITE);
+
+    // Apply mask so the corners become transparent.
+    ImageAlphaMask(&image, mask);
+    UnloadImage(mask);
+  }
+
   Texture2D tex = LoadTextureFromImage(image);
-
   UnloadImage(image);
-  UnloadImage(mask);
 
-  s_rounded_texture_cache[image_path] = tex;
-  return &s_rounded_texture_cache[image_path];
+  s_texture_cache[key] = tex;
+  return &s_texture_cache[key];
 }
 
 // --- Text rendering ---
@@ -254,7 +260,7 @@ void draw_thing(const Thing& thing, bool face_up) {
   // Thing background: image with rounded corners, or solid color fallback.
   Texture2D* texture = nullptr;
   if (!thing.image_path.empty()) {
-    texture = get_rounded_texture(thing.image_path);
+    texture = get_texture(thing.image_path, thing.rounded_corners);
   }
 
   if (texture) {

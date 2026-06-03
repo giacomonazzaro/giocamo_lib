@@ -35,7 +35,7 @@ void run_tabletop(
 // the caller doesn't need to record or replay the input stream.
 void run_tabletop(
   Table_State&                                    table,
-  std::function<void(Table_State&, const Input&)> update,
+  std::function<bool(Table_State&, const Input&)> update,
   int                                             window_width,
   int                                             window_height,
   const std::string&                              window_name
