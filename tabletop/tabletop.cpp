@@ -155,8 +155,6 @@ void handle_mouse_press(Table_State& state, const Input& input) {
   int thing_id  = path.back();
   int parent_id = path[path.size() - 2];
 
-  // Hovered target starts out as the dragged thing's own parent — that's the
-  // root-to-parent prefix of `path`. Build it before moving `path` away.
   Thing_Location parent_path(path.begin(), path.end() - 1);
   drag.dragged_thing = std::move(path);
   drag.hovered_thing = std::move(parent_path);
@@ -263,8 +261,8 @@ void handle_mouse_move(Table_State& state, const Input& input) {
   float target_world_y = my - drag.mouse_offset_y;
 
   // Update world and local transforms so the thing follows the cursor.
-  state.world_transforms[drag.thing_id()] =
-    Transform2D{target_world_x, target_world_y, 0.0f};
+  state.world_transforms[drag.thing_id()].x = target_world_x;
+  state.world_transforms[drag.thing_id()].y = target_world_y;
   update_local_transform_to_match_world_transform(
     state, drag.parent_id(), drag.thing_id()
   );

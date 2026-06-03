@@ -376,7 +376,9 @@ static void draw_thing_world(
 
 // --- draw_zoomed_thing ---
 
-void draw_zoomed_thing(const Thing& thing, bool face_up) {
+void draw_zoomed_thing(
+  const Table_State& state, const Input& input, int thing_id, bool face_up
+) {
   int screen_w = GetScreenWidth();
   int screen_h = GetScreenHeight();
 
@@ -397,10 +399,13 @@ void draw_zoomed_thing(const Thing& thing, bool face_up) {
   float cx = (float)screen_w / 2.0f;
   float cy = (float)screen_h / 2.0f;
 
+  const Thing& thing = state.things[thing_id];
   rlPushMatrix();
   rlTranslatef(cx, cy, 0.0f);
   rlScalef(scale, scale, 1.0f);
   draw_thing(thing, face_up);
+  auto cb = state.draw_callbacks.find(thing_id);
+  if (cb != state.draw_callbacks.end()) cb->second(state, input, face_up);
   rlPopMatrix();
 }
 
@@ -489,7 +494,7 @@ void draw_table(Table_State& state, const Input& input) {
       int owner = state.zoomed_thing_id[state.zoomed_thing_id.size() - 2];
       face_up   = state.things[owner].face_up;
     }
-    draw_zoomed_thing(state.things[thing_id], face_up);
+    draw_zoomed_thing(state, input, thing_id, face_up);
   }
 }
 
