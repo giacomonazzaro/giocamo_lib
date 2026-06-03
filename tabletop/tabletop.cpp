@@ -356,7 +356,7 @@ void update_children_positions(int parent_id, Table_State& state, bool sort) {
   Thing& parent   = state.things[parent_id];
   auto   children = parent.children;
   auto&  drag     = state.drag_state;
-  if (drag.thing_id() != -1) {
+  if (drag.thing_id() != -1 && drag.thing_id() != parent_id) {
     if (drag.parent_id() != parent_id && drag.hovered_id() == parent_id) {
       // Dragging thing onto new parent.
       children.push_back(drag.thing_id());
