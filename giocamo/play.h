@@ -99,12 +99,17 @@ Agent* make_agent_pair(
 //                    borders don't linger over a paused game.
 // `agent`          — the agent driving both seats (typically via Agent_Duel).
 // `input_feed`     — input source (live, record, or playback).
-// `window_title`   — used if `run_tabletop` needs to open the window itself.
-// `sync_table`     — invoked after every resolved Choice; the game-specific
-//                    callback typically copies the game's table_state into the
-//                    matching `table.things[...].children`.
-// `compute_scores` — returns the per-player final score for the game-over
-//                    screen. Skipped (no screen) if null.
+// `window_title`          — used if `run_tabletop` opens the window itself.
+// `update_table_from_game`— invoked after every resolved Choice; copies the
+//                           game state into the matching table children.
+// `compute_scores`        — per-player final score for the game-over screen.
+//                           Skipped (no screen) if null.
+// `update_game_from_table`— invoked when leaving playground: reads the
+//                           rearranged table back into the game state so play
+//                           resumes from it. If null, the table is instead
+//                           restored from the game via update_table_from_game.
+// `on_message`            — handles online messages play_game doesn't itself
+//                           recognize (anything but "playground"/"table_state").
 void play_game(
   Game&                             state,
   Table_State&                      table,
@@ -113,6 +118,8 @@ void play_game(
   Input_Feed&                       input_feed,
   const Menu_Result&                menu_result,
   const std::string&                window_title,
-  std::function<void()>             sync_table,
-  std::function<std::vector<int>()> compute_scores
+  std::function<void()>             update_table_from_game,
+  std::function<std::vector<int>()> compute_scores,
+  std::function<void()>             update_game_from_table = nullptr,
+  std::function<void(const nlohmann::json&)> on_message    = nullptr
 );

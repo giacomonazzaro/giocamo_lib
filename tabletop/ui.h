@@ -52,6 +52,9 @@ struct UI_State {
   int                          window_width;
   int                          window_height;
   const Input*                 input = nullptr;
+  // Playground pauses the game loop so the table can be rearranged freely.
+  // play_game owns the toggle; game code reads it to gate playground-only UI.
+  bool playground = false;
 
   UI_State(int width, int height);
   Rectangle place(

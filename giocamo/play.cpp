@@ -175,16 +175,28 @@ void play_game(
   Input_Feed&                       input_feed,
   const Menu_Result&                menu_result,
   const std::string&                window_title,
-  std::function<void()>             sync_table,
-  std::function<std::vector<int>()> compute_scores
+  std::function<void()>             update_table_from_game,
+  std::function<std::vector<int>()> compute_scores,
+  std::function<void()>             update_game_from_table,
+  std::function<void(const nlohmann::json&)> on_message
 ) {
   auto current_choice = std::optional<Choice>();
-  bool playground     = false;
 
   // Nullable handle to the remote peer. Outside online mode this stays null
   // and every send/recv branch below short-circuits.
   const Online* online = menu_result.is_online() ? &menu_result.online
                                                  : nullptr;
+
+  // Leaving playground: commit the rearranged table back into the game state
+  // when the game provides a way to (gods), otherwise restore the table from
+  // the canonical game state — discarding the playground edits.
+  auto leave_playground = [&] {
+    if (update_game_from_table) {
+      update_game_from_table();
+    } else if (update_table_from_game) {
+      update_table_from_game();
+    }
+  };
 
   // Each frame: ask game_frame for the next move. When it resolves a choice
   // (returns nullopt), let the game-specific code refresh the table from the
@@ -199,25 +211,31 @@ void play_game(
   // Returning true tells run_tabletop to exit the loop — we use that to
   // stop as soon as the game ends so the game-over screen can take over.
   auto update = [&](Table_State& table, const Input& input) {
-    // Drain any messages the remote sent us this frame. Two kinds matter:
-    // a "playground" flip from the other peer (mirror it locally) and a
-    // "table_state" snapshot (apply it so both screens stay in sync).
+    // The UI agent reads the current frame's input through ui_state.
+    ui_state.input = &input;
+
+    // Drain any messages the remote sent us this frame. Two kinds matter
+    // here: a "playground" flip from the other peer (mirror it locally) and a
+    // "table_state" snapshot (apply it so both screens stay in sync). Anything
+    // else is handed to the game-specific on_message hook.
     if (online) {
       while (auto incoming = try_recv_message(*online)) {
         std::string type = incoming->value("type", "");
         if (type == "playground") {
           bool remote_on = incoming->value("on", false);
-          if (remote_on != playground) {
-            playground = remote_on;
-            if (playground) {
+          if (remote_on != ui_state.playground) {
+            ui_state.playground = remote_on;
+            if (ui_state.playground) {
               table.is_drop_allowed = [](int, int, int) { return true; };
               ui_state.highlighted_things.clear();
-            } else if (sync_table) {
-              sync_table();
+            } else {
+              leave_playground();
             }
           }
         } else if (type == "table_state") {
           apply_table_state_message(table, (*incoming)["table_state"]);
+        } else if (on_message) {
+          on_message(*incoming);
         }
       }
     }
@@ -228,32 +246,33 @@ void play_game(
     };
     Rectangle button_rect =
       place_inside(screen_rect, 160, 32, "right", "top", 20);
-    std::string label = playground ? "Playground: ON" : "Playground: OFF";
+    std::string label =
+      ui_state.playground ? "Playground: ON" : "Playground: OFF";
     if (immediate_button(button_rect, label, input, Color{20, 20, 20, 100})) {
-      playground = !playground;
-      if (playground) {
+      ui_state.playground = !ui_state.playground;
+      if (ui_state.playground) {
         // Anything goes while playing around. Wipe the "legal move" borders
         // the agent left over the player's hand — they're misleading while
         // the game loop is paused.
         table.is_drop_allowed = [](int, int, int) { return true; };
         ui_state.highlighted_things.clear();
-      } else if (sync_table) {
-        // Discard playground edits; restore the canonical layout. The next
-        // game_frame call will re-install is_drop_allowed via the agent.
-        sync_table();
+      } else {
+        // Commit (or discard) the playground edits. The next game_frame call
+        // re-installs is_drop_allowed via the agent.
+        leave_playground();
       }
       // Tell the remote peer about the toggle. On entry we also blast a
       // full table snapshot so the other side starts from the same layout.
       if (online) {
         nlohmann::json msg;
         msg["type"] = "playground";
-        msg["on"]   = playground;
+        msg["on"]   = ui_state.playground;
         send_message(*online, msg);
-        if (playground) send_table_state(*online, table);
+        if (ui_state.playground) send_table_state(*online, table);
       }
     }
 
-    if (playground) {
+    if (ui_state.playground) {
       // Replicate drop / rotate / shuffle to the remote so playground edits
       // appear on both screens. Polling the drop also drains the event so it
       // doesn't get replayed as a real move when we toggle off.
@@ -265,8 +284,8 @@ void play_game(
     }
 
     current_choice = game_frame(state, agent, current_choice);
-    if (current_choice == std::nullopt && sync_table) {
-      sync_table();
+    if (current_choice == std::nullopt && update_table_from_game) {
+      update_table_from_game();
     }
     return state.is_game_over();
   };
