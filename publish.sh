@@ -91,6 +91,18 @@ cp "$BUILD_DIR/${SOURCE_DIR}.js"   "$GAME_DIR/"
 cp "$BUILD_DIR/${SOURCE_DIR}.wasm" "$GAME_DIR/"
 cp "$BUILD_DIR/${SOURCE_DIR}.data" "$GAME_DIR/"
 
+# Cache-busting. The assets keep the same filenames on every publish, so a
+# browser that already cached the old .js/.wasm/.data keeps running the old
+# build until a hard refresh. Stamp a unique version onto every asset URL so
+# each publish forces fresh files. The .js include gets a ?v=VERSION query,
+# and a locateFile hook adds the same query to the .wasm/.data the loader
+# fetches.
+VERSION=$(date +%s)
+perl -0pi -e "s{${SOURCE_DIR}\.js}{${SOURCE_DIR}.js?v=$VERSION}g" \
+    "$GAME_DIR/index.html"
+perl -0pi -e "s{<script src=${SOURCE_DIR}\.js}{<script>Module.locateFile=function(path,prefix){return prefix+path+'?v=$VERSION'};</script><script src=${SOURCE_DIR}.js}" \
+    "$GAME_DIR/index.html"
+
 # 6. Commit and push to `main` (the branch Pages serves from).
 (
     cd "$WORKDIR"
