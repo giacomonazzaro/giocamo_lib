@@ -200,10 +200,7 @@ void handle_mouse_release(Table_State& state) {
   int new_parent      = drag.hovered_id();
   state.drag_state    = Drag_State();
 
-  // Re-layout the affected parents. Skip root: its "layout" would smush all
-  // top-level zones together with its zero spread.
-  if (original_parent >= 0 && original_parent != state.root) {
-    // Remove.
+  if (original_parent >= 0) {
     auto& children = state.things[original_parent].children;
     auto  it       = std::find(children.begin(), children.end(), thing_id);
     if (it != children.end()) {
@@ -228,29 +225,32 @@ void handle_mouse_move(Table_State& state, const Input& input) {
   if (drag.thing_id() < 0) return;
 
   // Avoid that dragging away from a new parent doesn't leave a hole.
-  if (drag.hovered_id() != state.root) {
+  if (drag.hovered_id() >= 0 && drag.hovered_id() != state.root) {
     update_children_positions(drag.hovered_id(), state, /*sort=*/true);
   }
 
-  float mx           = (float)input.mouse_x;
-  float my           = (float)input.mouse_y;
+  float mx = (float)input.mouse_x;
+  float my = (float)input.mouse_y;
   drag.hovered_thing = find_thing_at(mx, my, state);
+  // The dragged thing follows the cursor, so find_thing_at can return a path
+  // that walks into the dragged thing's own subtree. Drop targets there would
+  // make the thing its own ancestor; trim the path at the dragged thing.
+  auto dragged_in_path = std::find(
+    drag.hovered_thing.begin(), drag.hovered_thing.end(), drag.thing_id()
+  );
+  drag.hovered_thing.erase(dragged_in_path, drag.hovered_thing.end());
 
   drag.allowed = false;
-  printf("start!\n");
   while (drag.hovered_thing.size() > 0) {
-    print(drag.hovered_thing);
-    drag.allowed = state.is_drop_allowed(
+    bool allowed = state.is_drop_allowed(
       drag.parent_id(), drag.hovered_id(), drag.thing_id()
     );
-    if (is_full(state.things[drag.hovered_id()])) {
-      drag.allowed = false;
-    }
-    if (!drag.allowed) {
-      drag.hovered_thing.pop_back();
-    } else {
+    if (is_full(state.things[drag.hovered_id()])) allowed = false;
+    if (allowed) {
+      drag.allowed = true;
       break;
     }
+    drag.hovered_thing.pop_back();
   }
   if (!drag.allowed) {
     return;
@@ -268,7 +268,7 @@ void handle_mouse_move(Table_State& state, const Input& input) {
   );
 
   update_children_positions(drag.parent_id(), state, /*sort=*/true);
-  if (drag.hovered_id() != state.root) {
+  if (drag.hovered_id() >= 0 && drag.hovered_id() != state.root) {
     update_children_positions(drag.hovered_id(), state, /*sort=*/true);
   }
 }
