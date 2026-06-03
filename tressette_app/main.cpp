@@ -35,8 +35,7 @@ static Table_State init_table_state(
 
   // One Thing per card; ids 0..39 match all_cards indices.
   for (const auto& c : state.all_cards) {
-    auto t = Thing();
-    t.id   = c.id;
+    auto t = make_card(c.id);
     if (c.suit == tressette::Suit::COPPE) t.color = {50, 100, 50, 255};
     if (c.suit == tressette::Suit::DENARI) t.color = {150, 120, 20, 255};
     if (c.suit == tressette::Suit::BASTONI) t.color = {80, 50, 50, 255};
