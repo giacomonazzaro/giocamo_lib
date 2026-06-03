@@ -19,3 +19,10 @@ if(NOT TARGET connect_four_lib)
     target_include_directories(connect_four_lib PUBLIC . "${CMAKE_CURRENT_SOURCE_DIR}/..")
     target_link_libraries(connect_four_lib PUBLIC game)
 endif()
+
+# Headless Minimax-vs-MCTS match-up. Plays N games, prints win counts and
+# per-agent wall-clock totals.
+if(NOT TARGET test)
+    add_executable(test test.cpp)
+    target_link_libraries(test PRIVATE connect_four_lib)
+endif()

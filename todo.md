@@ -1,0 +1,9 @@
+- power as sub-thing
+- implement D.O.T
+- generalize to templated play_game
+    - game setup function
+    - table setup function
+    - UI
+    - game_frame()
+    - table_from_game()
+    - game_from_table()
