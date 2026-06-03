@@ -146,32 +146,11 @@ static Table_State make_demo_table() {
     root.size      = {(float)tt::WINDOW_WIDTH, (float)tt::WINDOW_HEIGHT};
     root.transform = {tt::WINDOW_WIDTH / 2.0f, tt::WINDOW_HEIGHT / 2.0f, 0.0f};
     root.children  = {deck_id, hand_id, discard_id};
+    // Wooden table surface stretched across the full window.
+    root.image_path = "tabletop/data/wood.png";
     table.things.push_back(root);
     table.root = root_id;
   }
-
-  // Table background: stretch the wood texture across the full window.
-  // The texture is loaded lazily on the first frame because LoadTexture
-  // requires a live GL context, which only exists after InitWindow runs
-  // inside run_tabletop().
-  table.draw_callbacks[root_id] = [](const Table_State&, const Input&, bool) {
-    static Texture2D wood_texture = [] {
-      Texture2D loaded = LoadTexture("tabletop/data/wood.png");
-      SetTextureFilter(loaded, TEXTURE_FILTER_BILINEAR);
-      return loaded;
-    }();
-    rlPushMatrix();
-    rlLoadIdentity();
-    DrawTexturePro(
-      wood_texture,
-      Rectangle{0, 0, (float)wood_texture.width, (float)wood_texture.height},
-      Rectangle{0, 0, (float)GetRenderWidth(), (float)GetRenderHeight()},
-      Vector2{0, 0},
-      0.0f,
-      WHITE
-    );
-    rlPopMatrix();
-  };
 
   // Lay out cards into their initial slot positions inside each container.
   update_children_positions(deck_id, table, false);

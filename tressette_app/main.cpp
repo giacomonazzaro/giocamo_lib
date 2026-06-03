@@ -77,6 +77,8 @@ static Table_State init_table_state(
   root.transform.y = (float)tt::WINDOW_HEIGHT / 2.0f;
   root.id          = (int)table.things.size();
   root.children    = stack_ids;
+  // Wooden table surface stretched across the full window.
+  root.image_path = "tabletop/data/wood.png";
   table.things.push_back(root);
   table.root = root.id;
 

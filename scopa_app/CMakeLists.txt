@@ -56,5 +56,6 @@ if(EMSCRIPTEN)
         -s MIN_WEBGL_VERSION=2 \
         --shell-file ${CMAKE_CURRENT_SOURCE_DIR}/../raylib/src/minshell.html \
         --preload-file ${ASSETS_ROOT}/data/fonts@/data/fonts \
-        --preload-file ${ASSETS_ROOT}/tabletop/background.frag@/tabletop/background.frag")
+        --preload-file ${ASSETS_ROOT}/tabletop/background.frag@/tabletop/background.frag \
+        --preload-file ${ASSETS_ROOT}/tabletop/data/wood.png@/tabletop/data/wood.png")
 endif()
