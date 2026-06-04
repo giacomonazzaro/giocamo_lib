@@ -231,8 +231,16 @@ void handle_mouse_move(Table_State& state, const Input& input) {
     update_children_positions(drag.hovered_id(), state, /*sort=*/true);
   }
 
-  float mx           = (float)input.mouse_x;
-  float my           = (float)input.mouse_y;
+  float mx = (float)input.mouse_x;
+  float my = (float)input.mouse_y;
+
+  // Update world and local transforms so the thing follows the cursor.
+  state.world_transforms[drag.thing_id()].x = mx - drag.mouse_offset_x;
+  state.world_transforms[drag.thing_id()].y = my - drag.mouse_offset_y;
+  update_local_transform_to_match_world_transform(
+    state, drag.parent_id(), drag.thing_id()
+  );
+
   drag.hovered_thing = find_thing_at(mx, my, state);
   // The dragged thing follows the cursor, so find_thing_at can return a path
   // that walks into the dragged thing's own subtree. Drop targets there would
@@ -242,29 +250,16 @@ void handle_mouse_move(Table_State& state, const Input& input) {
   );
   drag.hovered_thing.erase(dragged_in_path, drag.hovered_thing.end());
 
-  drag.allowed = false;
   while (drag.hovered_thing.size() > 0) {
-    bool allowed = state.is_drop_allowed(
+    drag.allowed = !is_full(state.things[drag.hovered_id()]);
+    drag.allowed &= state.is_drop_allowed(
       drag.parent_id(), drag.hovered_id(), drag.thing_id()
     );
-    if (is_full(state.things[drag.hovered_id()])) allowed = false;
-    if (allowed) {
-      drag.allowed = true;
+    if (drag.allowed) {
       break;
     }
     drag.hovered_thing.pop_back();
   }
-
-  // Target world position for the dragged thing.
-  float target_world_x = mx - drag.mouse_offset_x;
-  float target_world_y = my - drag.mouse_offset_y;
-
-  // Update world and local transforms so the thing follows the cursor.
-  state.world_transforms[drag.thing_id()].x = target_world_x;
-  state.world_transforms[drag.thing_id()].y = target_world_y;
-  update_local_transform_to_match_world_transform(
-    state, drag.parent_id(), drag.thing_id()
-  );
 
   if (drag.allowed) {
     update_children_positions(drag.parent_id(), state, /*sort=*/true);
