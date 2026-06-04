@@ -77,6 +77,7 @@ struct Game_State : Game {
   int                 current_player    = 0;
   int                 last_trick_winner = -1;  // for the +1 ultima bonus.
   bool                game_over         = false;
+  int                 human_player      = -1;
 
   Game_State() {}
 

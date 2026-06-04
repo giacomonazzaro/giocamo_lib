@@ -6,6 +6,7 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 
 set(DOT_SOURCES
     cards.cpp
+    gameplay.cpp
 )
 
 # game static lib (idempotent: skipped if already added by a parent project).

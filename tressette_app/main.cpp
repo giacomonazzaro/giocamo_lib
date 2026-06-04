@@ -148,6 +148,8 @@ int main(int argc, char** argv) {
   auto       table =
     init_table_state(state, ui_state, bottom_player, show_opponent_hand);
 
+  state.human_player = bottom_player;
+
   // Per-player HUD overlay. Drawn on top of every frame via the -1 callback.
   table.draw_callbacks[-1] =
     [&, bottom_player](const Table_State&, const Input&, bool) {

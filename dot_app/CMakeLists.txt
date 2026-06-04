@@ -21,10 +21,13 @@ set(STANDALONE_CPP_ONLY ON CACHE BOOL "" FORCE)
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/../game     ${CMAKE_BINARY_DIR}/game_build)
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/../tabletop ${CMAKE_BINARY_DIR}/tabletop_build)
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/../dot      ${CMAKE_BINARY_DIR}/dot_build)
+add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/../online   ${CMAKE_BINARY_DIR}/online_build)
+add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/../giocamo  ${CMAKE_BINARY_DIR}/giocamo_build)
 
 add_executable(dot_app
     main.cpp
     ui.cpp
+    agent_ui.cpp
 )
 target_include_directories(dot_app PRIVATE
     .
@@ -35,6 +38,8 @@ target_link_libraries(dot_app PRIVATE
     dot_lib
     tabletop_lib
     raylib
+    giocamo
+    online_lib
 )
 
 if(EMSCRIPTEN)

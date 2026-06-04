@@ -60,7 +60,9 @@ void sort_hand(Game_State& state, int player_index) {
   });
 }
 
-void play_card(Game_State& state, int card_id) {
+static Choice wait_for_player_acknolwdgment(Game_State& state);
+
+Choice play_card(Game_State& state, int card_id) {
   Player& player = state.players[state.current_player];
   erase_card(player.hand, card_id);
   state.trick.push_back(card_id);
@@ -68,36 +70,59 @@ void play_card(Game_State& state, int card_id) {
   if (state.trick.size() < 2) {
     // First card of the trick: the responder plays next.
     state.switch_turn();
-    return;
+    return {};
+  } else {
+    return wait_for_player_acknolwdgment(state);
   }
+}
 
-  // Trick complete: resolve it.
-  const int winner        = trick_winner(state);
-  state.last_trick_winner = winner;
-  Player& winner_p        = state.players[winner];
-  for (int cid : state.trick) winner_p.tricks_won.push_back(cid);
-  state.trick.clear();
-  state.trick_leader   = winner;
-  state.current_player = winner;
+static Choice wait_for_player_acknolwdgment(Game_State& state) {
+  auto choice             = Choice();
+  choice.player_index     = state.human_player;
+  choice.description      = "acknowledge";
+  choice.text_description = "Acknowledge trick";
 
-  // Draw phase: winner draws first, loser second.
-  if (!state.stock.empty()) {
-    int top = state.stock.back();
-    state.stock.pop_back();
-    state.players[winner].hand.push_back(top);
+  choice.actions = [](Game& g) -> Choose {
+    auto& s   = static_cast<Game_State&>(g);
+    auto  c   = Choose_Option();
+    c.targets = {"Ok"};
+    return c;
+  };
 
-    top = state.stock.back();
-    state.stock.pop_back();
-    state.players[1 - winner].hand.push_back(top);
+  choice.resolve = [](Game& g, int _index) -> std::vector<Choice> {
+    auto& state = static_cast<Game_State&>(g);
 
-    sort_hand(state, winner);
-    sort_hand(state, 1 - winner);
-  }
+    // Trick complete: resolve it.
+    const int winner        = trick_winner(state);
+    state.last_trick_winner = winner;
+    Player& winner_p        = state.players[winner];
+    for (int cid : state.trick) winner_p.tricks_won.push_back(cid);
 
-  // Game ends when both hands are empty.
-  if (state.players[0].hand.empty() && state.players[1].hand.empty()) {
-    state.game_over = true;
-  }
+    state.trick.clear();
+    state.trick_leader   = winner;
+    state.current_player = winner;
+
+    // Draw phase: winner draws first, loser second.
+    if (!state.stock.empty()) {
+      int top = state.stock.back();
+      state.stock.pop_back();
+      state.players[winner].hand.push_back(top);
+
+      top = state.stock.back();
+      state.stock.pop_back();
+      state.players[1 - winner].hand.push_back(top);
+
+      sort_hand(state, winner);
+      sort_hand(state, 1 - winner);
+    }
+
+    // Game ends when both hands are empty.
+    if (state.players[0].hand.empty() && state.players[1].hand.empty()) {
+      state.game_over = true;
+    }
+    return {};
+  };
+  return choice;
 }
 
 void resolve_pending_trick(Game_State& state) {
@@ -121,10 +146,10 @@ std::optional<Choice> Game_State::next_choice() {
   };
 
   choice.resolve = [](Game& g, int index) -> std::vector<Choice> {
-    auto&            s     = static_cast<Game_State&>(g);
-    std::vector<int> legal = legal_cards(s);
-    play_card(s, legal[index]);
-    return {};
+    auto&            s           = static_cast<Game_State&>(g);
+    std::vector<int> legal       = legal_cards(s);
+    auto             next_choice = play_card(s, legal[index]);
+    return {next_choice};
   };
 
   return choice;

@@ -31,7 +31,7 @@ void sort_hand(Game_State& state, int player_index);
 //     (winner first, loser second), checks for game-over.
 //   - Otherwise switches to the other player.
 //   - Fires on_cards_changed once at the end.
-void play_card(Game_State& state, int card_id);
+// void play_card(Game_State& state, int card_id);
 
 // Deal a fresh hand: 10 cards each, 20 in the stock, player 0 leads.
 Game_State quick_setup(std::optional<int> seed = std::nullopt);
