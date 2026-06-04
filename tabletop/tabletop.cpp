@@ -112,8 +112,8 @@ bool point_in_thing(
   const Thing& thing = state.things[thing_id];
   // Bring the world point into the thing's local space (centered at its
   // origin, rotation undone), then test against the shape itself.
-  Transform2D local =
-    inverse(state.world_transforms[thing_id]) * Transform2D{px, py, 0.0f};
+  Transform2D local = inverse(state.world_transforms[thing_id]) *
+                      Transform2D{px, py, 0.0f};
   return point_in_shape(thing.shape, local.x, local.y);
 }
 
@@ -231,8 +231,8 @@ void handle_mouse_move(Table_State& state, const Input& input) {
     update_children_positions(drag.hovered_id(), state, /*sort=*/true);
   }
 
-  float mx = (float)input.mouse_x;
-  float my = (float)input.mouse_y;
+  float mx           = (float)input.mouse_x;
+  float my           = (float)input.mouse_y;
   drag.hovered_thing = find_thing_at(mx, my, state);
   // The dragged thing follows the cursor, so find_thing_at can return a path
   // that walks into the dragged thing's own subtree. Drop targets there would
@@ -254,9 +254,6 @@ void handle_mouse_move(Table_State& state, const Input& input) {
     }
     drag.hovered_thing.pop_back();
   }
-  if (!drag.allowed) {
-    return;
-  }
 
   // Target world position for the dragged thing.
   float target_world_x = mx - drag.mouse_offset_x;
@@ -269,9 +266,11 @@ void handle_mouse_move(Table_State& state, const Input& input) {
     state, drag.parent_id(), drag.thing_id()
   );
 
-  update_children_positions(drag.parent_id(), state, /*sort=*/true);
-  if (drag.hovered_id() >= 0 && drag.hovered_id() != state.root) {
-    update_children_positions(drag.hovered_id(), state, /*sort=*/true);
+  if (drag.allowed) {
+    update_children_positions(drag.parent_id(), state, /*sort=*/true);
+    if (drag.hovered_id() >= 0 && drag.hovered_id() != state.root) {
+      update_children_positions(drag.hovered_id(), state, /*sort=*/true);
+    }
   }
 }
 
@@ -345,16 +344,16 @@ void process_input(Table_State& state, const Input& input) {
 #include "raylib.h"
 
 Rectangle world_rect(int thing_id, const Table_State& state) {
-  float        px = state.world_transforms[thing_id].x;
-  float        py = state.world_transforms[thing_id].y;
-  const Thing& t  = state.things[thing_id];
+  float        px   = state.world_transforms[thing_id].x;
+  float        py   = state.world_transforms[thing_id].y;
+  const Thing& t    = state.things[thing_id];
   Vector2      size = shape_size(t.shape);
-  return Rectangle{
-    px - size.x / 2.0f, py - size.y / 2.0f, size.x, size.y
-  };
+  return Rectangle{px - size.x / 2.0f, py - size.y / 2.0f, size.x, size.y};
 }
 
-Thing create_table_root(int width, int height, const std::string& texture_path) {
+Thing create_table_root(
+  int width, int height, const std::string& texture_path
+) {
   auto root = Thing();
   root.name = "root";
   // Centered on the screen, so its rect spans (0,0)-(width,height) in world.
@@ -449,6 +448,6 @@ Thing make_card(int id, const std::string& image_path) {
     card.image_path = image_path;
   }
   card.capacity = 0;
-  card.shape    = rectangle_shape({(float)tt::CARD_WIDTH, (float)tt::CARD_HEIGHT});
+  card.shape = rectangle_shape({(float)tt::CARD_WIDTH, (float)tt::CARD_HEIGHT});
   return card;
 }
