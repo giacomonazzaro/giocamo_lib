@@ -132,7 +132,8 @@ Thing_Location find_thing_at(
   path.push_back(state.root);
   while (true) {
     auto found = false;
-    for (size_t i = 0; i < state.things[node_id].children.size(); i++) {
+    // Check from last to front, so things drawn on top are picked first.
+    for (int i = (int)state.things[node_id].children.size() - 1; i >= 0; i--) {
       if (state.things[node_id].children[i] == skip_id) continue;
       if (point_in_thing(px, py, state.things[node_id].children[i], state)) {
         node_id = state.things[node_id].children[i];

@@ -290,7 +290,9 @@ void draw_thing(const Thing& thing, bool face_up) {
         DrawCircleV({0.0f, 0.0f}, thing.shape.circle.radius, thing.color);
         break;
       case Shape_Type::HEXAGON:
-        DrawPoly({0.0f, 0.0f}, 6, thing.shape.hexagon.radius, 0.0f, thing.color);
+        DrawPoly(
+          {0.0f, 0.0f}, 6, thing.shape.hexagon.radius, 0.0f, thing.color
+        );
         break;
       case Shape_Type::TRIANGLE:
         DrawPoly(
@@ -305,9 +307,7 @@ void draw_thing(const Thing& thing, bool face_up) {
     std::string text      = std::to_string(thing.counter.value);
     int         font_size = (int)(std::min(w, h) * 0.45f);
     int         label_w   = text_width(text, font_size);
-    render_text(
-      text, -label_w / 2.0f, -font_size / 2.0f, font_size, WHITE
-    );
+    render_text(text, -label_w / 2.0f, -font_size / 2.0f, font_size, WHITE);
   }
 }
 
@@ -352,17 +352,22 @@ static void update_world_transforms(
 }
 
 void animate(
+  int                             i,
   std::vector<Transform2D>&       animated,
   const std::vector<Transform2D>& target,
-  const Table_State&              state,
-  float                           dt
+  const Table_State&              table,
+  float                           dt,
+  bool                            smoothout = true
 ) {
-  dt *= 10.0f;  // Speed multiplier: higher = snappier but more CPU.
-  for (int i = 0; i < state.things.size(); ++i) {
-    if (i == state.drag_state.thing_id()) {
-      animated[i] = target[i];  // Snap to cursor.
-      continue;
-    }
+  if (!smoothout) {
+    printf("smoothout: %d\n", smoothout);
+  }
+  // dt *= 10.0f;  // Speed multiplier: higher = snappier but more CPU.
+  // for (int i = 0; i < table.things.size(); ++i) {
+  if (i == table.drag_state.thing_id() || !smoothout) {
+    animated[i] = target[i];  // Snap to cursor.
+    // return;
+  } else {
     float vx = (target[i].x - animated[i].x) * dt;
     float vy = (target[i].y - animated[i].y) * dt;
     // Cap per-frame travel so big jumps (e.g. trick → captured pile) glide
@@ -380,6 +385,24 @@ void animate(
     // Rotation eases toward target with a small swing that tilts the thing.
     animated[i].rotation += vx * 0.1f;
   }
+
+  if (smoothout && table.drag_state.thing_id() == i) {
+    smoothout = false;
+  }
+  for (size_t k = 0; k < table.things[i].children.size(); k++) {
+    animate(
+      table.things[i].children[k], animated, target, table, dt, smoothout
+    );
+  }
+}
+
+void animate(
+  std::vector<Transform2D>&       animated,
+  const std::vector<Transform2D>& target,
+  const Table_State&              table,
+  float                           dt
+) {
+  animate(table.root, animated, target, table, dt * 10);
 }
 
 // Translate to (wt.x, wt.y) — which is the thing's center — and rotate
