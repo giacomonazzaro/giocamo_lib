@@ -124,13 +124,16 @@ bool thing_pressed(int thing_id, const Table_State& state, const Input& input) {
   );
 }
 
-Thing_Location find_thing_at(float px, float py, const Table_State& state) {
+Thing_Location find_thing_at(
+  float px, float py, const Table_State& state, int skip_id
+) {
   int            node_id = state.root;
   Thing_Location path;
   path.push_back(state.root);
   while (true) {
     auto found = false;
     for (size_t i = 0; i < state.things[node_id].children.size(); i++) {
+      if (state.things[node_id].children[i] == skip_id) continue;
       if (point_in_thing(px, py, state.things[node_id].children[i], state)) {
         node_id = state.things[node_id].children[i];
         path.push_back(node_id);
@@ -241,14 +244,7 @@ void handle_mouse_move(Table_State& state, const Input& input) {
     state, drag.parent_id(), drag.thing_id()
   );
 
-  drag.hovered_thing = find_thing_at(mx, my, state);
-  // The dragged thing follows the cursor, so find_thing_at can return a path
-  // that walks into the dragged thing's own subtree. Drop targets there would
-  // make the thing its own ancestor; trim the path at the dragged thing.
-  auto dragged_in_path = std::find(
-    drag.hovered_thing.begin(), drag.hovered_thing.end(), drag.thing_id()
-  );
-  drag.hovered_thing.erase(dragged_in_path, drag.hovered_thing.end());
+  drag.hovered_thing = find_thing_at(mx, my, state, drag.thing_id());
 
   while (drag.hovered_thing.size() > 0) {
     drag.allowed = !is_full(state.things[drag.hovered_id()]);

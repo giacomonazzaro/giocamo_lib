@@ -118,7 +118,9 @@ inline Vector2 shape_size(const Shape& shape) {
 
 // Point-in-convex-regular-polygon test, in the shape's local space (centered
 // at the origin), matching how DrawPoly lays out its vertices.
-inline bool point_in_regular_polygon(float x, float y, int sides, float radius) {
+inline bool point_in_regular_polygon(
+  float x, float y, int sides, float radius
+) {
   bool has_positive = false;
   bool has_negative = false;
   for (int i = 0; i < sides; i++) {
@@ -383,13 +385,15 @@ bool thing_pressed(int thing_id, const Table_State& state, const Input& input);
 // Returns the scene-tree path from root down to the topmost thing whose world
 // rect contains (px, py). Topmost is determined by reverse-DFS (the
 // last-drawn / visually frontmost thing wins). Empty when nothing matched.
-Thing_Location find_thing_at(float px, float py, const Table_State& state);
-void           handle_mouse_press(Table_State& state, const Input& input);
-void           handle_mouse_release(Table_State& state);
-void           handle_mouse_move(Table_State& state, const Input& input);
-void           handle_rotate_thing(
-            Table_State& state, const Input& input, bool clockwise = true
-          );
+Thing_Location find_thing_at(
+  float px, float py, const Table_State& state, int skip_id = -1
+);
+void handle_mouse_press(Table_State& state, const Input& input);
+void handle_mouse_release(Table_State& state);
+void handle_mouse_move(Table_State& state, const Input& input);
+void handle_rotate_thing(
+  Table_State& state, const Input& input, bool clockwise = true
+);
 void shuffle_thing(Table_State& state, int thing_id);
 void process_input(Table_State& state, const Input& input);
 
