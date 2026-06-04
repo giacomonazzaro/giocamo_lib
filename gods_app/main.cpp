@@ -33,6 +33,7 @@
 #include <nlohmann/json.hpp>
 
 #include "../struct/json.h"
+#include "../tabletop/tabletop_json.h"
 #include "agent_ui.h"
 #include "ui.h"
 
@@ -187,7 +188,7 @@ void init_table_layout(
   // Centered on the screen so the root rect spans (0,0)-(W,H) in world.
   Thing root;
   root.name        = "root";
-  root.size        = {(float)window_width, (float)window_height};
+  root.shape       = rectangle_shape({(float)window_width, (float)window_height});
   root.transform.x = (float)window_width / 2.0f;
   root.transform.y = (float)window_height / 2.0f;
   root.id          = (int)table_state.things.size();
@@ -445,7 +446,7 @@ static void handle_discard_expand(
       for (const Thing& f : fresh) {
         if (f.name == s.name) {
           s.transform = f.transform;
-          s.size      = f.size;
+          s.shape     = f.shape;
           break;
         }
       }

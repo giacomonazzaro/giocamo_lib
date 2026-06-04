@@ -53,23 +53,144 @@ inline Transform2D inverse(const Transform2D& t) {
   };
 }
 
+struct Counter {
+  int value = 0;
+  int min   = 0;
+  int max   = 0;
+
+  // Instead of making Counter optional, we just check if (counter) { ... }.
+  // When min=max=0, the counter is  inactive and the value is not rendered.
+  operator bool() const { return !(min == 00 && max == 0); }
+};
+VISITABLE_STRUCT(Counter, value, min, max);
+
+struct Shape_Circle {
+  float radius = 0.0f;
+};
+struct Shape_Hexagon {
+  float radius = 0.0f;
+};
+struct Shape_Triangle {
+  float radius = 0.0f;
+};
+struct Shape_Rectangle {
+  Vector2 size = {0.0f, 0.0f};
+  float   corner_radius =
+    (float)tt::CARD_CORNER_RADIUS;  // formerly `rounded_corners`
+};
+VISITABLE_STRUCT(Shape_Circle, radius);
+VISITABLE_STRUCT(Shape_Hexagon, radius);
+VISITABLE_STRUCT(Shape_Triangle, radius);
+VISITABLE_STRUCT(Shape_Rectangle, size, corner_radius);
+
+enum struct Shape_Type {
+  CIRCLE,
+  HEXAGON,
+  TRIANGLE,
+  RECTANGLE,
+};
+
+struct Shape {
+  Shape_Type type = Shape_Type::RECTANGLE;
+  union {
+    Shape_Circle    circle;
+    Shape_Hexagon   hexagon;
+    Shape_Triangle  triangle;
+    Shape_Rectangle rectangle;
+  };
+  // Default to a rounded rectangle, so a default-constructed Shape is valid.
+  Shape() : rectangle() {}
+};
+
+// Bounding-box size of any shape (used for layout, hit-testing, drawing).
+inline Vector2 shape_size(const Shape& shape) {
+  switch (shape.type) {
+    case Shape_Type::RECTANGLE: return shape.rectangle.size;
+    case Shape_Type::CIRCLE:
+      return {shape.circle.radius * 2.0f, shape.circle.radius * 2.0f};
+    case Shape_Type::HEXAGON:
+      return {shape.hexagon.radius * 2.0f, shape.hexagon.radius * 2.0f};
+    case Shape_Type::TRIANGLE:
+      return {shape.triangle.radius * 2.0f, shape.triangle.radius * 2.0f};
+  }
+  return {0.0f, 0.0f};
+}
+
+// Point-in-convex-regular-polygon test, in the shape's local space (centered
+// at the origin), matching how DrawPoly lays out its vertices.
+inline bool point_in_regular_polygon(float x, float y, int sides, float radius) {
+  bool has_positive = false;
+  bool has_negative = false;
+  for (int i = 0; i < sides; i++) {
+    float angle_0 = (float)(2.0 * M_PI * i / sides);
+    float angle_1 = (float)(2.0 * M_PI * (i + 1) / sides);
+    float x_0     = std::cos(angle_0) * radius;
+    float y_0     = std::sin(angle_0) * radius;
+    float x_1     = std::cos(angle_1) * radius;
+    float y_1     = std::sin(angle_1) * radius;
+    // The sign of the cross product tells which side of the edge the point is.
+    float cross = (x_1 - x_0) * (y - y_0) - (y_1 - y_0) * (x - x_0);
+    if (cross > 0.0f) has_positive = true;
+    if (cross < 0.0f) has_negative = true;
+    if (has_positive && has_negative) return false;  // On both sides: outside.
+  }
+  return true;
+}
+
+// True if a point in the shape's local space (relative to its center) lies
+// inside the shape.
+inline bool point_in_shape(const Shape& shape, float x, float y) {
+  switch (shape.type) {
+    case Shape_Type::RECTANGLE: {
+      float half_width  = shape.rectangle.size.x / 2.0f;
+      float half_height = shape.rectangle.size.y / 2.0f;
+      return -half_width <= x && x <= half_width && -half_height <= y &&
+             y <= half_height;
+    }
+    case Shape_Type::CIRCLE: {
+      float radius = shape.circle.radius;
+      return x * x + y * y <= radius * radius;
+    }
+    case Shape_Type::HEXAGON:
+      return point_in_regular_polygon(x, y, 6, shape.hexagon.radius);
+    case Shape_Type::TRIANGLE:
+      return point_in_regular_polygon(x, y, 3, shape.triangle.radius);
+  }
+  return false;
+}
+
+// Build a rounded-rectangle shape from a size, the default for most things.
+inline Shape rectangle_shape(Vector2 size) {
+  Shape shape;
+  shape.type      = Shape_Type::RECTANGLE;
+  shape.rectangle = Shape_Rectangle{size, (float)tt::CARD_CORNER_RADIUS};
+  return shape;
+}
+
+inline Shape circle_shape(float size) {
+  Shape shape;
+  shape.type   = Shape_Type::CIRCLE;
+  shape.circle = Shape_Circle{size / 2.0f};
+  return shape;
+}
+
 // Base visual entity with optional draw callback.
 struct Thing {
   // Info.
-  std::string name;
-  int         id = 0;
+  std::string name = "thing";
+  int         id   = 0;
 
   // Appearance.
-  Color       color = {255, 255, 255, 50};
-  std::string image_path;
-  bool        rounded_corners = true;  // Round image corners (off for backgrounds).
+  Color       color      = {255, 255, 255, 50};
+  std::string image_path = "";
 
-  // Geometry. A thing is assumed to be a rectangle for now, centered at (0,0).
-  Transform2D transform;
-  Vector2     size = {(float)tt::CARD_WIDTH, (float)tt::CARD_HEIGHT};
+  Transform2D transform = {};
 
-  bool  face_up = true;
-  float depth   = 0.0f;
+  // A thing was assumed to be a rectangle before, centered at (0,0).
+  Shape   shape;
+  Counter counter = {};
+  bool    face_up = true;
+  float   depth   = 0.0f;
 
   // Container
   int              capacity = -1;  // -1 = unlimited.
@@ -82,9 +203,9 @@ VISITABLE_STRUCT(
   name,
   id,
   image_path,
-  rounded_corners,
   color,
-  size,
+  shape,
+  counter,
   transform,
   face_up,
   depth,
@@ -98,18 +219,19 @@ VISITABLE_STRUCT(
 // parent's local space. transform.x/y stores the center, so we offset by
 // half the size.
 inline void set_local_rect(Thing& thing, Rectangle rect) {
-  thing.size        = {rect.width, rect.height};
+  thing.shape       = rectangle_shape({rect.width, rect.height});
   thing.transform.x = rect.x + rect.width / 2.0f;
   thing.transform.y = rect.y + rect.height / 2.0f;
 }
 
 // Local-space rectangle (top-left coords) of a thing.
 inline Rectangle local_rect(const Thing& thing) {
+  Vector2 size = shape_size(thing.shape);
   return Rectangle{
-    thing.transform.x - thing.size.x / 2.0f,
-    thing.transform.y - thing.size.y / 2.0f,
-    thing.size.x,
-    thing.size.y,
+    thing.transform.x - size.x / 2.0f,
+    thing.transform.y - size.y / 2.0f,
+    size.x,
+    size.y,
   };
 }
 

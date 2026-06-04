@@ -251,16 +251,20 @@ void draw_thing(const Thing& thing, bool face_up) {
   }
 
   // Drawn centered at origin. The world transform places this center.
-  float w = thing.size.x;
-  float h = thing.size.y;
-  float x = -w / 2.0f;
-  float y = -h / 2.0f;
-  float r = (float)tt::CARD_CORNER_RADIUS;
+  Vector2 size = shape_size(thing.shape);
+  float   w    = size.x;
+  float   h    = size.y;
+  float   x    = -w / 2.0f;
+  float   y    = -h / 2.0f;
+
+  // A rectangle's texture corners are rounded only when it has a corner radius.
+  bool rounded = thing.shape.type == Shape_Type::RECTANGLE &&
+                 thing.shape.rectangle.corner_radius > 0.0f;
 
   // Thing background: image with rounded corners, or solid color fallback.
   Texture2D* texture = nullptr;
   if (!thing.image_path.empty()) {
-    texture = get_texture(thing.image_path, thing.rounded_corners);
+    texture = get_texture(thing.image_path, rounded);
   }
 
   if (texture) {
@@ -273,9 +277,36 @@ void draw_thing(const Thing& thing, bool face_up) {
       *texture, source_rect, dest_rect, Vector2{0.0f, 0.0f}, 0.0f, WHITE
     );
   } else if (w > 0.0f && h > 0.0f) {
-    // Fallback: solid color background sized to the thing's own rect.
-    DrawRectangleRounded(
-      Rectangle{x, y, w, h}, r / std::min(w, h), 8, thing.color
+    // Fallback: solid color background matching the thing's shape.
+    switch (thing.shape.type) {
+      case Shape_Type::RECTANGLE: {
+        float r = thing.shape.rectangle.corner_radius;
+        DrawRectangleRounded(
+          Rectangle{x, y, w, h}, r / std::min(w, h), 8, thing.color
+        );
+        break;
+      }
+      case Shape_Type::CIRCLE:
+        DrawCircleV({0.0f, 0.0f}, thing.shape.circle.radius, thing.color);
+        break;
+      case Shape_Type::HEXAGON:
+        DrawPoly({0.0f, 0.0f}, 6, thing.shape.hexagon.radius, 0.0f, thing.color);
+        break;
+      case Shape_Type::TRIANGLE:
+        DrawPoly(
+          {0.0f, 0.0f}, 3, thing.shape.triangle.radius, 0.0f, thing.color
+        );
+        break;
+    }
+  }
+
+  // Counter: a number centered in the thing, sized relative to the thing.
+  if (thing.counter) {
+    std::string text      = std::to_string(thing.counter.value);
+    int         font_size = (int)(std::min(w, h) * 0.45f);
+    int         label_w   = text_width(text, font_size);
+    render_text(
+      text, -label_w / 2.0f, -font_size / 2.0f, font_size, WHITE
     );
   }
 }

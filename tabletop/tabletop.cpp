@@ -109,10 +109,12 @@ bool is_full(const Thing& thing) {
 bool point_in_thing(
   float px, float py, int thing_id, const Table_State& state
 ) {
-  Rectangle r = world_rect(thing_id, state);
-  return (
-    r.x <= px && px <= r.x + r.width && r.y <= py && py <= r.y + r.height
-  );
+  const Thing& thing = state.things[thing_id];
+  // Bring the world point into the thing's local space (centered at its
+  // origin, rotation undone), then test against the shape itself.
+  Transform2D local =
+    inverse(state.world_transforms[thing_id]) * Transform2D{px, py, 0.0f};
+  return point_in_shape(thing.shape, local.x, local.y);
 }
 
 bool thing_pressed(int thing_id, const Table_State& state, const Input& input) {
@@ -346,8 +348,9 @@ Rectangle world_rect(int thing_id, const Table_State& state) {
   float        px = state.world_transforms[thing_id].x;
   float        py = state.world_transforms[thing_id].y;
   const Thing& t  = state.things[thing_id];
+  Vector2      size = shape_size(t.shape);
   return Rectangle{
-    px - t.size.x / 2.0f, py - t.size.y / 2.0f, t.size.x, t.size.y
+    px - size.x / 2.0f, py - size.y / 2.0f, size.x, size.y
   };
 }
 
@@ -355,12 +358,12 @@ Thing create_table_root(int width, int height, const std::string& texture_path) 
   auto root = Thing();
   root.name = "root";
   // Centered on the screen, so its rect spans (0,0)-(width,height) in world.
-  root.size        = {(float)width, (float)height};
+  root.shape       = rectangle_shape({(float)width, (float)height});
   root.transform.x = (float)width / 2.0f;
   root.transform.y = (float)height / 2.0f;
   // Table surface filling the whole window (square, no rounded corners).
-  root.image_path      = texture_path;
-  root.rounded_corners = false;
+  root.shape.rectangle.corner_radius = 0.0f;
+  root.image_path                    = texture_path;
   return root;
 }
 
@@ -412,10 +415,11 @@ void update_children_positions(int parent_id, Table_State& state, bool sort) {
   float child_width = static_cast<float>(tt::CARD_WIDTH);
 
   // Adaptive spread: shrink if children would exceed the parent's width.
-  if (n > 1 && parent.size.x > 0.0f && spread_x != 0.0f) {
+  float parent_width = shape_size(parent.shape).x;
+  if (n > 1 && parent_width > 0.0f && spread_x != 0.0f) {
     float total_width = static_cast<float>(n - 1) * spread_x + child_width;
-    if (total_width > parent.size.x) {
-      spread_x = (parent.size.x - child_width) / static_cast<float>(n - 1);
+    if (total_width > parent_width) {
+      spread_x = (parent_width - child_width) / static_cast<float>(n - 1);
     }
   }
 
@@ -445,6 +449,6 @@ Thing make_card(int id, const std::string& image_path) {
     card.image_path = image_path;
   }
   card.capacity = 0;
-  card.size     = {(float)tt::CARD_WIDTH, (float)tt::CARD_HEIGHT};
+  card.shape    = rectangle_shape({(float)tt::CARD_WIDTH, (float)tt::CARD_HEIGHT});
   return card;
 }

@@ -18,7 +18,7 @@ std::vector<Thing> make_connect_four_columns() {
   for (int col = 0; col < connect_four::COLS; ++col) {
     Thing column;
     column.name        = "col" + std::to_string(col);
-    column.size        = {cell, cell * (float)connect_four::ROWS};
+    column.shape       = rectangle_shape({cell, cell * (float)connect_four::ROWS});
     column.transform.x =
       ((float)col - (float)(connect_four::COLS - 1) / 2.0f) * cell;
     column.transform.y = 0.0f;

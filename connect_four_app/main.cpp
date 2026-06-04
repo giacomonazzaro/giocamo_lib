@@ -34,13 +34,13 @@ static void update_board(Table_State& table, connect_four::Game_State& state) {
     for (int row = 0; row < connect_four::ROWS; ++row) {
       int value = state.board[row][col];
       if (value == connect_four::EMPTY) continue;
-      int    disc_id   = row * connect_four::COLS + col;
-      Thing& disc      = table.things[disc_id];
-      disc.color       = connect_four_disc_color(value);
+      int    disc_id = row * connect_four::COLS + col;
+      Thing& disc    = table.things[disc_id];
+      disc.color     = connect_four_disc_color(value);
       // Position in column-local space: row 0 sits at the bottom.
       disc.transform.x = 0.0f;
-      disc.transform.y =
-        (float)(connect_four::ROWS - 1) * cell / 2.0f - (float)row * cell;
+      disc.transform.y = (float)(connect_four::ROWS - 1) * cell / 2.0f -
+                         (float)row * cell;
       children.push_back(disc_id);
     }
     table.things[COLUMNS_OFFSET + col].children = children;
@@ -56,7 +56,7 @@ static Table_State init_table_state(connect_four::Game_State& state) {
   for (int row = 0; row < connect_four::ROWS; ++row) {
     for (int col = 0; col < connect_four::COLS; ++col) {
       Thing disc = make_card(row * connect_four::COLS + col);
-      disc.size  = {(float)CONNECT_FOUR_DISC, (float)CONNECT_FOUR_DISC};
+      disc.shape = circle_shape((float)CONNECT_FOUR_DISC);
       table.things.push_back(disc);
     }
   }
@@ -70,8 +70,9 @@ static Table_State init_table_state(connect_four::Game_State& state) {
     table.things.push_back(std::move(column));
   }
 
-  auto root =
-    create_table_root(tt::WINDOW_WIDTH, tt::WINDOW_HEIGHT, "tabletop/data/wood.png");
+  auto root = create_table_root(
+    tt::WINDOW_WIDTH, tt::WINDOW_HEIGHT, "tabletop/data/wood.png"
+  );
   root.id       = (int)table.things.size();
   root.children = column_ids;
   table.things.push_back(root);

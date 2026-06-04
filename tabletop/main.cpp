@@ -143,12 +143,12 @@ static Table_State make_demo_table() {
     Thing root;
     root.id        = root_id;
     root.name      = "root";
-    root.size      = {(float)tt::WINDOW_WIDTH, (float)tt::WINDOW_HEIGHT};
+    root.shape     = rectangle_shape({(float)tt::WINDOW_WIDTH, (float)tt::WINDOW_HEIGHT});
     root.transform = {tt::WINDOW_WIDTH / 2.0f, tt::WINDOW_HEIGHT / 2.0f, 0.0f};
     root.children  = {deck_id, hand_id, discard_id};
     // Wooden table surface filling the whole window (no rounded corners).
-    root.image_path      = "tabletop/data/wood.png";
-    root.rounded_corners = false;
+    root.shape.rectangle.corner_radius = 0.0f;
+    root.image_path                    = "tabletop/data/wood.png";
     table.things.push_back(root);
     table.root = root_id;
   }
