@@ -10,8 +10,9 @@
 int Tressette_Agent_UI::choose_action(Game& game, const Choice& choice) {
   auto actions = choice.actions(game);
   if (choice.description == "acknowledge") {
-    printf("AAA\n");
-    auto rect = this->ui_state->place(100, 50, "right", "bottom", 100);
+    int  base   = stacks_offset;
+    auto middle = world_rect(base + TRESSETTE_TABLE_IDX, *table_state);
+    auto rect   = place_next(middle, 100, 50, "right", "center", 100);
     if (immediate_button(rect, "Ok", *this->ui_state->input)) {
       return 0;
     }

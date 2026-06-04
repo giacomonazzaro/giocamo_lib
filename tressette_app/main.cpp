@@ -41,7 +41,6 @@ static Table_State init_table_state(
     if (c.suit == tressette::Suit::BASTONI) t.color = {80, 50, 50, 255};
     if (c.suit == tressette::Suit::SPADE) t.color = {70, 80, 150, 255};
 
-    t.image_path = "tressette_card";  // Non-existent path → white bg fallback.
     table.things.push_back(t);
     table.draw_callbacks[c.id] = make_card_draw_callback(state, ui_state, c.id);
   }

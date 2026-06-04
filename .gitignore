@@ -10,6 +10,7 @@ gods/.mypy_cache/
 gods/.pytest_cache/
 gods/cards/card-images/
 **/build/
+**/build-bak/
 **/build-debug/
 **/build_wasm/
 raylib/

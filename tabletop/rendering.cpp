@@ -86,8 +86,12 @@ static Texture2D* get_texture(
   // returns an image with width==0 when the file is missing — bail in that
   // case so the renderer can fall back to a solid-color rect.
   Image image = LoadImage(image_path.c_str());
-  int   iw    = image.width;
-  int   ih    = image.height;
+  if (image.data == nullptr) {
+    s_texture_cache[key] = Texture2D{0};
+    return nullptr;
+  }
+  int iw = image.width;
+  int ih = image.height;
   if (iw == 0 || ih == 0) {
     UnloadImage(image);
     return nullptr;
