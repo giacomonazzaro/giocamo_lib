@@ -56,10 +56,12 @@ static Table_State make_demo_table() {
     );
   };
 
-  // 16 blank cards with sequential ids (0-15).
+  // 16 blank cards with sequential ids (0-15). Each card carries a counter
+  // (value 1..16, range 0..16) so its number is drawn centered inside it.
   for (int index = 0; index < 16; index++) {
-    Thing card = make_card(index);
-    card.color = card_colors[index % 4];
+    Thing card    = make_card(index);
+    card.color    = card_colors[index % 4];
+    card.counter  = {index + 1, 0, 16};
     table.things.push_back(card);
     table.draw_callbacks[index] = draw_card_border;
   }
@@ -164,9 +166,27 @@ int main() {
   auto table = make_demo_table();
   run_tabletop(
     table,
-    // Return false every frame: the demo never ends itself; closing the
-    // window stops the loop.
-    [](Table_State&, const Input&) { return false; },
+    // Per-frame update. UP / DOWN change the value of the counter on the thing
+    // under the cursor, clamped to its [min, max] range. Returns false: the
+    // demo never ends itself; closing the window stops the loop.
+    [](Table_State& table, const Input& input) {
+      int delta = 0;
+      if (key_pressed(input, KEY_UP)) delta = 1;
+      if (key_pressed(input, KEY_DOWN)) delta = -1;
+      if (delta != 0) {
+        Thing_Location hovered =
+          find_thing_at((float)input.mouse_x, (float)input.mouse_y, table);
+        if (!hovered.empty()) {
+          Thing& thing = table.things[hovered.back()];
+          if (thing.counter) {
+            int value = thing.counter.value + delta;
+            thing.counter.value =
+              std::max(thing.counter.min, std::min(thing.counter.max, value));
+          }
+        }
+      }
+      return false;
+    },
     tt::WINDOW_WIDTH,
     tt::WINDOW_HEIGHT,
     "Tabletop Demo"
