@@ -62,6 +62,8 @@ void sort_hand(Game_State& state, int player_index) {
 
 static Choice wait_for_player_acknolwdgment(Game_State& state);
 
+Choice make_play_choice(Game_State& state);
+
 Choice play_card(Game_State& state, int card_id) {
   Player& player = state.players[state.current_player];
   erase_card(player.hand, card_id);
@@ -70,7 +72,7 @@ Choice play_card(Game_State& state, int card_id) {
   if (state.trick.size() < 2) {
     // First card of the trick: the responder plays next.
     state.switch_turn();
-    return {};
+      return make_play_choice(state);
   } else {
     return wait_for_player_acknolwdgment(state);
   }
@@ -89,7 +91,7 @@ static Choice wait_for_player_acknolwdgment(Game_State& state) {
     return c;
   };
 
-  choice.resolve = [](Game& g, int _index) -> std::vector<Choice> {
+  choice.resolve = [](Game& g, int _index) -> Choice {
     auto& state = static_cast<Game_State&>(g);
 
     // Trick complete: resolve it.
@@ -120,7 +122,7 @@ static Choice wait_for_player_acknolwdgment(Game_State& state) {
     if (state.players[0].hand.empty() && state.players[1].hand.empty()) {
       state.game_over = true;
     }
-    return {};
+    return make_play_choice(state);
   };
   return choice;
 }
@@ -130,11 +132,11 @@ void resolve_pending_trick(Game_State& state) {
   (void)state;
 }
 
-std::optional<Choice> Game_State::next_choice() {
-  if (game_over) return std::nullopt;
+Choice Game_State::next_choice() { return make_play_choice(*this); }
 
+Choice make_play_choice(Game_State& state) {
   auto choice             = Choice();
-  choice.player_index     = current_player;
+  choice.player_index     = state.current_player;
   choice.description      = "play";
   choice.text_description = "Play a card";
 
@@ -145,11 +147,11 @@ std::optional<Choice> Game_State::next_choice() {
     return c;
   };
 
-  choice.resolve = [](Game& g, int index) -> std::vector<Choice> {
+  choice.resolve = [](Game& g, int index) -> Choice {
     auto&            s           = static_cast<Game_State&>(g);
     std::vector<int> legal       = legal_cards(s);
     auto             next_choice = play_card(s, legal[index]);
-    return {next_choice};
+    return next_choice;
   };
 
   return choice;

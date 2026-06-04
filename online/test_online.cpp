@@ -33,8 +33,8 @@ struct Test_Game : Game {
 
   bool is_game_over() const override { return turn >= 6; }
 
-  std::optional<Choice> next_choice() override {
-    if (is_game_over()) return std::nullopt;
+  Choice next_choice() override {
+      if (is_game_over()) return {};
     Choice c;
     c.player_index = current_player;
     c.description  = "test";
@@ -43,21 +43,21 @@ struct Test_Game : Game {
       o.targets = {"A", "B"};
       return o;
     };
-    c.resolve = [](Game& g, int idx) -> std::vector<Choice> {
-      Test_Game& tg = static_cast<Test_Game&>(g);
-      fprintf(
-        stderr,
-        "  [%s] resolve: player %d picked %d -> turn %d -> %d\n",
-        tg.log_tag == 0 ? "host" : "join",
-        tg.current_player,
-        idx,
-        tg.turn + 1,
-        1 - tg.current_player
-      );
-      tg.current_player = 1 - tg.current_player;
-      tg.turn++;
-      return {};
-    };
+//    c.resolve = [](Game& g, int idx) -> std::vector<Choice> {
+//      Test_Game& tg = static_cast<Test_Game&>(g);
+//      fprintf(
+//        stderr,
+//        "  [%s] resolve: player %d picked %d -> turn %d -> %d\n",
+//        tg.log_tag == 0 ? "host" : "join",
+//        tg.current_player,
+//        idx,
+//        tg.turn + 1,
+//        1 - tg.current_player
+//      );
+//      tg.current_player = 1 - tg.current_player;
+//      tg.turn++;
+//      return {};
+//    };
     return c;
   }
 };
@@ -90,13 +90,13 @@ void run_peer(bool is_host, std::atomic<int>* turns_done) {
 
   while (!game.is_game_over()) {
     auto choice = game.next_choice();
-    if (!choice) break;
-    int idx = duel->choose_action(game, *choice);
+//    if (!choice) break;
+    int idx = duel->choose_action(game, choice);
     if (idx < 0) {
       std::this_thread::sleep_for(std::chrono::milliseconds(50));
       continue;
     }
-    choice->resolve(game, idx);
+    choice.resolve(game, idx);
     turns_done->store(game.turn);
   }
   fprintf(stderr, "[%s] done. turns=%d player=%d\n", tag, game.turn, game.current_player);

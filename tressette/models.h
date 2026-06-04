@@ -81,8 +81,8 @@ struct Game_State : Game {
 
   Game_State() {}
 
-  bool                  is_game_over() const override { return game_over; }
-  std::optional<Choice> next_choice() override;
+  bool   is_game_over() const override { return game_over; }
+  Choice next_choice() override;
 
   void switch_turn() { current_player = 1 - current_player; }
 };

@@ -168,16 +168,16 @@ Agent* make_agent_pair(
 }
 
 void play_game(
-  Game&                             state,
-  Table_State&                      table,
-  UI_State&                         ui_state,
-  Agent&                            agent,
-  Input_Feed&                       input_feed,
-  const Menu_Result&                menu_result,
-  const std::string&                window_title,
-  std::function<void()>             update_table_from_game,
-  std::function<std::vector<int>()> compute_scores,
-  std::function<void()>             update_game_from_table,
+  Game&                                      state,
+  Table_State&                               table,
+  UI_State&                                  ui_state,
+  Agent&                                     agent,
+  Input_Feed&                                input_feed,
+  const Menu_Result&                         menu_result,
+  const std::string&                         window_title,
+  std::function<void()>                      update_table_from_game,
+  std::function<std::vector<int>()>          compute_scores,
+  std::function<void()>                      update_game_from_table,
   std::function<void(const nlohmann::json&)> on_message
 ) {
   auto current_choice = std::optional<Choice>();
@@ -246,8 +246,8 @@ void play_game(
     };
     Rectangle button_rect =
       place_inside(screen_rect, 160, 32, "right", "top", 20);
-    std::string label =
-      ui_state.playground ? "Playground: ON" : "Playground: OFF";
+    std::string label = ui_state.playground ? "Playground: ON"
+                                            : "Playground: OFF";
     if (immediate_button(button_rect, label, input, Color{20, 20, 20, 100})) {
       ui_state.playground = !ui_state.playground;
       if (ui_state.playground) {
@@ -283,11 +283,11 @@ void play_game(
       return false;
     }
 
-    current_choice = game_frame(state, agent, current_choice);
-    if (current_choice == std::nullopt && update_table_from_game) {
+    bool game_over = game_frame(state, agent);
+    if (update_table_from_game) {
       update_table_from_game();
     }
-    return state.is_game_over();
+    return game_over;
   };
 
   run_tabletop(

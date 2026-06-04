@@ -40,7 +40,7 @@ struct Choice {
   // actions: produces the set of available action options for this choice.
   std::function<Choose(Game&)> actions;
   // resolve: applies the chosen action and returns any follow-up choices.
-  std::function<std::vector<Choice>(Game&, int)> resolve;
+  std::function<Choice(Game&, int)> resolve;
 };
 
 // Abstract base. Concrete games (e.g. gods) subclass and override.
@@ -49,8 +49,13 @@ struct Game {
 
   virtual ~Game() = default;
 
-  virtual bool                  is_game_over() const = 0;
-  virtual std::optional<Choice> next_choice()        = 0;
+  virtual bool   is_game_over() const = 0;
+  virtual Choice next_choice()        = 0;
+
+  inline const Choice& current_choice() const {
+    // assert(choices.size());
+    return choices.back();
+  }
 };
 
 // Returns the number of indexable action options for a Choose.
@@ -66,6 +71,4 @@ struct Agent;
 void game_loop(
   Game& game, Agent& agent, std::function<void(Game&)> callback = nullptr
 );
-std::optional<Choice> game_frame(
-  Game& game, Agent& agent, std::optional<Choice> choice
-);
+bool game_frame(Game& game, Agent& agent);

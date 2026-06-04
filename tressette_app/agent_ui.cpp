@@ -8,8 +8,15 @@
 #include "ui.h"
 
 int Tressette_Agent_UI::choose_action(Game& game, const Choice& choice) {
-  auto  actions = choice.actions(game);
-  auto* cc      = std::get_if<Choose_Card>(&actions);
+  auto actions = choice.actions(game);
+  if (choice.description == "acknowledge") {
+    printf("AAA\n");
+    auto rect = this->ui_state->place(100, 50, "right", "bottom", 100);
+    if (immediate_button(rect, "Ok", *this->ui_state->input)) {
+      return 0;
+    }
+  }
+  auto* cc = std::get_if<Choose_Card>(&actions);
   if (!cc || cc->targets.empty()) return -1;
 
   auto legal_set = std::set<int>(cc->targets.begin(), cc->targets.end());

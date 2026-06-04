@@ -1,5 +1,7 @@
 #include "game.h"
 
+#include <cassert>
+
 #include "agent.h"
 
 namespace {
@@ -50,44 +52,40 @@ int action_options_count(const Choose& choose) {
 }
 
 void resolve_choice(Game& game, const Choice& choice, int index) {
-  std::vector<Choice> new_choices = choice.resolve(game, index);
-  game.choices.insert(
-    game.choices.end(),
-    std::make_move_iterator(new_choices.begin()),
-    std::make_move_iterator(new_choices.end())
-  );
+  Choice new_choices = choice.resolve(game, index);
+  game.choices.push_back(std::move(new_choices));
 }
 
-void game_loop(Game& game, Agent& agent, std::function<void(Game&)> callback) {
-  while (!game.is_game_over()) {
-    std::optional<Choice> choice = game.next_choice();
-    if (!choice) break;
+// void game_loop(Game& game, Agent& agent, std::function<void(Game&)> callback)
+// {
+//   while (!game.is_game_over()) {
+//     std::optional<Choice> choice = game.next_choice();
+//     if (!choice) break;
 
-    int index = agent.choose_action(game, *choice);
-    resolve_choice(game, *choice, index);
-  }
+//     int index = agent.choose_action(game, *choice);
+//     resolve_choice(game, *choice, index);
+//   }
 
-  if (callback) callback(game);
-}
+//   if (callback) callback(game);
+// }
 
-std::optional<Choice> game_frame(
-  Game& game, Agent& agent, std::optional<Choice> choice
-) {
+bool game_frame(Game& game, Agent& agent) {
+  if (game.is_game_over()) return true;
+
   // Only fetch a new choice when the previous one has been resolved.
-  if (!choice) {
-    choice = game.next_choice();
+  if (game.choices.empty()) {
+    game.choices.push_back(game.next_choice());
   }
 
-  if (choice) {
-    if (action_options_count(choice->actions(game)) == 0) {
-      return std::nullopt;
-    }
-    int action_index = agent.choose_action(game, *choice);
-    if (action_index != -1) {
-      resolve_choice(game, *choice, action_index);
-      choice = std::nullopt;
-    }
+  auto& choice = game.current_choice();
+
+  assert(action_options_count(choice.actions(game)) != 0);
+
+  int action_index = agent.choose_action(game, choice);
+  if (action_index != -1) {
+    auto new_choice = choice.resolve(game, action_index);
+    game.choices.push_back(std::move(new_choice));
   }
 
-  return choice;
+  return false;
 }

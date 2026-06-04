@@ -39,8 +39,8 @@ struct Tic_Tac_Toe : Game {
 
   bool is_game_over() const override { return winner() != -1 || is_full(); }
 
-  std::optional<Choice> next_choice() override {
-    if (is_game_over()) return std::nullopt;
+  Choice next_choice() override {
+      if (is_game_over()) return {};
 
     Choice choice;
     choice.player_index     = current_player;
@@ -57,17 +57,17 @@ struct Tic_Tac_Toe : Game {
       return c;
     };
 
-    choice.resolve = [](Game& g, int index) -> std::vector<Choice> {
-      auto&            ttt = static_cast<Tic_Tac_Toe&>(g);
-      std::vector<int> empties;
-      for (int i = 0; i < 9; ++i) {
-        if (ttt.board[i] == 0) empties.push_back(i);
-      }
-      const int cell     = empties[index];
-      ttt.board[cell]    = ttt.current_player + 1;
-      ttt.current_player = 1 - ttt.current_player;
-      return {};
-    };
+//    choice.resolve = [](Game& g, int index) -> std::vector<Choice> {
+//      auto&            ttt = static_cast<Tic_Tac_Toe&>(g);
+//      std::vector<int> empties;
+//      for (int i = 0; i < 9; ++i) {
+//        if (ttt.board[i] == 0) empties.push_back(i);
+//      }
+//      const int cell     = empties[index];
+//      ttt.board[cell]    = ttt.current_player + 1;
+//      ttt.current_player = 1 - ttt.current_player;
+//      return {};
+//    };
 
     return choice;
   }
