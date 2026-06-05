@@ -363,6 +363,7 @@ void animate(
   float                           dt,
   bool                            smoothout = true
 ) {
+  dt = 0.1;
   if (i == table.drag_state.thing_id() || !smoothout) {
     animated[i] = target[i];  // Snap to cursor.
     // return;

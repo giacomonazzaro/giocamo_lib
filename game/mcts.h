@@ -321,6 +321,15 @@ struct Agent_MCTS_Stochastic : Agent_MCTS<Game_T> {
   // set it before the first `choose_action` call.
   std::function<Rollout_Agent_T()> rollout_agent_factory;
 
+#ifdef __EMSCRIPTEN__
+  // Web has no worker threads, so the search runs cooperatively: one
+  // determinization sample per frame, with the running vote tally kept here
+  // between frames. See the Emscripten branch of choose_action.
+  bool             web_search_active = false;
+  int              web_samples_done  = 0;
+  std::vector<int> web_votes;
+#endif
+
   Agent_MCTS_Stochastic(
     int   num_iterations       = 1000,
     int   rollout_depth        = 64,
@@ -350,34 +359,44 @@ struct Agent_MCTS_Stochastic : Agent_MCTS<Game_T> {
     if (num_actions <= 0) return 0;
     if (num_actions == 1) return 0;
 
+#ifdef __EMSCRIPTEN__
+    // Web has no worker threads, so a blocking search would freeze the whole
+    // page until it finishes. Instead the search is spread across frames: each
+    // call runs a single determinization sample and returns -1, which tells the
+    // game loop to render this frame and ask again next frame. The vote tally
+    // is kept on the agent between frames; once enough samples have been
+    // gathered we return the voted-best action.
+    static thread_local std::mt19937 rng{std::random_device{}()};
+    if (!web_search_active) {
+      web_search_active = true;
+      web_samples_done  = 0;
+      web_votes.assign(num_actions, 0);
+    }
+    Rollout_Agent_T rollout_agent = rollout_agent_factory();
+    // Cap each frame's work by time so a single sample never stalls the loop on
+    // a slow device; num_iterations still bounds the tree (and its allocation).
+    const float        per_frame_budget = 0.010f;
+    Game_T             sampled = sample_state(concrete, choice.player_index, rng);
+    std::vector<float> scores  = mcts_scores<Game_T>(
+      sampled,
+      choice,
+      num_actions,
+      choice.player_index,
+      this->num_iterations,
+      this->rollout_depth,
+      this->exploration_constant,
+      rollout_agent,
+      rng,
+      per_frame_budget
+    );
+    web_votes[argmax(scores)] += 1;
+    web_samples_done += 1;
+    if (web_samples_done < num_samples) return -1;  // Keep thinking next frame.
+    web_search_active = false;
+    return argmax_randomized(web_votes);
+#else
     std::vector<int> votes(num_actions, 0);
 
-#ifdef __EMSCRIPTEN__
-    static thread_local std::mt19937 rng{std::random_device{}()};
-    Rollout_Agent_T                  rollout_agent = rollout_agent_factory();
-    // Sequential path: each sample runs in turn, so the per-call budget has to
-    // be split across samples to keep the total per-move time on target.
-    const float per_sample_budget = (this->time_budget_seconds > 0.0f)
-                                      ? this->time_budget_seconds /
-                                          (float)num_samples
-                                      : 0.0f;
-    for (int sample_index = 0; sample_index < num_samples; ++sample_index) {
-      Game_T sampled = sample_state(concrete, choice.player_index, rng);
-      std::vector<float> scores = mcts_scores<Game_T>(
-        sampled,
-        choice,
-        num_actions,
-        choice.player_index,
-        this->num_iterations,
-        this->rollout_depth,
-        this->exploration_constant,
-        rollout_agent,
-        rng,
-        per_sample_budget
-      );
-      votes[argmax(scores)] += 1;
-    }
-#else
     // Each sample is independent — run them on separate threads. Each thread
     // gets its own sampling rng and its own Agent_Random so the two never
     // share state. scoress[s] is written by exactly one thread (index s), so
@@ -407,8 +426,7 @@ struct Agent_MCTS_Stochastic : Agent_MCTS<Game_T> {
     }
     for (auto& thread : threads) thread.join();
     for (const auto& scores : scoress) votes[argmax_randomized(scores)] += 1;
-#endif
-
     return argmax_randomized(votes);
+#endif
   }
 };

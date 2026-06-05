@@ -107,6 +107,18 @@ static Agent* make_ai_opponent() {
   return new tressette::Agent_Minimax_Neural(
     "tressette/tressette_value_traced.pt", 3, 20
   );
+#elif defined(__EMSCRIPTEN__)
+  // Web: the search runs one determinization per frame so the page stays
+  // responsive (see the Emscripten branch of Agent_MCTS_Stochastic). Keep
+  // num_iterations modest — it bounds each frame's tree (and its allocation) —
+  // and gather enough samples to vote well.
+  return new Agent_MCTS_Stochastic<tressette::Game_State>(
+    /* num_iterations       */ 20000,
+    /* rollout_depth        */ 40,
+    /* num_samples          */ 40,
+    /* exploration_constant */ 1.41421356f,
+    /* time_budget_seconds  */ 0.0f
+  );
 #else
   return new Agent_MCTS_Stochastic<tressette::Game_State>(
     /* num_iterations       */ 1000000,
