@@ -83,8 +83,11 @@ static Table_State init_table_state(dot::Game_State& state, UI_State& ui_state) 
         return (src == hand_local && dst == play_area) ||
                (src == play_area && dst == hand_local);
       }
-      return (src == pool_opp && dst == play_area) ||
-             (src == play_area && dst == pool_opp);
+      if (state.phase == dot::Phase::DISCARD) {
+        return (src == pool_opp && dst == play_area) ||
+               (src == play_area && dst == pool_opp);
+      }
+      return false;  // Acknowledge pause: nothing is draggable.
     };
 
   auto root = create_table_root(
@@ -116,6 +119,7 @@ int main(int argc, char** argv) {
   );
 
   auto state    = dot::quick_setup(menu_result.seed);
+  state.human_player = LOCAL_SEAT;  // The acknowledge pause is owned by the human.
   auto ui_state = UI_State(tt::WINDOW_WIDTH, tt::WINDOW_HEIGHT);
   auto table    = init_table_state(state, ui_state);
 

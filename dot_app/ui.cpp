@@ -26,43 +26,57 @@ static Thing make_stack(
   stack.spread_y = spread_y;
   stack.face_up  = face_up;
   stack.name     = name;
-  stack.color    = {255, 255, 255, 0};  // Invisible parent; only cards show.
+  stack.color    = {255, 255, 255, 10};  // Invisible parent; only cards show.
   return stack;
 }
 
 std::vector<Thing> make_dot_stacks() {
   const float card_w = (float)tt::CARD_WIDTH;
   const float card_h = (float)tt::CARD_HEIGHT;
-  const float row    = card_w + 10.0f;   // Spread for a fanned-out row.
-  const float pile   = -4.0f;            // Spread for a near-flat pile.
-  const float row_w  = row * 5.0f + card_w;  // Width for up to 6 cards.
+  const float row    = card_w + 10.0f;  // Spread for a fanned-out row.
+  const float pile   = -4.0f;           // Spread for a near-flat pile.
 
-  // Four centered rows from top to bottom: opponent pool, shared pool, play
-  // area, local hand.
-  auto centered_row = [&](float center_y) {
-    return Rectangle{-row_w / 2.0f, center_y - card_h / 2.0f, row_w, card_h};
+  // A fanned-out row centered at (center_x, center_y), wide enough for
+  // `max_cards` (it auto-shrinks if more are added).
+  auto row_rect = [&](float center_x, float center_y, int max_cards) {
+    float width = row * (float)(max_cards - 1) + card_w;
+    return Rectangle{
+      center_x - width / 2.0f, center_y - card_h / 2.0f, width, card_h
+    };
   };
-  Rectangle pool_1_rect = centered_row(-391.0f);
-  Rectangle shared_rect = centered_row(-130.0f);
-  Rectangle play_rect   = centered_row(130.0f);
-  Rectangle hand_0_rect = centered_row(391.0f);
-
-  // Side piles for things we don't pick from directly.
-  auto pile_rect = [&](float x, float y) {
-    return Rectangle{x, y, card_w, card_h};
+  auto pile_rect = [&](float center_x, float center_y) {
+    return Rectangle{
+      center_x - card_w / 2.0f, center_y - card_h / 2.0f, card_w, card_h
+    };
   };
 
+  // Four rows, matching the rulebook: opponent pool on top, the shared pool in
+  // the middle, your pool below it, and your hand along the bottom with the
+  // play area beside it.
   std::vector<Thing> stacks(DOT_STACK_COUNT);
-  stacks[DOT_POOL_1]    = make_stack(pool_1_rect, row, 0.0f, true, "pool_1");
-  stacks[DOT_SHARED]    = make_stack(shared_rect, row, 0.0f, false, "shared");
-  stacks[DOT_PLAY_AREA] = make_stack(play_rect, row, 0.0f, true, "play_area");
-  stacks[DOT_HAND_0]    = make_stack(hand_0_rect, row, 0.0f, true, "hand_0");
-  stacks[DOT_POOL_0]    = make_stack(pile_rect(440.0f, -460.0f), 0.0f, pile, true, "pool_0");
-  stacks[DOT_HAND_1]    = make_stack(pile_rect(-760.0f, -460.0f), 0.0f, pile, false, "hand_1");
-  stacks[DOT_DRAW_0]    = make_stack(pile_rect(-760.0f, 250.0f), 0.0f, pile, false, "draw_0");
-  stacks[DOT_STAR_0]    = make_stack(pile_rect(-590.0f, 250.0f), 0.0f, pile, false, "star_0");
-  stacks[DOT_DRAW_1]    = make_stack(pile_rect(-760.0f, -110.0f), 0.0f, pile, false, "draw_1");
-  stacks[DOT_STAR_1]    = make_stack(pile_rect(-590.0f, -110.0f), 0.0f, pile, false, "star_1");
+  stacks[DOT_POOL_1] =
+    make_stack(row_rect(0.0f, -391.0f, 8), row, 0.0f, true, "pool_1");
+  stacks[DOT_SHARED] =
+    make_stack(row_rect(0.0f, -130.0f, 6), row, 0.0f, false, "shared");
+  stacks[DOT_POOL_0] =
+    make_stack(row_rect(0.0f, 130.0f, 8), row, 0.0f, true, "pool_0");
+  stacks[DOT_HAND_0] =
+    make_stack(row_rect(-320.0f, 391.0f, 6), row, 0.0f, true, "hand_0");
+  stacks[DOT_PLAY_AREA] =
+    make_stack(row_rect(560.0f, 391.0f, 3), row, 0.0f, true, "play_area");
+
+  // Face-down piles tucked into the side margins (decks and the opponent's
+  // hidden hand); not interacted with directly.
+  stacks[DOT_HAND_1] =
+    make_stack(pile_rect(765.0f, -391.0f), 0.0f, pile, false, "hand_1");
+  stacks[DOT_DRAW_0] =
+    make_stack(pile_rect(-765.0f, -130.0f), 0.0f, pile, false, "draw_0");
+  stacks[DOT_DRAW_1] =
+    make_stack(pile_rect(765.0f, -130.0f), 0.0f, pile, false, "draw_1");
+  stacks[DOT_STAR_0] =
+    make_stack(pile_rect(-765.0f, 130.0f), 0.0f, pile, false, "star_0");
+  stacks[DOT_STAR_1] =
+    make_stack(pile_rect(765.0f, 130.0f), 0.0f, pile, false, "star_1");
   return stacks;
 }
 
@@ -82,34 +96,40 @@ std::function<void(const Table_State&, const Input&, bool)>
 make_dot_card_draw_callback(
   const std::vector<dot::Card>& cards, UI_State& ui_state, int id
 ) {
-  return [&cards, &ui_state, id](const Table_State&, const Input&, bool face_up) {
-    if (!face_up) return;
-    const dot::Card& card = cards[id];
+  return
+    [&cards, &ui_state, id](const Table_State&, const Input&, bool face_up) {
+      if (!face_up) return;
+      const dot::Card& card = cards[id];
 
-    // Three rows of dots: blue on top, black in the middle, red at the bottom.
-    draw_dot_row(card.blue_dots, -0.28f, BLUE_DOT);
-    draw_dot_row(card.black_dots, 0.0f, BLACK_DOT);
-    draw_dot_row(card.red_dots, 0.28f, RED_DOT);
+      // Three rows of dots: blue on top, black in the middle, red at the
+      // bottom.
+      draw_dot_row(card.blue_dots, -0.28f, BLUE_DOT);
+      draw_dot_row(card.black_dots, 0.0f, BLACK_DOT);
+      draw_dot_row(card.red_dots, 0.28f, RED_DOT);
 
-    float half_w = (float)tt::CARD_WIDTH / 2.0f;
-    float half_h = (float)tt::CARD_HEIGHT / 2.0f;
+      float half_w = (float)tt::CARD_WIDTH / 2.0f;
+      float half_h = (float)tt::CARD_HEIGHT / 2.0f;
 
-    // A small star marker in the top-left corner distinguishes star cards.
-    if (card.is_star) {
-      render_text("*", 8.0f - half_w, 4.0f - half_h, 40, Color{255, 215, 0, 255});
-    }
+      // A small star marker in the top-left corner distinguishes star cards.
+      if (card.is_star) {
+        render_text(
+          "*", 8.0f - half_w, 4.0f - half_h, 40, Color{255, 215, 0, 255}
+        );
+      }
 
-    // Highlight border on selectable cards.
-    if (ui_state.highlighted_things.count(id) > 0) {
-      DrawRectangleRoundedLinesEx(
-        Rectangle{-half_w, -half_h, (float)tt::CARD_WIDTH, (float)tt::CARD_HEIGHT},
-        0.18f,
-        8,
-        4.0f,
-        Color{255, 215, 0, 220}
-      );
-    }
-  };
+      // Highlight border on selectable cards.
+      if (ui_state.highlighted_things.count(id) > 0) {
+        DrawRectangleRoundedLinesEx(
+          Rectangle{
+            -half_w, -half_h, (float)tt::CARD_WIDTH, (float)tt::CARD_HEIGHT
+          },
+          0.18f,
+          8,
+          4.0f,
+          Color{255, 215, 0, 220}
+        );
+      }
+    };
 }
 
 // Sum of one color's dots over a set of cards. color: 0 blue, 1 black, 2 red.
@@ -119,9 +139,12 @@ static int pool_color_total(
   int total = 0;
   for (int id : cards) {
     const dot::Card& card = state.all_cards[id];
-    if (color == 0) total += card.blue_dots;
-    else if (color == 1) total += card.black_dots;
-    else total += card.red_dots;
+    if (color == 0)
+      total += card.blue_dots;
+    else if (color == 1)
+      total += card.black_dots;
+    else
+      total += card.red_dots;
   }
   return total;
 }
@@ -143,13 +166,18 @@ void draw_dot_hud(const dot::Game_State& state) {
   float x     = 16.0f;
   float y     = 16.0f;
 
-  render_text("D.O.T   Round " + std::to_string(state.round + 1) + "/3", x, y, 28, white);
+  render_text(
+    "D.O.T   Round " + std::to_string(state.round + 1) + "/3", x, y, 28, white
+  );
   y += 34.0f;
   render_text(
     "Tokens up for grabs:  blue " + std::to_string(state.pending_blue) +
       "   black " + std::to_string(state.pending_black) + "   red " +
       std::to_string(state.pending_red),
-    x, y, 20, dim
+    x,
+    y,
+    20,
+    dim
   );
   y += 34.0f;
   render_text("You: " + player_line(state, 0), x, y, 20, white);

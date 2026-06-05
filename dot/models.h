@@ -29,12 +29,14 @@ struct Player {
   int              tokens_red   = 0;
 };
 
-// The two phases a player makes a decision in. The star card is drawn
-// automatically into the hand, and scoring between SPLIT and DISCARD is
-// automatic, so neither is a phase here.
-//   SPLIT   - secretly pick which 3 of the 6 hand cards go to the shared pool.
-//   DISCARD - remove cards from the opponent's pool (end of Rounds 1 and 2).
-enum class Phase { SPLIT, DISCARD };
+// The phases a player makes a decision in. The star card is drawn
+// automatically into the hand.
+//   SPLIT       - secretly pick which 3 of the 6 hand cards go to the shared
+//                 pool.
+//   ACKNOWLEDGE - both players have committed; pause so the player can see the
+//                 revealed shared pool before it is scored.
+//   DISCARD     - remove cards from the opponent's pool (end of Rounds 1 & 2).
+enum class Phase { SPLIT, ACKNOWLEDGE, DISCARD };
 
 // Full D.O.T game state. Played over 3 rounds; each round both players draw,
 // secretly split 6 cards into their own pool (3) and the shared pool (3), then
@@ -55,10 +57,11 @@ struct Game_State : Game {
   Phase phase         = Phase::SPLIT;
   int   acting_player = 0;            // Whose decision the next choice is.
   int   discard_first = 0;            // Who discards first this round.
+  int   human_player  = -1;           // Seat that owns the acknowledge pause.
   bool  game_over     = false;
 
-  bool                  is_game_over() const override { return game_over; }
-  std::optional<Choice> next_choice() override;
+  bool   is_game_over() const override { return game_over; }
+  Choice next_choice() override;
 };
 
 }  // namespace dot

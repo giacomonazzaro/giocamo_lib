@@ -177,15 +177,6 @@ void handle_mouse_release(Table_State& state) {
   Drag_State& drag     = state.drag_state;
   int         thing_id = drag.thing_id();
   if (thing_id < 0) return;
-  assert(!drag.hovered_thing.empty());
-
-  // Capture the thing.s current world position (where the user let go) so the
-  // animation can lerp from that point — not from a stale rect that's about to
-  // be reinterpreted in a different parent's coordinate space.
-  Vector2 world_at_release = {
-    state.world_transforms[thing_id].x,
-    state.world_transforms[thing_id].y,
-  };
 
   if (!drag.allowed) {
     // Snap-back: reset drag first so update_children_positions doesn't skip
@@ -198,6 +189,16 @@ void handle_mouse_release(Table_State& state) {
     return;
   }
 
+  assert(!drag.hovered_thing.empty());
+
+  // Capture the thing.s current world position (where the user let go) so the
+  // animation can lerp from that point — not from a stale rect that's about to
+  // be reinterpreted in a different parent's coordinate space.
+  Vector2 world_at_release = {
+    state.world_transforms[thing_id].x,
+    state.world_transforms[thing_id].y,
+  };
+    
   // Signal drop as (from_parent, to_parent, thing_id).
   state.dropped_thing =
     std::make_tuple(drag.parent_id(), drag.hovered_id(), thing_id);
@@ -246,6 +247,7 @@ void handle_mouse_move(Table_State& state, const Input& input) {
   );
 
   drag.hovered_thing = find_thing_at(mx, my, state, drag.thing_id());
+  assert(!drag.hovered_thing.empty());
 
   while (drag.hovered_thing.size() > 0) {
     drag.allowed = !is_full(state.things[drag.hovered_id()]);

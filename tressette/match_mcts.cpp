@@ -74,20 +74,21 @@ int main(int argc, char** argv) {
   // types here to repurpose the program for other A/B comparisons.
   (void)rollout_minimax_depth;
 
-  Agent_MCTS_Stochastic_Old<tressette::Game_State> weak_agent(
-    mcts_iterations,
-    mcts_rollout_depth,
-    mcts_samples,
-    /*exploration_constant=*/1.41421356f,
-    mcts_time_budget_seconds
-  );
+  // Agent_MCTS_Stochastic_Old<tressette::Game_State> weak_agent(
+  //   mcts_iterations,
+  //   mcts_rollout_depth,
+  //   mcts_samples,
+  //   /*exploration_constant=*/1.41421356f,
+  //   mcts_time_budget_seconds
+  // );
+  auto weak_agent = Agent_Random();
 
   Agent_MCTS_Stochastic<tressette::Game_State> strong_agent(
-    mcts_iterations,
-    mcts_rollout_depth,
-    mcts_samples,
-    /*exploration_constant=*/1.41421356f,
-    mcts_time_budget_seconds
+    /* num_iterations       */ 20000,
+    /* rollout_depth        */ 40,
+    /* num_samples          */ 40,
+    /* exploration_constant */ 1.41421356f,
+    /* time_budget_seconds  */ 0.0f
   );
 
   Timing_Agent timed_weak(&weak_agent, "weak");

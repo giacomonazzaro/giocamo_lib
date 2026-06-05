@@ -213,7 +213,7 @@ void draw_background(const Input& input, float turn) {
 
 // --- draw_thing_back ---
 
-void draw_thing_back() {
+void draw_thing_back(const Thing& thing) {
   // Drawn centered at origin. The world transform places this center.
   float w = (float)tt::CARD_WIDTH;
   float h = (float)tt::CARD_HEIGHT;
@@ -222,9 +222,9 @@ void draw_thing_back() {
   float y = -h / 2.0f;
 
   // Thing colors from kt namespace (matching config.py defaults).
-  Color back_color    = {60, 80, 120, 255};
-  Color pattern_color = {80, 100, 140, 255};
-  Color border_color  = {80, 80, 80, 255};
+  Color back_color    = {60, 80, 120, thing.color.a};
+  Color pattern_color = {80, 100, 140, thing.color.a};
+  Color border_color  = {80, 80, 80, thing.color.a};
 
   // Thing background.
   DrawRectangleRounded(
@@ -250,7 +250,7 @@ void draw_thing_back() {
 
 void draw_thing(const Thing& thing, bool face_up) {
   if (!face_up) {
-    draw_thing_back();
+    draw_thing_back(thing);
     return;
   }
 

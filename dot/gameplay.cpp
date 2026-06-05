@@ -200,6 +200,16 @@ static void resolve_split(Game_State& state, int index) {
     state.acting_player = 1;  // The other player splits next.
     return;
   }
+  // Both players have committed; pause on the revealed shared pool so the
+  // player can see what the opponent played before it is scored.
+  state.phase = Phase::ACKNOWLEDGE;
+  state.acting_player =
+    state.human_player >= 0 ? state.human_player : state.acting_player;
+}
+
+// After the player has seen the revealed board: score the round and set up the
+// discard phase, or end the game.
+static void resolve_acknowledge(Game_State& state) {
   do_scoring(state);
   if (state.game_over) return;
   state.phase         = Phase::DISCARD;
@@ -225,8 +235,10 @@ static void resolve_discard(Game_State& state, int index) {
   start_round(state);
 }
 
-std::optional<Choice> Game_State::next_choice() {
-  if (game_over) return std::nullopt;
+Choice Game_State::next_choice() {
+  // The game is driven by is_game_over(); when it's set, this choice is never
+  // acted on, so a blank one is fine.
+  if (game_over) return Choice{};
 
   Choice choice;
   choice.player_index = acting_player;
@@ -238,9 +250,23 @@ std::optional<Choice> Game_State::next_choice() {
       Game_State& state = static_cast<Game_State&>(game);
       return Choose_Cards{state.players[state.acting_player].hand, SHARED_COUNT, false};
     };
-    choice.resolve = [](Game& game, int index) -> std::vector<Choice> {
-      resolve_split(static_cast<Game_State&>(game), index);
-      return {};
+    choice.resolve = [](Game& game, int index) -> Choice {
+      Game_State& state = static_cast<Game_State&>(game);
+      resolve_split(state, index);
+      return state.next_choice();  // The next decision (or game over).
+    };
+  } else if (phase == Phase::ACKNOWLEDGE) {
+    choice.description      = "acknowledge";
+    choice.text_description = "See the revealed cards";
+    choice.actions          = [](Game&) -> Choose {
+      Choose_Option option;
+      option.targets = {"Ok"};
+      return option;
+    };
+    choice.resolve = [](Game& game, int) -> Choice {
+      Game_State& state = static_cast<Game_State&>(game);
+      resolve_acknowledge(state);
+      return state.next_choice();  // The next decision (or game over).
     };
   } else {
     choice.description      = "discard";
@@ -251,9 +277,10 @@ std::optional<Choice> Game_State::next_choice() {
         state.players[1 - state.acting_player].pool, discard_count(state), false
       };
     };
-    choice.resolve = [](Game& game, int index) -> std::vector<Choice> {
-      resolve_discard(static_cast<Game_State&>(game), index);
-      return {};
+    choice.resolve = [](Game& game, int index) -> Choice {
+      Game_State& state = static_cast<Game_State&>(game);
+      resolve_discard(state, index);
+      return state.next_choice();  // The next decision (or game over).
     };
   }
   return choice;

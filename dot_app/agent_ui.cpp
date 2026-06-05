@@ -17,6 +17,20 @@ int Dot_Agent_UI::choose_action(Game& game, const Choice& choice) {
   auto&        state = static_cast<dot::Game_State&>(game);
   const Input& input = *ui_state->input;
 
+  // The Commit / Ok button sits in the gap between the hand and the play area.
+  Rectangle button = {1010.0f, 862.0f, 170.0f, 56.0f};
+
+  // Acknowledge pause: the shared pool is revealed; wait for the player to
+  // look at what the opponent played and press Ok before it is scored.
+  if (choice.description == "acknowledge") {
+    ui_state->highlighted_things.clear();
+    render_text(
+      "Cards revealed - press Ok to score", 640.0f, 18.0f, 22,
+      Color{255, 235, 150, 255}
+    );
+    return immediate_button(button, "Ok", input) ? 0 : -1;
+  }
+
   bool split    = (state.phase == dot::Phase::SPLIT);
   int  required = split ? dot::SHARED_COUNT : dot::discard_count(state);
 
@@ -34,15 +48,14 @@ int Dot_Agent_UI::choose_action(Game& game, const Choice& choice) {
   ui_state->highlighted_things.clear();
   for (int id : targets) ui_state->highlighted_things[id] = id;
 
-  // Instruction + Commit button, drawn on top of the table.
+  // Instruction at the top center, Commit button between hand and play area.
   std::string instruction = split ? "Drag 3 cards to the play area, then Commit"
                                   : "Drag " + std::to_string(required) +
                                       " opponent cards to discard, then Commit";
-  render_text(instruction, 1040.0f, 440.0f, 18, Color{235, 235, 235, 255});
+  render_text(instruction, 640.0f, 18.0f, 22, Color{255, 235, 150, 255});
   std::string label = "Commit " + std::to_string((int)selected.size()) + "/" +
                       std::to_string(required);
-  Rectangle button  = {1320.0f, 470.0f, 250.0f, 52.0f};
-  bool      pressed = immediate_button(button, label, input);
+  bool pressed = immediate_button(button, label, input);
 
   if (!pressed || (int)selected.size() != required) return -1;
 

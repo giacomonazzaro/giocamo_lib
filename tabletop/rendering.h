@@ -7,7 +7,6 @@ struct Input;
 struct Input_Feed;
 void draw_background(const Input& input, float turn = 0.0f);
 void draw_table(Table_State& state, const Input& input);
-void draw_thing_back();
 void draw_zoomed_thing(
   const Table_State& state, const Input& input, int thing_id, bool face_up
 );
