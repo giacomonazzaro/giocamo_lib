@@ -283,11 +283,11 @@ void play_game(
       return false;
     }
 
-    bool game_over = game_frame(state, agent);
-    if (update_table_from_game) {
+    bool state_changed = game_frame(state, agent);
+    if (state_changed && update_table_from_game) {
       update_table_from_game();
     }
-    return game_over;
+    return state.is_game_over();
   };
 
   run_tabletop(

@@ -85,6 +85,7 @@ bool game_frame(Game& game, Agent& agent) {
   if (action_index != -1) {
     auto new_choice = choice.resolve(game, action_index);
     game.choices.push_back(std::move(new_choice));
+    return true;
   }
 
   return false;

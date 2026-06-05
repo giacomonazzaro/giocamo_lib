@@ -363,11 +363,6 @@ void animate(
   float                           dt,
   bool                            smoothout = true
 ) {
-  if (!smoothout) {
-    printf("smoothout: %d\n", smoothout);
-  }
-  // dt *= 10.0f;  // Speed multiplier: higher = snappier but more CPU.
-  // for (int i = 0; i < table.things.size(); ++i) {
   if (i == table.drag_state.thing_id() || !smoothout) {
     animated[i] = target[i];  // Snap to cursor.
     // return;
@@ -406,7 +401,12 @@ void animate(
   const Table_State&              table,
   float                           dt
 ) {
-  animate(table.root, animated, target, table, dt * 10);
+  // The smoothing factor must stay below 1, otherwise the lerp overshoots its
+  // target and flings things far away. A long frame (e.g. the synchronous AI
+  // search on web blocking the loop) makes dt spike, so cap the factor: a big
+  // hitch then snaps to the target instead of exploding.
+  float smoothing = std::min(dt * 10.0f, 1.0f);
+  animate(table.root, animated, target, table, smoothing);
 }
 
 // Translate to (wt.x, wt.y) — which is the thing's center — and rotate

@@ -1,8 +1,8 @@
 #include "ui.h"
 
 #include <tabletop/config.h>
-#include <tabletop/tabletop.h>
 #include <tabletop/rendering.h>
+#include <tabletop/tabletop.h>
 
 #include <string>
 
@@ -165,4 +165,3 @@ void draw_tressette_player_hud(
                          : Color{120, 120, 120, 200};
   render_text(label, 30.0f, (float)hud_y, 28, col);
 }
-

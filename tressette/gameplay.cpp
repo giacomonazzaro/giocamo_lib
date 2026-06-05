@@ -79,8 +79,12 @@ Choice play_card(Game_State& state, int card_id) {
 }
 
 static Choice wait_for_player_acknolwdgment(Game_State& state) {
-  auto choice             = Choice();
-  choice.player_index     = state.human_player;
+  auto choice = Choice();
+  // The human confirms the completed trick when there is one; in headless play
+  // (search, self-play) there is no human, so let the current seat own this
+  // single-option step rather than the invalid seat -1.
+  choice.player_index =
+    state.human_player >= 0 ? state.human_player : state.current_player;
   choice.description      = "acknowledge";
   choice.text_description = "Acknowledge trick";
 
@@ -132,7 +136,15 @@ void resolve_pending_trick(Game_State& state) {
   (void)state;
 }
 
-Choice Game_State::next_choice() { return make_play_choice(*this); }
+Choice Game_State::next_choice() {
+  // A complete trick (2 cards on the table) must be resolved before anyone
+  // plays again: that's where the winner is decided, the cards are won, and
+  // both players draw from the stock. The search agents reach the pending
+  // choice only through next_choice(), so without this the trick would never
+  // resolve during search and every position would score zero.
+  if (trick.size() == 2) return wait_for_player_acknolwdgment(*this);
+  return make_play_choice(*this);
+}
 
 Choice make_play_choice(Game_State& state) {
   auto choice             = Choice();

@@ -109,9 +109,9 @@ static Agent* make_ai_opponent() {
   );
 #else
   return new Agent_MCTS_Stochastic<tressette::Game_State>(
-    /* num_iterations       */ 100000,
+    /* num_iterations       */ 1000000,
     /* rollout_depth        */ 40,
-    /* num_samples          */ 20,
+    /* num_samples          */ 50,
     /* exploration_constant */ 1.41421356f,
     /* time_budget_seconds  */ 5.0f
   );
