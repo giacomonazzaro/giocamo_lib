@@ -1,0 +1,63 @@
+#include "agent_ui.h"
+
+#include <dot/gameplay.h>
+#include <tabletop/config.h>
+#include <tabletop/rendering.h>
+
+#include <algorithm>
+#include <string>
+
+#include "ui.h"
+
+// raylib last: its color macros (RED/GREEN/BLUE) would expand inside enums
+// otherwise.
+#include <raylib.h>
+
+int Dot_Agent_UI::choose_action(Game& game, const Choice& choice) {
+  auto&        state = static_cast<dot::Game_State&>(game);
+  const Input& input = *ui_state->input;
+
+  bool split    = (state.phase == dot::Phase::SPLIT);
+  int  required = split ? dot::SHARED_COUNT : dot::discard_count(state);
+
+  // The list the chosen action indexes into: our hand for the split, the
+  // opponent's pool for the discard. The cards the player has dragged into
+  // the play area are a subset of this list.
+  const std::vector<int>& targets = split
+                                      ? state.players[player_index].hand
+                                      : state.players[1 - player_index].pool;
+
+  int                     play_area_id = stacks_offset + DOT_PLAY_AREA;
+  const std::vector<int>& selected = table_state->things[play_area_id].children;
+
+  // Highlight every card the player may drag this turn.
+  ui_state->highlighted_things.clear();
+  for (int id : targets) ui_state->highlighted_things[id] = id;
+
+  // Instruction + Commit button, drawn on top of the table.
+  std::string instruction = split ? "Drag 3 cards to the play area, then Commit"
+                                  : "Drag " + std::to_string(required) +
+                                      " opponent cards to discard, then Commit";
+  render_text(instruction, 1040.0f, 440.0f, 18, Color{235, 235, 235, 255});
+  std::string label = "Commit " + std::to_string((int)selected.size()) + "/" +
+                      std::to_string(required);
+  Rectangle button  = {1320.0f, 470.0f, 250.0f, 52.0f};
+  bool      pressed = immediate_button(button, label, input);
+
+  if (!pressed || (int)selected.size() != required) return -1;
+
+  // Turn the selected cards into the matching action index: find each card's
+  // position in the target list, then rank that sorted combination.
+  std::vector<int> positions;
+  for (int card_id : selected) {
+    for (int i = 0; i < (int)targets.size(); ++i) {
+      if (targets[i] == card_id) {
+        positions.push_back(i);
+        break;
+      }
+    }
+  }
+  std::sort(positions.begin(), positions.end());
+  ui_state->highlighted_things.clear();
+  return (int)dot::combination_rank((int)targets.size(), positions);
+}
