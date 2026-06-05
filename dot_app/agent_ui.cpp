@@ -34,12 +34,15 @@ int Dot_Agent_UI::choose_action(Game& game, const Choice& choice) {
   bool split    = (state.phase == dot::Phase::SPLIT);
   int  required = split ? dot::SHARED_COUNT : dot::discard_count(state);
 
-  // The list the chosen action indexes into: our hand for the split, the
-  // opponent's pool for the discard. The cards the player has dragged into
-  // the play area are a subset of this list.
-  const std::vector<int>& targets = split
-                                      ? state.players[player_index].hand
-                                      : state.players[1 - player_index].pool;
+  // The seat that is acting; this is the local player except in hot-seat,
+  // where the one agent drives both seats.
+  int seat = choice.player_index;
+
+  // The list the chosen action indexes into: the acting seat's hand for the
+  // split, the opponent's pool for the discard. The cards dragged into the
+  // play area are a subset of this list.
+  const std::vector<int>& targets =
+    split ? state.players[seat].hand : state.players[1 - seat].pool;
 
   int                     play_area_id = stacks_offset + DOT_PLAY_AREA;
   const std::vector<int>& selected = table_state->things[play_area_id].children;

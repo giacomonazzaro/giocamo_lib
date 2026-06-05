@@ -30,7 +30,7 @@ static Thing make_stack(
   return stack;
 }
 
-std::vector<Thing> make_dot_stacks() {
+std::vector<Thing> make_dot_stacks(int bottom_player, bool show_opponent_hand) {
   const float card_w = (float)tt::CARD_WIDTH;
   const float card_h = (float)tt::CARD_HEIGHT;
   const float row    = card_w + 10.0f;  // Spread for a fanned-out row.
@@ -50,33 +50,45 @@ std::vector<Thing> make_dot_stacks() {
     };
   };
 
-  // Four rows, matching the rulebook: opponent pool on top, the shared pool in
-  // the middle, your pool below it, and your hand along the bottom with the
-  // play area beside it.
+  // Stacks are indexed by player; their on-screen position depends on which
+  // seat the local player owns. The local player sits along the bottom.
+  const int top_player = 1 - bottom_player;
+  const int pool_idx[2] = {DOT_POOL_0, DOT_POOL_1};
+  const int hand_idx[2] = {DOT_HAND_0, DOT_HAND_1};
+  const int draw_idx[2] = {DOT_DRAW_0, DOT_DRAW_1};
+  const int star_idx[2] = {DOT_STAR_0, DOT_STAR_1};
+
+  // Matching the rulebook: opponent pool on top, the shared pool in the
+  // middle, your pool below it, and your hand along the bottom with the play
+  // area beside it.
   std::vector<Thing> stacks(DOT_STACK_COUNT);
-  stacks[DOT_POOL_1] =
-    make_stack(row_rect(0.0f, -391.0f, 8), row, 0.0f, true, "pool_1");
   stacks[DOT_SHARED] =
     make_stack(row_rect(0.0f, -130.0f, 6), row, 0.0f, false, "shared");
-  stacks[DOT_POOL_0] =
-    make_stack(row_rect(0.0f, 130.0f, 8), row, 0.0f, true, "pool_0");
-  stacks[DOT_HAND_0] =
-    make_stack(row_rect(-320.0f, 391.0f, 6), row, 0.0f, true, "hand_0");
   stacks[DOT_PLAY_AREA] =
     make_stack(row_rect(560.0f, 391.0f, 3), row, 0.0f, true, "play_area");
 
-  // Face-down piles tucked into the side margins (decks and the opponent's
-  // hidden hand); not interacted with directly.
-  stacks[DOT_HAND_1] =
-    make_stack(pile_rect(765.0f, -391.0f), 0.0f, pile, false, "hand_1");
-  stacks[DOT_DRAW_0] =
-    make_stack(pile_rect(-765.0f, -130.0f), 0.0f, pile, false, "draw_0");
-  stacks[DOT_DRAW_1] =
-    make_stack(pile_rect(765.0f, -130.0f), 0.0f, pile, false, "draw_1");
-  stacks[DOT_STAR_0] =
-    make_stack(pile_rect(-765.0f, 130.0f), 0.0f, pile, false, "star_0");
-  stacks[DOT_STAR_1] =
-    make_stack(pile_rect(765.0f, 130.0f), 0.0f, pile, false, "star_1");
+  // Your pool (bottom) and the opponent's pool (top), both fanned out.
+  stacks[pool_idx[bottom_player]] =
+    make_stack(row_rect(0.0f, 130.0f, 8), row, 0.0f, true, "your_pool");
+  stacks[pool_idx[top_player]] =
+    make_stack(row_rect(0.0f, -391.0f, 8), row, 0.0f, true, "opp_pool");
+
+  // Your hand is a fanned-out row (drag source); the opponent's hand is a
+  // face-down pile, shown face up only in hot-seat.
+  stacks[hand_idx[bottom_player]] =
+    make_stack(row_rect(-320.0f, 391.0f, 6), row, 0.0f, true, "your_hand");
+  stacks[hand_idx[top_player]] =
+    make_stack(pile_rect(765.0f, -391.0f), 0.0f, pile, show_opponent_hand, "opp_hand");
+
+  // Draw and star decks tucked into the side margins (yours left, theirs right).
+  stacks[draw_idx[bottom_player]] =
+    make_stack(pile_rect(-765.0f, -130.0f), 0.0f, pile, false, "your_draw");
+  stacks[star_idx[bottom_player]] =
+    make_stack(pile_rect(-765.0f, 130.0f), 0.0f, pile, false, "your_star");
+  stacks[draw_idx[top_player]] =
+    make_stack(pile_rect(765.0f, -130.0f), 0.0f, pile, false, "opp_draw");
+  stacks[star_idx[top_player]] =
+    make_stack(pile_rect(765.0f, 130.0f), 0.0f, pile, false, "opp_star");
   return stacks;
 }
 
@@ -160,7 +172,7 @@ static std::string player_line(const dot::Game_State& state, int player) {
          std::to_string(dot::total_tokens(state, player)) + ")";
 }
 
-void draw_dot_hud(const dot::Game_State& state) {
+void draw_dot_hud(const dot::Game_State& state, int local_seat) {
   Color white = {235, 235, 235, 255};
   Color dim   = {160, 160, 160, 255};
   float x     = 16.0f;
@@ -180,7 +192,7 @@ void draw_dot_hud(const dot::Game_State& state) {
     dim
   );
   y += 34.0f;
-  render_text("You: " + player_line(state, 0), x, y, 20, white);
+  render_text("You: " + player_line(state, local_seat), x, y, 20, white);
   y += 28.0f;
-  render_text("AI:  " + player_line(state, 1), x, y, 20, white);
+  render_text("Opponent: " + player_line(state, 1 - local_seat), x, y, 20, white);
 }

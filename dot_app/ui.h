@@ -23,8 +23,10 @@ enum Dot_Stack {
   DOT_STACK_COUNT,
 };
 
-// Build the table stacks (rows and side piles) in Dot_Stack order.
-std::vector<Thing> make_dot_stacks();
+// Build the table stacks (rows and side piles) in Dot_Stack order. The local
+// player (`bottom_player`) is laid out along the bottom; the opponent at the
+// top. The opponent's hand is shown only in hot-seat (`show_opponent_hand`).
+std::vector<Thing> make_dot_stacks(int bottom_player, bool show_opponent_hand);
 
 // Face renderer for the card with the given id: three rows of dots (blue,
 // black, red) plus a marker on star cards, and a highlight border when the
@@ -35,5 +37,5 @@ make_dot_card_draw_callback(
 );
 
 // Heads-up display: round number, tokens available, and each player's pool
-// dot totals and tokens won.
-void draw_dot_hud(const dot::Game_State& state);
+// dot totals and tokens won. `local_seat` is shown as "You".
+void draw_dot_hud(const dot::Game_State& state, int local_seat);
