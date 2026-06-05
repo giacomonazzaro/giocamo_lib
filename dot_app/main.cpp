@@ -40,9 +40,20 @@ static void update_table_from_game(Table_State& table, dot::Game_State& state) {
   set_stack(DOT_DRAW_1, state.players[1].draw_deck);
   set_stack(DOT_STAR_1, state.players[1].star_deck);
 
-  // Reveal the shared pool only once both players' three cards are in it.
-  bool both_committed = (int)state.shared_pool.size() >= 2 * dot::SHARED_COUNT;
-  table.things[base + DOT_SHARED].face_up = both_committed;
+  // Simulate simultaneous play: until both players have committed, every card
+  // played this round stays face-down -- both the shared pool and the cards
+  // each player just put in front of them. Cards carried from earlier rounds
+  // stay visible, and everything is revealed once both have committed.
+  for (const dot::Card& card : state.all_cards) table.things[card.id].face_up = true;
+  bool round_revealed = (int)state.shared_pool.size() >= 2 * dot::SHARED_COUNT;
+  if (!round_revealed) {
+    for (int id : state.shared_pool) table.things[id].face_up = false;
+    for (const dot::Player& player : state.players) {
+      for (int i = player.revealed_pool_count; i < (int)player.pool.size(); ++i) {
+        table.things[player.pool[i]].face_up = false;
+      }
+    }
+  }
 }
 
 static Table_State init_table_state(
@@ -74,13 +85,11 @@ static Table_State init_table_state(
     table.things.push_back(std::move(stack));
   }
 
-  auto root = create_table_root(
-    tt::WINDOW_WIDTH, tt::WINDOW_HEIGHT, "tabletop/data/wood.png"
-  );
-  root.id         = (int)table.things.size();
-  root.children   = stack_ids;
-  root.color      = {15, 15, 15, 255};
-  root.image_path = "";
+  // Empty texture path: the table is drawn with root.color (a dark surface).
+  auto root = create_table_root(tt::WINDOW_WIDTH, tt::WINDOW_HEIGHT, "");
+  root.id       = (int)table.things.size();
+  root.children = stack_ids;
+  root.color    = {15, 15, 15, 255};
   table.things.push_back(root);
   table.root = root.id;
 

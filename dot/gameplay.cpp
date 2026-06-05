@@ -142,6 +142,8 @@ static void start_round(Game_State& state) {
   state.pending_black += 1;
   state.pending_red += 1;
   for (Player& player : state.players) {
+    // Everything carried into this round is already known and shown.
+    player.revealed_pool_count = (int)player.pool.size();
     player.hand.clear();
     for (int i = 0; i < DRAW_PER_ROUND && !player.draw_deck.empty(); ++i) {
       player.hand.push_back(player.draw_deck.back());

@@ -24,6 +24,9 @@ struct Player {
   std::vector<int> star_deck;   // Remaining star cards (viewable by owner).
   std::vector<int> hand;        // The 6 cards held this round (5 draw + 1 star).
   std::vector<int> pool;        // Personal pool; carries over between rounds.
+  int              revealed_pool_count = 0;  // Pool cards from earlier rounds
+                                             // (already shown); the rest stay
+                                             // hidden until both players commit.
   int              tokens_blue  = 0;  // Scoring tokens won, by color.
   int              tokens_black = 0;
   int              tokens_red   = 0;

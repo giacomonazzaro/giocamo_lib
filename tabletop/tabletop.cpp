@@ -198,7 +198,7 @@ void handle_mouse_release(Table_State& state) {
     state.world_transforms[thing_id].x,
     state.world_transforms[thing_id].y,
   };
-    
+
   // Signal drop as (from_parent, to_parent, thing_id).
   state.dropped_thing =
     std::make_tuple(drag.parent_id(), drag.hovered_id(), thing_id);
@@ -223,6 +223,9 @@ void handle_mouse_release(Table_State& state) {
       state.world_transforms[thing_id];
     state.things[new_parent].children.push_back(thing_id);
     update_children_positions(new_parent, state, /*sort=*/true);
+
+    // Inherit visibility from new parent.
+    state.things[thing_id].face_up = state.things[new_parent].face_up;
   }
 }
 

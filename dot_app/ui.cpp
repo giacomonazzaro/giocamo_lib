@@ -62,8 +62,10 @@ std::vector<Thing> make_dot_stacks(int bottom_player, bool show_opponent_hand) {
   // middle, your pool below it, and your hand along the bottom with the play
   // area beside it.
   std::vector<Thing> stacks(DOT_STACK_COUNT);
+  // The shared pool stack is face up; individual shared cards are flipped
+  // face-down per-card until both players commit (see update_table_from_game).
   stacks[DOT_SHARED] =
-    make_stack(row_rect(0.0f, -130.0f, 6), row, 0.0f, false, "shared");
+    make_stack(row_rect(0.0f, -130.0f, 6), row, 0.0f, true, "shared");
   stacks[DOT_PLAY_AREA] =
     make_stack(row_rect(560.0f, 391.0f, 3), row, 0.0f, true, "play_area");
 
