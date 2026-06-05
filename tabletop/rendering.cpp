@@ -389,9 +389,9 @@ void animate(
   if (smoothout && table.drag_state.thing_id() == i) {
     smoothout = false;
   }
-  for (size_t k = 0; k < table.things[i].children.size(); k++) {
+  for (int k = 0; k < (int)table.things[i].children.size(); k++) {
     animate(
-      table.things[i].children[k], animated, target, table, dt, smoothout
+      table.things[i].child(k), animated, target, table, dt, smoothout
     );
   }
 }

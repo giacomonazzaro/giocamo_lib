@@ -199,6 +199,8 @@ struct Thing {
   std::vector<int> children;       // Ordered list of thing IDs.
   float            spread_x = 0.0f;
   float            spread_y = 0.0f;
+
+  inline int child(int i) const { return children[i]; }
 };
 VISITABLE_STRUCT(
   Thing,
