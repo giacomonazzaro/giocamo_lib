@@ -25,7 +25,7 @@ void update_zoomed_thing(Table_State& table_state, const Input& input) {
 nlohmann::json serialize_table_state(const Table_State& table_state) {
   nlohmann::json out = nlohmann::json::array();
   for (const Thing& t : table_state.things) {
-    out.push_back(t.children);
+    out.push_back(t.children());
   }
   return out;
 }
@@ -34,7 +34,7 @@ void apply_table_state_message(
   Table_State& table_state, const nlohmann::json& arr
 ) {
   for (size_t i = 0; i < arr.size() && i < table_state.things.size(); ++i) {
-    table_state.things[i].children = arr[i].get<std::vector<int>>();
+    table_state.things[i]._children = arr[i].get<std::vector<int>>();
     update_children_positions((int)i, table_state, false);
   }
 }

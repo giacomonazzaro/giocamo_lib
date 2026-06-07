@@ -133,20 +133,20 @@ void populate_stacks_from_gods_state(
   for (int i = 0; i < 2; ++i) {
     const Player& p  = gods_state.players[i];
     auto          pp = "p" + std::to_string(i);
-    table_state.things[thing_id[pp + "_deck"]].children    = p.deck;
-    table_state.things[thing_id[pp + "_hand"]].children    = p.hand;
-    table_state.things[thing_id[pp + "_discard"]].children = p.discard;
-    table_state.things[thing_id[pp + "_wonders"]].children = p.wonders;
+    table_state.things[thing_id[pp + "_deck"]]._children    = p.deck;
+    table_state.things[thing_id[pp + "_hand"]]._children    = p.hand;
+    table_state.things[thing_id[pp + "_discard"]]._children = p.discard;
+    table_state.things[thing_id[pp + "_wonders"]]._children = p.wonders;
     std::vector<int> peoples;
     for (int pid : gods_state.peoples) {
       if (gods_state.owner(pid) == i) peoples.push_back(pid);
     }
-    table_state.things[thing_id[pp + "_peoples"]].children = peoples;
+    table_state.things[thing_id[pp + "_peoples"]]._children = peoples;
   }
-  table_state.things[thing_id["shared_deck"]].children = gods_state.shared_deck;
+  table_state.things[thing_id["shared_deck"]]._children = gods_state.shared_deck;
 
   // Lay out cards inside each stack.
-  for (int stack_id : table_state.things[table_state.root].children) {
+  for (int stack_id : table_state.things[table_state.root].children()) {
     update_children_positions(stack_id, table_state, /*sort=*/false);
   }
 }
@@ -173,7 +173,7 @@ void init_table_layout(
   }
 
   // Stack things: assign ids by append order. Track the insertion order so
-  // root.children matches the original stack ordering. make_gods_stacks
+  // root.children() matches the original stack ordering. make_gods_stacks
   // returns stacks in root-local coords (root is centered on the screen).
   std::vector<Thing> stacks =
     make_gods_stacks(bottom_player, window_width, window_height);
@@ -192,7 +192,7 @@ void init_table_layout(
   root.transform.x = (float)window_width / 2.0f;
   root.transform.y = (float)window_height / 2.0f;
   root.id          = (int)table_state.things.size();
-  root.children    = stack_ids_in_order;
+  root._children    = stack_ids_in_order;
   root.capacity    = 0;
   // Transparent so the shader background drawn behind the table shows through.
   root.color       = {0, 0, 0, 0};
@@ -309,7 +309,7 @@ static void draw_hud(
   float     W           = (float)table_state->width;
   float     Hf          = (float)H;
   Rectangle root_window = {-W / 2.0f, -Hf / 2.0f, W, Hf};
-  for (int child_id : table_state->things[table_state->root].children) {
+  for (int child_id : table_state->things[table_state->root].children()) {
     Thing& s = table_state->things[child_id];
     if (s.name == "shared_deck") {
       Rectangle target = ui_state.playground ? place_inside(
@@ -412,7 +412,7 @@ static void handle_discard_expand(
                                  "_discard";
   std::string discard_opponent_name = "p" + std::to_string(1 - player_index) +
                                       "_discard";
-  for (int child_id : table_state.things[table_state.root].children) {
+  for (int child_id : table_state.things[table_state.root].children()) {
     const Thing& s = table_state.things[child_id];
     if (s.name == discard_you_name) discard_you = child_id;
     if (s.name == discard_opponent_name) discard_opponent = child_id;

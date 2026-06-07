@@ -89,7 +89,7 @@ static Table_State make_demo_table() {
         edge_padding
       )
     );
-    for (int index = 0; index < 8; index++) deck.children.push_back(index);
+    for (int index = 0; index < 8; index++) deck.add_child(index);
     table.things.push_back(deck);
   }
 
@@ -110,7 +110,7 @@ static Table_State make_demo_table() {
         root_rect, 800, card_slot_height, "center", "bottom", edge_padding
       )
     );
-    for (int index = 8; index < 16; index++) hand.children.push_back(index);
+    for (int index = 8; index < 16; index++) hand.add_child(index);
     table.things.push_back(hand);
   }
 
@@ -147,7 +147,7 @@ static Table_State make_demo_table() {
     root.name      = "root";
     root.shape     = rectangle_shape({(float)tt::WINDOW_WIDTH, (float)tt::WINDOW_HEIGHT});
     root.transform = {tt::WINDOW_WIDTH / 2.0f, tt::WINDOW_HEIGHT / 2.0f, 0.0f};
-    root.children  = {deck_id, hand_id, discard_id};
+    root._children  = {deck_id, hand_id, discard_id};
     // Wooden table surface filling the whole window (no rounded corners).
     root.shape.rectangle.corner_radius = 0.0f;
     root.image_path                    = "tabletop/data/wood.png";

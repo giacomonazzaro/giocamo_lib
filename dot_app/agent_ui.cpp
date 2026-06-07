@@ -45,7 +45,7 @@ int Dot_Agent_UI::choose_action(Game& game, const Choice& choice) {
     split ? state.players[seat].hand : state.players[1 - seat].pool;
 
   int                     play_area_id = stacks_offset + DOT_PLAY_AREA;
-  const std::vector<int>& selected = table_state->things[play_area_id].children;
+  const std::vector<int>& selected = table_state->things[play_area_id].children();
 
   // Highlight every card the player may drag this turn.
   ui_state->highlighted_things.clear();

@@ -196,11 +196,21 @@ struct Thing {
 
   // Container
   int              capacity = -1;  // -1 = unlimited.
-  std::vector<int> children;       // Ordered list of thing IDs.
+  std::vector<int> _children;      // Ordered list of thing IDs.
   float            spread_x = 0.0f;
   float            spread_y = 0.0f;
 
-  inline int child(int i) const { return children[i]; }
+  inline int                     child(int i) const { return _children[i]; }
+  inline const std::vector<int>& children() const { return _children; }
+
+  // Append a thing-id as the last child.
+  inline void add_child(int id) { _children.push_back(id); }
+
+  // Remove a thing-id from the children, if present.
+  inline void remove_child(int id) {
+    auto it = std::find(_children.begin(), _children.end(), id);
+    if (it != _children.end()) _children.erase(it);
+  }
 };
 VISITABLE_STRUCT(
   Thing,
@@ -214,7 +224,7 @@ VISITABLE_STRUCT(
   face_up,
   depth,
   capacity,
-  children,
+  _children,
   spread_x,
   spread_y
 );
@@ -414,7 +424,7 @@ void visit_things_recursive(
   Table_State& table, int parent_id, int thing_id, F&& f
 ) {
   f(table, parent_id, thing_id);
-  for (int child_id : table.things[thing_id].children)
+  for (int child_id : table.things[thing_id].children())
     visit_things_recursive(table, thing_id, child_id, f);
 }
 

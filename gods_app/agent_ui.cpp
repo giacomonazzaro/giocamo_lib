@@ -14,14 +14,14 @@ void sync_game_state_from_table(
   gods_state.peoples.clear();
   for (int i = 0; i < 2; ++i) {
     Stack_Indices s               = stack_indices(i, stacks_offset);
-    gods_state.players[i].deck    = table_state.things[s.deck].children;
-    gods_state.players[i].hand    = table_state.things[s.hand].children;
-    gods_state.players[i].discard = table_state.things[s.discard].children;
-    gods_state.players[i].wonders = table_state.things[s.wonders].children;
+    gods_state.players[i].deck    = table_state.things[s.deck].children();
+    gods_state.players[i].hand    = table_state.things[s.hand].children();
+    gods_state.players[i].discard = table_state.things[s.discard].children();
+    gods_state.players[i].wonders = table_state.things[s.wonders].children();
     for (int wid : gods_state.players[i].wonders) {
       gods_state.all_cards[wid].owner = i;
     }
-    for (int pid : table_state.things[s.peoples].children) {
+    for (int pid : table_state.things[s.peoples].children()) {
       gods_state.all_cards[pid].owner = i;
       gods_state.peoples.push_back(pid);
     }
@@ -32,7 +32,7 @@ void update_stacks(
   Table_State& table_state, Game_State& gods_state, int stacks_offset
 ) {
   auto refresh = [&](int stack_id, const std::vector<int>& card_ids) {
-    table_state.things[stack_id].children = card_ids;
+    table_state.things[stack_id]._children = card_ids;
     update_children_positions(stack_id, table_state, /*sort=*/false);
   };
 

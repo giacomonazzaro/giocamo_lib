@@ -26,7 +26,7 @@
 static void update_table_from_game(Table_State& table, dot::Game_State& state) {
   int  base      = (int)state.all_cards.size();
   auto set_stack = [&](int stack, const std::vector<int>& cards) {
-    table.things[base + stack].children = cards;
+    table.things[base + stack]._children = cards;
     update_children_positions(base + stack, table, false);
   };
   set_stack(DOT_POOL_0, state.players[0].pool);
@@ -88,7 +88,7 @@ static Table_State init_table_state(
   // Empty texture path: the table is drawn with root.color (a dark surface).
   auto root = create_table_root(tt::WINDOW_WIDTH, tt::WINDOW_HEIGHT, "");
   root.id       = (int)table.things.size();
-  root.children = stack_ids;
+  root._children = stack_ids;
   root.color    = {15, 15, 15, 255};
   table.things.push_back(root);
   table.root = root.id;

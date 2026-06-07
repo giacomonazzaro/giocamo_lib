@@ -56,19 +56,19 @@ static Table_State init_table_state(
 
   // Populate stack children from game state.
   int base                                       = (int)state.all_cards.size();
-  table.things[base + SCOPA_HAND_0].children     = state.players[0].hand;
-  table.things[base + SCOPA_HAND_1].children     = state.players[1].hand;
-  table.things[base + SCOPA_CAPTURED_0].children = state.players[0].captured;
-  table.things[base + SCOPA_CAPTURED_1].children = state.players[1].captured;
-  table.things[base + SCOPA_STOCK_IDX].children  = state.stock;
-  table.things[base + SCOPA_TABLE_IDX].children  = state.table;
+  table.things[base + SCOPA_HAND_0]._children     = state.players[0].hand;
+  table.things[base + SCOPA_HAND_1]._children     = state.players[1].hand;
+  table.things[base + SCOPA_CAPTURED_0]._children = state.players[0].captured;
+  table.things[base + SCOPA_CAPTURED_1]._children = state.players[1].captured;
+  table.things[base + SCOPA_STOCK_IDX]._children  = state.stock;
+  table.things[base + SCOPA_TABLE_IDX]._children  = state.table;
 
   // Root: a wooden table surface owning all stacks as direct children.
   auto root = create_table_root(
     tt::WINDOW_WIDTH, tt::WINDOW_HEIGHT, "tabletop/data/wood.png"
   );
   root.id       = (int)table.things.size();
-  root.children = stack_ids;
+  root._children = stack_ids;
   table.things.push_back(root);
   table.root = root.id;
   for (int stack_id : stack_ids) {
@@ -90,7 +90,7 @@ static void update_stacks(Table_State& table, scopa::Game_State& state) {
   int  base    = (int)state.all_cards.size();
   auto refresh = [&](int idx, const std::vector<int>& cards) {
     int stack_id                    = base + idx;
-    table.things[stack_id].children = cards;
+    table.things[stack_id]._children = cards;
     update_children_positions(stack_id, table, false);
   };
   refresh(SCOPA_HAND_0, state.players[0].hand);

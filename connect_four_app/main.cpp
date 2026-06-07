@@ -43,7 +43,7 @@ static void update_board(Table_State& table, connect_four::Game_State& state) {
                          (float)row * cell;
       children.push_back(disc_id);
     }
-    table.things[COLUMNS_OFFSET + col].children = children;
+    table.things[COLUMNS_OFFSET + col]._children = children;
   }
 }
 
@@ -74,7 +74,7 @@ static Table_State init_table_state(connect_four::Game_State& state) {
     tt::WINDOW_WIDTH, tt::WINDOW_HEIGHT, "tabletop/data/wood.png"
   );
   root.id       = (int)table.things.size();
-  root.children = column_ids;
+  root._children = column_ids;
   table.things.push_back(root);
   table.root = root.id;
 

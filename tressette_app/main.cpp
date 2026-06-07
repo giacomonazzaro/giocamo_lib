@@ -57,21 +57,21 @@ static Table_State init_table_state(
 
   // Populate stack children from game state.
   int base                                       = (int)state.all_cards.size();
-  table.things[base + TRESSETTE_HAND_0].children = state.players[0].hand;
-  table.things[base + TRESSETTE_HAND_1].children = state.players[1].hand;
-  table.things[base + TRESSETTE_TRICKS_0].children =
+  table.things[base + TRESSETTE_HAND_0]._children = state.players[0].hand;
+  table.things[base + TRESSETTE_HAND_1]._children = state.players[1].hand;
+  table.things[base + TRESSETTE_TRICKS_0]._children =
     state.players[0].tricks_won;
-  table.things[base + TRESSETTE_TRICKS_1].children =
+  table.things[base + TRESSETTE_TRICKS_1]._children =
     state.players[1].tricks_won;
-  table.things[base + TRESSETTE_STOCK_IDX].children = state.stock;
-  table.things[base + TRESSETTE_TABLE_IDX].children = state.trick;
+  table.things[base + TRESSETTE_STOCK_IDX]._children = state.stock;
+  table.things[base + TRESSETTE_TABLE_IDX]._children = state.trick;
 
   // Root: a wooden table surface owning all stacks as direct children.
   auto root = create_table_root(
     tt::WINDOW_WIDTH, tt::WINDOW_HEIGHT, "tabletop/data/wood.png"
   );
   root.id       = (int)table.things.size();
-  root.children = stack_ids;
+  root._children = stack_ids;
   table.things.push_back(root);
   table.root = root.id;
   for (int stack_id : stack_ids) {
@@ -84,7 +84,7 @@ static void update_stacks(Table_State& table, tressette::Game_State& state) {
   int  base    = (int)state.all_cards.size();
   auto refresh = [&](int idx, const std::vector<int>& cards) {
     int thing_id                    = base + idx;
-    table.things[thing_id].children = cards;
+    table.things[thing_id]._children = cards;
   };
   refresh(TRESSETTE_HAND_0, state.players[0].hand);
   refresh(TRESSETTE_HAND_1, state.players[1].hand);

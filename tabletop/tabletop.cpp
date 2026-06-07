@@ -103,7 +103,7 @@ Input capture_input() {
 }
 
 bool is_full(const Thing& thing) {
-  return thing.capacity >= 0 && (int)thing.children.size() >= thing.capacity;
+  return thing.capacity >= 0 && (int)thing._children.size() >= thing.capacity;
 }
 
 bool point_in_thing(
@@ -133,7 +133,7 @@ Thing_Location find_thing_at(
   while (true) {
     auto found = false;
     // Check from last to front, so things drawn on top are picked first.
-    for (int i = (int)state.things[node_id].children.size() - 1; i >= 0; i--) {
+    for (int i = (int)state.things[node_id]._children.size() - 1; i >= 0; i--) {
       if (state.things[node_id].child(i) == skip_id) continue;
       if (point_in_thing(px, py, state.things[node_id].child(i), state)) {
         node_id = state.things[node_id].child(i);
@@ -208,25 +208,24 @@ void handle_mouse_release(Table_State& state) {
   state.drag_state    = Drag_State();
 
   if (original_parent >= 0) {
-    auto& children = state.things[original_parent].children;
-    auto  it       = std::find(children.begin(), children.end(), thing_id);
-    if (it != children.end()) {
-      children.erase(it);
-      update_children_positions(original_parent, state, /*sort=*/true);
-    }
-
-    // Add.
-    update_local_transform_to_match_world_transform(
-      state, new_parent, thing_id
-    );
-    state.world_transforms_animated[thing_id] =
-      state.world_transforms[thing_id];
-    state.things[new_parent].children.push_back(thing_id);
-    update_children_positions(new_parent, state, /*sort=*/true);
-
-    // Inherit visibility from new parent.
-    state.things[thing_id].face_up = state.things[new_parent].face_up;
+    // auto& children = state.things[original_parent].children();
+    // auto  it       = std::find(children.begin(), children.end(), thing_id);
+    // if (it != children.end()) {
+    //   children.erase(it);
+    //   update_children_positions(original_parent, state, /*sort=*/true);
+    // }
+    state.things[original_parent].remove_child(thing_id);
+    update_children_positions(original_parent, state, /*sort=*/true);
   }
+
+  // Add.
+  update_local_transform_to_match_world_transform(state, new_parent, thing_id);
+  state.world_transforms_animated[thing_id] = state.world_transforms[thing_id];
+  state.things[new_parent].add_child(thing_id);
+  update_children_positions(new_parent, state, /*sort=*/true);
+
+  // Inherit visibility from new parent.
+  state.things[thing_id].face_up = state.things[new_parent].face_up;
 }
 
 void handle_mouse_move(Table_State& state, const Input& input) {
@@ -294,7 +293,7 @@ void shuffle_thing(Table_State& state, int parent_id) {
 
   Thing&              thing = state.things[parent_id];
   static std::mt19937 rng{std::random_device{}()};
-  std::shuffle(thing.children.begin(), thing.children.end(), rng);
+  std::shuffle(thing._children.begin(), thing._children.end(), rng);
   update_children_positions(parent_id, state, /*sort=*/false);
 }
 
@@ -366,7 +365,7 @@ Thing create_table_root(
 void update_children_positions(int parent_id, Table_State& state, bool sort) {
   if (parent_id == state.root) return;
   Thing& parent   = state.things[parent_id];
-  auto   children = parent.children;
+  auto   children = state.things[parent_id].children();
   auto&  drag     = state.drag_state;
   if (drag.thing_id() != -1 && drag.thing_id() != parent_id) {
     if (drag.parent_id() != parent_id && drag.hovered_id() == parent_id) {

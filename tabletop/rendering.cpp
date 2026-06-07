@@ -349,7 +349,7 @@ static void update_world_transforms(
   std::vector<Transform2D>&       world_transforms
 ) {
   world_transforms[id] = parent_transform * local_transforms[id];
-  for (int child_id : things[id].children)
+  for (int child_id : things[id]._children)
     update_world_transforms(
       child_id, world_transforms[id], things, local_transforms, world_transforms
     );
@@ -389,9 +389,9 @@ void animate(
   if (smoothout && table.drag_state.thing_id() == i) {
     smoothout = false;
   }
-  for (int k = 0; k < (int)table.things[i].children.size(); k++) {
+  for (int child_id: table.things[i].children()) {
     animate(
-      table.things[i].child(k), animated, target, table, dt, smoothout
+      child_id, animated, target, table, dt, smoothout
     );
   }
 }
@@ -434,7 +434,7 @@ static void draw_thing_world(
     if (cb != state.draw_callbacks.end()) cb->second(state, input, face_up);
     rlPopMatrix();
   }
-  for (int child_id : t.children) {
+  for (int child_id : state.things[id].children()) {
     draw_thing_world(child_id, state, face_up, input);
   }
 }
@@ -514,7 +514,7 @@ void draw_table(Table_State& state, const Input& input) {
 
   // Depth-sort root's children so layered draw order is preserved.
   // const Thing&     root_thing = state.things[state.root];
-  // std::vector<int> draw_order = root_thing.children;
+  // std::vector<int> draw_order = root_thing.children();
   // std::sort(draw_order.begin(), draw_order.end(), [&state](int a, int b) {
   //   return state.things[a].depth < state.things[b].depth;
   // });
