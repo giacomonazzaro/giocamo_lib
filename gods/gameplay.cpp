@@ -77,12 +77,12 @@ Choice make_choose_card_choice(
     return Choose_Card{pack_targets(get_targets(gs)), true};
   };
   c.resolve = [get_targets,
-               on_chosen](Game& g, int option_index) -> std::vector<Choice> {
+               on_chosen](Game& g, int option_index) -> Choice {
     auto&   gs      = static_cast<Game_State&>(g);
     auto    targets = get_targets(gs);
     Card_Id chosen  = targets[option_index];
-    if (Card_Id::is_null(chosen)) return {};
-    return on_chosen(gs, chosen);
+    if (Card_Id::is_null(chosen)) return resume(gs, {});
+    return resume(gs, on_chosen(gs, chosen));
   };
   return c;
 }
@@ -107,10 +107,10 @@ Choice make_choose_cards_choice(
   c.resolve = [get_targets,
                get_count,
                up_to,
-               on_chosen](Game& g, int option_index) -> std::vector<Choice> {
+               on_chosen](Game& g, int option_index) -> Choice {
     auto& gs     = static_cast<Game_State&>(g);
     auto  combos = all_combinations(get_targets(gs), get_count(gs), up_to);
-    return on_chosen(gs, combos[option_index]);
+    return resume(gs, on_chosen(gs, combos[option_index]));
   };
   return c;
 }
@@ -359,7 +359,7 @@ std::optional<Choice> make_claim_choice(Game_State& game) {
     return Choose_Card{pack_targets(build_actions(gs)), true};
   };
   c.resolve = [build_actions,
-               player_index](Game& g, int option_index) -> std::vector<Choice> {
+               player_index](Game& g, int option_index) -> Choice {
     auto&   gs      = static_cast<Game_State&>(g);
     auto    targets = build_actions(gs);
     Card_Id chosen  = targets[option_index];
@@ -367,7 +367,7 @@ std::optional<Choice> make_claim_choice(Game_State& game) {
       Card& people = gs.get_card(chosen);
       people.owner = player_index;
     }
-    return {};
+    return resume(gs, {});
   };
   return c;
 }
@@ -416,14 +416,14 @@ Choice make_main_choice(Game_State& game) {
     return Choose_Card{pack_targets(build_actions(gs)), true};
   };
   c.resolve =
-    [build_actions](Game& g, int option_index) -> std::vector<Choice> {
+    [build_actions](Game& g, int option_index) -> Choice {
     auto&   gs      = static_cast<Game_State&>(g);
     auto    actions = build_actions(gs);
     Card_Id chosen  = actions[option_index];
     if (!Card_Id::is_null(chosen)) {
       auto choices     = play_card(gs, chosen);
       gs.current_phase = Game_Phase::POST_PLAY;
-      return choices;
+      return resume(gs, choices);
     }
     std::vector<Choice> result;
     Player&             player = gs.active_player();
@@ -432,7 +432,7 @@ Choice make_main_choice(Game_State& game) {
       for (auto& ch : extra) result.push_back(std::move(ch));
     }
     gs.current_phase = Game_Phase::POST_PASS_EFFECTS;
-    return result;
+    return resume(gs, result);
   };
   return c;
 }

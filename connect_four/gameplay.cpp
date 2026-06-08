@@ -78,8 +78,8 @@ Game_State quick_setup(int /*seed*/) {
   return Game_State();  // Empty board, player 0 to move.
 }
 
-std::optional<Choice> Game_State::next_choice() {
-  if (game_over) return std::nullopt;
+Choice Game_State::next_choice() {
+  if (game_over) return Choice{};
 
   Choice choice;
   choice.player_index     = current_player;
@@ -96,12 +96,12 @@ std::optional<Choice> Game_State::next_choice() {
     return option;
   };
 
-  // Drop into the chosen column.
-  choice.resolve = [](Game& game, int index) -> std::vector<Choice> {
+  // Drop into the chosen column, then return the next decision.
+  choice.resolve = [](Game& game, int index) -> Choice {
     Game_State&      state   = static_cast<Game_State&>(game);
     std::vector<int> columns = legal_columns(state);
     apply_move(state, columns[index]);
-    return {};
+    return state.next_choice();
   };
 
   return choice;

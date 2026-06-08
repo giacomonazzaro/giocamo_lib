@@ -211,8 +211,9 @@ int compute_player_score(const Game_State& state, int player_index) {
   return score;
 }
 
-std::optional<Choice> Game_State::next_choice() {
-  if (game_over) return std::nullopt;
+Choice Game_State::next_choice() {
+  // The loop checks is_game_over() first, so this choice is never acted on.
+  if (game_over) return Choice{};
 
   Choice choice;
   choice.player_index     = current_player;
@@ -233,11 +234,11 @@ std::optional<Choice> Game_State::next_choice() {
     return option;
   };
 
-  choice.resolve = [](Game& game, int index) -> std::vector<Choice> {
+  choice.resolve = [](Game& game, int index) -> Choice {
     Game_State&         state   = static_cast<Game_State&>(game);
     std::vector<Action> actions = enumerate_actions(state);
     apply_action(state, actions[index]);
-    return {};
+    return state.next_choice();
   };
 
   return choice;

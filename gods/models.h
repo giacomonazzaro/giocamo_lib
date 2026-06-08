@@ -134,11 +134,15 @@ struct Game_State : Game {
   Game_Phase current_phase  = Game_Phase::MAIN;
   bool       game_over      = false;
 
+  // FIFO of pending choices produced by the phase machine and card effects.
+  // Kept separate from the base `choices`, which the game loop manages.
+  std::vector<Choice> queue;
+
   Game_State() = default;
 
   // Game interface.
-  bool                  is_game_over() const override { return game_over; }
-  std::optional<Choice> next_choice() override;
+  bool   is_game_over() const override { return game_over; }
+  Choice next_choice() override;
 
   // Helpers (mirror gods/models.py methods).
   Player&              active_player() { return players[current_player]; }

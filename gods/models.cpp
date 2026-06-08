@@ -140,11 +140,11 @@ int Game_State::effective_power(int card_id) const {
   return power;
 }
 
-std::optional<Choice> Game_State::next_choice() {
+Choice Game_State::next_choice() {
   while (!game_over) {
-    if (!choices.empty()) {
-      Choice c = std::move(choices.front());
-      choices.erase(choices.begin());
+    if (!queue.empty()) {
+      Choice c = std::move(queue.front());
+      queue.erase(queue.begin());
       Choose actions = c.actions(*this);
       if (action_options_count(actions) == 0) continue;
       return c;
@@ -153,11 +153,11 @@ std::optional<Choice> Game_State::next_choice() {
     if (current_phase == Game_Phase::START) {
       for (int wid : active_player().wonders) {
         auto extra = all_cards[wid].on_turn_start(*this);
-        for (auto& ch : extra) choices.push_back(std::move(ch));
+        for (auto& ch : extra) queue.push_back(std::move(ch));
       }
       current_phase = Game_Phase::MAIN;
     } else if (current_phase == Game_Phase::MAIN) {
-      choices.push_back(make_main_choice(*this));
+      queue.push_back(make_main_choice(*this));
     } else if (current_phase == Game_Phase::POST_PLAY) {
       current_phase = Game_Phase::CLAIM;
     } else if (current_phase == Game_Phase::POST_PASS_EFFECTS) {
@@ -167,22 +167,29 @@ std::optional<Choice> Game_State::next_choice() {
         continue;
       }
       auto extra = draw_card(*this, current_player);
-      for (auto& ch : extra) choices.push_back(std::move(ch));
+      for (auto& ch : extra) queue.push_back(std::move(ch));
       current_phase = Game_Phase::POST_PASS_DRAW;
     } else if (current_phase == Game_Phase::POST_PASS_DRAW) {
       current_phase = Game_Phase::CLAIM;
     } else if (current_phase == Game_Phase::CLAIM) {
       auto claim = make_claim_choice(*this);
-      if (claim) choices.push_back(std::move(*claim));
+      if (claim) queue.push_back(std::move(*claim));
       current_phase = Game_Phase::END;
     } else if (current_phase == Game_Phase::END) {
       for (int wid : active_player().wonders) {
         auto extra = all_cards[wid].on_turn_end(*this);
-        for (auto& ch : extra) choices.push_back(std::move(ch));
+        for (auto& ch : extra) queue.push_back(std::move(ch));
       }
       switch_turn();
       current_phase = Game_Phase::START;
     }
   }
-  return std::nullopt;
+  // The loop checks is_game_over() first, so this choice is never acted on.
+  return Choice{};
+}
+
+// Append follow-up choices to the queue, then yield the next choice to present.
+Choice resume(Game_State& game, std::vector<Choice> follow_ups) {
+  for (auto& choice : follow_ups) game.queue.push_back(std::move(choice));
+  return game.next_choice();
 }

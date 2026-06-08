@@ -668,7 +668,7 @@ struct Stars : Card_Design {
     c.actions          = [](Game&) -> Choose {
       return Choose_Option{{"Draw from shared deck", "Draw normally"}};
     };
-    c.resolve = [my_id, my_owner](Game& g, int option_index) -> vector<Choice> {
+    c.resolve = [my_id, my_owner](Game& g, int option_index) -> Choice {
       auto& s = static_cast<Game_State&>(g);
       if (option_index == 0) {
         int     power  = s.effective_power(my_id);
@@ -679,9 +679,9 @@ struct Stars : Card_Design {
         card.power = power;
         card.owner = my_owner;
         player.hand.push_back(cid);
-        return {};
+        return resume(s, {});
       }
-      return draw_card(s, my_owner, false);
+      return resume(s, draw_card(s, my_owner, false));
     };
     return {c};
   }

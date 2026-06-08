@@ -27,7 +27,7 @@ struct Game_State : Game {
   }
 
   bool                  is_game_over() const override { return game_over; }
-  std::optional<Choice> next_choice() override;
+  Choice next_choice() override;
 
   void switch_turn() { current_player = 1 - current_player; }
 };
