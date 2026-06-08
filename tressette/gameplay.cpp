@@ -33,20 +33,17 @@ int compute_player_score(const Game_State& state, int player_index) {
   return score;
 }
 
-std::vector<int> legal_cards(const Game_State& state) {
+Inlined_Vector<int, 16> legal_cards(const Game_State& state) {
   const Player& player = state.players[state.current_player];
-  // Leader can play any card.
-  if (state.trick.empty()) {
-    return std::vector<int>(player.hand.begin(), player.hand.end());
-  }
+  if (state.trick.empty()) return player.hand;  // Leader can play any card.
 
   const Suit led_suit = all_cards[state.trick[0]].suit;
-  auto       matches  = std::vector<int>();
+  auto       matches  = Inlined_Vector<int, 16>();
   for (int cid : player.hand) {
     if (all_cards[cid].suit == led_suit) matches.push_back(cid);
   }
   if (!matches.empty()) return matches;
-  return std::vector<int>(player.hand.begin(), player.hand.end());
+  return player.hand;
 }
 
 // Remove a single occurrence of card_id from a hand.
@@ -165,9 +162,9 @@ Choice make_play_choice(Game_State& state) {
   };
 
   choice.resolve = [](Game& g, int index) -> Choice {
-    auto&            s           = static_cast<Game_State&>(g);
-    std::vector<int> legal       = legal_cards(s);
-    auto             next_choice = play_card(s, legal[index]);
+    auto& s           = static_cast<Game_State&>(g);
+    auto  legal       = legal_cards(s);
+    auto  next_choice = play_card(s, legal[index]);
     return next_choice;
   };
 

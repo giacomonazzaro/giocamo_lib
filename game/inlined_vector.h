@@ -33,6 +33,15 @@ struct Inlined_Vector {
 
   Inlined_Vector() = default;
   Inlined_Vector(const Inlined_Vector& other) { copy_from(other); }
+  // Construct from an Inlined_Vector of any capacity (copies the live elements).
+  template <int M>
+  Inlined_Vector(const Inlined_Vector<T, M>& other) {
+    assign(other.begin(), other.end());
+  }
+  // Construct from a std::vector, for call sites that still produce one.
+  Inlined_Vector(const std::vector<T>& other) {
+    assign(other.begin(), other.end());
+  }
   Inlined_Vector& operator=(const Inlined_Vector& other) {
     if (this != &other) {
       release();
@@ -94,7 +103,7 @@ struct Inlined_Vector {
 
   // Append the range [first, last). Only end-insertion is used by the games.
   template <class Iterator>
-  void insert(T* position, Iterator first, Iterator last) {
+  void insert([[maybe_unused]] T* position, Iterator first, Iterator last) {
     assert(position == end());
     for (Iterator it = first; it != last; ++it) push_back(*it);
   }

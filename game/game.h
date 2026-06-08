@@ -1,20 +1,25 @@
 #pragma once
 
+#include "inlined_vector.h"
+
 #include <functional>
 #include <optional>
 #include <string>
 #include <variant>
 #include <vector>
 
+// Card targets live inline (capacity 16) so producing the action list for a
+// choice does no heap allocation — this happens on every simulated ply during
+// search. Spills to the heap on the rare hand with more than 16 options.
 struct Choose_Card {
-  std::vector<int> targets;
-  bool             up_to = true;
+  Inlined_Vector<int, 16> targets;
+  bool                    up_to = true;
 };
 
 struct Choose_Cards {
-  std::vector<int> targets;
-  int              count;
-  bool             up_to = true;
+  Inlined_Vector<int, 16> targets;
+  int                     count;
+  bool                    up_to = true;
 };
 
 struct Choose_Option {

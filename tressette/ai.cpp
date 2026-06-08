@@ -26,7 +26,9 @@ Game_State sample_state(
   Player&    opponent       = sampled.players[opponent_index];
   const int  hand_size      = (int)opponent.hand.size();
 
-  std::vector<int> hidden(opponent.hand.begin(), opponent.hand.end());
+  // Opponent's hand plus the stock are the cards hidden from `player_index`:
+  // at most 10 + 20 = 30, so they live inline.
+  auto hidden = Inlined_Vector<int, 30>(opponent.hand);
   hidden.insert(hidden.end(), sampled.stock.begin(), sampled.stock.end());
   std::shuffle(hidden.begin(), hidden.end(), rng);
 
