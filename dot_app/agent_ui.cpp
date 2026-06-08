@@ -5,7 +5,6 @@
 #include <tabletop/rendering.h>
 
 #include <algorithm>
-#include <cstring>
 #include <string>
 
 #include "ui.h"
@@ -23,7 +22,7 @@ int Dot_Agent_UI::choose_action(Game& game, const Choice& choice) {
 
   // Acknowledge pause: the shared pool is revealed; wait for the player to
   // look at what the opponent played and press Ok before it is scored.
-  if (strcmp(choice.description, "acknowledge") == 0) {
+  if (choice.description == "acknowledge") {
     ui_state->highlighted_things.clear();
     render_text(
       "Cards revealed - press Ok to score", 640.0f, 18.0f, 22,

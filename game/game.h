@@ -3,6 +3,7 @@
 #include <functional>
 #include <optional>
 #include <string>
+#include <string_view>
 #include <variant>
 #include <vector>
 
@@ -42,9 +43,13 @@ struct Game;
 struct Choice;
 
 struct Choice {
-  int         player_index;
-  const char* description      = "";
-  const char* text_description = "";
+  int player_index;
+  // Set from string literals (static lifetime), so these are non-owning views —
+  // a Choice is built on every simulated ply during search, and a std::string
+  // member would allocate each time. string_view compares by content, so `==`
+  // against a literal works as expected.
+  std::string_view description;
+  std::string_view text_description;
   // actions: produces the set of available action options for this choice.
   std::function<Choose(Game&)> actions;
   // resolve: applies the chosen action and returns any follow-up choices.
