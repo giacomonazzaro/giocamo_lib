@@ -27,7 +27,7 @@ Choice make_choose_card_choice(
   int                                                      player_index,
   std::function<std::vector<Card_Id>(Game_State&)>         get_targets,
   std::function<std::vector<Choice>(Game_State&, Card_Id)> on_chosen,
-  std::string                                              text_description = ""
+  const char*                                              text_description = ""
 );
 
 // Build a "choose multiple cards" Choice. up_to=true allows fewer than count.
@@ -38,7 +38,7 @@ Choice make_choose_cards_choice(
   bool                                             up_to,
   std::function<std::vector<Choice>(Game_State&, std::vector<Card_Id>)>
               on_chosen,
-  std::string text_description = ""
+  const char* text_description = ""
 );
 
 // Enumerate all combinations of card_ids of size <= num_cards (or == num_cards

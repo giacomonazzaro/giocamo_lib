@@ -5,6 +5,7 @@
 #include <cassert>
 #include <cstdlib>
 #include <cstring>
+#include <initializer_list>
 #include <type_traits>
 #include <vector>
 
@@ -42,6 +43,10 @@ struct Inlined_Vector {
   Inlined_Vector(const std::vector<T>& other) {
     assign(other.begin(), other.end());
   }
+  // Construct from a braced list, e.g. Inlined_Vector<const char*, N>{"a", "b"}.
+  Inlined_Vector(std::initializer_list<T> list) {
+    assign(list.begin(), list.end());
+  }
   Inlined_Vector& operator=(const Inlined_Vector& other) {
     if (this != &other) {
       release();
@@ -58,6 +63,11 @@ struct Inlined_Vector {
   // Assign from a std::vector or an array (span) view, for convenience.
   Inlined_Vector& operator=(const std::vector<T>& other) {
     assign(other.begin(), other.end());
+    return *this;
+  }
+  // Assign from a braced list, e.g. targets = {"Ok"}.
+  Inlined_Vector& operator=(std::initializer_list<T> list) {
+    assign(list.begin(), list.end());
     return *this;
   }
   template <class U>

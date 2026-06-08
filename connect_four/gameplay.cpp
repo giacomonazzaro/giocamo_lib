@@ -90,10 +90,12 @@ Choice Game_State::next_choice() {
 
   // Offer the legal columns; option index i corresponds to legal_columns()[i].
   choice.actions = [](Game& game) -> Choose {
-    Game_State&   state = static_cast<Game_State&>(game);
-    Choose_Option option;
+    // Static labels so the option targets can be non-owning const char*.
+    static const char* column_labels[COLS] = {"0", "1", "2", "3", "4", "5", "6"};
+    Game_State&        state               = static_cast<Game_State&>(game);
+    Choose_Option      option;
     for (int col : legal_columns(state)) {
-      option.targets.push_back(std::to_string(col));
+      option.targets.push_back(column_labels[col]);
     }
     return option;
   };

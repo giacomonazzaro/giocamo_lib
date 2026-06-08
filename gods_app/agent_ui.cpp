@@ -4,6 +4,7 @@
 #include <tabletop/config.h>
 #include <tabletop/tabletop.h>
 
+#include <cstring>
 #include <variant>
 
 void sync_game_state_from_table(
@@ -57,7 +58,7 @@ int Agent_UI::choose_action(Game& state, const Choice& choice) {
   Choose      action_type = choice.actions(state);
 
   int total_options = action_options_count(action_type);
-  if (total_options == 1 && choice.description != "main") return 0;
+  if (total_options == 1 && strcmp(choice.description, "main") != 0) return 0;
 
   Stack_Indices my_zones   = stack_indices(choice.player_index, stacks_offset);
   int           hand_stack = my_zones.hand;
@@ -77,7 +78,7 @@ int Agent_UI::choose_action(Game& state, const Choice& choice) {
   auto dropped = table_state->poll_dropped_thing();
   if (dropped) {
     auto [orig, target, dropped_card_id] = *dropped;
-    if (choice.description == "main" && orig == hand_stack &&
+    if (strcmp(choice.description, "main") == 0 && orig == hand_stack &&
         target == play_stack) {
       // Find the Card_Id in the Choose_Card targets whose card_index matches.
       if (auto* cc = std::get_if<Choose_Card>(&action_type)) {
@@ -126,8 +127,8 @@ int Agent_UI::choose_action(Game& state, const Choice& choice) {
   }
 
   if (auto* cc = std::get_if<Choose_Card>(&action_type)) {
-    const std::string done_label = (choice.description == "main") ? "Pass"
-                                                                  : "Done";
+    const std::string done_label =
+      (strcmp(choice.description, "main") == 0) ? "Pass" : "Done";
     for (int i = 0; i < (int)cc->targets.size(); ++i) {
       Card_Id cid = unpack_card_id(cc->targets[i]);
       if (Card_Id::is_null(cid)) {
@@ -139,7 +140,7 @@ int Agent_UI::choose_action(Game& state, const Choice& choice) {
       } else {
         int kt_card_id                 = gods_state.get_card(cid).id;
         ui_state->highlighted_things[i] = kt_card_id;
-        if (mouse_clicked && choice.description != "main") {
+        if (mouse_clicked && strcmp(choice.description, "main") != 0) {
           if (thing_pressed(kt_card_id, *table_state, input)) {
             ui_state->highlighted_things.clear();
             return i;

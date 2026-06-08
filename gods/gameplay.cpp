@@ -66,12 +66,12 @@ Choice make_choose_card_choice(
   int                                                      player_index,
   std::function<std::vector<Card_Id>(Game_State&)>         get_targets,
   std::function<std::vector<Choice>(Game_State&, Card_Id)> on_chosen,
-  std::string                                              text_description
+  const char*                                              text_description
 ) {
   Choice c;
   c.player_index     = player_index;
   c.description      = "choose-card";
-  c.text_description = std::move(text_description);
+  c.text_description = text_description;
   c.actions          = [get_targets](Game& g) -> Choose {
     auto& gs = static_cast<Game_State&>(g);
     return Choose_Card{pack_targets(get_targets(gs)), true};
@@ -94,12 +94,12 @@ Choice make_choose_cards_choice(
   bool                                             up_to,
   std::function<std::vector<Choice>(Game_State&, std::vector<Card_Id>)>
               on_chosen,
-  std::string text_description
+  const char* text_description
 ) {
   Choice c;
   c.player_index     = player_index;
   c.description      = "choose-cards";
-  c.text_description = std::move(text_description);
+  c.text_description = text_description;
   c.actions          = [get_targets, get_count, up_to](Game& g) -> Choose {
     auto& gs = static_cast<Game_State&>(g);
     return Choose_Cards{pack_targets(get_targets(gs)), get_count(gs), up_to};

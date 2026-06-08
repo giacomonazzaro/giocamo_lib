@@ -1,12 +1,12 @@
 #pragma once
 
-#include "inlined_vector.h"
-
 #include <functional>
 #include <optional>
 #include <string>
 #include <variant>
 #include <vector>
+
+#include "inlined_vector.h"
 
 // Card targets live inline (capacity 16) so producing the action list for a
 // choice does no heap allocation — this happens on every simulated ply during
@@ -22,14 +22,17 @@ struct Choose_Cards {
   bool                    up_to = true;
 };
 
+// Option labels are string literals (static lifetime), held as non-owning
+// pointers so building a choice allocates nothing — same reasoning as the int
+// target lists above.
 struct Choose_Option {
-  std::vector<std::string> targets;
+  Inlined_Vector<const char*, 16> targets;
 };
 
 struct Choose_Options {
-  std::vector<std::string> targets;
-  int                      count;
-  bool                     up_to = true;
+  Inlined_Vector<const char*, 16> targets;
+  int                             count;
+  bool                            up_to = true;
 };
 
 using Choose =
@@ -40,8 +43,8 @@ struct Choice;
 
 struct Choice {
   int         player_index;
-  std::string description;
-  std::string text_description;
+  const char* description      = "";
+  const char* text_description = "";
   // actions: produces the set of available action options for this choice.
   std::function<Choose(Game&)> actions;
   // resolve: applies the chosen action and returns any follow-up choices.

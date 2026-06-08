@@ -2,6 +2,7 @@
 
 #include <tressette/models.h>
 
+#include <cstring>
 #include <set>
 #include <variant>
 
@@ -9,7 +10,7 @@
 
 int Tressette_Agent_UI::choose_action(Game& game, const Choice& choice) {
   auto actions = choice.actions(game);
-  if (choice.description == "acknowledge") {
+  if (strcmp(choice.description, "acknowledge") == 0) {
     int  base   = stacks_offset;
     auto middle = world_rect(base + TRESSETTE_TABLE_IDX, *table_state);
     auto rect   = place_next(middle, 100, 50, "right", "center", 100);

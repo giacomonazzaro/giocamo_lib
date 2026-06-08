@@ -221,15 +221,14 @@ Choice Game_State::next_choice() {
   choice.text_description = "Play a card";
 
   // Each action option is identified by its index in the flat enumeration.
-  // We expose them as Choose_Option strings; the actual content is just a
-  // tag for debugging — agents always pick by index.
+  // We expose one option per action; the label content is unused — agents
+  // always pick by index — so a single static tag stands in for every option.
   choice.actions = [](Game& game) -> Choose {
     Game_State&         state   = static_cast<Game_State&>(game);
     std::vector<Action> actions = enumerate_actions(state);
     Choose_Option       option;
-    option.targets.reserve(actions.size());
     for (int i = 0; i < (int)actions.size(); ++i) {
-      option.targets.push_back(std::to_string(i));
+      option.targets.push_back("action");
     }
     return option;
   };
