@@ -1,7 +1,9 @@
 #pragma once
 
 #include <game/game.h>
+#include <game/inlined_vector.h>
 
+#include <array>
 #include <functional>
 #include <string>
 #include <vector>
@@ -59,21 +61,21 @@ struct Card {
   Suit suit = Suit::COPPE;
 };
 
-// Player state: hand of card ids and the cards won in tricks.
+// Player state: hand of card ids and the cards won in tricks. Both card lists
+// live inline so copying a player (per MCTS node) does no heap allocation.
 struct Player {
-  std::string      name;
-  std::vector<int> hand;
-  std::vector<int> tricks_won;
+  std::string             name;
+  Inlined_Vector<int, 10> hand;        // Up to 10 cards held.
+  Inlined_Vector<int, 40> tricks_won;  // Up to 40 cards if one player wins all.
 };
 
 // Full Tressette game state. Subclasses game's abstract Game so the
 // templated minimax / game_loop work directly on it.
 struct Game_State : Game {
-  std::vector<Card>   all_cards;  // 40 fixed cards.
-  std::vector<Player> players;    // exactly 2.
-  std::vector<int>    stock;      // face-down draw pile.
-  std::vector<int>    trick;      // 0..2 cards on the table.
-  int                 trick_leader      = 0;
+  std::array<Player, 2>   players;  // Exactly 2.
+  Inlined_Vector<int, 20> stock;    // Face-down draw pile (up to 20).
+  Inlined_Vector<int, 2>  trick;    // 0..2 cards on the table.
+  int                     trick_leader      = 0;
   int                 current_player    = 0;
   int                 last_trick_winner = -1;  // for the +1 ultima bonus.
   bool                game_over         = false;
@@ -86,5 +88,10 @@ struct Game_State : Game {
 
   void switch_turn() { current_player = 1 - current_player; }
 };
+
+// The 40 fixed cards. Set once at setup and never modified during play, so they
+// live outside Game_State: copying a state (as MCTS does per node) shouldn't
+// copy the whole deck. Cards are looked up by id, which indexes into this.
+extern std::vector<Card> all_cards;
 
 }  // namespace tressette

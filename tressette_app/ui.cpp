@@ -125,7 +125,7 @@ make_card_draw_callback(
     [&state, &ui_state, id](const Table_State&, const Input&, bool face_up) {
       if (!face_up) return;
       // Drawn in card-local space where the card center is at (0, 0).
-      const tressette::Card& c      = state.all_cards[id];
+      const tressette::Card& c      = tressette::all_cards[id];
       const char*            rlbl   = rank_label(c.rank);
       const char*            slbl   = suit_name(c.suit);
       Color                  col    = {255, 255, 255, 255};

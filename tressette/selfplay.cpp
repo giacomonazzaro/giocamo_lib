@@ -35,7 +35,7 @@ struct Snapshot {
 };
 
 // Pack a list of card ids (0..39) into a 40-bit bitmask.
-static inline std::uint64_t card_ids_to_bitmask(const std::vector<int>& ids) {
+static inline std::uint64_t card_ids_to_bitmask(array<const int> ids) {
   std::uint64_t mask = 0;
   for (int id : ids) mask |= (std::uint64_t(1) << id);
   return mask;

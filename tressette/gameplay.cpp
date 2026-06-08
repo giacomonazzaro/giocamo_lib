@@ -5,12 +5,14 @@
 
 namespace tressette {
 
+std::vector<Card> all_cards;
+
 int trick_winner(const Game_State& state) {
   // Caller guarantees state.trick.size() == 2.
   const int   led_card_id      = state.trick[0];
   const int   response_card_id = state.trick[1];
-  const Card& led_card         = state.all_cards[led_card_id];
-  const Card& response_card    = state.all_cards[response_card_id];
+  const Card& led_card         = all_cards[led_card_id];
+  const Card& response_card    = all_cards[response_card_id];
   const int   leader           = state.trick_leader;
   // Different suit -> leader wins automatically (no trumps in Tressette).
   if (response_card.suit != led_card.suit) return leader;
@@ -22,7 +24,7 @@ int trick_winner(const Game_State& state) {
 int compute_player_score(const Game_State& state, int player_index) {
   int thirds = 0;
   for (int cid : state.players[player_index].tricks_won) {
-    thirds += card_thirds(state.all_cards[cid].rank);
+    thirds += card_thirds(all_cards[cid].rank);
   }
   int score = thirds / 3;  // floor.
   if (state.stock.empty() && state.players[player_index].hand.empty() &&
@@ -33,28 +35,31 @@ int compute_player_score(const Game_State& state, int player_index) {
 
 std::vector<int> legal_cards(const Game_State& state) {
   const Player& player = state.players[state.current_player];
-  if (state.trick.empty()) return player.hand;  // Leader can play any card.
+  // Leader can play any card.
+  if (state.trick.empty()) {
+    return std::vector<int>(player.hand.begin(), player.hand.end());
+  }
 
-  const Suit led_suit = state.all_cards[state.trick[0]].suit;
+  const Suit led_suit = all_cards[state.trick[0]].suit;
   auto       matches  = std::vector<int>();
   for (int cid : player.hand) {
-    if (state.all_cards[cid].suit == led_suit) matches.push_back(cid);
+    if (all_cards[cid].suit == led_suit) matches.push_back(cid);
   }
   if (!matches.empty()) return matches;
-  return player.hand;
+  return std::vector<int>(player.hand.begin(), player.hand.end());
 }
 
-// Remove a single occurrence of card_id from v.
-static void erase_card(std::vector<int>& v, int card_id) {
-  auto it = std::find(v.begin(), v.end(), card_id);
-  if (it != v.end()) v.erase(it);
+// Remove a single occurrence of card_id from a hand.
+static void erase_card(Inlined_Vector<int, 10>& hand, int card_id) {
+  auto it = std::find(hand.begin(), hand.end(), card_id);
+  if (it != hand.end()) hand.erase(it);
 }
 
 void sort_hand(Game_State& state, int player_index) {
   auto& hand = state.players[player_index].hand;
-  std::sort(hand.begin(), hand.end(), [&state](int a, int b) {
-    const Card& ca = state.all_cards[a];
-    const Card& cb = state.all_cards[b];
+  std::sort(hand.begin(), hand.end(), [](int a, int b) {
+    const Card& ca = all_cards[a];
+    const Card& cb = all_cards[b];
     if (ca.suit != cb.suit) return ca.suit < cb.suit;
     return ca.rank < cb.rank;
   });
@@ -176,13 +181,14 @@ Game_State quick_setup(std::optional<int> seed) {
 
   // Card id encoding: id / 10 = suit index (0..3), id % 10 = rank - 1.
   const Suit suits[4] = {Suit::COPPE, Suit::DENARI, Suit::SPADE, Suit::BASTONI};
-  game.all_cards.reserve(40);
+  all_cards.clear();
+  all_cards.reserve(40);
   for (int i = 0; i < 40; ++i) {
     auto c = Card();
     c.id   = i;
     c.rank = (i % 10) + 1;
     c.suit = suits[i / 10];
-    game.all_cards.push_back(c);
+    all_cards.push_back(c);
   }
 
   auto deck = std::vector<int>(40);

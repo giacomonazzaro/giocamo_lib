@@ -34,7 +34,7 @@ static Table_State init_table_state(
   table.is_drop_allowed = [](int, int, int) { return false; };
 
   // One Thing per card; ids 0..39 match all_cards indices.
-  for (const auto& c : state.all_cards) {
+  for (const auto& c : tressette::all_cards) {
     auto t = make_card(c.id);
     if (c.suit == tressette::Suit::COPPE) t.color = {50, 100, 50, 255};
     if (c.suit == tressette::Suit::DENARI) t.color = {150, 120, 20, 255};
@@ -56,15 +56,18 @@ static Table_State init_table_state(
   }
 
   // Populate stack children from game state.
-  int base                                       = (int)state.all_cards.size();
-  table.things[base + TRESSETTE_HAND_0]._children = state.players[0].hand;
-  table.things[base + TRESSETTE_HAND_1]._children = state.players[1].hand;
-  table.things[base + TRESSETTE_TRICKS_0]._children =
-    state.players[0].tricks_won;
-  table.things[base + TRESSETTE_TRICKS_1]._children =
-    state.players[1].tricks_won;
-  table.things[base + TRESSETTE_STOCK_IDX]._children = state.stock;
-  table.things[base + TRESSETTE_TABLE_IDX]._children = state.trick;
+  int  base      = (int)tressette::all_cards.size();
+  auto set_stack = [&](int stack, array<const int> cards) {
+    table.things[base + stack]._children.assign(
+      cards.data, cards.data + cards.size()
+    );
+  };
+  set_stack(TRESSETTE_HAND_0, state.players[0].hand);
+  set_stack(TRESSETTE_HAND_1, state.players[1].hand);
+  set_stack(TRESSETTE_TRICKS_0, state.players[0].tricks_won);
+  set_stack(TRESSETTE_TRICKS_1, state.players[1].tricks_won);
+  set_stack(TRESSETTE_STOCK_IDX, state.stock);
+  set_stack(TRESSETTE_TABLE_IDX, state.trick);
 
   // Root: a wooden table surface owning all stacks as direct children.
   auto root = create_table_root(
@@ -81,10 +84,11 @@ static Table_State init_table_state(
 }
 
 static void update_stacks(Table_State& table, tressette::Game_State& state) {
-  int  base    = (int)state.all_cards.size();
-  auto refresh = [&](int idx, const std::vector<int>& cards) {
-    int thing_id                    = base + idx;
-    table.things[thing_id]._children = cards;
+  int  base    = (int)tressette::all_cards.size();
+  auto refresh = [&](int idx, array<const int> cards) {
+    table.things[base + idx]._children.assign(
+      cards.data, cards.data + cards.size()
+    );
   };
   refresh(TRESSETTE_HAND_0, state.players[0].hand);
   refresh(TRESSETTE_HAND_1, state.players[1].hand);
@@ -173,7 +177,7 @@ int main(int argc, char** argv) {
     };
 
   auto agent_ui = Tressette_Agent_UI(
-    &table, &ui_state, menu_result.player_index, (int)state.all_cards.size()
+    &table, &ui_state, menu_result.player_index, (int)tressette::all_cards.size()
   );
   Agent* agent =
     make_agent_pair(&agent_ui, make_ai_opponent(), menu_result, options.vs_ai);

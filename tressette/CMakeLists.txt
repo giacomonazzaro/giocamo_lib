@@ -42,7 +42,7 @@ if(NOT TARGET tressette_selfplay)
 endif()
 
 # Headless MCTS-vs-Minimax match-up. Plays N games, prints win counts.
-if(NOT TARGET tressette_match_mcts)
-    add_executable(tressette_match_mcts match_mcts.cpp)
-    target_link_libraries(tressette_match_mcts PRIVATE tressette_lib)
+if(NOT TARGET match_mcts)
+    add_executable(match_mcts match_mcts.cpp)
+    target_link_libraries(match_mcts PRIVATE tressette_lib)
 endif()

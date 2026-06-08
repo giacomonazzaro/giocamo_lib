@@ -4,7 +4,7 @@
 namespace tressette {
 
 // Converts a list of card ids (0..39) to a length-40 float tensor (indicator).
-static torch::Tensor card_ids_to_tensor(const std::vector<int>& ids) {
+static torch::Tensor card_ids_to_tensor(array<const int> ids) {
   auto t = torch::zeros({40});
   for (int id : ids) t[id] = 1.0f;
   return t;
