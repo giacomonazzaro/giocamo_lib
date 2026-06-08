@@ -97,7 +97,6 @@ static Game_State quick_setup(std::optional<int> seed) {
   Player p1;
   p1.name      = "Player 2";
   game.players = {p0, p1};
-  game.peoples = {};
 
   for (const auto& c : game.all_cards) game.shared_deck.push_back(c.id);
   std::shuffle(game.shared_deck.begin(), game.shared_deck.end(), rng);

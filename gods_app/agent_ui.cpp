@@ -12,16 +12,12 @@ void sync_game_state_from_table(
   // peoples is a flat list across both players; rebuild it from the table
   // so subsequent update_stacks calls don't clear the peoples zones.
   gods_state.peoples.clear();
-  auto set_list = [&](auto& list, int thing) {
-    const std::vector<int>& ids = table_state.things[thing].children();
-    list.assign(ids.begin(), ids.end());
-  };
   for (int i = 0; i < 2; ++i) {
-    Stack_Indices s = stack_indices(i, stacks_offset);
-    set_list(gods_state.players[i].deck, s.deck);
-    set_list(gods_state.players[i].hand, s.hand);
-    set_list(gods_state.players[i].discard, s.discard);
-    set_list(gods_state.players[i].wonders, s.wonders);
+    Stack_Indices s               = stack_indices(i, stacks_offset);
+    gods_state.players[i].deck    = table_state.things[s.deck].children();
+    gods_state.players[i].hand    = table_state.things[s.hand].children();
+    gods_state.players[i].discard = table_state.things[s.discard].children();
+    gods_state.players[i].wonders = table_state.things[s.wonders].children();
     for (int wid : gods_state.players[i].wonders) {
       gods_state.all_cards[wid].owner = i;
     }

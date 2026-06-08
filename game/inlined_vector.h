@@ -6,6 +6,7 @@
 #include <cstdlib>
 #include <cstring>
 #include <type_traits>
+#include <vector>
 
 // A vector that stores up to N elements inline and only spills to the heap if
 // it grows beyond N. Copying one that fits inline does no heap allocation —
@@ -42,6 +43,16 @@ struct Inlined_Vector {
   // Assign from an Inlined_Vector of any capacity (copies the live elements).
   template <int M>
   Inlined_Vector& operator=(const Inlined_Vector<T, M>& other) {
+    assign(other.begin(), other.end());
+    return *this;
+  }
+  // Assign from a std::vector or an array (span) view, for convenience.
+  Inlined_Vector& operator=(const std::vector<T>& other) {
+    assign(other.begin(), other.end());
+    return *this;
+  }
+  template <class U>
+  Inlined_Vector& operator=(const array<U>& other) {
     assign(other.begin(), other.end());
     return *this;
   }
