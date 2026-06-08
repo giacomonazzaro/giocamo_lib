@@ -75,7 +75,9 @@ int compute_player_score(const Game_State& state, int player) {
 }
 
 Game_State quick_setup(int /*seed*/) {
-  return Game_State();  // Empty board, player 0 to move.
+  Game_State game;  // Empty board, player 0 to move.
+  game.begin_game(game.next_choice());  // The opening decision to present.
+  return game;
 }
 
 Choice Game_State::next_choice() {

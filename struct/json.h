@@ -57,6 +57,14 @@ std::string to_json(
   const std::vector<T, Alloc>& arr, int indent = 0, bool pretty = true
 );
 
+// Inlined_Vector (inline fixed-capacity vector, defined in game/inlined_vector.h).
+template <class T, int Capacity>
+struct Inlined_Vector;
+template <class T, int Capacity>
+std::string to_json(
+  const Inlined_Vector<T, Capacity>& arr, int indent = 0, bool pretty = true
+);
+
 template <typename T, std::enable_if_t<!std::is_enum_v<T>, int> = 0>
 std::string to_json(const T& t, int indent = 0, bool pretty = true);
 
@@ -166,6 +174,14 @@ std::string to_json(const std::vector<T, Alloc>& arr, int indent, bool pretty) {
   return array_to_json(arr, indent, pretty);
 }
 
+// Inlined_Vector — serialized as a JSON array, same as a vector.
+template <class T, int Capacity>
+std::string to_json(
+  const Inlined_Vector<T, Capacity>& arr, int indent, bool pretty
+) {
+  return array_to_json(arr, indent, pretty);
+}
+
 // Enum (scoped or unscoped) — serialize as underlying integer.
 template <typename T>
 auto to_json(const T& t, int = 0, bool = true)
@@ -252,6 +268,9 @@ inline bool from_json_impl(JsonParser& p, long double& out);
 
 template <typename T, typename Alloc>
 bool from_json_impl(JsonParser& p, std::vector<T, Alloc>& out);
+
+template <class T, int Capacity>
+bool from_json_impl(JsonParser& p, Inlined_Vector<T, Capacity>& out);
 
 template <typename T>
 auto from_json_impl(JsonParser& p, T& out) -> std::
@@ -454,6 +473,30 @@ inline auto from_json_impl(JsonParser& p, T& out)
 // std::vector
 template <typename T, typename Alloc>
 inline bool from_json_impl(JsonParser& p, std::vector<T, Alloc>& out) {
+  p.skip_whitespace();
+  if (!p.expect('[')) return false;
+
+  out.clear();
+  bool first = true;
+  while (true) {
+    p.skip_whitespace();
+    if (p.peek() == ']') {
+      p.get();
+      return true;
+    }
+
+    if (!first && !p.expect(',')) return false;
+    first = false;
+
+    T elem;
+    if (!from_json_impl(p, elem)) return false;
+    out.push_back(std::move(elem));
+  }
+}
+
+// Inlined_Vector — parsed from a JSON array, same as a vector.
+template <class T, int Capacity>
+inline bool from_json_impl(JsonParser& p, Inlined_Vector<T, Capacity>& out) {
   p.skip_whitespace();
   if (!p.expect('[')) return false;
 

@@ -56,10 +56,10 @@ inline Game_State sample_state(
 
   // The opponent's hand keeps its (known) star cards; its draw cards are
   // pooled with the draw deck and re-dealt.
-  std::vector<int> hand_stars;
-  std::vector<int> hidden_draws;
+  Inlined_Vector<int, 4>  hand_stars;
+  Inlined_Vector<int, 20> hidden_draws;
   for (int id : opponent.hand) {
-    if (sampled.all_cards[id].is_star) hand_stars.push_back(id);
+    if (all_cards[id].is_star) hand_stars.push_back(id);
     else hidden_draws.push_back(id);
   }
   int draws_in_hand = (int)hidden_draws.size();

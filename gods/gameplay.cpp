@@ -245,7 +245,8 @@ std::vector<Choice> discard_cards(
 }
 
 std::vector<int> wonders_by_priority(Game_State& game) {
-  std::vector<int> result = game.active_player().wonders;
+  const auto&      mine = game.active_player().wonders;
+  std::vector<int> result(mine.begin(), mine.end());
   for (int wid : game.opponent().wonders) result.push_back(wid);
   return result;
 }

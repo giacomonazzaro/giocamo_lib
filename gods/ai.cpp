@@ -46,7 +46,7 @@ Game_State sample_state(
   int              opponent_index = 1 - player_index;
   Player&          opponent       = sampled.players[opponent_index];
   int              hand_size      = (int)opponent.hand.size();
-  std::vector<int> hidden         = opponent.hand;
+  std::vector<int> hidden(opponent.hand.begin(), opponent.hand.end());
   hidden.insert(hidden.end(), opponent.deck.begin(), opponent.deck.end());
   std::shuffle(hidden.begin(), hidden.end(), rng);
   opponent.hand.assign(hidden.begin(), hidden.begin() + hand_size);

@@ -41,8 +41,9 @@ int Dot_Agent_UI::choose_action(Game& game, const Choice& choice) {
   // The list the chosen action indexes into: the acting seat's hand for the
   // split, the opponent's pool for the discard. The cards dragged into the
   // play area are a subset of this list.
-  const std::vector<int>& targets =
-    split ? state.players[seat].hand : state.players[1 - seat].pool;
+  array<const int> targets = split
+                               ? array<const int>(state.players[seat].hand)
+                               : array<const int>(state.players[1 - seat].pool);
 
   int                     play_area_id = stacks_offset + DOT_PLAY_AREA;
   const std::vector<int>& selected = table_state->things[play_area_id].children();

@@ -82,7 +82,6 @@ static Game_State quick_setup(std::optional<int> seed) {
   Game_State game;
 
   // Build all_cards from card_designs.
-  game.all_cards.reserve(card_designs.size());
   for (const auto& d : card_designs) {
     Card c;
     c.id        = d->id;
@@ -100,7 +99,6 @@ static Game_State quick_setup(std::optional<int> seed) {
   game.players = {p0, p1};
   game.peoples = {};
 
-  game.shared_deck.reserve(game.all_cards.size());
   for (const auto& c : game.all_cards) game.shared_deck.push_back(c.id);
   std::shuffle(game.shared_deck.begin(), game.shared_deck.end(), rng);
 
@@ -114,6 +112,7 @@ static Game_State quick_setup(std::optional<int> seed) {
     }
   }
 
+  game.begin_game(game.next_choice());  // The opening decision to present.
   return game;
 }
 
@@ -130,20 +129,25 @@ void populate_stacks_from_gods_state(
     if (!n.empty()) thing_id[n] = i;
   }
 
+  auto set_children = [&](const std::string& name, array<const int> ids) {
+    table_state.things[thing_id[name]]._children.assign(
+      ids.data, ids.data + ids.size()
+    );
+  };
   for (int i = 0; i < 2; ++i) {
     const Player& p  = gods_state.players[i];
     auto          pp = "p" + std::to_string(i);
-    table_state.things[thing_id[pp + "_deck"]]._children    = p.deck;
-    table_state.things[thing_id[pp + "_hand"]]._children    = p.hand;
-    table_state.things[thing_id[pp + "_discard"]]._children = p.discard;
-    table_state.things[thing_id[pp + "_wonders"]]._children = p.wonders;
+    set_children(pp + "_deck", p.deck);
+    set_children(pp + "_hand", p.hand);
+    set_children(pp + "_discard", p.discard);
+    set_children(pp + "_wonders", p.wonders);
     std::vector<int> peoples;
     for (int pid : gods_state.peoples) {
       if (gods_state.owner(pid) == i) peoples.push_back(pid);
     }
-    table_state.things[thing_id[pp + "_peoples"]]._children = peoples;
+    set_children(pp + "_peoples", peoples);
   }
-  table_state.things[thing_id["shared_deck"]]._children = gods_state.shared_deck;
+  set_children("shared_deck", gods_state.shared_deck);
 
   // Lay out cards inside each stack.
   for (int stack_id : table_state.things[table_state.root].children()) {

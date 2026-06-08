@@ -148,11 +148,11 @@ make_dot_card_draw_callback(
 
 // Sum of one color's dots over a set of cards. color: 0 blue, 1 black, 2 red.
 static int pool_color_total(
-  const dot::Game_State& state, const std::vector<int>& cards, int color
+  const dot::Game_State& state, array<const int> cards, int color
 ) {
   int total = 0;
   for (int id : cards) {
-    const dot::Card& card = state.all_cards[id];
+    const dot::Card& card = dot::all_cards[id];
     if (color == 0)
       total += card.blue_dots;
     else if (color == 1)

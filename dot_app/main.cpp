@@ -24,9 +24,11 @@
 // play area is cleared (it isn't backed by game state), and the shared pool
 // stays face-down until both players have committed their three cards.
 static void update_table_from_game(Table_State& table, dot::Game_State& state) {
-  int  base      = (int)state.all_cards.size();
-  auto set_stack = [&](int stack, const std::vector<int>& cards) {
-    table.things[base + stack]._children = cards;
+  int  base      = (int)dot::all_cards.size();
+  auto set_stack = [&](int stack, array<const int> cards) {
+    table.things[base + stack]._children.assign(
+      cards.data, cards.data + cards.size()
+    );
     update_children_positions(base + stack, table, false);
   };
   set_stack(DOT_POOL_0, state.players[0].pool);
@@ -44,7 +46,7 @@ static void update_table_from_game(Table_State& table, dot::Game_State& state) {
   // played this round stays face-down -- both the shared pool and the cards
   // each player just put in front of them. Cards carried from earlier rounds
   // stay visible, and everything is revealed once both have committed.
-  for (const dot::Card& card : state.all_cards) table.things[card.id].face_up = true;
+  for (const dot::Card& card : dot::all_cards) table.things[card.id].face_up = true;
   bool round_revealed = (int)state.shared_pool.size() >= 2 * dot::SHARED_COUNT;
   if (!round_revealed) {
     for (int id : state.shared_pool) table.things[id].face_up = false;
@@ -67,12 +69,12 @@ static Table_State init_table_state(
 
   // One Thing per card; ids match all_cards indices. Cream face so the
   // colored dots stand out.
-  for (const dot::Card& card : state.all_cards) {
+  for (const dot::Card& card : dot::all_cards) {
     Thing thing = make_card(card.id);
     thing.color = {235, 225, 205, 255};
     table.things.push_back(thing);
     table.draw_callbacks[card.id] =
-      make_dot_card_draw_callback(state.all_cards, ui_state, card.id);
+      make_dot_card_draw_callback(dot::all_cards, ui_state, card.id);
   }
 
   // Stacks appended after the cards, laid out for the local player's seat.
@@ -156,7 +158,7 @@ int main(int argc, char** argv) {
   // screen controls that seat (both seats in hot-seat). Cards move between
   // the acting player's hand and the play area for the split, and between the
   // opponent's pool and the play area for the discard.
-  int base = (int)state.all_cards.size();
+  int base = (int)dot::all_cards.size();
   table.is_drop_allowed =
     [&state, base, bottom_player, hot_seat](int src, int dst, int) {
       if (src == dst) return true;

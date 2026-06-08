@@ -45,17 +45,16 @@ struct Choice {
 
 // Abstract base. Concrete games (e.g. gods) subclass and override.
 struct Game {
-  std::vector<Choice> choices;
+  Choice _choice;
 
-  virtual ~Game() = default;
+  virtual ~Game()                   = default;
+  virtual bool is_game_over() const = 0;
 
-  virtual bool   is_game_over() const = 0;
-  virtual Choice next_choice()        = 0;
+  // Seeds the first choice to present, before the game loop starts. Every later
+  // choice comes from a resolve, so this is only needed once during setup.
+  void begin_game(const Choice& choice) { _choice = choice; }
 
-  inline const Choice& current_choice() const {
-    // assert(choices.size());
-    return choices.back();
-  }
+  inline const Choice& current_choice() const { return _choice; }
 };
 
 // Returns the number of indexable action options for a Choose.

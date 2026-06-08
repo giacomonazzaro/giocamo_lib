@@ -105,20 +105,18 @@ std::vector<Card_Id> Game_State::card_list(
     });
     return a;
   }
-  const Player&           p   = players[player_id];
-  const std::vector<int>* src = nullptr;
+  const Player&    p   = players[player_id];
+  array<const int> src;  // Empty unless the area names one of the lists below.
   if (area == "hand")
-    src = &p.hand;
+    src = p.hand;
   else if (area == "wonders")
-    src = &p.wonders;
+    src = p.wonders;
   else if (area == "discard")
-    src = &p.discard;
+    src = p.discard;
   else if (area == "deck")
-    src = &p.deck;
+    src = p.deck;
   std::vector<Card_Id> out;
-  if (src) {
-    for (int cid : *src) out.push_back(Card_Id{area, cid, player_id});
-  }
+  for (int cid : src) out.push_back(Card_Id{area, cid, player_id});
   std::sort(out.begin(), out.end(), [](const Card_Id& a, const Card_Id& b) {
     return a.card_index < b.card_index;
   });

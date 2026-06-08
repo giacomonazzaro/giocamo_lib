@@ -9,6 +9,9 @@
 
 namespace dot {
 
+// Definition of the shared deck declared in models.h. Filled by quick_setup.
+std::vector<Card> all_cards;
+
 constexpr int DRAW_PER_ROUND = 5;  // Draw cards drawn each round (star adds 1).
 constexpr int NUM_ROUNDS      = 3;
 constexpr int WIN_TOKENS      = 5;  // Reaching this ends the game immediately.
@@ -61,11 +64,11 @@ long long combination_rank(int n, const std::vector<int>& positions) {
 
 // Dots of one color in a set of cards. color: 0 blue, 1 black, 2 red.
 static int color_count(
-  const Game_State& state, const std::vector<int>& cards, int color
+  const Game_State& state, array<const int> cards, int color
 ) {
   int total = 0;
   for (int id : cards) {
-    const Card& card = state.all_cards[id];
+    const Card& card = all_cards[id];
     if (color == 0) total += card.blue_dots;
     else if (color == 1) total += card.black_dots;
     else total += card.red_dots;
@@ -160,7 +163,9 @@ static void start_round(Game_State& state) {
 
 Game_State quick_setup(int seed) {
   Game_State state;
-  state.players.resize(2);
+
+  // Rebuild the shared deck for this game.
+  all_cards.clear();
 
   // Both players get an identical deck of cards, with distinct ids so each
   // card is its own Thing on the table.
@@ -169,8 +174,8 @@ Game_State quick_setup(int seed) {
     Player& player = state.players[player_index];
     for (const Card& card : base) {
       Card copy = card;
-      copy.id   = (int)state.all_cards.size();
-      state.all_cards.push_back(copy);
+      copy.id   = (int)all_cards.size();
+      all_cards.push_back(copy);
       if (copy.is_star) player.star_deck.push_back(copy.id);
       else player.draw_deck.push_back(copy.id);
     }
@@ -181,6 +186,7 @@ Game_State quick_setup(int seed) {
 
   state.round = 0;
   start_round(state);
+  state.begin_game(state.next_choice());  // The opening decision to present.
   return state;
 }
 
@@ -222,7 +228,7 @@ static void resolve_acknowledge(Game_State& state) {
 // Remove the chosen cards from the opponent's pool, then advance: the other
 // player discards, or once both have, start the next round.
 static void resolve_discard(Game_State& state, int index) {
-  std::vector<int>& opponent_pool = state.players[1 - state.acting_player].pool;
+  auto& opponent_pool = state.players[1 - state.acting_player].pool;
   std::vector<int>  picks =
     combination_at((int)opponent_pool.size(), discard_count(state), index);
   // Erase from the back so earlier positions stay valid.
@@ -250,7 +256,10 @@ Choice Game_State::next_choice() {
     choice.text_description = "Pick 3 cards for the shared pool";
     choice.actions          = [](Game& game) -> Choose {
       Game_State& state = static_cast<Game_State&>(game);
-      return Choose_Cards{state.players[state.acting_player].hand, SHARED_COUNT, false};
+      const auto& hand = state.players[state.acting_player].hand;
+      return Choose_Cards{
+        std::vector<int>(hand.begin(), hand.end()), SHARED_COUNT, false
+      };
     };
     choice.resolve = [](Game& game, int index) -> Choice {
       Game_State& state = static_cast<Game_State&>(game);
@@ -274,9 +283,10 @@ Choice Game_State::next_choice() {
     choice.description      = "discard";
     choice.text_description = "Discard from the opponent's pool";
     choice.actions          = [](Game& game) -> Choose {
-      Game_State& state = static_cast<Game_State&>(game);
+      Game_State&      state = static_cast<Game_State&>(game);
+      const auto& pool = state.players[1 - state.acting_player].pool;
       return Choose_Cards{
-        state.players[1 - state.acting_player].pool, discard_count(state), false
+        std::vector<int>(pool.begin(), pool.end()), discard_count(state), false
       };
     };
     choice.resolve = [](Game& game, int index) -> Choice {

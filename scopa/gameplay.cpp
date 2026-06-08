@@ -278,6 +278,7 @@ Game_State quick_setup(std::optional<int> seed) {
 
   sort_hand(game, 0);
   sort_hand(game, 1);
+  game.begin_game(game.next_choice());  // The opening decision to present.
   return game;
 }
 

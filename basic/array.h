@@ -4,6 +4,8 @@
 
 #include <cassert>
 #include <initializer_list>
+#include <type_traits>
+#include <vector>
 
 template <typename Type>
 struct array {
@@ -27,6 +29,14 @@ struct array {
 
     // array(const Type* p, int c) : data(p), count(c) {}
     array(Type* p, size_t c) : data(p), count(c) {}
+
+    // Implicit view over a std::vector. Two overloads so a const-element view
+    // (array<const T>) can be taken over a std::vector<T> as well.
+    template <typename U = Type, std::enable_if_t<!std::is_const<U>::value, int> = 0>
+    array(std::vector<U>& v) : data(v.data()), count(v.size()) {}
+    template <typename U = Type, std::enable_if_t<std::is_const<U>::value, int> = 0>
+    array(const std::vector<std::remove_const_t<U>>& v)
+        : data(v.data()), count(v.size()) {}
 
     inline void insert(const Type& element, size_t index) {
         for (size_t i = count; i > index; i--) {

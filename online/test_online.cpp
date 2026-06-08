@@ -33,7 +33,7 @@ struct Test_Game : Game {
 
   bool is_game_over() const override { return turn >= 6; }
 
-  Choice next_choice() override {
+  Choice next_choice() {
       if (is_game_over()) return {};
     Choice c;
     c.player_index = current_player;

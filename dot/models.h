@@ -1,7 +1,9 @@
 #pragma once
 
 #include <game/game.h>
+#include <game/inlined_vector.h>
 
+#include <array>
 #include <optional>
 #include <vector>
 
@@ -20,10 +22,10 @@ struct Card {
 
 // One player. Card collections hold ids into Game_State.all_cards.
 struct Player {
-  std::vector<int> draw_deck;   // Remaining face-down draw cards.
-  std::vector<int> star_deck;   // Remaining star cards (viewable by owner).
-  std::vector<int> hand;        // The 6 cards held this round (5 draw + 1 star).
-  std::vector<int> pool;        // Personal pool; carries over between rounds.
+  Inlined_Vector<int, 16> draw_deck;   // Up to 15 face-down draw cards.
+  Inlined_Vector<int, 4>  star_deck;   // Up to 3 star cards (viewable by owner).
+  Inlined_Vector<int, 8>  hand;        // 6 cards held this round (5 draw + 1 star).
+  Inlined_Vector<int, 12> pool;        // Personal pool; carries over between rounds.
   int              revealed_pool_count = 0;  // Pool cards from earlier rounds
                                              // (already shown); the rest stay
                                              // hidden until both players commit.
@@ -46,9 +48,8 @@ enum class Phase { SPLIT, ACKNOWLEDGE, DISCARD };
 // tokens are awarded on the dot-count difference, and opponents' pools are
 // thinned in the discard phase.
 struct Game_State : Game {
-  std::vector<Card>   all_cards;    // 36: ids 0..17 player 0, 18..35 player 1.
-  std::vector<Player> players;      // Exactly 2.
-  std::vector<int>    shared_pool;  // Cards played to the shared pool this round.
+  std::array<Player, 2>  players;      // Exactly 2.
+  Inlined_Vector<int, 8> shared_pool;  // Cards played to the shared pool (max 6).
 
   // Tokens of each color currently up for grabs (1 per round, plus any that
   // carried over from a tied color in an earlier round).
@@ -64,7 +65,12 @@ struct Game_State : Game {
   bool  game_over     = false;
 
   bool   is_game_over() const override { return game_over; }
-  Choice next_choice() override;
+  Choice next_choice();
 };
+
+// The deck of cards. Fixed at setup and never modified during play, so it lives
+// outside Game_State: copying a state (as MCTS does per node) shouldn't copy the
+// whole deck. Cards are looked up by id, which indexes into this.
+extern std::vector<Card> all_cards;
 
 }  // namespace dot

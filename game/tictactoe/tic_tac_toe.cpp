@@ -73,6 +73,7 @@ int main() {
 
   std::cout << "Tic-tac-toe: you are X (first), minimax AI is O.\n";
 
+  game.begin_game(game.next_choice());  // The opening decision to present.
   game_loop(game, duel, [](Game& g) {
     auto& ttt = static_cast<Tic_Tac_Toe&>(g);
     print_board(ttt);
