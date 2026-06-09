@@ -21,12 +21,16 @@ int trick_winner(const Game_State& state) {
                                                                 : leader;
 }
 
-int compute_player_score(const Game_State& state, int player_index) {
+int compute_player_thirds(const Game_State& state, int player_index) {
   int thirds = 0;
   for (int cid : state.players[player_index].tricks_won) {
     thirds += card_thirds(all_cards[cid].rank);
   }
-  int score = thirds / 3;  // floor.
+  return thirds;
+}
+
+int compute_player_score(const Game_State& state, int player_index) {
+  int score = compute_player_thirds(state, player_index) / 3;  // floor.
   if (state.stock.empty() && state.players[player_index].hand.empty() &&
       state.last_trick_winner == player_index)
     score += 1;  // ultima bonus.
@@ -66,6 +70,38 @@ static Choice wait_for_player_acknolwdgment(Game_State& state);
 
 Choice make_play_choice(Game_State& state);
 
+// Award a completed 2-card trick to its winner, draw from the stock (winner
+// first, loser second), advance the lead, and end the game when both hands are
+// empty.
+static void resolve_trick(Game_State& state) {
+  const int winner        = trick_winner(state);
+  state.last_trick_winner = winner;
+  Player& winner_p        = state.players[winner];
+  for (int cid : state.trick) winner_p.tricks_won.push_back(cid);
+
+  state.trick.clear();
+  state.trick_leader   = winner;
+  state.current_player = winner;
+
+  // Draw phase: winner draws first, loser second.
+  if (!state.stock.empty()) {
+    int top = state.stock.back();
+    state.stock.pop_back();
+    state.players[winner].hand.push_back(top);
+
+    top = state.stock.back();
+    state.stock.pop_back();
+    state.players[1 - winner].hand.push_back(top);
+
+    sort_hand(state, winner);
+    sort_hand(state, 1 - winner);
+  }
+
+  if (state.players[0].hand.empty() && state.players[1].hand.empty()) {
+    state.game_over = true;
+  }
+}
+
 Choice play_card(Game_State& state, int card_id) {
   Player& player = state.players[state.current_player];
   erase_card(player.hand, card_id);
@@ -74,19 +110,16 @@ Choice play_card(Game_State& state, int card_id) {
   if (state.trick.size() < 2) {
     // First card of the trick: the responder plays next.
     state.switch_turn();
-      return make_play_choice(state);
-  } else {
-    return wait_for_player_acknolwdgment(state);
+    return make_play_choice(state);
   }
+  // Trick complete: next_choice decides whether to pause on the acknowledge
+  // step (human) or resolve it straight away (search/self-play).
+  return state.next_choice();
 }
 
 static Choice wait_for_player_acknolwdgment(Game_State& state) {
-  auto choice = Choice();
-  // The human confirms the completed trick when there is one; in headless play
-  // (search, self-play) there is no human, so let the current seat own this
-  // single-option step rather than the invalid seat -1.
-  choice.player_index =
-    state.human_player >= 0 ? state.human_player : state.current_player;
+  auto choice             = Choice();
+  choice.player_index     = state.human_player;
   choice.description      = "acknowledge";
   choice.text_description = "Acknowledge trick";
 
@@ -99,35 +132,7 @@ static Choice wait_for_player_acknolwdgment(Game_State& state) {
 
   choice.resolve = [](Game& g, int _index) -> Choice {
     auto& state = static_cast<Game_State&>(g);
-
-    // Trick complete: resolve it.
-    const int winner        = trick_winner(state);
-    state.last_trick_winner = winner;
-    Player& winner_p        = state.players[winner];
-    for (int cid : state.trick) winner_p.tricks_won.push_back(cid);
-
-    state.trick.clear();
-    state.trick_leader   = winner;
-    state.current_player = winner;
-
-    // Draw phase: winner draws first, loser second.
-    if (!state.stock.empty()) {
-      int top = state.stock.back();
-      state.stock.pop_back();
-      state.players[winner].hand.push_back(top);
-
-      top = state.stock.back();
-      state.stock.pop_back();
-      state.players[1 - winner].hand.push_back(top);
-
-      sort_hand(state, winner);
-      sort_hand(state, 1 - winner);
-    }
-
-    // Game ends when both hands are empty.
-    if (state.players[0].hand.empty() && state.players[1].hand.empty()) {
-      state.game_over = true;
-    }
+    resolve_trick(state);
     return make_play_choice(state);
   };
   return choice;
@@ -139,12 +144,15 @@ void resolve_pending_trick(Game_State& state) {
 }
 
 Choice Game_State::next_choice() {
-  // A complete trick (2 cards on the table) must be resolved before anyone
-  // plays again: that's where the winner is decided, the cards are won, and
-  // both players draw from the stock. The search agents reach the pending
-  // choice only through next_choice(), so without this the trick would never
-  // resolve during search and every position would score zero.
-  if (trick.size() == 2) return wait_for_player_acknolwdgment(*this);
+  if (trick.size() == 2) {
+    // No human to see the trick: resolve it in place, so search/self-play never
+    // build or step through the acknowledge node at all.
+    if (human_player < 0) {
+      resolve_trick(*this);
+      return make_play_choice(*this);
+    }
+    return wait_for_player_acknolwdgment(*this);
+  }
   return make_play_choice(*this);
 }
 

@@ -162,6 +162,67 @@ std::vector<int> traverse_to_leaf_node(
 
 }  // namespace mcts_detail
 
+// A rollout policy that biases play toward stronger moves instead of choosing
+// uniformly at random. For each legal action it applies the action to a copy of
+// the state and scores the resulting position with evaluate_state from the
+// acting player's perspective, then samples an action with probability
+// proportional to softmax(score / temperature). Low temperature is greedy; high
+// temperature approaches uniform random. Plugs into Agent_MCTS_Stochastic as the
+// Rollout_Agent_T. Game_T must provide evaluate_state(Game_T&, int) — the same
+// hook the rollout's terminal evaluation already uses.
+template <class Game_T>
+struct Agent_Softmax_Rollout : Agent {
+  float        temperature;
+  std::mt19937 rng;
+
+  explicit Agent_Softmax_Rollout(float temperature = 1.0f)
+      : temperature(temperature), rng(std::random_device{}()) {}
+
+  void message(const std::string&) override {}
+
+  int choose_action(Game& game, const Choice& choice) override {
+    const int num_actions = action_options_count(choice.actions(game));
+    if (num_actions <= 0) return 0;
+    if (num_actions == 1) return 0;
+    const int player = choice.player_index;
+
+    // Score each action by the heuristic value of the position it leads to.
+    Inlined_Vector<float, 16> weights;
+    float max_score = -std::numeric_limits<float>::infinity();
+    for (int action_index = 0; action_index < num_actions; ++action_index) {
+      Game_T next = static_cast<Game_T&>(game);
+      resolve_choice(next, choice, action_index);
+      // Fast-forward through forced single-option follow-ups (e.g. a trick
+      // resolving) so the heuristic sees the move's outcome, not an
+      // intermediate position where nothing has been scored yet.
+      for (int guard = 0; guard < 8 && !next.is_game_over(); ++guard) {
+        Choice follow = next.next_choice();
+        if (action_options_count(follow.actions(next)) != 1) break;
+        resolve_choice(next, follow, 0);
+      }
+      const float score = evaluate_state(next, player);
+      weights.push_back(score);
+      if (score > max_score) max_score = score;
+    }
+
+    // Softmax over the scores (max-shifted for numerical stability), then draw
+    // one action from the resulting distribution.
+    float sum = 0.0f;
+    for (int i = 0; i < num_actions; ++i) {
+      weights[i]  = std::exp((weights[i] - max_score) / temperature);
+      sum        += weights[i];
+    }
+    std::uniform_real_distribution<float> dist(0.0f, sum);
+    const float threshold = dist(rng);
+    float       running    = 0.0f;
+    for (int i = 0; i < num_actions; ++i) {
+      running += weights[i];
+      if (running >= threshold) return i;
+    }
+    return num_actions - 1;
+  }
+};
+
 // Runs MCTS for `num_iterations` and returns one score per root action — the
 // visit count of the corresponding root child. Visit counts are the standard
 // final selection criterion for MCTS and are more robust to outliers than the

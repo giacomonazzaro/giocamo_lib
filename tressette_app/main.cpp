@@ -106,6 +106,27 @@ static void update_stacks(Table_State& table, tressette::Game_State& state) {
 // The opponent agent picked for solo (vs-AI) play. Hides the TORCH_AVAILABLE
 // fork so the caller doesn't have to know about it.
 #include <game/mcts.h>
+// MCTS with softmax-weighted (guided) rollouts: instead of playing the rollout
+// uniformly at random, each step is biased toward stronger moves scored by
+// evaluate_state. This gives a far better value signal than random rollouts,
+// which is what limits plain MCTS in Tressette (a random rollout opponent never
+// punishes bad play, so e.g. leading an Ace looks safe when it isn't).
+static Agent* make_softmax_mcts(
+  int num_iterations, int rollout_depth, int num_samples, float time_budget
+) {
+  using Game_State = tressette::Game_State;
+  auto* agent =
+    new Agent_MCTS_Stochastic<Game_State, Agent_Softmax_Rollout<Game_State>>(
+      num_iterations, rollout_depth, num_samples, 1.41421356f, time_budget
+    );
+  // Each search thread builds its own rollout agent; lower temperature is
+  // greedier (sharper guidance), higher is closer to random.
+  agent->rollout_agent_factory = []() {
+    return Agent_Softmax_Rollout<Game_State>(/* temperature */ 0.5f);
+  };
+  return agent;
+}
+
 static Agent* make_ai_opponent() {
 #ifdef TORCH_AVAILABLE
   return new tressette::Agent_Minimax_Neural(
@@ -113,23 +134,20 @@ static Agent* make_ai_opponent() {
   );
 #elif defined(__EMSCRIPTEN__)
   // Web: the search runs one determinization per frame so the page stays
-  // responsive (see the Emscripten branch of Agent_MCTS_Stochastic). Keep
-  // num_iterations modest — it bounds each frame's tree (and its allocation) —
-  // and gather enough samples to vote well.
-  return new Agent_MCTS_Stochastic<tressette::Game_State>(
-    /* num_iterations       */ 20000,
-    /* rollout_depth        */ 40,
-    /* num_samples          */ 40,
-    /* exploration_constant */ 1.41421356f,
-    /* time_budget_seconds  */ 0.0f
+  // responsive (see the Emscripten branch of Agent_MCTS_Stochastic). Guided
+  // rollouts cost more per iteration, so keep num_iterations modest.
+  return make_softmax_mcts(
+    /* num_iterations */ 5000, /* rollout_depth */ 40, /* num_samples */ 40,
+    /* time_budget_seconds */ 0.0f
   );
 #else
-  return new Agent_MCTS_Stochastic<tressette::Game_State>(
-    /* num_iterations       */ 1000000,
-    /* rollout_depth        */ 40,
-    /* num_samples          */ 50,
-    /* exploration_constant */ 1.41421356f,
-    /* time_budget_seconds  */ 5.0f
+  // Guided rollouts are several times slower per iteration, but plain MCTS
+  // already saturates after a few hundred iterations here, so a smaller
+  // iteration cap with a better rollout policy spends the time budget far
+  // better than brute-forcing random rollouts.
+  return make_softmax_mcts(
+    /* num_iterations */ 20000, /* rollout_depth */ 40, /* num_samples */ 50,
+    /* time_budget_seconds */ 5.0f
   );
 #endif
 }

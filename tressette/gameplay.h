@@ -15,6 +15,10 @@ namespace tressette {
 // Returns the winning player index (0 or 1).
 int trick_winner(const Game_State& state);
 
+// Sum of captured card values in thirds-of-a-point (un-floored). Used both for
+// the final score and as a smooth mid-game heuristic.
+int compute_player_thirds(const Game_State& state, int player_index);
+
 // Total points scored by player_index, integer (floored thirds + ultima bonus).
 int compute_player_score(const Game_State& state, int player_index);
 
