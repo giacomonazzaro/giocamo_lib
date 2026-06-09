@@ -33,6 +33,10 @@ Game_State sample_state(
   const Game_State& state, int player_index, std::mt19937& rng
 ) {
   Game_State sampled        = state;
+  // The search's internal model has no human, so tricks resolve immediately
+  // (no acknowledge node) and the rollout heuristic still sees each trick's
+  // outcome without any fast-forwarding.
+  sampled.human_player      = -1;
   const int  opponent_index = 1 - player_index;
   Player&    opponent       = sampled.players[opponent_index];
   const int  hand_size      = (int)opponent.hand.size();

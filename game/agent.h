@@ -86,6 +86,77 @@ struct Timing_Agent : Agent {
   }
 };
 
+// Aggregated outcome of benchmark_agents, from agent_a's perspective.
+struct Benchmark_Result {
+  int    a_wins    = 0;
+  int    b_wins    = 0;
+  int    draws     = 0;
+  int    a_points  = 0;
+  int    b_points  = 0;
+  double a_seconds = 0.0;  // Total wall-clock time agent_a spent choosing moves.
+  double b_seconds = 0.0;
+  int    a_calls   = 0;    // Number of moves each agent chose.
+  int    b_calls   = 0;
+
+  double a_ms_per_move() const {
+    return a_calls ? a_seconds / a_calls * 1000.0 : 0.0;
+  }
+  double b_ms_per_move() const {
+    return b_calls ? b_seconds / b_calls * 1000.0 : 0.0;
+  }
+};
+
+// Plays `num_games` of a two-player game between agent_a and agent_b, swapping
+// which seat each holds every game so neither benefits from leading.
+//   make_state(game_index) -> Game_T   : a fresh game to play (e.g. a new deal).
+//   score(game, player_index) -> int   : that player's final score.
+// Each game runs through game_loop; a per-game line with the running win count
+// is printed to stderr. The agents are timed internally (move time goes into the
+// result). Tallies are returned from agent_a's perspective.
+template <class Game_T, class Make_State, class Score_Fn>
+Benchmark_Result benchmark_agents(
+  int         num_games,
+  Make_State  make_state,
+  Score_Fn    score,
+  Agent&      agent_a,
+  const char* name_a,
+  Agent&      agent_b,
+  const char* name_b
+) {
+  Timing_Agent timed_a(&agent_a, name_a);
+  Timing_Agent timed_b(&agent_b, name_b);
+
+  Benchmark_Result result;
+  for (int game_index = 0; game_index < num_games; ++game_index) {
+    // Alternate seats: agent_a leads on even games, agent_b on odd ones.
+    const bool a_is_player_0 = (game_index % 2 == 0);
+    Agent_Duel duel(&timed_a, &timed_b, /*swap=*/!a_is_player_0);
+
+    Game_T game = make_state(game_index);
+    game_loop(game, duel);
+
+    const int a_score = score(game, a_is_player_0 ? 0 : 1);
+    const int b_score = score(game, a_is_player_0 ? 1 : 0);
+    result.a_points += a_score;
+    result.b_points += b_score;
+    if (a_score > b_score)
+      result.a_wins += 1;
+    else if (a_score < b_score)
+      result.b_wins += 1;
+    else
+      result.draws += 1;
+
+    std::cerr << "game " << (game_index + 1) << "/" << num_games << "  "
+              << name_a << "=" << a_score << "  " << name_b << "=" << b_score
+              << "  score=" << result.a_wins << "-" << result.b_wins << "\n";
+  }
+  result.a_seconds = timed_a.total_seconds;
+  result.b_seconds = timed_b.total_seconds;
+  result.a_calls   = timed_a.num_calls;
+  result.b_calls   = timed_b.num_calls;
+  return result;
+}
+
 // Runs an inner agent's choose_action on a background thread so the caller
 // can keep drawing frames while it thinks. The first call for a given choice
 // kicks off the worker and returns -1 immediately; subsequent calls return

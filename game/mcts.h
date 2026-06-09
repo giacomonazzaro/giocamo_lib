@@ -192,14 +192,6 @@ struct Agent_Softmax_Rollout : Agent {
     for (int action_index = 0; action_index < num_actions; ++action_index) {
       Game_T next = static_cast<Game_T&>(game);
       resolve_choice(next, choice, action_index);
-      // Fast-forward through forced single-option follow-ups (e.g. a trick
-      // resolving) so the heuristic sees the move's outcome, not an
-      // intermediate position where nothing has been scored yet.
-      for (int guard = 0; guard < 8 && !next.is_game_over(); ++guard) {
-        Choice follow = next.next_choice();
-        if (action_options_count(follow.actions(next)) != 1) break;
-        resolve_choice(next, follow, 0);
-      }
       const float score = evaluate_state(next, player);
       weights.push_back(score);
       if (score > max_score) max_score = score;
