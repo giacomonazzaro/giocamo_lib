@@ -18,33 +18,15 @@ float evaluate_state(Game_State& game, int player_index) {
   const int  my_thirds  = compute_player_thirds(game, player_index);
   const int  opp_thirds = compute_player_thirds(game, 1 - player_index);
 
-  if (use_normalized_evaluation) {
-    // [0,1] from player_index's perspective: 1 = win, 0 = loss, 0.5 = even.
-    if (over) {
-      int my  = compute_player_score(game, player_index);
-      int opp = compute_player_score(game, 1 - player_index);
-      if (my > opp) return 1.0f;
-      if (my < opp) return 0.0f;
-      return 0.5f;
-    }
-    // Mid-game (rarely reached): each player's captured points over the 11 at
-    // stake, combined into a [0,1] differential.
-    float my_points  = (my_thirds / 3.0f) / 11.0f;
-    float opp_points = (opp_thirds / 3.0f) / 11.0f;
-    return 0.5f + 0.5f * (my_points - opp_points);
-  }
-
-  // Legacy raw scale: large terminal magnitude, thirds/3 mid-game. Using
-  // un-floored thirds gives every captured card an immediate, proportional
-  // effect instead of only registering at 3-thirds boundaries.
   if (over) {
     int my  = compute_player_score(game, player_index);
     int opp = compute_player_score(game, 1 - player_index);
-    if (my > opp) return +1000.0f;
-    if (my < opp) return -1000.0f;
-    return 0.0f;
+    if (my > opp) return +1.0f;
+    if (my < opp) return 0.0f;
+    return 0.5f;
   }
-  return (float)(my_thirds - opp_thirds) / 3.0f;
+  float score = (my_thirds - opp_thirds) / 3.0f;
+  return score / 10.0f;
 }
 
 Game_State sample_state(
