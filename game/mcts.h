@@ -309,6 +309,11 @@ std::vector<float> mcts_scores(
 
 // MCTS agent. Templated on the concrete Game subclass so the search can copy
 // state by value, in the same spirit as Agent_Minimax.
+//
+// Root-parallel: choose_action grows `num_threads` independent trees at once
+// (each running the full iteration / time budget) and sums their root visit
+// counts. At a fixed wall-clock budget this multiplies the total simulations by
+// the core count, which is the cheapest way to make the agent stronger.
 template <class Game_T>
 struct Agent_MCTS : Agent {
   int   num_iterations;
@@ -317,17 +322,27 @@ struct Agent_MCTS : Agent {
   // Soft wall-clock budget per choose_action call. 0 disables the bound and
   // the agent runs the full `num_iterations`.
   float time_budget_seconds;
+  // Number of independent search trees to grow in parallel. 0 means "one per
+  // hardware core". Always 1 under Emscripten, which has no worker threads.
+  int num_threads;
+  // Optional leaf value function. When set, the simulation step replaces the
+  // random rollout with a direct value lookup at each leaf — e.g. a shallow
+  // minimax — which is far stronger than random playouts in tactical games.
+  // Shared (read-only) across the search threads.
+  std::function<float(const Game_T&, int)> leaf_evaluator = nullptr;
 
   Agent_MCTS(
     int   num_iterations       = 1000,
     int   rollout_depth        = 64,
     float exploration_constant = 1.41421356f,
-    float time_budget_seconds  = 0.0f
+    float time_budget_seconds  = 0.0f,
+    int   num_threads          = 0
   )
       : num_iterations(num_iterations)
       , rollout_depth(rollout_depth)
       , exploration_constant(exploration_constant)
-      , time_budget_seconds(time_budget_seconds) {}
+      , time_budget_seconds(time_budget_seconds)
+      , num_threads(num_threads) {}
 
   void message(const std::string&) override {}
 
@@ -336,9 +351,11 @@ struct Agent_MCTS : Agent {
     const int num_actions = action_options_count(choice.actions(state));
     if (num_actions <= 0) return 0;
     if (num_actions == 1) return 0;
+
+#ifdef __EMSCRIPTEN__
+    // No worker threads on the web: grow a single tree.
     static thread_local Agent_Random rollout_agent;
     static thread_local std::mt19937 rng{std::random_device{}()};
-
     std::vector<float> scores = mcts_scores<Game_T>(
       concrete,
       choice,
@@ -349,9 +366,48 @@ struct Agent_MCTS : Agent {
       exploration_constant,
       rollout_agent,
       rng,
-      time_budget_seconds
+      time_budget_seconds,
+      leaf_evaluator
     );
     return argmax_randomized(scores);
+#else
+    int thread_count = num_threads > 0
+      ? num_threads
+      : (int)std::max(1u, std::thread::hardware_concurrency());
+
+    // Each thread grows its own tree with its own rollout agent and rng — no
+    // shared mutable state, so no locking. concrete and choice are only read
+    // (mcts_scores copies the state into its own tree), so sharing them is safe.
+    auto per_thread_scores = std::vector<std::vector<float>>(thread_count);
+    auto threads           = std::vector<std::thread>(thread_count);
+    for (int t = 0; t < thread_count; ++t) {
+      threads[t] = std::thread([&, t] {
+        Agent_Random rollout_agent;
+        std::mt19937 rng{std::random_device{}()};
+        per_thread_scores[t] = mcts_scores<Game_T>(
+          concrete,
+          choice,
+          num_actions,
+          choice.player_index,
+          num_iterations,
+          rollout_depth,
+          exploration_constant,
+          rollout_agent,
+          rng,
+          time_budget_seconds,
+          leaf_evaluator
+        );
+      });
+    }
+    for (auto& thread : threads) thread.join();
+
+    // Sum visit counts across the independent trees, then pick the best.
+    auto scores = std::vector<float>(num_actions, 0.0f);
+    for (const auto& tree_scores : per_thread_scores) {
+      for (int i = 0; i < num_actions; ++i) scores[i] += tree_scores[i];
+    }
+    return argmax_randomized(scores);
+#endif
   }
 };
 

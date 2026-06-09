@@ -1,8 +1,7 @@
-// Headless battle: the current MCTS (uniform-random rollouts) vs the softmax
-// MCTS (guided, softmax-weighted rollouts). Both run Agent_MCTS_Stochastic with
-// the same search budget, so the only difference is the rollout policy. Plays N
-// games of Tressette, alternating seats, and prints per-game scores plus the
-// running win count.
+// Headless benchmark: plain MCTS (uniform-random rollouts) with two different
+// determinization-sample counts, given the same per-move time budget. Tests
+// whether spending the budget on more determinizations (many samples) beats
+// fewer determinizations searched more deeply (few samples).
 
 #include <game/agent.h>
 #include <game/game.h>
@@ -26,10 +25,11 @@ static bool parse_int_flag(
 
 int main(int argc, char** argv) {
   int num_games           = 20;
-  int mcts_iterations     = 1000;
+  int mcts_iterations     = 1000000;  // High cap so the time budget is what binds.
   int mcts_rollout_depth  = 40;
-  int mcts_samples        = 20;
-  int mcts_time_budget_ms = 0;  // 0 disables the time bound.
+  int samples_a           = 20;
+  int samples_b           = 200;
+  int mcts_time_budget_ms = 1000;  // Per move; the shared budget for both sides.
   int seed                = 42;
 
   for (int i = 1; i < argc; ++i) {
@@ -37,7 +37,8 @@ int main(int argc, char** argv) {
     if (parse_int_flag(arg, "num-games", num_games)) continue;
     if (parse_int_flag(arg, "mcts-iterations", mcts_iterations)) continue;
     if (parse_int_flag(arg, "mcts-rollout-depth", mcts_rollout_depth)) continue;
-    if (parse_int_flag(arg, "mcts-samples", mcts_samples)) continue;
+    if (parse_int_flag(arg, "samples-a", samples_a)) continue;
+    if (parse_int_flag(arg, "samples-b", samples_b)) continue;
     if (parse_int_flag(arg, "mcts-time-budget-ms", mcts_time_budget_ms))
       continue;
     if (parse_int_flag(arg, "seed", seed)) continue;
@@ -45,31 +46,26 @@ int main(int argc, char** argv) {
     return 1;
   }
 
-  const float time_budget = (float)mcts_time_budget_ms / 1000.0f;
-
-  std::cerr << "tressette_match_mcts: games=" << num_games
-            << "  mcts(iters=" << mcts_iterations
-            << ", rollout=" << mcts_rollout_depth
-            << ", samples=" << mcts_samples
-            << ", time_budget_ms=" << mcts_time_budget_ms << ")  seed=" << seed
-            << "\n  current (random rollouts)  vs  softmax (guided rollouts)\n";
-
+  const float time_budget          = (float)mcts_time_budget_ms / 1000.0f;
   const float exploration_constant = 1.41421356f;
 
-  // Same search budget on both sides; only the rollout policy differs.
-  auto current_agent = Agent_MCTS_Stochastic<tressette::Game_State>(
-    mcts_iterations, mcts_rollout_depth, mcts_samples, exploration_constant,
+  std::cerr << "tressette_match_mcts: games=" << num_games
+            << "  rollout=" << mcts_rollout_depth
+            << "  time_budget_ms=" << mcts_time_budget_ms
+            << "  iters_cap=" << mcts_iterations << "  seed=" << seed
+            << "\n  " << samples_a << " samples  vs  " << samples_b
+            << " samples (same per-move time)\n";
+
+  // Plain MCTS on both sides; the only difference is the number of
+  // determinization samples each spends its time budget across.
+  auto agent_a = Agent_MCTS_Stochastic<tressette::Game_State>(
+    mcts_iterations, mcts_rollout_depth, samples_a, exploration_constant,
     time_budget
   );
-  auto softmax_agent = Agent_MCTS_Stochastic<
-    tressette::Game_State, Agent_Softmax_Rollout<tressette::Game_State>>(
-    mcts_iterations, mcts_rollout_depth, mcts_samples, exploration_constant,
+  auto agent_b = Agent_MCTS_Stochastic<tressette::Game_State>(
+    mcts_iterations, mcts_rollout_depth, samples_b, exploration_constant,
     time_budget
   );
-  // Each search thread builds its own rollout agent; hand it the temperature.
-  softmax_agent.rollout_agent_factory = []() {
-    return Agent_Softmax_Rollout<tressette::Game_State>(/* temperature */ 0.5f);
-  };
 
   auto make_state = [&](int game_index) {
     return tressette::quick_setup(seed + game_index);
@@ -78,19 +74,22 @@ int main(int argc, char** argv) {
     return tressette::compute_player_score(game, player_index);
   };
 
+  std::string name_a = std::to_string(samples_a) + "-samples";
+  std::string name_b = std::to_string(samples_b) + "-samples";
+
   Benchmark_Result result = benchmark_agents<tressette::Game_State>(
-    num_games, make_state, score, softmax_agent, "softmax", current_agent,
-    "current"
+    num_games, make_state, score, agent_a, name_a.c_str(), agent_b,
+    name_b.c_str()
   );
 
-  std::cout << "\nresult:  softmax_wins=" << result.a_wins
-            << "  current_wins=" << result.b_wins << "  draws=" << result.draws
-            << "  total_points: softmax=" << result.a_points
-            << " current=" << result.b_points << "\n";
+  std::cout << "\nresult:  " << name_a << "_wins=" << result.a_wins << "  "
+            << name_b << "_wins=" << result.b_wins << "  draws=" << result.draws
+            << "  total_points: " << name_a << "=" << result.a_points << " "
+            << name_b << "=" << result.b_points << "\n";
   std::cout << "compute (wall clock):\n";
-  std::cout << "  current: total=" << result.b_seconds
-            << "s  avg_per_move=" << result.b_ms_per_move() << "ms\n";
-  std::cout << "  softmax: total=" << result.a_seconds
-            << "s  avg_per_move=" << result.a_ms_per_move() << "ms\n";
+  std::cout << "  " << name_a << ": avg_per_move=" << result.a_ms_per_move()
+            << "ms\n";
+  std::cout << "  " << name_b << ": avg_per_move=" << result.b_ms_per_move()
+            << "ms\n";
   return 0;
 }

@@ -1,5 +1,6 @@
+- Adaptive resolution
+- Finish wrapper for setting thing.children so animation are always handled.
 - power as sub-thing
-- implement D.O.T
 - generalize to templated play_game
     - game setup function
     - table setup function
