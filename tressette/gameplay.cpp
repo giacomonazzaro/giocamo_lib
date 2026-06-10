@@ -51,7 +51,7 @@ Array_Inline<int, 16> legal_cards(const Game_State& state) {
 }
 
 // Remove a single occurrence of card_id from a hand.
-static void erase_card(Array_Inline<int, 10>& hand, int card_id) {
+static void erase_card(Array_Static<int, 10>& hand, int card_id) {
   auto it = std::find(hand.begin(), hand.end(), card_id);
   if (it != hand.end()) hand.erase(it);
 }

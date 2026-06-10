@@ -1,6 +1,7 @@
 #pragma once
 
 #include <basic/array_inline.h>
+#include <basic/array_static.h>
 #include <game/game.h>
 
 #include <array>
@@ -65,16 +66,16 @@ struct Card {
 // live inline so copying a player (per MCTS node) does no heap allocation.
 struct Player {
   std::string           name;
-  Array_Inline<int, 10> hand;        // Up to 10 cards held.
-  Array_Inline<int, 40> tricks_won;  // Up to 40 cards if one player wins all.
+  Array_Static<int, 10> hand;        // Up to 10 cards held.
+  Array_Static<int, 40> tricks_won;  // Up to 40 cards if one player wins all.
 };
 
 // Full Tressette game state. Subclasses game's abstract Game so the
 // templated minimax / game_loop work directly on it.
 struct Game_State : Game {
   std::array<Player, 2> players;  // Exactly 2.
-  Array_Inline<int, 20> stock;    // Face-down draw pile (up to 20).
-  Array_Inline<int, 2>  trick;    // 0..2 cards on the table.
+  Array_Static<int, 20> stock;    // Face-down draw pile (up to 20).
+  Array_Static<int, 2>  trick;    // 0..2 cards on the table.
   int                   trick_leader      = 0;
   int                   current_player    = 0;
   int                   last_trick_winner = -1;  // for the +1 ultima bonus.

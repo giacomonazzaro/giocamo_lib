@@ -9,9 +9,9 @@
 #include <type_traits>
 #include <vector>
 
-// A vector that stores up to N elements inline and only spills to the heap if
-// it grows beyond N.
-// Restricted to trivially-copyable elements, so copies are plain memory moves.
+// An array that stores up to N elements inline and spills everything to the
+// heap if it grows beyond N (leaving inline storage unused). Restricted to
+// trivially-copyable elements, so copies are plain memory moves.
 //
 // Implicitly converts to `array<T>` (a non-owning span), so functions can take
 // `array<const T>` parameters and accept both Array_Inline and std::vector.
