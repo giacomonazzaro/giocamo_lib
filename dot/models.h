@@ -1,7 +1,7 @@
 #pragma once
 
+#include <basic/array_inline.h>
 #include <game/game.h>
-#include <game/inlined_vector.h>
 
 #include <array>
 #include <optional>
@@ -22,16 +22,16 @@ struct Card {
 
 // One player. Card collections hold ids into Game_State.all_cards.
 struct Player {
-  Inlined_Vector<int, 16> draw_deck;   // Up to 15 face-down draw cards.
-  Inlined_Vector<int, 4>  star_deck;   // Up to 3 star cards (viewable by owner).
-  Inlined_Vector<int, 8>  hand;        // 6 cards held this round (5 draw + 1 star).
-  Inlined_Vector<int, 12> pool;        // Personal pool; carries over between rounds.
-  int              revealed_pool_count = 0;  // Pool cards from earlier rounds
-                                             // (already shown); the rest stay
-                                             // hidden until both players commit.
-  int              tokens_blue  = 0;  // Scoring tokens won, by color.
-  int              tokens_black = 0;
-  int              tokens_red   = 0;
+  Array_Inline<int, 16> draw_deck;  // Up to 15 face-down draw cards.
+  Array_Inline<int, 4>  star_deck;  // Up to 3 star cards (viewable by owner).
+  Array_Inline<int, 8>  hand;   // 6 cards held this round (5 draw + 1 star).
+  Array_Inline<int, 12> pool;   // Personal pool; carries over between rounds.
+  int revealed_pool_count = 0;  // Pool cards from earlier rounds
+                                // (already shown); the rest stay
+                                // hidden until both players commit.
+  int tokens_blue  = 0;         // Scoring tokens won, by color.
+  int tokens_black = 0;
+  int tokens_red   = 0;
 };
 
 // The phases a player makes a decision in. The star card is drawn
@@ -48,8 +48,8 @@ enum class Phase { SPLIT, ACKNOWLEDGE, DISCARD };
 // tokens are awarded on the dot-count difference, and opponents' pools are
 // thinned in the discard phase.
 struct Game_State : Game {
-  std::array<Player, 2>  players;      // Exactly 2.
-  Inlined_Vector<int, 8> shared_pool;  // Cards played to the shared pool (max 6).
+  std::array<Player, 2> players;     // Exactly 2.
+  Array_Inline<int, 8> shared_pool;  // Cards played to the shared pool (max 6).
 
   // Tokens of each color currently up for grabs (1 per round, plus any that
   // carried over from a tied color in an earlier round).
@@ -57,11 +57,11 @@ struct Game_State : Game {
   int pending_black = 0;
   int pending_red   = 0;
 
-  int   round         = 0;            // 0..2 (Rounds 1..3 on the rules sheet).
+  int   round         = 0;  // 0..2 (Rounds 1..3 on the rules sheet).
   Phase phase         = Phase::SPLIT;
-  int   acting_player = 0;            // Whose decision the next choice is.
-  int   discard_first = 0;            // Who discards first this round.
-  int   human_player  = -1;           // Seat that owns the acknowledge pause.
+  int   acting_player = 0;   // Whose decision the next choice is.
+  int   discard_first = 0;   // Who discards first this round.
+  int   human_player  = -1;  // Seat that owns the acknowledge pause.
   bool  game_over     = false;
 
   bool   is_game_over() const override { return game_over; }
@@ -69,8 +69,8 @@ struct Game_State : Game {
 };
 
 // The deck of cards. Fixed at setup and never modified during play, so it lives
-// outside Game_State: copying a state (as MCTS does per node) shouldn't copy the
-// whole deck. Cards are looked up by id, which indexes into this.
+// outside Game_State: copying a state (as MCTS does per node) shouldn't copy
+// the whole deck. Cards are looked up by id, which indexes into this.
 extern std::vector<Card> all_cards;
 
 }  // namespace dot

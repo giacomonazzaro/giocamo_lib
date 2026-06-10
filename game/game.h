@@ -1,5 +1,7 @@
 #pragma once
 
+#include <basic/array_inline.h>
+
 #include <functional>
 #include <optional>
 #include <string>
@@ -7,33 +9,31 @@
 #include <variant>
 #include <vector>
 
-#include "inlined_vector.h"
-
 // Card targets live inline (capacity 16) so producing the action list for a
 // choice does no heap allocation — this happens on every simulated ply during
 // search. Spills to the heap on the rare hand with more than 16 options.
 struct Choose_Card {
-  Inlined_Vector<int, 16> targets;
-  bool                    up_to = true;
+  Array_Inline<int, 16> targets;
+  bool                  up_to = true;
 };
 
 struct Choose_Cards {
-  Inlined_Vector<int, 16> targets;
-  int                     count;
-  bool                    up_to = true;
+  Array_Inline<int, 16> targets;
+  int                   count;
+  bool                  up_to = true;
 };
 
 // Option labels are string literals (static lifetime), held as non-owning
 // pointers so building a choice allocates nothing — same reasoning as the int
 // target lists above.
 struct Choose_Option {
-  Inlined_Vector<const char*, 16> targets;
+  Array_Inline<const char*, 16> targets;
 };
 
 struct Choose_Options {
-  Inlined_Vector<const char*, 16> targets;
-  int                             count;
-  bool                            up_to = true;
+  Array_Inline<const char*, 16> targets;
+  int                           count;
+  bool                          up_to = true;
 };
 
 using Choose =

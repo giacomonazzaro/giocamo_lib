@@ -37,12 +37,12 @@ int compute_player_score(const Game_State& state, int player_index) {
   return score;
 }
 
-Inlined_Vector<int, 16> legal_cards(const Game_State& state) {
+Array_Inline<int, 16> legal_cards(const Game_State& state) {
   const Player& player = state.players[state.current_player];
   if (state.trick.empty()) return player.hand;  // Leader can play any card.
 
   const Suit led_suit = all_cards[state.trick[0]].suit;
-  auto       matches  = Inlined_Vector<int, 16>();
+  auto       matches  = Array_Inline<int, 16>();
   for (int cid : player.hand) {
     if (all_cards[cid].suit == led_suit) matches.push_back(cid);
   }
@@ -51,7 +51,7 @@ Inlined_Vector<int, 16> legal_cards(const Game_State& state) {
 }
 
 // Remove a single occurrence of card_id from a hand.
-static void erase_card(Inlined_Vector<int, 10>& hand, int card_id) {
+static void erase_card(Array_Inline<int, 10>& hand, int card_id) {
   auto it = std::find(hand.begin(), hand.end(), card_id);
   if (it != hand.end()) hand.erase(it);
 }

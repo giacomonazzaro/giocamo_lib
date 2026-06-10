@@ -32,18 +32,18 @@ float evaluate_state(Game_State& game, int player_index) {
 Game_State sample_state(
   const Game_State& state, int player_index, std::mt19937& rng
 ) {
-  Game_State sampled        = state;
+  Game_State sampled = state;
   // The search's internal model has no human, so tricks resolve immediately
   // (no acknowledge node) and the rollout heuristic still sees each trick's
   // outcome without any fast-forwarding.
-  sampled.human_player      = -1;
-  const int  opponent_index = 1 - player_index;
-  Player&    opponent       = sampled.players[opponent_index];
-  const int  hand_size      = (int)opponent.hand.size();
+  sampled.human_player     = -1;
+  const int opponent_index = 1 - player_index;
+  Player&   opponent       = sampled.players[opponent_index];
+  const int hand_size      = (int)opponent.hand.size();
 
   // Opponent's hand plus the stock are the cards hidden from `player_index`:
   // at most 10 + 20 = 30, so they live inline.
-  auto hidden = Inlined_Vector<int, 30>(opponent.hand);
+  auto hidden = Array_Inline<int, 30>(opponent.hand);
   hidden.insert(hidden.end(), sampled.stock.begin(), sampled.stock.end());
   std::shuffle(hidden.begin(), hidden.end(), rng);
 

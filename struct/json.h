@@ -57,12 +57,11 @@ std::string to_json(
   const std::vector<T, Alloc>& arr, int indent = 0, bool pretty = true
 );
 
-// Inlined_Vector (inline fixed-capacity vector, defined in game/inlined_vector.h).
 template <class T, int Capacity>
-struct Inlined_Vector;
+struct Array_Inline;
 template <class T, int Capacity>
 std::string to_json(
-  const Inlined_Vector<T, Capacity>& arr, int indent = 0, bool pretty = true
+  const Array_Inline<T, Capacity>& arr, int indent = 0, bool pretty = true
 );
 
 template <typename T, std::enable_if_t<!std::is_enum_v<T>, int> = 0>
@@ -174,10 +173,10 @@ std::string to_json(const std::vector<T, Alloc>& arr, int indent, bool pretty) {
   return array_to_json(arr, indent, pretty);
 }
 
-// Inlined_Vector — serialized as a JSON array, same as a vector.
+// Array_Inline — serialized as a JSON array, same as a vector.
 template <class T, int Capacity>
 std::string to_json(
-  const Inlined_Vector<T, Capacity>& arr, int indent, bool pretty
+  const Array_Inline<T, Capacity>& arr, int indent, bool pretty
 ) {
   return array_to_json(arr, indent, pretty);
 }
@@ -270,7 +269,7 @@ template <typename T, typename Alloc>
 bool from_json_impl(JsonParser& p, std::vector<T, Alloc>& out);
 
 template <class T, int Capacity>
-bool from_json_impl(JsonParser& p, Inlined_Vector<T, Capacity>& out);
+bool from_json_impl(JsonParser& p, Array_Inline<T, Capacity>& out);
 
 template <typename T>
 auto from_json_impl(JsonParser& p, T& out) -> std::
@@ -494,9 +493,9 @@ inline bool from_json_impl(JsonParser& p, std::vector<T, Alloc>& out) {
   }
 }
 
-// Inlined_Vector — parsed from a JSON array, same as a vector.
+// Array_Inline — parsed from a JSON array, same as a vector.
 template <class T, int Capacity>
-inline bool from_json_impl(JsonParser& p, Inlined_Vector<T, Capacity>& out) {
+inline bool from_json_impl(JsonParser& p, Array_Inline<T, Capacity>& out) {
   p.skip_whitespace();
   if (!p.expect('[')) return false;
 

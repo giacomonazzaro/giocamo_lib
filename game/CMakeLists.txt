@@ -10,8 +10,7 @@ add_library(game STATIC
   agent.cpp
 )
 
-# The parent dir is on the path so headers can reach <basic/array.h>, which
-# inlined_vector.h (pulled in by game.h) depends on.
+# The parent dir is on the path so headers can reach <basic/array.h>.
 target_include_directories(game PUBLIC ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/..)
 target_compile_options(game PRIVATE -Wall -Wextra -Wpedantic)
 

@@ -56,11 +56,13 @@ inline Game_State sample_state(
 
   // The opponent's hand keeps its (known) star cards; its draw cards are
   // pooled with the draw deck and re-dealt.
-  Inlined_Vector<int, 4>  hand_stars;
-  Inlined_Vector<int, 20> hidden_draws;
+  Array_Inline<int, 4>  hand_stars;
+  Array_Inline<int, 20> hidden_draws;
   for (int id : opponent.hand) {
-    if (all_cards[id].is_star) hand_stars.push_back(id);
-    else hidden_draws.push_back(id);
+    if (all_cards[id].is_star)
+      hand_stars.push_back(id);
+    else
+      hidden_draws.push_back(id);
   }
   int draws_in_hand = (int)hidden_draws.size();
   hidden_draws.insert(
@@ -70,9 +72,13 @@ inline Game_State sample_state(
 
   opponent.hand = hand_stars;
   opponent.hand.insert(
-    opponent.hand.end(), hidden_draws.begin(), hidden_draws.begin() + draws_in_hand
+    opponent.hand.end(),
+    hidden_draws.begin(),
+    hidden_draws.begin() + draws_in_hand
   );
-  opponent.draw_deck.assign(hidden_draws.begin() + draws_in_hand, hidden_draws.end());
+  opponent.draw_deck.assign(
+    hidden_draws.begin() + draws_in_hand, hidden_draws.end()
+  );
 
   // The searching player doesn't know the order of their own face-down draw
   // deck either, so randomize it for the rollout.

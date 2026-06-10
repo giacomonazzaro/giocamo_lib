@@ -1,7 +1,7 @@
 #pragma once
 
+#include <basic/array_inline.h>
 #include <game/game.h>
-#include <game/inlined_vector.h>
 
 #include <memory>
 #include <string>
@@ -107,11 +107,11 @@ VISITABLE_STRUCT(Card, id, card_type, color, power, counters, destroyed, owner);
 
 // Player state — owns lists of card ids referencing Game_State.all_cards.
 struct Player {
-  std::string             name;
-  Inlined_Vector<int, 32> deck;     // Face-down draw pile.
-  Inlined_Vector<int, 12> hand;     // Cards in hand.
-  Inlined_Vector<int, 16> discard;  // Played/discarded cards.
-  Inlined_Vector<int, 8>  wonders;  // Wonders in play.
+  std::string           name;
+  Array_Inline<int, 32> deck;     // Face-down draw pile.
+  Array_Inline<int, 12> hand;     // Cards in hand.
+  Array_Inline<int, 16> discard;  // Played/discarded cards.
+  Array_Inline<int, 8>  wonders;  // Wonders in play.
 };
 VISITABLE_STRUCT(Player, name, deck, hand, discard, wonders);
 
@@ -126,10 +126,10 @@ enum class Game_Phase {
 };
 
 struct Game_State : Game {
-  Inlined_Vector<Card, 40> all_cards;    // The full deck; fixed at setup.
-  std::vector<Player>      players;       // Exactly 2 (kept a vector for JSON).
-  Inlined_Vector<int, 12>  peoples;       // People in play.
-  Inlined_Vector<int, 32>  shared_deck;   // Shared draw pile (Stars).
+  Array_Inline<Card, 40> all_cards;    // The full deck; fixed at setup.
+  std::vector<Player>    players;      // Exactly 2 (kept a vector for JSON).
+  Array_Inline<int, 12>  peoples;      // People in play.
+  Array_Inline<int, 32>  shared_deck;  // Shared draw pile (Stars).
 
   int        current_player = 0;
   Game_Phase current_phase  = Game_Phase::MAIN;

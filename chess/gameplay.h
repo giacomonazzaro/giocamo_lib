@@ -18,7 +18,7 @@ struct Move {
 // Move lists stay inline (no heap allocation) for any reasonable position: a
 // chess position has at most 218 legal moves but rarely more than ~40, and
 // legal_moves runs on every simulated ply during search.
-using Move_List = Inlined_Vector<Move, 128>;
+using Move_List = Array_Inline<Move, 128>;
 
 // All fully legal moves for the player to move: pseudo-legal moves with any
 // that would leave the mover's own king in check removed. Both next_choice and

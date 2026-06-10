@@ -10,21 +10,16 @@
 #include <vector>
 
 // A vector that stores up to N elements inline and only spills to the heap if
-// it grows beyond N. Copying one that fits inline does no heap allocation —
-// which is the point: game states are copied per node during agent search, and
-// a std::vector member would pay one allocation per list on every copy.
-//
-// Pick N per field from the common-case length; the heap spill keeps it correct
-// if that's ever exceeded. Restricted to trivially-copyable elements (the games
-// store ints and small PODs), so copies are plain memory moves.
+// it grows beyond N.
+// Restricted to trivially-copyable elements, so copies are plain memory moves.
 //
 // Implicitly converts to `array<T>` (a non-owning span), so functions can take
-// `array<const T>` parameters and accept both Inlined_Vector and std::vector.
+// `array<const T>` parameters and accept both Array_Inline and std::vector.
 template <class T, int N>
-struct Inlined_Vector {
+struct Array_Inline {
   static_assert(
     std::is_trivially_copyable<T>::value,
-    "Inlined_Vector requires a trivially-copyable element type"
+    "Array_Inline requires a trivially-copyable element type"
   );
 
   T   inline_storage[N];
@@ -32,50 +27,52 @@ struct Inlined_Vector {
   int count    = 0;
   int capacity = N;
 
-  Inlined_Vector() = default;
-  Inlined_Vector(const Inlined_Vector& other) { copy_from(other); }
-  // Construct from an Inlined_Vector of any capacity (copies the live elements).
+  Array_Inline() = default;
+  Array_Inline(const Array_Inline& other) { copy_from(other); }
+  // Construct from an Array_Inline of any capacity (copies the live
+  // elements).
   template <int M>
-  Inlined_Vector(const Inlined_Vector<T, M>& other) {
+  Array_Inline(const Array_Inline<T, M>& other) {
     assign(other.begin(), other.end());
   }
   // Construct from a std::vector, for call sites that still produce one.
-  Inlined_Vector(const std::vector<T>& other) {
+  Array_Inline(const std::vector<T>& other) {
     assign(other.begin(), other.end());
   }
-  // Construct from a braced list, e.g. Inlined_Vector<const char*, N>{"a", "b"}.
-  Inlined_Vector(std::initializer_list<T> list) {
+  // Construct from a braced list, e.g. Array_Inline<const char*, N>{"a",
+  // "b"}.
+  Array_Inline(std::initializer_list<T> list) {
     assign(list.begin(), list.end());
   }
-  Inlined_Vector& operator=(const Inlined_Vector& other) {
+  Array_Inline& operator=(const Array_Inline& other) {
     if (this != &other) {
       release();
       copy_from(other);
     }
     return *this;
   }
-  // Assign from an Inlined_Vector of any capacity (copies the live elements).
+  // Assign from an Array_Inline of any capacity (copies the live elements).
   template <int M>
-  Inlined_Vector& operator=(const Inlined_Vector<T, M>& other) {
+  Array_Inline& operator=(const Array_Inline<T, M>& other) {
     assign(other.begin(), other.end());
     return *this;
   }
   // Assign from a std::vector or an array (span) view, for convenience.
-  Inlined_Vector& operator=(const std::vector<T>& other) {
+  Array_Inline& operator=(const std::vector<T>& other) {
     assign(other.begin(), other.end());
     return *this;
   }
   // Assign from a braced list, e.g. targets = {"Ok"}.
-  Inlined_Vector& operator=(std::initializer_list<T> list) {
+  Array_Inline& operator=(std::initializer_list<T> list) {
     assign(list.begin(), list.end());
     return *this;
   }
   template <class U>
-  Inlined_Vector& operator=(const array<U>& other) {
+  Array_Inline& operator=(const array<U>& other) {
     assign(other.begin(), other.end());
     return *this;
   }
-  ~Inlined_Vector() { release(); }
+  ~Array_Inline() { release(); }
 
   int  size() const { return count; }
   bool empty() const { return count == 0; }
@@ -111,17 +108,17 @@ struct Inlined_Vector {
     for (Iterator it = first; it != last; ++it) push_back(*it);
   }
 
-  // Append the range [first, last). Only end-insertion is used by the games.
   template <class Iterator>
-  void insert([[maybe_unused]] T* position, Iterator first, Iterator last) {
-    assert(position == end());
+  void append(Iterator first, Iterator last) {
     for (Iterator it = first; it != last; ++it) push_back(*it);
   }
 
   // Erase one element, shifting the tail down. Returns the next position.
   T* erase(T* position) {
-    for (T* p = position; p + 1 != end(); ++p) *p = *(p + 1);
-    --count;
+    for (T* p = position; p + 1 != end(); ++p) {
+      *p = *(p + 1);
+    }
+    count -= 1;
     return position;
   }
 
@@ -146,7 +143,7 @@ struct Inlined_Vector {
     capacity = N;
     count    = 0;
   }
-  void copy_from(const Inlined_Vector& other) {
+  void copy_from(const Array_Inline& other) {
     count = other.count;
     if (other.count <= N) {
       items    = inline_storage;

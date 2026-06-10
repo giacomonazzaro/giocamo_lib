@@ -167,9 +167,9 @@ std::vector<int> traverse_to_leaf_node(
 // the state and scores the resulting position with evaluate_state from the
 // acting player's perspective, then samples an action with probability
 // proportional to softmax(score / temperature). Low temperature is greedy; high
-// temperature approaches uniform random. Plugs into Agent_MCTS_Stochastic as the
-// Rollout_Agent_T. Game_T must provide evaluate_state(Game_T&, int) — the same
-// hook the rollout's terminal evaluation already uses.
+// temperature approaches uniform random. Plugs into Agent_MCTS_Stochastic as
+// the Rollout_Agent_T. Game_T must provide evaluate_state(Game_T&, int) — the
+// same hook the rollout's terminal evaluation already uses.
 template <class Game_T>
 struct Agent_Softmax_Rollout : Agent {
   float        temperature;
@@ -187,8 +187,8 @@ struct Agent_Softmax_Rollout : Agent {
     const int player = choice.player_index;
 
     // Score each action by the heuristic value of the position it leads to.
-    Inlined_Vector<float, 16> weights;
-    float max_score = -std::numeric_limits<float>::infinity();
+    Array_Inline<float, 16> weights;
+    float                   max_score = -std::numeric_limits<float>::infinity();
     for (int action_index = 0; action_index < num_actions; ++action_index) {
       Game_T next = static_cast<Game_T&>(game);
       resolve_choice(next, choice, action_index);
@@ -201,12 +201,12 @@ struct Agent_Softmax_Rollout : Agent {
     // one action from the resulting distribution.
     float sum = 0.0f;
     for (int i = 0; i < num_actions; ++i) {
-      weights[i]  = std::exp((weights[i] - max_score) / temperature);
-      sum        += weights[i];
+      weights[i] = std::exp((weights[i] - max_score) / temperature);
+      sum += weights[i];
     }
     std::uniform_real_distribution<float> dist(0.0f, sum);
-    const float threshold = dist(rng);
-    float       running    = 0.0f;
+    const float                           threshold = dist(rng);
+    float                                 running   = 0.0f;
     for (int i = 0; i < num_actions; ++i) {
       running += weights[i];
       if (running >= threshold) return i;
@@ -356,7 +356,7 @@ struct Agent_MCTS : Agent {
     // No worker threads on the web: grow a single tree.
     static thread_local Agent_Random rollout_agent;
     static thread_local std::mt19937 rng{std::random_device{}()};
-    std::vector<float> scores = mcts_scores<Game_T>(
+    std::vector<float>               scores = mcts_scores<Game_T>(
       concrete,
       choice,
       num_actions,
@@ -371,13 +371,14 @@ struct Agent_MCTS : Agent {
     );
     return argmax_randomized(scores);
 #else
-    int thread_count = num_threads > 0
-      ? num_threads
-      : (int)std::max(1u, std::thread::hardware_concurrency());
+    int thread_count =
+      num_threads > 0 ? num_threads
+                      : (int)std::max(1u, std::thread::hardware_concurrency());
 
     // Each thread grows its own tree with its own rollout agent and rng — no
     // shared mutable state, so no locking. concrete and choice are only read
-    // (mcts_scores copies the state into its own tree), so sharing them is safe.
+    // (mcts_scores copies the state into its own tree), so sharing them is
+    // safe.
     auto per_thread_scores = std::vector<std::vector<float>>(thread_count);
     auto threads           = std::vector<std::thread>(thread_count);
     for (int t = 0; t < thread_count; ++t) {
@@ -484,9 +485,9 @@ struct Agent_MCTS_Stochastic : Agent_MCTS<Game_T> {
     Rollout_Agent_T rollout_agent = rollout_agent_factory();
     // Cap each frame's work by time so a single sample never stalls the loop on
     // a slow device; num_iterations still bounds the tree (and its allocation).
-    const float        per_frame_budget = 0.010f;
-    Game_T             sampled = sample_state(concrete, choice.player_index, rng);
-    std::vector<float> scores  = mcts_scores<Game_T>(
+    const float per_frame_budget = 0.010f;
+    Game_T      sampled = sample_state(concrete, choice.player_index, rng);
+    std::vector<float> scores = mcts_scores<Game_T>(
       sampled,
       choice,
       num_actions,

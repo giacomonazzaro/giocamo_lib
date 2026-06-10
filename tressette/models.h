@@ -1,7 +1,7 @@
 #pragma once
 
+#include <basic/array_inline.h>
 #include <game/game.h>
-#include <game/inlined_vector.h>
 
 #include <array>
 #include <functional>
@@ -64,22 +64,22 @@ struct Card {
 // Player state: hand of card ids and the cards won in tricks. Both card lists
 // live inline so copying a player (per MCTS node) does no heap allocation.
 struct Player {
-  std::string             name;
-  Inlined_Vector<int, 10> hand;        // Up to 10 cards held.
-  Inlined_Vector<int, 40> tricks_won;  // Up to 40 cards if one player wins all.
+  std::string           name;
+  Array_Inline<int, 10> hand;        // Up to 10 cards held.
+  Array_Inline<int, 40> tricks_won;  // Up to 40 cards if one player wins all.
 };
 
 // Full Tressette game state. Subclasses game's abstract Game so the
 // templated minimax / game_loop work directly on it.
 struct Game_State : Game {
-  std::array<Player, 2>   players;  // Exactly 2.
-  Inlined_Vector<int, 20> stock;    // Face-down draw pile (up to 20).
-  Inlined_Vector<int, 2>  trick;    // 0..2 cards on the table.
-  int                     trick_leader      = 0;
-  int                 current_player    = 0;
-  int                 last_trick_winner = -1;  // for the +1 ultima bonus.
-  bool                game_over         = false;
-  int                 human_player      = -1;
+  std::array<Player, 2> players;  // Exactly 2.
+  Array_Inline<int, 20> stock;    // Face-down draw pile (up to 20).
+  Array_Inline<int, 2>  trick;    // 0..2 cards on the table.
+  int                   trick_leader      = 0;
+  int                   current_player    = 0;
+  int                   last_trick_winner = -1;  // for the +1 ultima bonus.
+  bool                  game_over         = false;
+  int                   human_player      = -1;
 
   Game_State() {}
 

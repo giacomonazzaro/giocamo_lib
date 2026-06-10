@@ -24,7 +24,7 @@ int compute_player_score(const Game_State& state, int player_index);
 
 // Returns the legal cards in the current player's hand for the next play.
 // The responder must follow suit if possible.
-Inlined_Vector<int, 16> legal_cards(const Game_State& state);
+Array_Inline<int, 16> legal_cards(const Game_State& state);
 
 // Sort a player's hand by suit then rank.
 void sort_hand(Game_State& state, int player_index);
