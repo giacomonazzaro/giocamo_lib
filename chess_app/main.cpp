@@ -52,9 +52,11 @@ static Table_State init_table_state() {
     table.things.push_back(std::move(square));
   }
 
-  // Piece Things: a square body that draws a piece image (set in update_board),
-  // centered on whichever square owns it as a child. A zero corner radius keeps
-  // the renderer from rounding the texture. They start detached.
+  // Piece Things: a square body that draws a piece image (set in update_board).
+  // A zero corner radius keeps the renderer from rounding the texture. They are
+  // children of the root, listed after the squares so every piece draws on top
+  // of every square — otherwise a sliding piece would be hidden behind squares
+  // drawn later in the tree. update_board positions them.
   Shape piece_shape;
   piece_shape.type      = Shape_Type::RECTANGLE;
   piece_shape.rectangle = Shape_Rectangle{{(float)CHESS_CELL, (float)CHESS_CELL}, 0.0f};
@@ -72,10 +74,25 @@ static Table_State init_table_state() {
   );
   root.id        = (int)table.things.size();
   root._children = square_ids;
+  for (int i = 0; i < PIECE_THING_COUNT; ++i) {
+    root._children.push_back(PIECE_THING_BASE + i);
+  }
   table.things.push_back(root);
   table.root = root.id;
 
   return table;
+}
+
+// Root-local center of a board square. Pieces are root children, so they share
+// the squares' coordinate space; this matches make_chess_squares().
+static Transform2D square_transform(int square) {
+  int row = square / 8;
+  int col = square % 8;
+  return Transform2D{
+    ((float)col - 3.5f) * (float)CHESS_CELL,
+    (3.5f - (float)row) * (float)CHESS_CELL,
+    0.0f,
+  };
 }
 
 // Image file for a piece value, e.g. white knight -> "...pieces/wN.png". The
@@ -85,10 +102,9 @@ static std::string piece_image_path(int value) {
   return "chess_app/data/pieces/" + color + chess_piece_glyph(value) + ".png";
 }
 
-// Reconcile the piece Things with the board by re-parenting children, the same
-// way Connect Four owns its discs — except a chess piece moves, so the moving
-// piece keeps its Thing (matched by value) and is re-attached to the
-// destination square, which is what makes the renderer slide it there.
+// Reconcile the piece Things with the board: the moving piece keeps its Thing
+// (matched by value) and is repositioned onto the destination square, which is
+// what makes the renderer slide it there.
 static void update_board(Table_State& table, chess::Game_State& state) {
   static bool initialized = false;
   if (!initialized) {
@@ -100,7 +116,7 @@ static void update_board(Table_State& table, chess::Game_State& state) {
     initialized = true;
   }
 
-  // Detach every Thing whose square no longer holds its piece; remember them as
+  // Release every Thing whose square no longer holds its piece; remember them as
   // free so the squares that still need a piece can reuse them.
   int freed[PIECE_THING_COUNT];
   int freed_count = 0;
@@ -108,7 +124,6 @@ static void update_board(Table_State& table, chess::Game_State& state) {
     int square = square_of_thing[i];
     if (square < 0) continue;
     if (state.board[square / 8][square % 8] != value_of_thing[i]) {
-      table.things[square].remove_child(PIECE_THING_BASE + i);
       thing_for_square[square] = -1;
       square_of_thing[i]       = -1;
       freed[freed_count++]     = i;
@@ -156,8 +171,9 @@ static void update_board(Table_State& table, chess::Game_State& state) {
     thing_for_square[square] = chosen;
     Thing& piece             = table.things[PIECE_THING_BASE + chosen];
     piece.image_path         = piece_image_path(value);
-    piece.transform          = Transform2D{0.0f, 0.0f, 0.0f};
-    table.things[square].add_child(PIECE_THING_BASE + chosen);
+    // Setting the target square moves the Thing; the renderer slides it from
+    // wherever it was (the source square) to here.
+    piece.transform = square_transform(square);
   }
 
   // Freed Things nobody reused were captured: blank them (no image, and they
