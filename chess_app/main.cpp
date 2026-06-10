@@ -58,8 +58,9 @@ static Table_State init_table_state() {
   // of every square — otherwise a sliding piece would be hidden behind squares
   // drawn later in the tree. update_board positions them.
   Shape piece_shape;
-  piece_shape.type      = Shape_Type::RECTANGLE;
-  piece_shape.rectangle = Shape_Rectangle{{(float)CHESS_CELL, (float)CHESS_CELL}, 0.0f};
+  piece_shape.type = Shape_Type::RECTANGLE;
+  piece_shape.rectangle =
+    Shape_Rectangle{{(float)CHESS_CELL, (float)CHESS_CELL}, 0.0f};
   for (int i = 0; i < PIECE_THING_COUNT; ++i) {
     Thing piece;
     piece.name  = "piece" + std::to_string(i);
@@ -116,8 +117,8 @@ static void update_board(Table_State& table, chess::Game_State& state) {
     initialized = true;
   }
 
-  // Release every Thing whose square no longer holds its piece; remember them as
-  // free so the squares that still need a piece can reuse them.
+  // Release every Thing whose square no longer holds its piece; remember them
+  // as free so the squares that still need a piece can reuse them.
   int freed[PIECE_THING_COUNT];
   int freed_count = 0;
   for (int i = 0; i < PIECE_THING_COUNT; ++i) {
@@ -180,7 +181,7 @@ static void update_board(Table_State& table, chess::Game_State& state) {
   // stay detached so they aren't drawn).
   for (int k = 0; k < freed_count; ++k) {
     if (!used[k]) {
-      value_of_thing[freed[k]]                       = 0;
+      value_of_thing[freed[k]]                             = 0;
       table.things[PIECE_THING_BASE + freed[k]].image_path = "";
     }
   }
@@ -190,8 +191,8 @@ static void update_board(Table_State& table, chess::Game_State& state) {
 // soundly than MCTS in this tactical game, deepening the search until the time
 // runs out and playing the best move from the deepest completed depth.
 static Agent* make_minimax_agent() {
-  return new Agent_Minimax_Timed<chess::Game_State>(
-    /* time_budget_seconds */ 8.0f
+  return new Agent_Minimax<chess::Game_State>(
+    /* time_budget_seconds */ 6
   );
 }
 

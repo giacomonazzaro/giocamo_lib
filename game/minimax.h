@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <chrono>
+#include <cstdio>
 #include <functional>
 #include <limits>
 #include <vector>
@@ -149,11 +150,17 @@ std::vector<float> minimax_scores(
 
 // Alpha-beta minimax. Templated on the concrete Game subclass so the search can
 // copy state by value (no clone() / unique_ptr needed).
+//
+// Root-parallel: the root moves are split across threads. Each root move is
+// already searched with a full [-inf, inf] window (no alpha sharing between
+// siblings), so spreading them over cores costs no pruning — it's pure speedup.
 template <class Game_T>
 struct Agent_Minimax : Agent {
   int max_depth;
+  int num_threads;  // 0 = one per hardware core. Always 1 under Emscripten.
 
-  Agent_Minimax(int max_depth) : max_depth(max_depth) {}
+  explicit Agent_Minimax(int max_depth, int num_threads = 0)
+      : max_depth(max_depth), num_threads(num_threads) {}
 
   void message(const std::string&) override {}
 
@@ -161,9 +168,41 @@ struct Agent_Minimax : Agent {
     Game_T&   concrete    = static_cast<Game_T&>(state);
     const int num_actions = action_options_count(choice.actions(state));
     if (num_actions <= 0) return 0;
-    std::vector<float> scores = minimax_scores<Game_T>(
-      concrete, choice, num_actions, choice.player_index, max_depth
-    );
+
+    const float        inf    = std::numeric_limits<float>::infinity();
+    const int          player = choice.player_index;
+    std::vector<float> scores(num_actions, -inf);
+
+#ifdef __EMSCRIPTEN__
+    for (int action_index = 0; action_index < num_actions; ++action_index) {
+      Game_T new_state = concrete;
+      resolve_choice(new_state, choice, action_index);
+      scores[action_index] =
+        minimax_detail::minimax(new_state, max_depth, -inf, inf, player);
+    }
+#else
+    int thread_count = num_threads > 0
+      ? num_threads
+      : (int)std::max(1u, std::thread::hardware_concurrency());
+    thread_count = std::min(thread_count, num_actions);
+
+    // Each action's score is written by exactly one thread, so the disjoint
+    // writes need no synchronization. Round-robin balances the uneven subtrees.
+    auto threads = std::vector<std::thread>(thread_count);
+    for (int t = 0; t < thread_count; ++t) {
+      threads[t] = std::thread([&, t] {
+        for (int action_index = t; action_index < num_actions;
+             action_index += thread_count) {
+          Game_T new_state = concrete;
+          resolve_choice(new_state, choice, action_index);
+          scores[action_index] =
+            minimax_detail::minimax(new_state, max_depth, -inf, inf, player);
+        }
+      });
+    }
+    for (auto& thread : threads) thread.join();
+#endif
+
     return argmax_randomized(scores);
   }
 };
@@ -205,14 +244,17 @@ struct Agent_Minimax_Timed : Agent {
                             std::chrono::duration<float>(time_budget_seconds)
                           );
 
-    int best_action = 0;
+    int best_action     = 0;
+    int completed_depth = 0;
     for (int depth = 1; depth <= max_depth; ++depth) {
       std::vector<float> scores(num_actions, -inf);
       // Keep the deepest fully completed depth; a partial one is unreliable.
       if (search_root(concrete, choice, depth, deadline, scores)) break;
-      best_action = (int)argmax_randomized(scores);
+      best_action     = (int)argmax_randomized(scores);
+      completed_depth = depth;
       if (minimax_detail::Clock::now() >= deadline) break;
     }
+    std::fprintf(stderr, "minimax: reached depth %d\n", completed_depth);
     return best_action;
   }
 
