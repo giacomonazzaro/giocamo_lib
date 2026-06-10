@@ -16,13 +16,30 @@
 // otherwise.
 #include <raylib.h>
 
+#include <string>
 #include <vector>
 
 #include "agent_ui.h"
 #include "ui.h"
 
-// One square Thing per board slot, with thing-id == board index (squares are
-// appended first), then a screen-filling root that parents all 64 squares.
+// Square Things hold ids 0..63 (id == board index). The piece Things follow at
+// 64..95: a pool of 32, one per piece that can be on the board at once.
+static const int PIECE_THING_BASE  = 64;
+static const int PIECE_THING_COUNT = 32;
+
+// Piece identity, kept across moves so a piece keeps its Thing as it travels
+// and the renderer slides it. There is one board per process, so file-static is
+// fine.
+namespace {
+int thing_for_square[64];  // Pool Thing on each square, or -1.
+int
+  square_of_thing[PIECE_THING_COUNT];  // Square each pool Thing sits on, or -1.
+int value_of_thing[PIECE_THING_COUNT];  // Piece value each pool Thing shows, 0
+                                        // if free.
+}  // namespace
+
+// One square Thing per board slot (id == board index), 32 detached piece
+// Things, then a screen-filling root that parents the squares.
 static Table_State init_table_state() {
   Table_State table;
   table.is_drop_allowed = [](int, int, int) { return false; };
@@ -33,6 +50,21 @@ static Table_State init_table_state() {
     square.id = (int)table.things.size();  // 0..63 == row*8 + col.
     square_ids.push_back(square.id);
     table.things.push_back(std::move(square));
+  }
+
+  // Piece Things: a square body that draws a piece image (set in update_board),
+  // centered on whichever square owns it as a child. A zero corner radius keeps
+  // the renderer from rounding the texture. They start detached.
+  Shape piece_shape;
+  piece_shape.type      = Shape_Type::RECTANGLE;
+  piece_shape.rectangle = Shape_Rectangle{{(float)CHESS_CELL, (float)CHESS_CELL}, 0.0f};
+  for (int i = 0; i < PIECE_THING_COUNT; ++i) {
+    Thing piece;
+    piece.name  = "piece" + std::to_string(i);
+    piece.id    = (int)table.things.size();  // PIECE_THING_BASE + i.
+    piece.shape = piece_shape;
+    piece.color = Color{0, 0, 0, 0};  // Only used if the image fails to load.
+    table.things.push_back(piece);
   }
 
   auto root = create_table_root(
@@ -46,26 +78,139 @@ static Table_State init_table_state() {
   return table;
 }
 
-// Draw a single piece glyph centered on its square's on-screen position.
-static void draw_piece(const Table_State& table, int square, int piece) {
-  const char* glyph = chess_piece_glyph(piece);
-  if (glyph[0] == '\0') return;
-  const int   size = 52;
-  const float x    = table.world_transforms[square].x -
-                  (float)text_width(glyph, size) / 2.0f;
-  const float y = table.world_transforms[square].y - (float)size / 2.0f;
-  render_text(glyph, x, y, size, chess_piece_color(piece));
+// Image file for a piece value, e.g. white knight -> "...pieces/wN.png". The
+// "w"/"b" prefix is the color and the glyph letter is the piece type.
+static std::string piece_image_path(int value) {
+  std::string color = chess::piece_color(value) == 0 ? "w" : "b";
+  return "chess_app/data/pieces/" + color + chess_piece_glyph(value) + ".png";
+}
+
+// Reconcile the piece Things with the board by re-parenting children, the same
+// way Connect Four owns its discs — except a chess piece moves, so the moving
+// piece keeps its Thing (matched by value) and is re-attached to the
+// destination square, which is what makes the renderer slide it there.
+static void update_board(Table_State& table, chess::Game_State& state) {
+  static bool initialized = false;
+  if (!initialized) {
+    for (int s = 0; s < 64; ++s) thing_for_square[s] = -1;
+    for (int i = 0; i < PIECE_THING_COUNT; ++i) {
+      square_of_thing[i] = -1;
+      value_of_thing[i]  = 0;
+    }
+    initialized = true;
+  }
+
+  // Detach every Thing whose square no longer holds its piece; remember them as
+  // free so the squares that still need a piece can reuse them.
+  int freed[PIECE_THING_COUNT];
+  int freed_count = 0;
+  for (int i = 0; i < PIECE_THING_COUNT; ++i) {
+    int square = square_of_thing[i];
+    if (square < 0) continue;
+    if (state.board[square / 8][square % 8] != value_of_thing[i]) {
+      table.things[square].remove_child(PIECE_THING_BASE + i);
+      thing_for_square[square] = -1;
+      square_of_thing[i]       = -1;
+      freed[freed_count++]     = i;
+    }
+  }
+
+  // Fill each square that needs a piece. Prefer a freed Thing of the same value
+  // (the piece that actually moved — it slides over), then any freed Thing (a
+  // promotion reuses the pawn's Thing), then a spare (first placement).
+  bool used[PIECE_THING_COUNT];
+  for (int k = 0; k < freed_count; ++k) used[k] = false;
+  for (int square = 0; square < 64; ++square) {
+    int value = state.board[square / 8][square % 8];
+    if (value == 0 || thing_for_square[square] != -1) continue;
+
+    int chosen = -1;
+    for (int k = 0; k < freed_count; ++k) {
+      if (!used[k] && value_of_thing[freed[k]] == value) {
+        chosen  = freed[k];
+        used[k] = true;
+        break;
+      }
+    }
+    if (chosen < 0) {
+      for (int k = 0; k < freed_count; ++k) {
+        if (!used[k]) {
+          chosen  = freed[k];
+          used[k] = true;
+          break;
+        }
+      }
+    }
+    if (chosen < 0) {
+      for (int i = 0; i < PIECE_THING_COUNT; ++i) {
+        if (square_of_thing[i] < 0 && value_of_thing[i] == 0) {
+          chosen = i;
+          break;
+        }
+      }
+    }
+    if (chosen < 0) continue;  // Pool exhausted — cannot happen with 32 pieces.
+
+    value_of_thing[chosen]   = value;
+    square_of_thing[chosen]  = square;
+    thing_for_square[square] = chosen;
+    Thing& piece             = table.things[PIECE_THING_BASE + chosen];
+    piece.image_path         = piece_image_path(value);
+    piece.transform          = Transform2D{0.0f, 0.0f, 0.0f};
+    table.things[square].add_child(PIECE_THING_BASE + chosen);
+  }
+
+  // Freed Things nobody reused were captured: blank them (no image, and they
+  // stay detached so they aren't drawn).
+  for (int k = 0; k < freed_count; ++k) {
+    if (!used[k]) {
+      value_of_thing[freed[k]]                       = 0;
+      table.things[PIECE_THING_BASE + freed[k]].image_path = "";
+    }
+  }
 }
 
 // Iterative-deepening alpha-beta with a wall-clock budget: it plays much more
 // soundly than MCTS in this tactical game, deepening the search until the time
 // runs out and playing the best move from the deepest completed depth.
-static Agent* make_ai_opponent() {
-  return new Agent_Minimax_Timed<chess::Game_State>(/* time_budget_seconds */ 6.0f);
+static Agent* make_minimax_agent() {
+  return new Agent_Minimax_Timed<chess::Game_State>(
+    /* time_budget_seconds */ 8.0f
+  );
 }
+
+// MCTS whose leaves are scored by a shallow alpha-beta search.
+static Agent* make_mcts_agent() {
+  auto* agent = new Agent_MCTS<chess::Game_State>(
+    /* num_iterations       */ 9999999,
+    /* rollout_depth        */ 40,
+    /* exploration_constant */ 1.41421356f,
+    /* time_budget_seconds  */ 8.0f
+  );
+  const int minimax_depth = 2;
+  agent->leaf_evaluator =
+    [minimax_depth](const chess::Game_State& state, int player) {
+      const float       infinity = std::numeric_limits<float>::infinity();
+      chess::Game_State copy     = state;  // minimax needs a mutable copy.
+      return minimax_detail::minimax(
+        copy, minimax_depth, -infinity, infinity, player
+      );
+    };
+  return agent;
+}
+
+// The human plays against the minimax bot by default.
+static Agent* make_ai_opponent() { return make_minimax_agent(); }
 
 int main(int argc, char** argv) {
   auto options = parse_play_args(argc, argv);
+
+  // --watch: the two bots play each other (White = minimax, Black = MCTS) and
+  // we just spectate. Skips the menu since there is no human to set up.
+  bool watch = false;
+  for (int i = 1; i < argc; ++i) {
+    if (std::string(argv[i]) == "--watch") watch = true;
+  }
 
   auto inputs      = Input_Feed(Input_Mode::Live, "");
   auto menu_result = run_menu(
@@ -75,7 +220,7 @@ int main(int argc, char** argv) {
     inputs,
     argc,
     argv,
-    options.skip_menu,
+    options.skip_menu || watch,
     options.seed
   );
 
@@ -85,19 +230,17 @@ int main(int argc, char** argv) {
 
   auto agent_ui = Chess_Agent_UI(&table, &ui_state, menu_result.player_index);
 
-  // Per-frame overlay: highlight the picked piece and its legal destinations,
-  // draw every piece as a letter, then the turn/result HUD.
+  // Per-frame overlay: cancel any table-top drag (chess is click-only) and pin
+  // the squares, highlight the picked piece's legal destinations, then the HUD.
+  // Pieces are Things now, so they're drawn and animated by the renderer
+  // itself.
   table.draw_callbacks[-1] = [&](const Table_State&, const Input&, bool) {
-    // Chess is click-only, so cancel any drag the table-top started this frame
-    // (otherwise pressing a square would drag it) and keep the squares pinned
-    // to their grid positions.
     table.drag_state = Drag_State();
     for (int square = 0; square < 64; ++square) {
       table.world_transforms_animated[square] = table.world_transforms[square];
     }
 
     if (agent_ui.selected_square >= 0) {
-      // Outline the selected square; mark each legal destination from it.
       const float half = (float)CHESS_CELL / 2.0f;
       float       sx   = table.world_transforms[agent_ui.selected_square].x;
       float       sy   = table.world_transforms[agent_ui.selected_square].y;
@@ -114,18 +257,24 @@ int main(int argc, char** argv) {
       }
     }
 
-    for (int row = 0; row < 8; ++row) {
-      for (int col = 0; col < 8; ++col) {
-        int piece = state.board[row][col];
-        if (piece != chess::EMPTY) draw_piece(table, row * 8 + col, piece);
-      }
-    }
-
     draw_chess_hud(state);
   };
 
-  Agent* agent =
-    make_agent_pair(&agent_ui, make_ai_opponent(), menu_result, options.vs_ai);
+  update_board(table, state);  // Place the starting position.
+
+  // Watch mode: White (player 0) is the minimax bot, Black (player 1) is MCTS.
+  // Both are wrapped in Agent_Async so their 6s search runs off the render
+  // thread. Otherwise it's the usual human-vs-AI / hot-seat pairing.
+  Agent* agent;
+  if (watch) {
+    auto* white = new Agent_Async(make_minimax_agent());
+    auto* black = new Agent_Async(make_mcts_agent());
+    agent       = new Agent_Duel(white, black, /*swap=*/false);
+  } else {
+    agent = make_agent_pair(
+      &agent_ui, make_ai_opponent(), menu_result, options.vs_ai
+    );
+  }
 
   play_game(
     state,
@@ -135,7 +284,7 @@ int main(int argc, char** argv) {
     inputs,
     menu_result,
     "Chess",
-    [] {},  // Pieces are drawn from the game state each frame, so no sync step.
+    [&] { update_board(table, state); },
     [&] {
       return std::vector<int>{
         chess::compute_player_score(state, 0),
