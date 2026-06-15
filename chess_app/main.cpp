@@ -192,7 +192,7 @@ static void update_board(Table_State& table, chess::Game_State& state) {
 // runs out and playing the best move from the deepest completed depth.
 static Agent* make_minimax_agent() {
   return new Agent_Minimax<chess::Game_State>(
-    /* time_budget_seconds */ 6
+    6  // max_depth
   );
 }
 
@@ -210,7 +210,7 @@ static Agent* make_mcts_agent() {
       const float       infinity = std::numeric_limits<float>::infinity();
       chess::Game_State copy     = state;  // minimax needs a mutable copy.
       return minimax_detail::minimax(
-        copy, minimax_depth, -infinity, infinity, player
+        copy, minimax_depth, -infinity, infinity, player, [] { return false; }
       );
     };
   return agent;

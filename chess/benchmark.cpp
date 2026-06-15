@@ -77,7 +77,9 @@ int main(int argc, char** argv) {
     [mcts_leaf_depth](const chess::Game_State& state, int player) {
       const float       infinity = std::numeric_limits<float>::infinity();
       chess::Game_State copy     = state;  // minimax needs a mutable copy.
-      return minimax_detail::minimax(copy, mcts_leaf_depth, -infinity, infinity, player);
+      return minimax_detail::minimax(
+        copy, mcts_leaf_depth, -infinity, infinity, player, [] { return false; }
+      );
     };
 
   auto make_state = [seed](int game_index) {
