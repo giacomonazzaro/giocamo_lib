@@ -41,3 +41,10 @@ if(NOT TARGET move_generation_test)
     add_executable(move_generation_test move_generation_test.cpp)
     target_link_libraries(move_generation_test PRIVATE chess_lib)
 endif()
+
+# Plays one whole minimax-vs-minimax game end to end, to check the search drives
+# a full game without crashing or making an illegal move.
+if(NOT TARGET selfplay_test)
+    add_executable(selfplay_test selfplay_test.cpp)
+    target_link_libraries(selfplay_test PRIVATE chess_lib)
+endif()
