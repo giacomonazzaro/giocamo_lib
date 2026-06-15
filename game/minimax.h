@@ -34,6 +34,27 @@ inline size_t argmax_randomized(const std::vector<T>& v) {
 namespace minimax_detail {
 
 template <class Game_T>
+Array_Inline<int, 64> order_children(
+  std::vector<Game_T>& children,
+  const Choice&        choice,
+  int                  player_index,
+  bool                 maximizing
+) {
+  int  num_actions = (int)children.size();
+  auto scores      = Array_Inline<float, 64>();
+  auto indices     = Array_Inline<int, 64>();
+  for (int i = 0; i < num_actions; ++i) {
+    resolve_choice(children[i], choice, i);
+    scores.push_back(evaluate_state(children[i], player_index));
+    indices.push_back(i);
+  }
+  std::sort(indices.begin(), indices.end(), [&](int a, int b) {
+    return maximizing ? scores[a] > scores[b] : scores[a] < scores[b];
+  });
+  return indices;
+}
+
+template <class Game_T>
 float minimax(
   Game_T& state, int depth, float alpha, float beta, int player_index
 ) {
@@ -50,11 +71,13 @@ float minimax(
   const float inf        = std::numeric_limits<float>::infinity();
   float       value      = maximizing ? -inf : inf;
 
-  for (int action_index = 0; action_index < num_actions; ++action_index) {
-    Game_T new_state = state;
-    resolve_choice(new_state, *choice, action_index);
+  auto children = std::vector<Game_T>(num_actions, state);
+  auto indices  = order_children(children, *choice, player_index, maximizing);
+
+  for (int i = 0; i < num_actions; i++) {
+    int         action_index = indices[i];
     const float score =
-      minimax(new_state, depth - 1, alpha, beta, player_index);
+      minimax(children[action_index], depth - 1, alpha, beta, player_index);
     if (maximizing) {
       value = std::max(value, score);
       alpha = std::max(alpha, value);
@@ -103,11 +126,19 @@ float minimax_timed(
   const float inf        = std::numeric_limits<float>::infinity();
   float       value      = maximizing ? -inf : inf;
 
-  for (int action_index = 0; action_index < num_actions; ++action_index) {
-    Game_T new_state = state;
-    resolve_choice(new_state, *choice, action_index);
-    const float score = minimax_timed(
-      new_state, depth - 1, alpha, beta, player_index, deadline, aborted
+  auto children = std::vector<Game_T>(num_actions, state);
+  auto indices  = order_children(children, *choice, player_index, maximizing);
+
+  for (int i = 0; i < num_actions; ++i) {
+    int   action_index = indices[i];
+    float score        = minimax_timed(
+      children[action_index],
+      depth - 1,
+      alpha,
+      beta,
+      player_index,
+      deadline,
+      aborted
     );
     if (aborted) return value;  // Result is incomplete; the caller drops it.
     if (maximizing) {
@@ -181,9 +212,9 @@ struct Agent_Minimax : Agent {
         minimax_detail::minimax(new_state, max_depth, -inf, inf, player);
     }
 #else
-    int thread_count = num_threads > 0
-      ? num_threads
-      : (int)std::max(1u, std::thread::hardware_concurrency());
+    int thread_count =
+      num_threads > 0 ? num_threads
+                      : (int)std::max(1u, std::thread::hardware_concurrency());
     thread_count = std::min(thread_count, num_actions);
 
     // Each action's score is written by exactly one thread, so the disjoint
@@ -238,11 +269,12 @@ struct Agent_Minimax_Timed : Agent {
     if (num_actions <= 0) return 0;
     if (num_actions == 1) return 0;
 
-    const float inf      = std::numeric_limits<float>::infinity();
-    const auto  deadline = minimax_detail::Clock::now() +
-                          std::chrono::duration_cast<minimax_detail::Clock::duration>(
-                            std::chrono::duration<float>(time_budget_seconds)
-                          );
+    const float inf = std::numeric_limits<float>::infinity();
+    const auto  deadline =
+      minimax_detail::Clock::now() +
+      std::chrono::duration_cast<minimax_detail::Clock::duration>(
+        std::chrono::duration<float>(time_budget_seconds)
+      );
 
     int best_action     = 0;
     int completed_depth = 0;
@@ -279,15 +311,16 @@ struct Agent_Minimax_Timed : Agent {
     for (int action_index = 0; action_index < num_actions; ++action_index) {
       Game_T new_state = concrete;
       resolve_choice(new_state, choice, action_index);
-      scores[action_index] =
-        minimax_timed(new_state, depth - 1, -inf, inf, player, deadline, aborted);
+      scores[action_index] = minimax_timed(
+        new_state, depth - 1, -inf, inf, player, deadline, aborted
+      );
       if (aborted) return true;
     }
     return false;
 #else
-    int thread_count = num_threads > 0
-      ? num_threads
-      : (int)std::max(1u, std::thread::hardware_concurrency());
+    int thread_count =
+      num_threads > 0 ? num_threads
+                      : (int)std::max(1u, std::thread::hardware_concurrency());
     thread_count = std::min(thread_count, num_actions);
 
     auto thread_aborted = std::vector<char>(thread_count, 0);
@@ -295,7 +328,8 @@ struct Agent_Minimax_Timed : Agent {
     for (int t = 0; t < thread_count; ++t) {
       threads[t] = std::thread([&, t] {
         bool aborted = false;
-        // Round-robin assignment spreads the variable-size root subtrees evenly.
+        // Round-robin assignment spreads the variable-size root subtrees
+        // evenly.
         for (int action_index = t; action_index < num_actions;
              action_index += thread_count) {
           Game_T new_state = concrete;

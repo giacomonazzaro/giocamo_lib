@@ -66,8 +66,6 @@ struct Game {
   // Seeds the first choice to present, before the game loop starts. Every later
   // choice comes from a resolve, so this is only needed once during setup.
   void begin_game(const Choice& choice) { _choice = choice; }
-
-  inline const Choice& current_choice() const { return _choice; }
 };
 
 // Returns the number of indexable action options for a Choose.
