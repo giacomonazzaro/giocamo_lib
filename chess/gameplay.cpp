@@ -15,7 +15,9 @@ static bool on_board(int row, int col) {
 // down (-1).
 static int pawn_forward(int player) { return player == 0 ? 1 : -1; }
 
-bool is_square_attacked(const Game_State& state, int square, int by_player) {
+// Core attack test, working on the bare board so move generation can probe a
+// board copy without copying the whole game state.
+static bool is_square_attacked_on(const Board& board, int square, int by_player) {
   int row = square_row(square);
   int col = square_col(square);
 
@@ -26,8 +28,7 @@ bool is_square_attacked(const Game_State& state, int square, int by_player) {
   int pawn_row    = row - forward;
   for (int d_col = -1; d_col <= 1; d_col += 2) {
     int pawn_col = col + d_col;
-    if (on_board(pawn_row, pawn_col) &&
-        state.board[pawn_row][pawn_col] == pawn_value) {
+    if (on_board(pawn_row, pawn_col) && board[pawn_row][pawn_col] == pawn_value) {
       return true;
     }
   }
@@ -39,7 +40,7 @@ bool is_square_attacked(const Game_State& state, int square, int by_player) {
   for (const auto& offset : knight_offsets) {
     int r = row + offset[0];
     int c = col + offset[1];
-    if (on_board(r, c) && state.board[r][c] == knight_value) return true;
+    if (on_board(r, c) && board[r][c] == knight_value) return true;
   }
 
   // King attacks (adjacent squares).
@@ -49,7 +50,7 @@ bool is_square_attacked(const Game_State& state, int square, int by_player) {
       if (d_row == 0 && d_col == 0) continue;
       int r = row + d_row;
       int c = col + d_col;
-      if (on_board(r, c) && state.board[r][c] == king_value) return true;
+      if (on_board(r, c) && board[r][c] == king_value) return true;
     }
   }
 
@@ -65,7 +66,7 @@ bool is_square_attacked(const Game_State& state, int square, int by_player) {
     int r = row + dir[0];
     int c = col + dir[1];
     while (on_board(r, c)) {
-      int value = state.board[r][c];
+      int value = board[r][c];
       if (value != EMPTY) {
         if (value == bishop_value || value == queen_value) return true;
         break;
@@ -78,7 +79,7 @@ bool is_square_attacked(const Game_State& state, int square, int by_player) {
     int r = row + dir[0];
     int c = col + dir[1];
     while (on_board(r, c)) {
-      int value = state.board[r][c];
+      int value = board[r][c];
       if (value != EMPTY) {
         if (value == rook_value || value == queen_value) return true;
         break;
@@ -91,20 +92,24 @@ bool is_square_attacked(const Game_State& state, int square, int by_player) {
   return false;
 }
 
-static int find_king(const Game_State& state, int player) {
+static int find_king_on(const Board& board, int player) {
   int king_value = make_piece(KING, player);
   for (int row = 0; row < 8; ++row) {
     for (int col = 0; col < 8; ++col) {
-      if (state.board[row][col] == king_value) return square_of(row, col);
+      if (board[row][col] == king_value) return square_of(row, col);
     }
   }
   return -1;
 }
 
+bool is_square_attacked(const Game_State& state, int square, int by_player) {
+  return is_square_attacked_on(state.board, square, by_player);
+}
+
 bool in_check(const Game_State& state, int player) {
-  int king_square = find_king(state, player);
+  int king_square = find_king_on(state.board, player);
   if (king_square < 0) return false;
-  return is_square_attacked(state, king_square, 1 - player);
+  return is_square_attacked_on(state.board, king_square, 1 - player);
 }
 
 // Append a pawn move, expanding it into the four promotion choices when it lands
@@ -247,10 +252,44 @@ static Move_List generate_pseudo_legal(const Game_State& state, int player) {
   return moves;
 }
 
-// Mutate the board for `move` without switching turn or deciding the outcome:
-// move the piece, hop the castling rook, remove an en-passant-captured pawn,
-// place a promoted piece, then refresh castling rights, the en-passant target
-// and the 50-move clock. Used both to test legality and inside apply_move.
+// Apply only the board changes of `move` for `player`: move the piece, promote
+// it, remove an en-passant-captured pawn, and hop the castling rook. This is the
+// part move generation needs to test king safety, so it runs on a bare board
+// (a cheap 64-byte copy) without touching the rest of the game state.
+static void apply_board_move(
+  Board& board, const Move& move, int player, int en_passant_target
+) {
+  int from_row = square_row(move.from);
+  int from_col = square_col(move.from);
+  int to_row   = square_row(move.to);
+  int to_col   = square_col(move.to);
+  int moving   = board[from_row][from_col];
+  int type     = piece_type(moving);
+
+  bool is_en_passant =
+    type == PAWN && move.to == en_passant_target && board[to_row][to_col] == EMPTY;
+
+  // Move the piece (promoting if a pawn reaches the last rank).
+  board[from_row][from_col] = EMPTY;
+  board[to_row][to_col] =
+    move.promotion != 0 ? make_piece(move.promotion, player) : moving;
+
+  // En passant removes the pawn that just double-stepped, beside the target.
+  if (is_en_passant) board[from_row][to_col] = EMPTY;
+
+  // Castling: the king moved two files, so hop the matching rook.
+  if (type == KING && to_col - from_col == 2) {
+    board[to_row][5] = board[to_row][7];
+    board[to_row][7] = EMPTY;
+  } else if (type == KING && from_col - to_col == 2) {
+    board[to_row][3] = board[to_row][0];
+    board[to_row][0] = EMPTY;
+  }
+}
+
+// Apply `move` to the full state without switching turn or deciding the outcome:
+// the board changes above, then refresh castling rights, the en-passant target
+// and the 50-move clock. Used inside apply_move.
 static void make_move_on_board(Game_State& state, const Move& move) {
   int player   = state.current_player;
   int from_row = square_row(move.from);
@@ -261,29 +300,12 @@ static void make_move_on_board(Game_State& state, const Move& move) {
   int type     = piece_type(moving);
   int captured = state.board[to_row][to_col];
 
-  bool is_pawn_move      = type == PAWN;
-  bool is_en_passant     = is_pawn_move && move.to == state.en_passant_target &&
-                           captured == EMPTY;
-  bool is_capture        = captured != EMPTY || is_en_passant;
+  bool is_pawn_move  = type == PAWN;
+  bool is_en_passant = is_pawn_move && move.to == state.en_passant_target &&
+                       captured == EMPTY;
+  bool is_capture = captured != EMPTY || is_en_passant;
 
-  // Move the piece (promoting if a pawn reaches the last rank).
-  state.board[from_row][from_col] = EMPTY;
-  state.board[to_row][to_col] =
-    move.promotion != 0 ? make_piece(move.promotion, player) : moving;
-
-  // En passant removes the pawn that just double-stepped, beside the target.
-  if (is_en_passant) {
-    state.board[from_row][to_col] = EMPTY;
-  }
-
-  // Castling: the king moved two files, so hop the matching rook.
-  if (type == KING && to_col - from_col == 2) {
-    state.board[to_row][5] = state.board[to_row][7];
-    state.board[to_row][7] = EMPTY;
-  } else if (type == KING && from_col - to_col == 2) {
-    state.board[to_row][3] = state.board[to_row][0];
-    state.board[to_row][0] = EMPTY;
-  }
+  apply_board_move(state.board, move, player, state.en_passant_target);
 
   // Castling rights: lose them when the king or a rook leaves home, or when a
   // rook is captured on its home square.
@@ -320,14 +342,48 @@ static void make_move_on_board(Game_State& state, const Move& move) {
   }
 }
 
+// True if `square` shares a rank, file, or diagonal with the king. These are
+// the only lines along which vacating `square` could discover an attack on the
+// king, so a piece off all of them can never expose its king by moving.
+static bool on_king_line(int king_square, int square) {
+  int d_row = square_row(king_square) - square_row(square);
+  int d_col = square_col(king_square) - square_col(square);
+  return d_row == 0 || d_col == 0 || d_row == d_col || d_row == -d_col;
+}
+
 Move_List legal_moves(const Game_State& state) {
-  Move_List pseudo_legal = generate_pseudo_legal(state, state.current_player);
+  int       player       = state.current_player;
+  int       opponent     = 1 - player;
+  Move_List pseudo_legal = generate_pseudo_legal(state, player);
   Move_List legal;
+
+  // The king's square is the same for every non-king move, so find it once.
+  int  king_square = find_king_on(state.board, player);
+  bool in_check_now =
+    king_square >= 0 && is_square_attacked_on(state.board, king_square, opponent);
+
   for (const Move& move : pseudo_legal) {
-    // Play the move on a copy and keep it only if the mover's king is safe.
-    Game_State next = state;
-    make_move_on_board(next, move);
-    if (!in_check(next, state.current_player)) legal.push_back(move);
+    bool king_move  = move.from == king_square;
+    // A pawn reaching the en-passant target captures en passant, which clears
+    // two squares on one rank and can discover a check, so it needs checking.
+    bool en_passant = !king_move && move.to == state.en_passant_target &&
+                      piece_type(state.board[square_row(move.from)]
+                                            [square_col(move.from)]) == PAWN;
+
+    // Fast path: with the king safe and the moved piece off every king line, the
+    // move cannot expose the king — it is legal with no attack scan at all.
+    if (king_square >= 0 && !king_move && !en_passant && !in_check_now &&
+        !on_king_line(king_square, move.from)) {
+      legal.push_back(move);
+      continue;
+    }
+
+    // Otherwise verify on a cheap board copy: the king (which moves on a king
+    // move) must not be attacked afterwards.
+    Board board = state.board;
+    apply_board_move(board, move, player, state.en_passant_target);
+    int king_after = king_move ? move.to : king_square;
+    if (!is_square_attacked_on(board, king_after, opponent)) legal.push_back(move);
   }
   return legal;
 }

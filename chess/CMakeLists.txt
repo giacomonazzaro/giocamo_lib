@@ -34,3 +34,10 @@ if(NOT TARGET benchmark)
     find_package(Threads REQUIRED)
     target_link_libraries(benchmark PRIVATE Threads::Threads)
 endif()
+
+# Move-generation regression check: counts the legal-move tree from the start
+# and compares against known-correct totals. Exits non-zero on any mismatch.
+if(NOT TARGET move_generation_test)
+    add_executable(move_generation_test move_generation_test.cpp)
+    target_link_libraries(move_generation_test PRIVATE chess_lib)
+endif()
