@@ -102,6 +102,7 @@ void draw_game_over_screen(
   while (!WindowShouldClose()) {
     Input input = capture_input();
     BeginDrawing();
+    begin_screen_fit();
     draw_background(input, 0.0f);
     draw_table(table_state, input);
     DrawRectangle(0, 0, W, H, Color{0, 0, 0, 160});
@@ -126,6 +127,7 @@ void draw_game_over_screen(
       30,
       Color{200, 200, 200, 255}
     );
+    end_screen_fit();
     EndDrawing();
   }
 }

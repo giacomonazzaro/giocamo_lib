@@ -444,8 +444,9 @@ static void draw_thing_world(
 void draw_zoomed_thing(
   const Table_State& state, const Input& input, int thing_id, bool face_up
 ) {
-  int screen_w = GetScreenWidth();
-  int screen_h = GetScreenHeight();
+  // Drawn inside the screen-fit transform, so work in logical canvas coords.
+  int screen_w = tt::WINDOW_WIDTH;
+  int screen_h = tt::WINDOW_HEIGHT;
 
   // Dim background.
   DrawRectangle(0, 0, screen_w, screen_h, Color{0, 0, 0, 160});
@@ -563,6 +564,15 @@ void draw_table(Table_State& state, const Input& input) {
   }
 }
 
+void begin_screen_fit() {
+  Screen_Fit fit = screen_fit();
+  rlPushMatrix();
+  rlTranslatef(fit.offset_x, fit.offset_y, 0.0f);
+  rlScalef(fit.scale, fit.scale, 1.0f);
+}
+
+void end_screen_fit() { rlPopMatrix(); }
+
 void run_tabletop(
   Table_State&                                    table,
   std::function<bool(Table_State&, const Input&)> update,
@@ -575,8 +585,11 @@ void run_tabletop(
   if (owns_window) {
     // Request 4x multisampling and high-DPI so on Retina displays the GL
     // framebuffer is created at physical pixel resolution (2x logical) —
-    // effectively free supersampling on top of MSAA.
-    SetConfigFlags(FLAG_MSAA_4X_HINT | FLAG_WINDOW_HIGHDPI);
+    // effectively free supersampling on top of MSAA. Resizable so the layout
+    // can fit any window.
+    SetConfigFlags(
+      FLAG_MSAA_4X_HINT | FLAG_WINDOW_HIGHDPI | FLAG_WINDOW_RESIZABLE
+    );
     InitWindow(window_width, window_height, window_name.c_str());
     SetTargetFPS(tt::TARGET_FPS);
   }
@@ -586,13 +599,16 @@ void run_tabletop(
     process_input(table, input);
 
     BeginDrawing();
+    begin_screen_fit();
     draw_background(input);
     draw_table(table, input);
 
     // Game logic runs after rendering so that world_transforms (refreshed
     // inside draw_table) are current when the update needs them — e.g. to
-    // recompute local transforms after re-parenting a card.
+    // recompute local transforms after re-parenting a card. It also draws
+    // immediate-mode UI, so it stays inside the screen-fit transform.
     bool end = update(table, input);
+    end_screen_fit();
     if (end) break;
     EndDrawing();
   }

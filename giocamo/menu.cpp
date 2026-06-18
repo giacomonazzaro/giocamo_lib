@@ -105,30 +105,46 @@ Menu_Result run_menu(
   int W = window_width;
   int H = window_height;
 
+  // On the web the browser resizes the canvas (via CSS, below); only the
+  // desktop window needs the resizable flag.
+#ifdef __EMSCRIPTEN__
   SetConfigFlags(FLAG_WINDOW_HIGHDPI);
+#else
+  SetConfigFlags(FLAG_WINDOW_HIGHDPI | FLAG_WINDOW_RESIZABLE);
+#endif
   InitWindow(W, H, title.c_str());
   SetTargetFPS(tt::TARGET_FPS);
 #ifdef __EMSCRIPTEN__
   // FLAG_WINDOW_HIGHDPI is not implemented on PLATFORM_WEB. Resize the
-  // canvas pixel buffer to physical resolution and pin the CSS size to
-  // logical dimensions so the game fills the viewport at full Retina
-  // sharpness; draw_background then maps the logical coord space to the
-  // physical canvas every frame.
+  // canvas pixel buffer to physical resolution for Retina sharpness
+  // (draw_background maps the logical coord space onto it every frame), then
+  // let CSS scale the displayed canvas to fit the browser window — preserving
+  // aspect ratio and centering it — so the whole layout stays visible at any
+  // size. Scaling the element uniformly keeps mouse coordinates correct.
   double dpr = emscripten_get_device_pixel_ratio();
   if (dpr > 1.0) {
     emscripten_set_canvas_element_size(
       "#canvas", (int)(tt::WINDOW_WIDTH * dpr), (int)(tt::WINDOW_HEIGHT * dpr)
     );
-    EM_ASM(
-      {
-        var c          = document.getElementById('canvas');
-        c.style.width  = $0 + 'px';
-        c.style.height = $1 + 'px';
-      },
-      tt::WINDOW_WIDTH,
-      tt::WINDOW_HEIGHT
-    );
   }
+  EM_ASM(
+    {
+      var canvas = document.getElementById('canvas');
+      function fit_canvas() {
+        var scale =
+          Math.min(window.innerWidth / $0, window.innerHeight / $1);
+        canvas.style.position = 'absolute';
+        canvas.style.width    = ($0 * scale) + 'px';
+        canvas.style.height   = ($1 * scale) + 'px';
+        canvas.style.left     = ((window.innerWidth - $0 * scale) / 2) + 'px';
+        canvas.style.top      = ((window.innerHeight - $1 * scale) / 2) + 'px';
+      }
+      window.addEventListener('resize', fit_canvas);
+      fit_canvas();
+    },
+    tt::WINDOW_WIDTH,
+    tt::WINDOW_HEIGHT
+  );
 #endif
 
   Menu_State state;
@@ -198,6 +214,7 @@ Menu_Result run_menu(
 
     auto window_rect = Rectangle{0.0f, 0.0f, (float)W, (float)H};
     BeginDrawing();
+    begin_screen_fit();
     draw_background(input);
 
     if (state.screen == Screen::MAIN) {
@@ -219,6 +236,7 @@ Menu_Result run_menu(
         Menu_Result r;
         r.mode = Menu_Result::VS_AI;
         // Note: window stays open; main() continues using it.
+        end_screen_fit();
         EndDrawing();
         return r;
       }
@@ -414,6 +432,7 @@ Menu_Result run_menu(
       }
     }
 
+    end_screen_fit();
     EndDrawing();
   }
 

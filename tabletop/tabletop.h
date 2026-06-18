@@ -377,6 +377,17 @@ VISITABLE_STRUCT(
   delta_time
 );
 
+// Uniform scale plus centering that fits the fixed logical
+// WINDOW_WIDTH×WINDOW_HEIGHT canvas into the actual window, preserving aspect
+// ratio. Anything outside the logical canvas shows as letterbox bars, so the
+// whole layout stays visible at any window size.
+struct Screen_Fit {
+  float scale    = 1.0f;
+  float offset_x = 0.0f;
+  float offset_y = 0.0f;
+};
+Screen_Fit screen_fit();
+
 // Reads the current frame's input from raylib. This is the ONLY place in
 // `tabletop/` that calls raylib input functions directly.
 Input capture_input();

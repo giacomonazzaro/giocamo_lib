@@ -80,10 +80,27 @@ static const int s_watched_down[] = {
   KEY_RIGHT_CONTROL,
 };
 
+Screen_Fit screen_fit() {
+  float screen_width  = (float)GetScreenWidth();
+  float screen_height = (float)GetScreenHeight();
+  float scale         = std::min(
+    screen_width / (float)tt::WINDOW_WIDTH,
+    screen_height / (float)tt::WINDOW_HEIGHT
+  );
+  Screen_Fit fit;
+  fit.scale    = scale;
+  fit.offset_x = (screen_width - (float)tt::WINDOW_WIDTH * scale) / 2.0f;
+  fit.offset_y = (screen_height - (float)tt::WINDOW_HEIGHT * scale) / 2.0f;
+  return fit;
+}
+
 Input capture_input() {
   Input input;
-  input.mouse_x       = GetMouseX();
-  input.mouse_y       = GetMouseY();
+  // Mouse comes in window pixels; map it back into the logical canvas so
+  // hit-testing lines up with the letterboxed, scaled drawing.
+  Screen_Fit fit      = screen_fit();
+  input.mouse_x       = (int)(((float)GetMouseX() - fit.offset_x) / fit.scale);
+  input.mouse_y       = (int)(((float)GetMouseY() - fit.offset_y) / fit.scale);
   input.left_pressed  = IsMouseButtonPressed(MOUSE_BUTTON_LEFT);
   input.left_released = IsMouseButtonReleased(MOUSE_BUTTON_LEFT);
   for (int k : s_watched_pressed) {

@@ -21,6 +21,11 @@ void render_text(
 );
 int text_width(const std::string& text, int size);
 
+// Push / pop the letterbox transform (see screen_fit) so drawing done in
+// logical canvas coordinates lands scaled and centered in the real window.
+void begin_screen_fit();
+void end_screen_fit();
+
 void run_tabletop(
   Table_State&                                    table,
   std::function<bool(Table_State&, const Input&)> update,
