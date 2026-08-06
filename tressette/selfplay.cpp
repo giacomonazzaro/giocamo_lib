@@ -132,8 +132,12 @@ int main(int argc, char** argv) {
   std::unique_ptr<Agent> agent_0_ptr, agent_1_ptr;
 #ifdef TORCH_AVAILABLE
   if (use_neural) {
-    agent_0_ptr = std::make_unique<tressette::Agent_Minimax_Neural>(model_path, depth, samples);
-    agent_1_ptr = std::make_unique<tressette::Agent_Minimax_Neural>(model_path, depth, samples);
+    agent_0_ptr = std::make_unique<tressette::Agent_Minimax_Neural>(
+      model_path, depth, samples
+    );
+    agent_1_ptr = std::make_unique<tressette::Agent_Minimax_Neural>(
+      model_path, depth, samples
+    );
   } else {
     agent_0_ptr = std::make_unique<tressette::Tressette_Agent>(depth, samples);
     agent_1_ptr = std::make_unique<tressette::Tressette_Agent>(depth, samples);
@@ -152,15 +156,14 @@ int main(int argc, char** argv) {
     snapshots.reserve(40);
 
     while (!state.game_over) {
-      std::optional<Choice> choice = state.next_choice();
-      if (!choice) break;
+      if (pending_action_count(state) == 0) break;
 
       // Snapshot the state the agent is about to act on.
       snapshots.push_back(make_snapshot(state));
 
-      int action_index = duel.choose_action(state, *choice);
+      int action_index = duel.choose_action(state, pending_choice(state));
       if (action_index < 0) break;  // Defensive: minimax always returns >= 0.
-      resolve_choice(state, *choice, action_index);
+      resolve_choice(state, action_index);
     }
 
     int  score_0_int = tressette::compute_player_score(state, 0);

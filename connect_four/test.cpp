@@ -42,7 +42,8 @@ int main(int argc, char** argv) {
     if (parse_int_flag(arg, "minimax-depth", minimax_depth)) continue;
     if (parse_int_flag(arg, "mcts-iterations", mcts_iterations)) continue;
     if (parse_int_flag(arg, "mcts-rollout-depth", mcts_rollout_depth)) continue;
-    if (parse_int_flag(arg, "mcts-time-budget-ms", mcts_time_budget_ms)) continue;
+    if (parse_int_flag(arg, "mcts-time-budget-ms", mcts_time_budget_ms))
+      continue;
     if (parse_int_flag(arg, "seed", seed)) continue;
     std::cerr << "unknown argument: " << arg << "\n";
     return 1;
@@ -82,11 +83,10 @@ int main(int argc, char** argv) {
     connect_four::Game_State state =
       connect_four::quick_setup(seed + game_index);
     while (!state.game_over) {
-      std::optional<Choice> choice = state.next_choice();
-      if (!choice) break;
-      int action_index = duel.choose_action(state, *choice);
+      if (pending_action_count(state) == 0) break;
+      int action_index = duel.choose_action(state, pending_choice(state));
       if (action_index < 0) break;
-      resolve_choice(state, *choice, action_index);
+      resolve_choice(state, action_index);
     }
 
     int score_player_0 = connect_four::compute_player_score(state, 0);

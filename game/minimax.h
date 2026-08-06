@@ -37,25 +37,23 @@ namespace minimax_detail {
 using Clock    = std::chrono::steady_clock;
 using Deadline = Clock::time_point;
 
-// Resolve every child of `choice` once, in place in `children` (each already a
-// copy of the parent position), and return their indices ordered best-first for
-// the side to move: scored by the cheap static evaluation of the resulting
-// position, highest score first when `maximizing`, lowest otherwise. Searching
-// the likely-best child first tightens the alpha/beta window sooner, so far more
-// of the remaining tree is pruned. The caller reuses `children` for the
-// recursion, so each child is resolved exactly once.
+// Resolve every child once, in place in `children` (each already a copy of the
+// parent position, so each carries the same pending choice), and return their
+// indices ordered best-first for the side to move: scored by the cheap static
+// evaluation of the resulting position, highest score first when `maximizing`,
+// lowest otherwise. Searching the likely-best child first tightens the
+// alpha/beta window sooner, so far more of the remaining tree is pruned. The
+// caller reuses `children` for the recursion, so each child is resolved exactly
+// once.
 template <class Game_T>
 Array_Inline<int, 64> order_children(
-  std::vector<Game_T>& children,
-  const Choice&        choice,
-  int                  player_index,
-  bool                 maximizing
+  std::vector<Game_T>& children, int player_index, bool maximizing
 ) {
   int  num_actions = (int)children.size();
   auto scores      = Array_Inline<float, 64>();
   auto indices     = Array_Inline<int, 64>();
   for (int i = 0; i < num_actions; ++i) {
-    resolve_choice(children[i], choice, i);
+    resolve_choice(children[i], i);
     scores.push_back(evaluate_state(children[i], player_index));
     indices.push_back(i);
   }
@@ -66,11 +64,11 @@ Array_Inline<int, 64> order_children(
 }
 
 // Alpha-beta minimax. Templated on the concrete Game subclass so the search can
-// copy state by value (no clone() / unique_ptr needed). `aborted` is a predicate
-// checked at every node; when it returns true the search unwinds early with a
-// partial value the caller must discard. Pass a lambda that always returns false
-// for an unbounded search, or one that tests a wall-clock deadline for a
-// time-bounded one.
+// copy state by value (no clone() / unique_ptr needed). `aborted` is a
+// predicate checked at every node; when it returns true the search unwinds
+// early with a partial value the caller must discard. Pass a lambda that always
+// returns false for an unbounded search, or one that tests a wall-clock
+// deadline for a time-bounded one.
 template <class Game_T, typename Aborted>
 float minimax(
   Game_T& state,
@@ -85,18 +83,15 @@ float minimax(
   }
   if (aborted()) return evaluate_state(state, player_index);
 
-  std::optional<Choice> choice = state.next_choice();
-  if (!choice) return evaluate_state(state, player_index);
-
-  const int num_actions = action_options_count(choice->actions(state));
+  const int num_actions = pending_action_count(state);
   if (num_actions == 0) return evaluate_state(state, player_index);
 
-  const bool  maximizing = choice->player_index == player_index;
+  const bool  maximizing = pending_choice(state).player_index == player_index;
   const float inf        = std::numeric_limits<float>::infinity();
   float       value      = maximizing ? -inf : inf;
 
   auto children = std::vector<Game_T>(num_actions, state);
-  auto indices  = order_children(children, *choice, player_index, maximizing);
+  auto indices  = order_children(children, player_index, maximizing);
 
   for (int i = 0; i < num_actions; i++) {
     int   action_index = indices[i];
@@ -118,23 +113,22 @@ float minimax(
 
 }  // namespace minimax_detail
 
-// Search every root action and return their exact scores, indexed by action.
-// Each action is searched with a full [-inf, +inf] window, so the scores are
-// exact values (not alpha-beta bounds) — which matters when several actions tie
-// for best. The root actions are resolved once and ordered best-first like every
-// interior node; with full windows that does not change the scores, only the
-// order they are produced in. When `num_threads != 1` the actions are split
-// across threads; each score is written by exactly one thread, so the disjoint
-// writes need no locking. `aborted` is forwarded to the search (see minimax).
+// Search every action of `state`'s pending choice and return their scores,
+// indexed by action. The best action gets its exact score; actions that get cut
+// come back as an upper bound (see the shared lower bound below), which is all
+// that picking the best one needs. The root actions are resolved once and
+// ordered best-first like every interior node. When `num_threads != 1` the
+// actions are split across threads; each score is written by exactly one
+// thread, so the disjoint writes need no locking. `aborted` is forwarded to the
+// search (see minimax).
 template <class Game_T, typename Aborted>
 std::vector<float> minimax_scores(
-  Game_T&       state,
-  const Choice& choice,
-  int           num_actions,
-  int           player_index,
-  int           max_depth,
-  int           num_threads,
-  Aborted       aborted
+  Game_T& state,
+  int     num_actions,
+  int     player_index,
+  int     max_depth,
+  int     num_threads,
+  Aborted aborted
 ) {
   using minimax_detail::minimax;
   using minimax_detail::order_children;
@@ -142,9 +136,9 @@ std::vector<float> minimax_scores(
   std::vector<float> scores(num_actions, -inf);
 
   // Resolve and order the root children once, exactly like an interior node.
-  bool maximizing = choice.player_index == player_index;
+  bool maximizing = pending_choice(state).player_index == player_index;
   auto children   = std::vector<Game_T>(num_actions, state);
-  auto indices    = order_children(children, choice, player_index, maximizing);
+  auto indices    = order_children(children, player_index, maximizing);
 
   // Shared lower bound across the root moves: each move is searched with the
   // best score found so far as its alpha, so a move that cannot beat it is cut
@@ -158,7 +152,12 @@ std::vector<float> minimax_scores(
 
   auto search_one = [&](int action_index) {
     float score = minimax(
-      children[action_index], max_depth, shared_alpha, inf, player_index, aborted
+      children[action_index],
+      max_depth,
+      shared_alpha,
+      inf,
+      player_index,
+      aborted
     );
     scores[action_index] = score;
     if (score > shared_alpha) shared_alpha = score;
@@ -167,10 +166,10 @@ std::vector<float> minimax_scores(
 #ifdef __EMSCRIPTEN__
   for (int k = 0; k < num_actions; ++k) search_one(indices[k]);
 #else
-  int thread_count =
-    num_threads > 0 ? num_threads
-                    : (int)std::max(1u, std::thread::hardware_concurrency());
-  thread_count = std::min(thread_count, num_actions);
+  int thread_count = num_threads > 0
+                       ? num_threads
+                       : (int)std::max(1u, std::thread::hardware_concurrency());
+  thread_count     = std::min(thread_count, num_actions);
 
   if (thread_count <= 1) {
     for (int k = 0; k < num_actions; ++k) search_one(indices[k]);
@@ -202,14 +201,18 @@ struct Agent_Minimax : Agent {
 
   void message(const std::string&) override {}
 
-  int choose_action(Game& state, const Choice& choice) override {
+  int choose_action(Game& state, const Choice&) override {
     Game_T&   concrete    = static_cast<Game_T&>(state);
-    const int num_actions = action_options_count(choice.actions(state));
+    const int num_actions = pending_action_count(state);
     if (num_actions <= 0) return 0;
 
     std::vector<float> scores = minimax_scores<Game_T>(
-      concrete, choice, num_actions, choice.player_index, max_depth,
-      num_threads, [] { return false; }
+      concrete,
+      num_actions,
+      pending_choice(state).player_index,
+      max_depth,
+      num_threads,
+      [] { return false; }
     );
     return argmax_randomized(scores);
   }
@@ -234,9 +237,9 @@ struct Agent_Minimax_Timed : Agent {
 
   void message(const std::string&) override {}
 
-  int choose_action(Game& state, const Choice& choice) override {
+  int choose_action(Game& state, const Choice&) override {
     Game_T&   concrete    = static_cast<Game_T&>(state);
-    const int num_actions = action_options_count(choice.actions(state));
+    const int num_actions = pending_action_count(state);
     if (num_actions <= 0) return 0;
     if (num_actions == 1) return 0;
 
@@ -253,7 +256,11 @@ struct Agent_Minimax_Timed : Agent {
     int completed_depth = 0;
     for (int depth = 1; depth <= max_depth; ++depth) {
       std::vector<float> scores = minimax_scores<Game_T>(
-        concrete, choice, num_actions, choice.player_index, depth, num_threads,
+        concrete,
+        num_actions,
+        pending_choice(state).player_index,
+        depth,
+        num_threads,
         aborted
       );
       // Keep the deepest fully completed depth; a partial one is unreliable.
@@ -275,9 +282,10 @@ struct Agent_Minimax_Stochastic : Agent_Minimax<Game_T> {
 
   void message(const std::string&) override {}
 
-  int choose_action(Game& state, const Choice& choice) override {
-    Game_T& concrete    = static_cast<Game_T&>(state);
-    int     num_actions = action_options_count(choice.actions(state));
+  int choose_action(Game& state, const Choice&) override {
+    Game_T&   concrete     = static_cast<Game_T&>(state);
+    int       num_actions  = pending_action_count(state);
+    const int player_index = pending_choice(state).player_index;
     if (num_actions <= 0) return 0;
     if (num_actions == 1) return 0;
 
@@ -286,12 +294,15 @@ struct Agent_Minimax_Stochastic : Agent_Minimax<Game_T> {
 
     // Each sample searches serially (num_threads = 1); the parallelism is over
     // the samples instead, since they are independent and never share state.
+    // A sampled state is a copy, so it carries the same pending choice and the
+    // action indices line up with the ones the caller will resolve.
 #ifdef __EMSCRIPTEN__
     for (int s = 0; s < num_samples; ++s) {
-      Game_T             sampled = sample_state(concrete, choice.player_index, rng);
+      Game_T             sampled = sample_state(concrete, player_index, rng);
       std::vector<float> scores  = minimax_scores<Game_T>(
-        sampled, choice, num_actions, choice.player_index, this->max_depth, 1,
-        [] { return false; }
+        sampled, num_actions, player_index, this->max_depth, 1, [] {
+          return false;
+        }
       );
       votes[argmax(scores)] += 1;
     }
@@ -304,10 +315,11 @@ struct Agent_Minimax_Stochastic : Agent_Minimax<Game_T> {
       threads[s] = std::thread([&, s] {
         // Local rng per thread: avoids contention and gives distinct sequences.
         std::mt19937 local_rng{std::random_device{}()};
-        Game_T sampled = sample_state(concrete, choice.player_index, local_rng);
-        scoress[s]     = minimax_scores<Game_T>(
-          sampled, choice, num_actions, choice.player_index, this->max_depth, 1,
-          [] { return false; }
+        Game_T       sampled = sample_state(concrete, player_index, local_rng);
+        scoress[s]           = minimax_scores<Game_T>(
+          sampled, num_actions, player_index, this->max_depth, 1, [] {
+            return false;
+          }
         );
       });
     }

@@ -51,9 +51,14 @@ int action_options_count(const Choose& choose) {
   );
 }
 
-void resolve_choice(Game& game, const Choice& choice, int index) {
-  Choice new_choices = choice.resolve(game, index);
-  game._choice       = std::move(new_choices);
+int pending_action_count(Game& game) {
+  if (!game._choice.actions) return 0;
+  return action_options_count(game._choice.actions(game));
+}
+
+void resolve_choice(Game& game, int index) {
+  Choice next  = game._choice.resolve(game, index);
+  game._choice = std::move(next);
 }
 
 void game_loop(Game& game, Agent& agent, std::function<void(Game&)> callback) {
@@ -63,12 +68,12 @@ void game_loop(Game& game, Agent& agent, std::function<void(Game&)> callback) {
 
 bool game_frame(Game& game, Agent& agent) {
   assert(!game.is_game_over());
-  assert(action_options_count(game._choice.actions(game)) > 0);
+  assert(pending_action_count(game) > 0);
 
   int action_index = agent.choose_action(game, game._choice);
   if (action_index == -1) {
     return false;  // Agent not ready yet, try again next frame.
   }
-  game._choice = game._choice.resolve(game, action_index);
+  resolve_choice(game, action_index);
   return true;
 }

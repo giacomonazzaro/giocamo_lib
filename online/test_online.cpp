@@ -34,7 +34,7 @@ struct Test_Game : Game {
   bool is_game_over() const override { return turn >= 6; }
 
   Choice next_choice() {
-      if (is_game_over()) return {};
+    if (is_game_over()) return {};
     Choice c;
     c.player_index = current_player;
     c.description  = "test";
@@ -43,21 +43,21 @@ struct Test_Game : Game {
       o.targets = {"A", "B"};
       return o;
     };
-//    c.resolve = [](Game& g, int idx) -> std::vector<Choice> {
-//      Test_Game& tg = static_cast<Test_Game&>(g);
-//      fprintf(
-//        stderr,
-//        "  [%s] resolve: player %d picked %d -> turn %d -> %d\n",
-//        tg.log_tag == 0 ? "host" : "join",
-//        tg.current_player,
-//        idx,
-//        tg.turn + 1,
-//        1 - tg.current_player
-//      );
-//      tg.current_player = 1 - tg.current_player;
-//      tg.turn++;
-//      return {};
-//    };
+    c.resolve = [](Game& g, int index) -> Choice {
+      Test_Game& test_game = static_cast<Test_Game&>(g);
+      fprintf(
+        stderr,
+        "  [%s] resolve: player %d picked %d -> turn %d -> %d\n",
+        test_game.log_tag == 0 ? "host" : "join",
+        test_game.current_player,
+        index,
+        test_game.turn + 1,
+        1 - test_game.current_player
+      );
+      test_game.current_player = 1 - test_game.current_player;
+      test_game.turn++;
+      return test_game.next_choice();
+    };
     return c;
   }
 };
@@ -88,15 +88,13 @@ void run_peer(bool is_host, std::atomic<int>* turns_done) {
   Agent_Scripted scripted(tag);
   Agent*         duel = make_online_duel(&scripted, conn.online, conn.player_index);
 
+  game.begin_game(game.next_choice());
   while (!game.is_game_over()) {
-    auto choice = game.next_choice();
-//    if (!choice) break;
-    int idx = duel->choose_action(game, choice);
-    if (idx < 0) {
+    // game_frame returns false while the remote agent has not answered yet.
+    if (!game_frame(game, *duel)) {
       std::this_thread::sleep_for(std::chrono::milliseconds(50));
       continue;
     }
-    choice.resolve(game, idx);
     turns_done->store(game.turn);
   }
   fprintf(stderr, "[%s] done. turns=%d player=%d\n", tag, game.turn, game.current_player);

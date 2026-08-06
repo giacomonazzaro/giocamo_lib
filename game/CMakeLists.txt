@@ -14,6 +14,13 @@ add_library(game STATIC
 target_include_directories(game PUBLIC ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/..)
 target_compile_options(game PRIVATE -Wall -Wextra -Wpedantic)
 
+# Checks that the app loop and the search walk the same sequence of choices,
+# on a game whose next_choice() has side effects. Exits non-zero if they differ.
+if(NOT TARGET protocol_test)
+    add_executable(protocol_test protocol_test.cpp)
+    target_link_libraries(protocol_test PRIVATE game)
+endif()
+
 # add_executable(tic_tac_toe tictactoe/tic_tac_toe.cpp)
 # target_link_libraries(tic_tac_toe PRIVATE game)
 # target_include_directories(tic_tac_toe PRIVATE tictactoe)

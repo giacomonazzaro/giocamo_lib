@@ -26,17 +26,15 @@ float minimax_neural(
     return static_cast<float>(compute_player_score(state, player_index));
   if (depth == 0) return net.predict(state, player_index);
 
-  std::optional<Choice> choice = state.next_choice();
-  if (!choice) return net.predict(state, player_index);
-  const int n = action_options_count(choice->actions(state));
+  const int n = pending_action_count(state);
   if (n == 0) return net.predict(state, player_index);
 
-  const bool  maximizing = choice->player_index == player_index;
+  const bool  maximizing = pending_choice(state).player_index == player_index;
   const float inf        = std::numeric_limits<float>::infinity();
   float       value      = maximizing ? -inf : inf;
   for (int a = 0; a < n; ++a) {
     Game_State child = state;
-    resolve_choice(child, *choice, a);
+    resolve_choice(child, a);
     const float score =
       minimax_neural(child, depth - 1, alpha, beta, player_index, net);
     if (maximizing) {
@@ -56,9 +54,10 @@ Agent_Minimax_Neural::Agent_Minimax_Neural(
 )
     : net(model_path), max_depth(max_depth), num_samples(num_samples) {}
 
-int Agent_Minimax_Neural::choose_action(Game& game, const Choice& choice) {
-  Game_State& concrete    = static_cast<Game_State&>(game);
-  const int   num_actions = action_options_count(choice.actions(game));
+int Agent_Minimax_Neural::choose_action(Game& game, const Choice&) {
+  Game_State& concrete     = static_cast<Game_State&>(game);
+  const int   num_actions  = pending_action_count(game);
+  const int   player_index = pending_choice(game).player_index;
   if (num_actions <= 0) return 0;
   if (num_actions == 1) return 0;
 
@@ -66,14 +65,14 @@ int Agent_Minimax_Neural::choose_action(Game& game, const Choice& choice) {
   std::vector<int>                 votes(num_actions, 0);
 
   for (int s = 0; s < num_samples; ++s) {
-    Game_State  sampled = sample_state(concrete, choice.player_index, rng);
-    const float inf     = std::numeric_limits<float>::infinity();
+    Game_State         sampled = sample_state(concrete, player_index, rng);
+    const float        inf     = std::numeric_limits<float>::infinity();
     std::vector<float> scores(num_actions, -inf);
     for (int a = 0; a < num_actions; ++a) {
       Game_State child = sampled;
-      resolve_choice(child, choice, a);
+      resolve_choice(child, a);
       scores[a] =
-        minimax_neural(child, max_depth, -inf, inf, choice.player_index, net);
+        minimax_neural(child, max_depth, -inf, inf, player_index, net);
     }
     votes[argmax(scores)] += 1;
   }

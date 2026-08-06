@@ -20,15 +20,14 @@
 
 namespace mcts_detail {
 
-// A single node in the MCTS tree. The `choice` field caches the
-// pending Choice once `next_choice()` has been called on the node's state, so
-// expansion of N children only pays for `next_choice()` once per node — this
-// matters for games whose `next_choice()` mutates state.
+// A single node in the MCTS tree.
 struct Node {
   std::vector<int> children;
   int              visits;
-  float  value_sum;  // Cumulative reward, from root_player's perspective.
-  Choice choice;     // Pending choice to resolve from this node.
+  float value_sum;  // Cumulative reward, from root_player's perspective.
+  // Seat to move at this node, taken from the state's pending choice. -1 when
+  // the node is terminal.
+  int player_index;
   // Number of children this node will have once expanded. 0 means terminal
   // (game over or no actions available). A node is a leaf while `children`
   // is empty; once expanded, children.size() == num_actions.
@@ -46,12 +45,11 @@ float rollout(
 ) {
   for (int depth = 0; depth < max_depth; ++depth) {
     if (state.is_game_over()) break;
-    std::optional<Choice> choice = state.next_choice();
-    if (!choice) break;
-    const int num_actions = action_options_count(choice->actions(state));
-    if (num_actions == 0) break;
-    const int action_index = rollout_agent.choose_action(state, *choice);
-    resolve_choice(state, *choice, action_index);
+    if (pending_action_count(state) == 0) break;
+    const int action_index =
+      rollout_agent.choose_action(state, pending_choice(state));
+    if (action_index < 0) break;
+    resolve_choice(state, action_index);
   }
   return evaluate_state(state, root_player);
 }
@@ -74,7 +72,7 @@ inline int best_ucb1_child(
        ++action_index) {
     if (nodes[parent.children[action_index]].visits == 0) return action_index;
   }
-  const bool  maximizing        = (parent.choice.player_index == root_player);
+  const bool  maximizing        = (parent.player_index == root_player);
   const float log_parent_visits = std::log((float)std::max(1, parent.visits));
   int         best_action       = 0;
   float       best_score        = -std::numeric_limits<float>::infinity();
@@ -94,24 +92,22 @@ inline int best_ucb1_child(
   return best_action;
 }
 
-// Initializes a freshly created node from its state. Calls state.next_choice()
-// to cache the next pending choice and the number of actions it offers. The
-// children vector stays empty — children are materialized later by the first
-// expansion of this node.
+// Initializes a freshly created node from its state: records the seat to move
+// and how many actions the state's pending choice offers. The children vector
+// stays empty — children are materialized later by the first expansion of this
+// node.
 template <class Game_T>
 void initialize_node(Node& node, Game_T& state, int parent) {
   node.visits    = 0;
   node.value_sum = 0.0f;
   node.children.clear();
-  node.choice      = Choice();
-  node.num_actions = 0;
+  node.player_index = -1;
+  node.num_actions  = 0;
   if (state.is_game_over()) return;
-  std::optional<Choice> choice = state.next_choice();
-  if (!choice) return;
-  const int num_actions = action_options_count(choice->actions(state));
+  const int num_actions = pending_action_count(state);
   if (num_actions == 0) return;
-  node.choice      = std::move(*choice);
-  node.num_actions = num_actions;
+  node.player_index = pending_choice(state).player_index;
+  node.num_actions  = num_actions;
 }
 
 // Walks down the tree from the root by UCB1 until it reaches a leaf — a node
@@ -147,8 +143,10 @@ std::vector<int> traverse_to_leaf_node(
   const int num_children = nodes[parent_index].num_actions;
   nodes[parent_index].children.resize(num_children);
   for (int action_index = 0; action_index < num_children; ++action_index) {
+    // A child starts as a copy of the parent, so it carries the same pending
+    // choice and `action_index` means the same thing in both.
     Game_T child_state = states[parent_index];
-    resolve_choice(child_state, nodes[parent_index].choice, action_index);
+    resolve_choice(child_state, action_index);
     Node child_node;
     initialize_node(child_node, child_state, parent_index);
     const int child_index = (int)nodes.size();
@@ -180,18 +178,18 @@ struct Agent_Softmax_Rollout : Agent {
 
   void message(const std::string&) override {}
 
-  int choose_action(Game& game, const Choice& choice) override {
-    const int num_actions = action_options_count(choice.actions(game));
+  int choose_action(Game& game, const Choice&) override {
+    const int num_actions = pending_action_count(game);
     if (num_actions <= 0) return 0;
     if (num_actions == 1) return 0;
-    const int player = choice.player_index;
+    const int player = pending_choice(game).player_index;
 
     // Score each action by the heuristic value of the position it leads to.
     Array_Inline<float, 16> weights;
     float                   max_score = -std::numeric_limits<float>::infinity();
     for (int action_index = 0; action_index < num_actions; ++action_index) {
       Game_T next = static_cast<Game_T&>(game);
-      resolve_choice(next, choice, action_index);
+      resolve_choice(next, action_index);
       const float score = evaluate_state(next, player);
       weights.push_back(score);
       if (score > max_score) max_score = score;
@@ -221,16 +219,15 @@ struct Agent_Softmax_Rollout : Agent {
 // raw value estimates.
 template <class Game_T>
 std::vector<float> mcts_scores(
-  Game_T&       state,
-  const Choice& root_choice,
-  int           num_root_actions,
-  int           root_player,
-  int           num_iterations,
-  int           rollout_depth,
-  float         exploration_constant,
-  Agent&        rollout_agent,
-  std::mt19937  rng,
-  float         time_budget_seconds = 0.0f,
+  Game_T&      state,
+  int          num_root_actions,
+  int          root_player,
+  int          num_iterations,
+  int          rollout_depth,
+  float        exploration_constant,
+  Agent&       rollout_agent,
+  std::mt19937 rng,
+  float        time_budget_seconds = 0.0f,
   // Optional: when set, the simulation step replaces the random rollout with a
   // direct value lookup at the leaf — AlphaZero-style "neural value at leaf"
   // instead of Monte Carlo. Use a callable like
@@ -255,15 +252,13 @@ std::vector<float> mcts_scores(
   nodes.reserve(num_iterations + 1);
   states.reserve(num_iterations + 1);
 
-  // The caller has already popped `root_choice` from the game's choices queue,
-  // so we use it directly rather than calling state.next_choice() (which would
-  // return a later pending choice). Children stay empty until the root is
-  // expanded by the first traversal that revisits it.
+  // Children stay empty until the root is expanded by the first traversal that
+  // revisits it.
   Node root_node;
-  root_node.visits      = 0;
-  root_node.value_sum   = 0.0f;
-  root_node.choice      = root_choice;
-  root_node.num_actions = num_root_actions;
+  root_node.visits       = 0;
+  root_node.value_sum    = 0.0f;
+  root_node.player_index = pending_choice(state).player_index;
+  root_node.num_actions  = num_root_actions;
   nodes.push_back(std::move(root_node));
   states.push_back(state);
 
@@ -346,9 +341,10 @@ struct Agent_MCTS : Agent {
 
   void message(const std::string&) override {}
 
-  int choose_action(Game& state, const Choice& choice) override {
-    Game_T&   concrete    = static_cast<Game_T&>(state);
-    const int num_actions = action_options_count(choice.actions(state));
+  int choose_action(Game& state, const Choice&) override {
+    Game_T&   concrete     = static_cast<Game_T&>(state);
+    const int num_actions  = pending_action_count(state);
+    const int player_index = pending_choice(state).player_index;
     if (num_actions <= 0) return 0;
     if (num_actions == 1) return 0;
 
@@ -358,9 +354,8 @@ struct Agent_MCTS : Agent {
     static thread_local std::mt19937 rng{std::random_device{}()};
     std::vector<float>               scores = mcts_scores<Game_T>(
       concrete,
-      choice,
       num_actions,
-      choice.player_index,
+      player_index,
       num_iterations,
       rollout_depth,
       exploration_constant,
@@ -376,9 +371,8 @@ struct Agent_MCTS : Agent {
                       : (int)std::max(1u, std::thread::hardware_concurrency());
 
     // Each thread grows its own tree with its own rollout agent and rng — no
-    // shared mutable state, so no locking. concrete and choice are only read
-    // (mcts_scores copies the state into its own tree), so sharing them is
-    // safe.
+    // shared mutable state, so no locking. concrete is only read (mcts_scores
+    // copies the state into its own tree), so sharing it is safe.
     auto per_thread_scores = std::vector<std::vector<float>>(thread_count);
     auto threads           = std::vector<std::thread>(thread_count);
     for (int t = 0; t < thread_count; ++t) {
@@ -387,9 +381,8 @@ struct Agent_MCTS : Agent {
         std::mt19937 rng{std::random_device{}()};
         per_thread_scores[t] = mcts_scores<Game_T>(
           concrete,
-          choice,
           num_actions,
-          choice.player_index,
+          player_index,
           num_iterations,
           rollout_depth,
           exploration_constant,
@@ -463,9 +456,10 @@ struct Agent_MCTS_Stochastic : Agent_MCTS<Game_T> {
 
   void message(const std::string&) override {}
 
-  int choose_action(Game& state, const Choice& choice) override {
-    Game_T&   concrete    = static_cast<Game_T&>(state);
-    const int num_actions = action_options_count(choice.actions(state));
+  int choose_action(Game& state, const Choice&) override {
+    Game_T&   concrete     = static_cast<Game_T&>(state);
+    const int num_actions  = pending_action_count(state);
+    const int player_index = pending_choice(state).player_index;
     if (num_actions <= 0) return 0;
     if (num_actions == 1) return 0;
 
@@ -485,13 +479,12 @@ struct Agent_MCTS_Stochastic : Agent_MCTS<Game_T> {
     Rollout_Agent_T rollout_agent = rollout_agent_factory();
     // Cap each frame's work by time so a single sample never stalls the loop on
     // a slow device; num_iterations still bounds the tree (and its allocation).
-    const float per_frame_budget = 0.010f;
-    Game_T      sampled = sample_state(concrete, choice.player_index, rng);
-    std::vector<float> scores = mcts_scores<Game_T>(
+    const float        per_frame_budget = 0.010f;
+    Game_T             sampled = sample_state(concrete, player_index, rng);
+    std::vector<float> scores  = mcts_scores<Game_T>(
       sampled,
-      choice,
       num_actions,
-      choice.player_index,
+      player_index,
       this->num_iterations,
       this->rollout_depth,
       this->exploration_constant,
@@ -517,14 +510,13 @@ struct Agent_MCTS_Stochastic : Agent_MCTS<Game_T> {
       threads[sample_index] = std::thread([&, sample_index] {
         std::mt19937    rng{std::random_device{}()};
         Rollout_Agent_T local_rollout_agent = this->rollout_agent_factory();
-        Game_T sampled = sample_state(concrete, choice.player_index, rng);
+        Game_T          sampled = sample_state(concrete, player_index, rng);
         // Parallel path: samples run in parallel, so each thread gets the
         // full per-move budget and the total wall time stays ~budget.
         scoress[sample_index] = mcts_scores<Game_T>(
           sampled,
-          choice,
           num_actions,
-          choice.player_index,
+          player_index,
           this->num_iterations,
           this->rollout_depth,
           this->exploration_constant,

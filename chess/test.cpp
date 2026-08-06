@@ -32,7 +32,7 @@ int main(int argc, char** argv) {
   int minimax_depth       = 3;
   int mcts_iterations     = 2000;
   int mcts_rollout_depth  = 40;
-  int mcts_time_budget_ms = 0;  // 0 disables the time bound.
+  int mcts_time_budget_ms = 0;    // 0 disables the time bound.
   int max_plies           = 200;  // Long games count as a draw for the summary.
   int seed                = 42;
 
@@ -42,7 +42,8 @@ int main(int argc, char** argv) {
     if (parse_int_flag(arg, "minimax-depth", minimax_depth)) continue;
     if (parse_int_flag(arg, "mcts-iterations", mcts_iterations)) continue;
     if (parse_int_flag(arg, "mcts-rollout-depth", mcts_rollout_depth)) continue;
-    if (parse_int_flag(arg, "mcts-time-budget-ms", mcts_time_budget_ms)) continue;
+    if (parse_int_flag(arg, "mcts-time-budget-ms", mcts_time_budget_ms))
+      continue;
     if (parse_int_flag(arg, "max-plies", max_plies)) continue;
     if (parse_int_flag(arg, "seed", seed)) continue;
     std::cerr << "unknown argument: " << arg << "\n";
@@ -81,11 +82,10 @@ int main(int argc, char** argv) {
     chess::Game_State state = chess::quick_setup(seed + game_index);
     int               plies = 0;
     while (!state.game_over && plies < max_plies) {
-      std::optional<Choice> choice = state.next_choice();
-      if (!choice) break;
-      int action_index = duel.choose_action(state, *choice);
+      if (pending_action_count(state) == 0) break;
+      int action_index = duel.choose_action(state, pending_choice(state));
       if (action_index < 0) break;
-      resolve_choice(state, *choice, action_index);
+      resolve_choice(state, action_index);
       plies += 1;
     }
 

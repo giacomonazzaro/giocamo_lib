@@ -57,6 +57,17 @@ struct Choice {
 };
 
 // Abstract base. Concrete games (e.g. gods) subclass and override.
+//
+// A game holds exactly one pending choice at a time. Resolving it produces the
+// next one, so the whole game is the sequence
+//   begin_game -> resolve -> resolve -> ... -> is_game_over.
+// Everything that walks a game — the app loop, minimax, mcts, self-play — reads
+// the pending choice with pending_choice() and advances with resolve_choice(),
+// so they all see the same sequence of decisions. A game may have its own
+// next_choice() to build a choice during setup, but nothing outside the game
+// calls it: doing so would advance a game whose next_choice() has side effects
+// (draining a queue of card effects, resolving a trick) past a decision the app
+// loop would have presented.
 struct Game {
   Choice _choice;
 
@@ -68,12 +79,21 @@ struct Game {
   void begin_game(const Choice& choice) { _choice = choice; }
 };
 
+// The choice the game is currently waiting on.
+inline const Choice& pending_choice(const Game& game) { return game._choice; }
+
 // Returns the number of indexable action options for a Choose.
 // For multi-select kinds this is the count of valid combinations.
 int action_options_count(const Choose& choose);
 
-// Applies a choice's resolve callback and appends any follow-up choices.
-void resolve_choice(Game& game, const Choice& choice, int index);
+// Number of options the pending choice offers. Zero when the game has no choice
+// to present, so callers can test this instead of guarding against an empty
+// choice themselves.
+int pending_action_count(Game& game);
+
+// Applies the pending choice's resolve callback; the choice it returns becomes
+// the new pending choice.
+void resolve_choice(Game& game, int index);
 
 // Forward declaration; defined in agent.h.
 struct Agent;
