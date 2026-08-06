@@ -16,3 +16,4 @@ gods/cards/card-images/
 raylib/
 .cache*/
 **/xcode/
+imgui.ini

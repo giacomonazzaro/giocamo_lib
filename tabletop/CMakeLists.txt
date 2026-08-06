@@ -28,7 +28,21 @@ if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
     target_include_directories(tabletop_lib PUBLIC . "${CMAKE_CURRENT_SOURCE_DIR}/..")
     target_link_libraries(tabletop_lib PUBLIC raylib)
 
-    add_executable(tabletop_demo main.cpp)
-    target_include_directories(tabletop_demo PRIVATE . "${CMAKE_CURRENT_SOURCE_DIR}/..")
-    target_link_libraries(tabletop_demo PRIVATE tabletop_lib raylib)
+    # Dear ImGui, plus the raylib glue that draws its output through rlgl.
+    # Both are sibling clones at the project root, like raylib.
+    set(IMGUI_DIR   "${CMAKE_CURRENT_SOURCE_DIR}/../imgui")
+    set(RLIMGUI_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../rlImGui")
+    add_library(imgui STATIC
+        "${IMGUI_DIR}/imgui.cpp"
+        "${IMGUI_DIR}/imgui_draw.cpp"
+        "${IMGUI_DIR}/imgui_tables.cpp"
+        "${IMGUI_DIR}/imgui_widgets.cpp"
+        "${RLIMGUI_DIR}/rlImGui.cpp"
+    )
+    target_include_directories(imgui PUBLIC "${IMGUI_DIR}" "${RLIMGUI_DIR}")
+    target_link_libraries(imgui PUBLIC raylib)
+
+    add_executable(main main.cpp main_ui.cpp)
+    target_include_directories(main PRIVATE . "${CMAKE_CURRENT_SOURCE_DIR}/..")
+    target_link_libraries(main PRIVATE tabletop_lib raylib imgui)
 endif()
