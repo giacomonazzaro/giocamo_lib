@@ -190,5 +190,5 @@ Choice Game_State::next_choice() {
 // first one off the queue, through next_choice().
 Choice queue_follow_ups(Game_State& game, std::vector<Choice> follow_ups) {
   for (auto& choice : follow_ups) game.queue.push_back(std::move(choice));
-  return no_choice;
+  return null_choice;
 }

@@ -277,7 +277,7 @@ Choice Game_State::next_choice() {
     choice.resolve = [](Game& game, int index) -> Choice {
       Game_State& state = static_cast<Game_State&>(game);
       resolve_split(state, index);
-      return no_choice;
+      return null_choice;
     };
   } else if (phase == Phase::ACKNOWLEDGE) {
     choice.description      = "acknowledge";
@@ -290,7 +290,7 @@ Choice Game_State::next_choice() {
     choice.resolve = [](Game& game, int) -> Choice {
       Game_State& state = static_cast<Game_State&>(game);
       resolve_acknowledge(state);
-      return no_choice;
+      return null_choice;
     };
   } else {
     choice.description      = "discard";
@@ -305,7 +305,7 @@ Choice Game_State::next_choice() {
     choice.resolve = [](Game& game, int index) -> Choice {
       Game_State& state = static_cast<Game_State&>(game);
       resolve_discard(state, index);
-      return no_choice;
+      return null_choice;
     };
   }
   return choice;

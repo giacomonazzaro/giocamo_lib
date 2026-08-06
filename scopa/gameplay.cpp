@@ -237,7 +237,7 @@ Choice Game_State::next_choice() {
     Game_State&         state   = static_cast<Game_State&>(game);
     std::vector<Action> actions = enumerate_actions(state);
     apply_action(state, actions[index]);
-    return no_choice;
+    return null_choice;
   };
 
   return choice;

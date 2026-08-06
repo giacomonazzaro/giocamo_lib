@@ -498,7 +498,7 @@ Choice Game_State::next_choice() {
     Game_State& state = static_cast<Game_State&>(game);
     Move_List   moves = legal_moves(state);
     apply_move(state, moves[index]);
-    return no_choice;
+    return null_choice;
   };
 
   return choice;

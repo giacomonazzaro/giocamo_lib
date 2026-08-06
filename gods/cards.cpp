@@ -679,7 +679,7 @@ struct Stars : Card_Design {
         card.power = power;
         card.owner = my_owner;
         player.hand.push_back(cid);
-        return no_choice;
+        return null_choice;
       }
       return queue_follow_ups(s, draw_card(s, my_owner, false));
     };

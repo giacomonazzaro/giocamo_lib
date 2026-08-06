@@ -9,10 +9,10 @@
 
 #include "models.h"
 
-// Put the choices an effect produced on the game's queue, and return no_choice.
-// A resolve ends with this when a card effect asks further questions: it cannot
-// say which choice comes next, so resolve_choice takes the first queued one
-// through next_choice().
+// Put the choices an effect produced on the game's queue, and return
+// null_choice. A resolve ends with this when a card effect asks further
+// questions: it cannot say which choice comes next, so resolve_choice takes the
+// first queued one through next_choice().
 Choice queue_follow_ups(Game_State& game, std::vector<Choice> follow_ups);
 
 // ---- Choice helpers ----

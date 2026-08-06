@@ -54,6 +54,10 @@ struct Choice {
   std::function<Choose(Game&)> actions;
   // resolve: applies the chosen action and returns any follow-up choices.
   std::function<Choice(Game&, int)> resolve;
+
+  bool is_null() const {
+    return player_index == -1 && description.empty() && !actions && !resolve;
+  }
 };
 
 // Abstract base. A concrete game derives from it.
@@ -69,7 +73,7 @@ struct Choice {
 //     It is the only way to move a game forward.
 //
 // A resolve often knows which choice comes next, and returns it. A resolve
-// that does not know returns no_choice instead. resolve_choice then asks the
+// that does not know returns null_choice instead. resolve_choice then asks the
 // game, by calling next_choice().
 //
 // next_choice() is allowed to change the game. It may take a pending effect
@@ -81,11 +85,9 @@ struct Choice {
 struct Game {
   Choice _choice;
 
-  virtual ~Game()                   = default;
-  virtual bool is_game_over() const = 0;
-  // The choice the game waits on next. resolve_choice calls this when a resolve
-  // returned no_choice. Returns no_choice once the game is over.
-  virtual Choice next_choice() = 0;
+  virtual ~Game()                     = default;
+  virtual bool   is_game_over() const = 0;
+  virtual Choice next_choice()        = 0;
 
   // Asks the game for its opening choice. Setup calls this once, after it has
   // dealt the cards or set up the board.
@@ -94,11 +96,13 @@ struct Game {
 
 // What a resolve returns when it cannot say which choice comes next, and what
 // next_choice() returns once the game is over.
-inline const Choice no_choice = Choice{};
-
-// True for a choice that carries no decision: no resolve means it cannot move
-// the game anywhere.
-inline bool is_no_choice(const Choice& choice) { return !choice.resolve; }
+inline const Choice null_choice = Choice{
+  .player_index     = -1,
+  .description      = "",
+  .text_description = "",
+  .actions          = nullptr,
+  .resolve          = nullptr
+};
 
 // ---- What a game must provide ----
 //
@@ -114,11 +118,12 @@ inline bool is_no_choice(const Choice& choice) { return !choice.resolve; }
 //   };
 //
 //   next_choice() returns the choice the game waits on next, and returns
-//   no_choice once the game is over. It may change the game while it works one
-//   out. Only resolve_choice calls it, so it runs once per decision.
+//   null_choice once the game is over. It may change the game while it works
+//   one out. Only resolve_choice calls it, so it runs once per decision.
 //
 //   Each resolve returns the choice that follows it. A resolve that cannot work
-//   that out returns no_choice, and resolve_choice falls back to next_choice().
+//   that out returns null_choice, and resolve_choice falls back to
+//   next_choice().
 //
 //   The type must be copyable. A search copies a whole position per child node
 //   instead of undoing moves.

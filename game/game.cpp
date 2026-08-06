@@ -61,7 +61,7 @@ void resolve_choice(Game& game, int index) {
   // The resolve could not say what comes next, so ask the game. This is the
   // only call to next_choice() once a game is running, which is what keeps the
   // app loop and the searches on the same sequence of choices.
-  if (is_no_choice(next)) next = game.next_choice();
+  if (next.is_null()) next = game.next_choice();
   game._choice = std::move(next);
 }
 

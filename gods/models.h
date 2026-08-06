@@ -143,7 +143,7 @@ struct Game_State : Game {
 
   // Game interface.
   bool   is_game_over() const override { return game_over; }
-  Choice next_choice();
+  Choice next_choice() override;
 
   // Helpers (mirror gods/models.py methods).
   Player&              active_player() { return players[current_player]; }

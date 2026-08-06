@@ -24,7 +24,7 @@ struct Queue_Game : Game {
 
   bool is_game_over() const override { return turn >= 6; }
 
-  Choice next_choice() {
+  Choice next_choice() override {
     if (is_game_over()) return {};
     if (!queue.empty()) {
       std::string description = queue.front();
@@ -49,7 +49,7 @@ struct Queue_Game : Game {
       Queue_Game& queue_game = static_cast<Queue_Game&>(game);
       queue_game.turn += 1;
       if (queue_game.turn % 2 == 1) queue_game.queue.push_back("follow-up");
-      return no_choice;
+      return null_choice;
     };
     return choice;
   }

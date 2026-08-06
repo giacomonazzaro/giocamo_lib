@@ -107,7 +107,7 @@ Choice Game_State::next_choice() {
     Game_State&      state   = static_cast<Game_State&>(game);
     std::vector<int> columns = legal_columns(state);
     apply_move(state, columns[index]);
-    return no_choice;
+    return null_choice;
   };
 
   return choice;

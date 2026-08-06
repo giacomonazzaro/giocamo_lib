@@ -80,7 +80,7 @@ Choice make_choose_card_choice(
     auto&   gs      = static_cast<Game_State&>(g);
     auto    targets = get_targets(gs);
     Card_Id chosen  = targets[option_index];
-    if (Card_Id::is_null(chosen)) return no_choice;
+    if (Card_Id::is_null(chosen)) return null_choice;
     return queue_follow_ups(gs, on_chosen(gs, chosen));
   };
   return c;
@@ -370,7 +370,7 @@ std::optional<Choice> make_claim_choice(Game_State& game) {
       Card& people = gs.get_card(chosen);
       people.owner = player_index;
     }
-    return no_choice;
+    return null_choice;
   };
   return c;
 }

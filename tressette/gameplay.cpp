@@ -114,7 +114,7 @@ Choice play_card(Game_State& state, int card_id) {
   }
   // Trick complete: next_choice decides whether to pause on the acknowledge
   // step (human) or resolve it straight away (search/self-play).
-  return no_choice;
+  return null_choice;
 }
 
 static Choice wait_for_player_acknolwdgment(Game_State& state) {
