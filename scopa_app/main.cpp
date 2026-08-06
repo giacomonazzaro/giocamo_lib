@@ -55,19 +55,21 @@ static Table_State init_table_state(
   }
 
   // Populate stack children from game state.
-  int base                                       = (int)state.all_cards.size();
-  table.things[base + SCOPA_HAND_0]._children     = state.players[0].hand;
-  table.things[base + SCOPA_HAND_1]._children     = state.players[1].hand;
-  table.things[base + SCOPA_CAPTURED_0]._children = state.players[0].captured;
-  table.things[base + SCOPA_CAPTURED_1]._children = state.players[1].captured;
-  table.things[base + SCOPA_STOCK_IDX]._children  = state.stock;
-  table.things[base + SCOPA_TABLE_IDX]._children  = state.table;
+  auto set_children = [&](const char* name, const std::vector<int>& cards) {
+    table.things[find_thing(table, name)]._children = cards;
+  };
+  set_children("p0_hand", state.players[0].hand);
+  set_children("p1_hand", state.players[1].hand);
+  set_children("p0_captured", state.players[0].captured);
+  set_children("p1_captured", state.players[1].captured);
+  set_children("stock", state.stock);
+  set_children("table", state.table);
 
   // Root: a wooden table surface owning all stacks as direct children.
   auto root = create_table_root(
     tt::WINDOW_WIDTH, tt::WINDOW_HEIGHT, "tabletop/data/wood.png"
   );
-  root.id       = (int)table.things.size();
+  root.id        = (int)table.things.size();
   root._children = stack_ids;
   table.things.push_back(root);
   table.root = root.id;
@@ -87,18 +89,17 @@ static void create_coupling_between_table_and_game(
   }
 }
 static void update_stacks(Table_State& table, scopa::Game_State& state) {
-  int  base    = (int)state.all_cards.size();
-  auto refresh = [&](int idx, const std::vector<int>& cards) {
-    int stack_id                    = base + idx;
+  auto refresh = [&](const char* name, const std::vector<int>& cards) {
+    int stack_id                     = find_thing(table, name);
     table.things[stack_id]._children = cards;
     update_children_positions(stack_id, table, false);
   };
-  refresh(SCOPA_HAND_0, state.players[0].hand);
-  refresh(SCOPA_HAND_1, state.players[1].hand);
-  refresh(SCOPA_CAPTURED_0, state.players[0].captured);
-  refresh(SCOPA_CAPTURED_1, state.players[1].captured);
-  refresh(SCOPA_STOCK_IDX, state.stock);
-  refresh(SCOPA_TABLE_IDX, state.table);
+  refresh("p0_hand", state.players[0].hand);
+  refresh("p1_hand", state.players[1].hand);
+  refresh("p0_captured", state.players[0].captured);
+  refresh("p1_captured", state.players[1].captured);
+  refresh("stock", state.stock);
+  refresh("table", state.table);
 }
 
 #include <game/mcts.h>
@@ -145,9 +146,7 @@ int main(int argc, char** argv) {
       }
     };
 
-  auto agent_ui = Scopa_Agent_UI(
-    &table, &ui_state, menu_result.player_index, (int)state.all_cards.size()
-  );
+  auto   agent_ui = Scopa_Agent_UI(&table, &ui_state, menu_result.player_index);
   Agent* agent =
     make_agent_pair(&agent_ui, make_ai_opponent(), menu_result, options.vs_ai);
 

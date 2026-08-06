@@ -24,34 +24,36 @@
 // play area is cleared (it isn't backed by game state), and the shared pool
 // stays face-down until both players have committed their three cards.
 static void update_table_from_game(Table_State& table, dot::Game_State& state) {
-  int  base      = (int)dot::all_cards.size();
-  auto set_stack = [&](int stack, array<const int> cards) {
-    table.things[base + stack]._children.assign(
+  auto set_stack = [&](const char* name, array<const int> cards) {
+    int stack_id = find_thing(table, name);
+    table.things[stack_id]._children.assign(
       cards.data, cards.data + cards.size()
     );
-    update_children_positions(base + stack, table, false);
+    update_children_positions(stack_id, table, false);
   };
-  set_stack(DOT_POOL_0, state.players[0].pool);
-  set_stack(DOT_POOL_1, state.players[1].pool);
-  set_stack(DOT_SHARED, state.shared_pool);
-  set_stack(DOT_PLAY_AREA, {});
-  set_stack(DOT_HAND_0, state.players[0].hand);
-  set_stack(DOT_HAND_1, state.players[1].hand);
-  set_stack(DOT_DRAW_0, state.players[0].draw_deck);
-  set_stack(DOT_STAR_0, state.players[0].star_deck);
-  set_stack(DOT_DRAW_1, state.players[1].draw_deck);
-  set_stack(DOT_STAR_1, state.players[1].star_deck);
+  set_stack("p0_pool", state.players[0].pool);
+  set_stack("p1_pool", state.players[1].pool);
+  set_stack("shared", state.shared_pool);
+  set_stack("play_area", {});
+  set_stack("p0_hand", state.players[0].hand);
+  set_stack("p1_hand", state.players[1].hand);
+  set_stack("p0_draw", state.players[0].draw_deck);
+  set_stack("p0_star", state.players[0].star_deck);
+  set_stack("p1_draw", state.players[1].draw_deck);
+  set_stack("p1_star", state.players[1].star_deck);
 
   // Simulate simultaneous play: until both players have committed, every card
   // played this round stays face-down -- both the shared pool and the cards
   // each player just put in front of them. Cards carried from earlier rounds
   // stay visible, and everything is revealed once both have committed.
-  for (const dot::Card& card : dot::all_cards) table.things[card.id].face_up = true;
+  for (const dot::Card& card : dot::all_cards)
+    table.things[card.id].face_up = true;
   bool round_revealed = (int)state.shared_pool.size() >= 2 * dot::SHARED_COUNT;
   if (!round_revealed) {
     for (int id : state.shared_pool) table.things[id].face_up = false;
     for (const dot::Player& player : state.players) {
-      for (int i = player.revealed_pool_count; i < (int)player.pool.size(); ++i) {
+      for (int i = player.revealed_pool_count; i < (int)player.pool.size();
+           ++i) {
         table.things[player.pool[i]].face_up = false;
       }
     }
@@ -88,10 +90,10 @@ static Table_State init_table_state(
   }
 
   // Empty texture path: the table is drawn with root.color (a dark surface).
-  auto root = create_table_root(tt::WINDOW_WIDTH, tt::WINDOW_HEIGHT, "");
-  root.id       = (int)table.things.size();
+  auto root      = create_table_root(tt::WINDOW_WIDTH, tt::WINDOW_HEIGHT, "");
+  root.id        = (int)table.things.size();
   root._children = stack_ids;
-  root.color    = {15, 15, 15, 255};
+  root.color     = {15, 15, 15, 255};
   table.things.push_back(root);
   table.root = root.id;
 
@@ -158,20 +160,20 @@ int main(int argc, char** argv) {
   // screen controls that seat (both seats in hot-seat). Cards move between
   // the acting player's hand and the play area for the split, and between the
   // opponent's pool and the play area for the discard.
-  int base = (int)dot::all_cards.size();
   table.is_drop_allowed =
-    [&state, base, bottom_player, hot_seat](int src, int dst, int) {
+    [&state, &table, bottom_player, hot_seat](int src, int dst, int) {
       if (src == dst) return true;
       int seat = state.acting_player;
       if (!hot_seat && seat != bottom_player) return false;
-      int play_area = base + DOT_PLAY_AREA;
+      int play_area = find_thing(table, "play_area");
       if (state.phase == dot::Phase::SPLIT) {
-        int hand = base + (seat == 0 ? DOT_HAND_0 : DOT_HAND_1);
+        int hand = find_thing(table, seat == 0 ? "p0_hand" : "p1_hand");
         return (src == hand && dst == play_area) ||
                (src == play_area && dst == hand);
       }
       if (state.phase == dot::Phase::DISCARD) {
-        int pool = base + (seat == 0 ? DOT_POOL_1 : DOT_POOL_0);
+        // The discard phase takes from the *opponent's* pool.
+        int pool = find_thing(table, seat == 0 ? "p1_pool" : "p0_pool");
         return (src == pool && dst == play_area) ||
                (src == play_area && dst == pool);
       }
@@ -184,8 +186,7 @@ int main(int argc, char** argv) {
       draw_dot_hud(state, bottom_player);
     };
 
-  auto agent_ui =
-    Dot_Agent_UI(&table, &ui_state, menu_result.player_index, base);
+  auto   agent_ui = Dot_Agent_UI(&table, &ui_state, menu_result.player_index);
   Agent* agent =
     make_agent_pair(&agent_ui, make_ai_opponent(), menu_result, options.vs_ai);
 

@@ -15,10 +15,32 @@ static const Color BLUE_DOT  = {70, 130, 200, 255};
 static const Color BLACK_DOT = {45, 45, 45, 255};
 static const Color RED_DOT   = {200, 70, 70, 255};
 
+// Slots in the vector make_dot_stacks() returns. Only the layout code below
+// uses these; everything else addresses a stack by name.
+namespace {
+enum Dot_Stack {
+  DOT_POOL_1,
+  DOT_SHARED,
+  DOT_PLAY_AREA,
+  DOT_HAND_0,
+  DOT_POOL_0,
+  DOT_HAND_1,
+  DOT_DRAW_0,
+  DOT_STAR_0,
+  DOT_DRAW_1,
+  DOT_STAR_1,
+  DOT_STACK_COUNT,
+};
+}  // namespace
+
 // One table stack: a rectangle parent that lays its card children out by
 // spread_x / spread_y. Rectangles are in root-local coords (origin centered).
 static Thing make_stack(
-  Rectangle rect, float spread_x, float spread_y, bool face_up, const char* name
+  Rectangle          rect,
+  float              spread_x,
+  float              spread_y,
+  bool               face_up,
+  const std::string& name
 ) {
   Thing stack;
   set_local_rect(stack, rect);
@@ -52,11 +74,17 @@ std::vector<Thing> make_dot_stacks(int bottom_player, bool show_opponent_hand) {
 
   // Stacks are indexed by player; their on-screen position depends on which
   // seat the local player owns. The local player sits along the bottom.
-  const int top_player = 1 - bottom_player;
+  const int top_player  = 1 - bottom_player;
   const int pool_idx[2] = {DOT_POOL_0, DOT_POOL_1};
   const int hand_idx[2] = {DOT_HAND_0, DOT_HAND_1};
   const int draw_idx[2] = {DOT_DRAW_0, DOT_DRAW_1};
   const int star_idx[2] = {DOT_STAR_0, DOT_STAR_1};
+
+  // Stacks are named by seat ("p0_hand", "p1_hand", ...), so game code finds
+  // the seat it means regardless of which seat is sitting at the bottom.
+  auto seat_name = [](int seat, const char* zone) {
+    return "p" + std::to_string(seat) + "_" + zone;
+  };
 
   // Matching the rulebook: opponent pool on top, the shared pool in the
   // middle, your pool below it, and your hand along the bottom with the play
@@ -70,27 +98,52 @@ std::vector<Thing> make_dot_stacks(int bottom_player, bool show_opponent_hand) {
     make_stack(row_rect(560.0f, 391.0f, 3), row, 0.0f, true, "play_area");
 
   // Your pool (bottom) and the opponent's pool (top), both fanned out.
-  stacks[pool_idx[bottom_player]] =
-    make_stack(row_rect(0.0f, 130.0f, 8), row, 0.0f, true, "your_pool");
-  stacks[pool_idx[top_player]] =
-    make_stack(row_rect(0.0f, -391.0f, 8), row, 0.0f, true, "opp_pool");
+  stacks[pool_idx[bottom_player]] = make_stack(
+    row_rect(0.0f, 130.0f, 8), row, 0.0f, true, seat_name(bottom_player, "pool")
+  );
+  stacks[pool_idx[top_player]] = make_stack(
+    row_rect(0.0f, -391.0f, 8), row, 0.0f, true, seat_name(top_player, "pool")
+  );
 
   // Your hand is a fanned-out row (drag source); the opponent's hand is a
   // face-down pile, shown face up only in hot-seat.
-  stacks[hand_idx[bottom_player]] =
-    make_stack(row_rect(-320.0f, 391.0f, 6), row, 0.0f, true, "your_hand");
-  stacks[hand_idx[top_player]] =
-    make_stack(pile_rect(765.0f, -391.0f), 0.0f, pile, show_opponent_hand, "opp_hand");
+  stacks[hand_idx[bottom_player]] = make_stack(
+    row_rect(-320.0f, 391.0f, 6),
+    row,
+    0.0f,
+    true,
+    seat_name(bottom_player, "hand")
+  );
+  stacks[hand_idx[top_player]] = make_stack(
+    pile_rect(765.0f, -391.0f),
+    0.0f,
+    pile,
+    show_opponent_hand,
+    seat_name(top_player, "hand")
+  );
 
-  // Draw and star decks tucked into the side margins (yours left, theirs right).
-  stacks[draw_idx[bottom_player]] =
-    make_stack(pile_rect(-765.0f, -130.0f), 0.0f, pile, false, "your_draw");
-  stacks[star_idx[bottom_player]] =
-    make_stack(pile_rect(-765.0f, 130.0f), 0.0f, pile, false, "your_star");
-  stacks[draw_idx[top_player]] =
-    make_stack(pile_rect(765.0f, -130.0f), 0.0f, pile, false, "opp_draw");
-  stacks[star_idx[top_player]] =
-    make_stack(pile_rect(765.0f, 130.0f), 0.0f, pile, false, "opp_star");
+  // Draw and star decks tucked into the side margins (yours left, theirs
+  // right).
+  stacks[draw_idx[bottom_player]] = make_stack(
+    pile_rect(-765.0f, -130.0f),
+    0.0f,
+    pile,
+    false,
+    seat_name(bottom_player, "draw")
+  );
+  stacks[star_idx[bottom_player]] = make_stack(
+    pile_rect(-765.0f, 130.0f),
+    0.0f,
+    pile,
+    false,
+    seat_name(bottom_player, "star")
+  );
+  stacks[draw_idx[top_player]] = make_stack(
+    pile_rect(765.0f, -130.0f), 0.0f, pile, false, seat_name(top_player, "draw")
+  );
+  stacks[star_idx[top_player]] = make_stack(
+    pile_rect(765.0f, 130.0f), 0.0f, pile, false, seat_name(top_player, "star")
+  );
   return stacks;
 }
 
@@ -196,5 +249,7 @@ void draw_dot_hud(const dot::Game_State& state, int local_seat) {
   y += 34.0f;
   render_text("You: " + player_line(state, local_seat), x, y, 20, white);
   y += 28.0f;
-  render_text("Opponent: " + player_line(state, 1 - local_seat), x, y, 20, white);
+  render_text(
+    "Opponent: " + player_line(state, 1 - local_seat), x, y, 20, white
+  );
 }

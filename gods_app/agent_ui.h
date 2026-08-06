@@ -3,14 +3,12 @@
 #include <game/agent.h>
 #include <gods/models.h>
 #include <tabletop/tabletop.h>
-#include <tabletop/tabletop.h>
 #include <tabletop/ui.h>
 
 #include <set>
 
-// Thing-ids of a given player's zones. Layout is the one produced by
-// make_gods_stacks(): deck/hand/discard/peoples/wonders, each player gets 5
-// consecutive entries starting at stacks_offset + player_index*5.
+// Thing-ids of a given player's zones, looked up by the names
+// make_gods_stacks() gives them ("p0_deck", "p1_hand", ...).
 struct Stack_Indices {
   int deck;
   int hand;
@@ -19,22 +17,17 @@ struct Stack_Indices {
   int wonders;
 };
 
-inline Stack_Indices stack_indices(int player_index, int stacks_offset) {
-  int base = stacks_offset + player_index * 5;
-  return Stack_Indices{base, base + 1, base + 2, base + 3, base + 4};
-}
+Stack_Indices stack_indices(const Table_State& table_state, int player_index);
 
 // Copy current visual stack contents back into the Game_State (used when
 // exiting Playground mode so game logic resumes from the user-arranged layout).
 void sync_game_state_from_table(
-  Table_State& table_state, Game_State& gods_state, int stacks_offset
+  Table_State& table_state, Game_State& gods_state
 );
 
 // Push the current Game_State zones into Table_State.stacks and refresh card
 // positions.
-void update_stacks(
-  Table_State& table_state, Game_State& gods_state, int stacks_offset
-);
+void update_stacks(Table_State& table_state, Game_State& gods_state);
 
 // Comparator so Card_Id can sit in an ordered set.
 struct Card_Id_Less {
@@ -51,14 +44,10 @@ struct Agent_UI : Agent {
   Table_State*                    table_state;
   UI_State*                       ui_state;
   int                             bottom_player;
-  int                             stacks_offset;
   std::set<Card_Id, Card_Id_Less> card_multiselection;
 
-  Agent_UI(Table_State* t, UI_State* u, int bp, int stacks_offset)
-      : table_state(t)
-      , ui_state(u)
-      , bottom_player(bp)
-      , stacks_offset(stacks_offset) {}
+  Agent_UI(Table_State* t, UI_State* u, int bp)
+      : table_state(t), ui_state(u), bottom_player(bp) {}
 
   void message(const std::string&) override {}
 

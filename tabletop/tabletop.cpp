@@ -3,6 +3,7 @@
 #include <struct/print.h>
 
 #include <algorithm>
+#include <cassert>
 #include <cmath>
 #include <cstdio>
 #include <random>
@@ -117,6 +118,14 @@ Input capture_input() {
   input.time       = GetTime();
   input.delta_time = GetFrameTime();
   return input;
+}
+
+int find_thing(const Table_State& state, const std::string& name) {
+  for (int id = 0; id < (int)state.things.size(); ++id) {
+    if (state.things[id].name == name) return id;
+  }
+  assert(false && "no thing with that name on the table");
+  return -1;
 }
 
 bool is_full(const Thing& thing) {

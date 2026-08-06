@@ -401,6 +401,12 @@ inline bool key_down(const Input& input, int key) {
          input.keys_down.end();
 }
 
+// Thing-id of the thing called `name`, or -1 if the table has none. Names are
+// how game code addresses the zones it cares about ("p0_hand", "stock", ...),
+// so a zone can be added or reordered in the layout without moving anything
+// else.
+int find_thing(const Table_State& state, const std::string& name);
+
 // True if `thing` has a capacity limit and has reached it.
 bool is_full(const Thing& thing);
 // Hit-test `thing` against world point (px, py) using its accumulated world

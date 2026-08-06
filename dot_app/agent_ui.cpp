@@ -25,7 +25,10 @@ int Dot_Agent_UI::choose_action(Game& game, const Choice& choice) {
   if (choice.description == "acknowledge") {
     ui_state->highlighted_things.clear();
     render_text(
-      "Cards revealed - press Ok to score", 640.0f, 18.0f, 22,
+      "Cards revealed - press Ok to score",
+      640.0f,
+      18.0f,
+      22,
       Color{255, 235, 150, 255}
     );
     return immediate_button(button, "Ok", input) ? 0 : -1;
@@ -45,8 +48,9 @@ int Dot_Agent_UI::choose_action(Game& game, const Choice& choice) {
                                ? array<const int>(state.players[seat].hand)
                                : array<const int>(state.players[1 - seat].pool);
 
-  int                     play_area_id = stacks_offset + DOT_PLAY_AREA;
-  const std::vector<int>& selected = table_state->things[play_area_id].children();
+  int                     play_area_id = find_thing(*table_state, "play_area");
+  const std::vector<int>& selected =
+    table_state->things[play_area_id].children();
 
   // Highlight every card the player may drag this turn.
   ui_state->highlighted_things.clear();

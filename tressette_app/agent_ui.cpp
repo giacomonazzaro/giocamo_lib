@@ -10,8 +10,7 @@
 int Tressette_Agent_UI::choose_action(Game& game, const Choice& choice) {
   auto actions = choice.actions(game);
   if (choice.description == "acknowledge") {
-    int  base   = stacks_offset;
-    auto middle = world_rect(base + TRESSETTE_TABLE_IDX, *table_state);
+    auto middle = world_rect(find_thing(*table_state, "table"), *table_state);
     auto rect   = place_next(middle, 100, 50, "right", "center", 100);
     if (immediate_button(rect, "Ok", *this->ui_state->input)) {
       return 0;
@@ -22,11 +21,9 @@ int Tressette_Agent_UI::choose_action(Game& game, const Choice& choice) {
 
   auto legal_set = std::set<int>(cc->targets.begin(), cc->targets.end());
 
-  // stacks_offset is set by main to point at the first stack thing-id.
-  int base = stacks_offset;
   int hand_id =
-    base + (choice.player_index == 0 ? TRESSETTE_HAND_0 : TRESSETTE_HAND_1);
-  int table_id = base + TRESSETTE_TABLE_IDX;
+    find_thing(*table_state, choice.player_index == 0 ? "p0_hand" : "p1_hand");
+  int table_id = find_thing(*table_state, "table");
 
   auto* state_ptr = static_cast<tressette::Game_State*>(&game);
   table_state->is_drop_allowed =

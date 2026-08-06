@@ -122,14 +122,8 @@ static Game_State quick_setup(std::optional<int> seed) {
 void populate_stacks_from_gods_state(
   Table_State& table_state, Game_State& gods_state
 ) {
-  auto thing_id = std::map<std::string, int>();
-  for (int i = 0; i < (int)table_state.things.size(); ++i) {
-    const std::string& n = table_state.things[i].name;
-    if (!n.empty()) thing_id[n] = i;
-  }
-
   auto set_children = [&](const std::string& name, array<const int> ids) {
-    table_state.things[thing_id[name]]._children.assign(
+    table_state.things[find_thing(table_state, name)]._children.assign(
       ids.data, ids.data + ids.size()
     );
   };
@@ -190,15 +184,15 @@ void init_table_layout(
   // Root: sits at the end of `things`, owns all stacks as direct children.
   // Centered on the screen so the root rect spans (0,0)-(W,H) in world.
   Thing root;
-  root.name        = "root";
-  root.shape       = rectangle_shape({(float)window_width, (float)window_height});
+  root.name  = "root";
+  root.shape = rectangle_shape({(float)window_width, (float)window_height});
   root.transform.x = (float)window_width / 2.0f;
   root.transform.y = (float)window_height / 2.0f;
   root.id          = (int)table_state.things.size();
-  root._children    = stack_ids_in_order;
+  root._children   = stack_ids_in_order;
   root.capacity    = 0;
   // Transparent so the shader background drawn behind the table shows through.
-  root.color       = {0, 0, 0, 0};
+  root.color = {0, 0, 0, 0};
   table_state.things.push_back(root);
   table_state.root = root.id;
 
@@ -393,9 +387,7 @@ static void handle_debug_save(
   // back into gods_state so the two snapshots agree — otherwise the
   // load path's per-frame update_stacks would snap cards back to
   // whatever gods_state.players[*] says.
-  sync_game_state_from_table(
-    table_state, gods_state, (int)gods_state.all_cards.size()
-  );
+  sync_game_state_from_table(table_state, gods_state);
   save_to_json<Game_State>(gods_state, "data/debug_gods_state.json");
   save_to_json<Table_Layout>(table_state, "data/debug_table_state.json");
   printf("Saved debug snapshot to data/debug_*.json\n");
@@ -595,18 +587,15 @@ int main(int argc, char** argv) {
   Gods_UI ui_state(tt::WINDOW_WIDTH, tt::WINDOW_HEIGHT);
   init_card_draw_callbacks(table_state, gods_state, ui_state);
 
-  const int player_index  = menu_result.player_index;
-  const int stacks_offset = (int)gods_state.all_cards.size();
+  const int player_index = menu_result.player_index;
 
   // UI agent for the local seat; AI for the opponent unless hot-seat (where the
   // UI agent plays both seats). make_duel wires up the online/local pairing.
-  Agent* agent_ui = new Agent_UI(
-    &table_state, &ui_state, player_index, stacks_offset
-  );
+  Agent* agent_ui = new Agent_UI(&table_state, &ui_state, player_index);
   bool   vs_ai    = !args.hot_seat && menu_result.mode == Menu_Result::VS_AI;
-  Agent* opponent =
-    vs_ai ? (Agent*)new Agent_Minimax_Stochastic_Gods(6, 20) : agent_ui;
-  Agent* agent = make_duel(agent_ui, opponent, menu_result);
+  Agent* opponent = vs_ai ? (Agent*)new Agent_Minimax_Stochastic_Gods(6, 20)
+                          : agent_ui;
+  Agent* agent    = make_duel(agent_ui, opponent, menu_result);
 
   // Per-frame overlay: gods-specific inputs (power editor, debug save, discard
   // expand) plus the HUD drawing. The -1 callback runs every frame with the
@@ -624,14 +613,14 @@ int main(int argc, char** argv) {
   // Refresh the table from gods_state after every resolved choice, and push
   // the latest card state (power/owner/...) to the remote peer.
   auto update_table_from_game = [&] {
-    update_stacks(table_state, gods_state, stacks_offset);
+    update_stacks(table_state, gods_state);
     if (online) broadcast_cards(*online, gods_state);
   };
 
   // Leaving playground: read the rearranged table back into gods_state so play
   // resumes from the user's layout.
   auto update_game_from_table = [&] {
-    sync_game_state_from_table(table_state, gods_state, stacks_offset);
+    sync_game_state_from_table(table_state, gods_state);
     ui_state.power_edit_card_id = -1;
   };
 

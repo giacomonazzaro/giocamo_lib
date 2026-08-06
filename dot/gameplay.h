@@ -65,16 +65,12 @@ inline Game_State sample_state(
       hidden_draws.push_back(id);
   }
   int draws_in_hand = (int)hidden_draws.size();
-  hidden_draws.insert(
-    hidden_draws.end(), opponent.draw_deck.begin(), opponent.draw_deck.end()
-  );
+  hidden_draws.append(opponent.draw_deck.begin(), opponent.draw_deck.end());
   std::shuffle(hidden_draws.begin(), hidden_draws.end(), rng);
 
   opponent.hand = hand_stars;
-  opponent.hand.insert(
-    opponent.hand.end(),
-    hidden_draws.begin(),
-    hidden_draws.begin() + draws_in_hand
+  opponent.hand.append(
+    hidden_draws.begin(), hidden_draws.begin() + draws_in_hand
   );
   opponent.draw_deck.assign(
     hidden_draws.begin() + draws_in_hand, hidden_draws.end()

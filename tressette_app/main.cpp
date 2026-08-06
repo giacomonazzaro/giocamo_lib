@@ -56,24 +56,23 @@ static Table_State init_table_state(
   }
 
   // Populate stack children from game state.
-  int  base      = (int)tressette::all_cards.size();
-  auto set_stack = [&](int stack, array<const int> cards) {
-    table.things[base + stack]._children.assign(
+  auto set_stack = [&](const char* name, array<const int> cards) {
+    table.things[find_thing(table, name)]._children.assign(
       cards.data, cards.data + cards.size()
     );
   };
-  set_stack(TRESSETTE_HAND_0, state.players[0].hand);
-  set_stack(TRESSETTE_HAND_1, state.players[1].hand);
-  set_stack(TRESSETTE_TRICKS_0, state.players[0].tricks_won);
-  set_stack(TRESSETTE_TRICKS_1, state.players[1].tricks_won);
-  set_stack(TRESSETTE_STOCK_IDX, state.stock);
-  set_stack(TRESSETTE_TABLE_IDX, state.trick);
+  set_stack("p0_hand", state.players[0].hand);
+  set_stack("p1_hand", state.players[1].hand);
+  set_stack("p0_tricks", state.players[0].tricks_won);
+  set_stack("p1_tricks", state.players[1].tricks_won);
+  set_stack("stock", state.stock);
+  set_stack("table", state.trick);
 
   // Root: a wooden table surface owning all stacks as direct children.
   auto root = create_table_root(
     tt::WINDOW_WIDTH, tt::WINDOW_HEIGHT, "tabletop/data/wood.png"
   );
-  root.id       = (int)table.things.size();
+  root.id        = (int)table.things.size();
   root._children = stack_ids;
   table.things.push_back(root);
   table.root = root.id;
@@ -84,18 +83,17 @@ static Table_State init_table_state(
 }
 
 static void update_stacks(Table_State& table, tressette::Game_State& state) {
-  int  base    = (int)tressette::all_cards.size();
-  auto refresh = [&](int idx, array<const int> cards) {
-    table.things[base + idx]._children.assign(
+  auto refresh = [&](const char* name, array<const int> cards) {
+    table.things[find_thing(table, name)]._children.assign(
       cards.data, cards.data + cards.size()
     );
   };
-  refresh(TRESSETTE_HAND_0, state.players[0].hand);
-  refresh(TRESSETTE_HAND_1, state.players[1].hand);
-  refresh(TRESSETTE_TRICKS_0, state.players[0].tricks_won);
-  refresh(TRESSETTE_TRICKS_1, state.players[1].tricks_won);
-  refresh(TRESSETTE_STOCK_IDX, state.stock);
-  refresh(TRESSETTE_TABLE_IDX, state.trick);
+  refresh("p0_hand", state.players[0].hand);
+  refresh("p1_hand", state.players[1].hand);
+  refresh("p0_tricks", state.players[0].tricks_won);
+  refresh("p1_tricks", state.players[1].tricks_won);
+  refresh("stock", state.stock);
+  refresh("table", state.trick);
 
   update_local_transforms_to_match_world_transforms(table);
   for (size_t i = 0; i < table.things.size(); i++) {
@@ -137,7 +135,9 @@ static Agent* make_ai_opponent() {
   // responsive (see the Emscripten branch of Agent_MCTS_Stochastic). Guided
   // rollouts cost more per iteration, so keep num_iterations modest.
   return make_softmax_mcts(
-    /* num_iterations */ 5000, /* rollout_depth */ 40, /* num_samples */ 40,
+    /* num_iterations */ 5000,
+    /* rollout_depth */ 40,
+    /* num_samples */ 40,
     /* time_budget_seconds */ 0.0f
   );
 #else
@@ -146,7 +146,9 @@ static Agent* make_ai_opponent() {
   // iteration cap with a better rollout policy spends the time budget far
   // better than brute-forcing random rollouts.
   return make_softmax_mcts(
-    /* num_iterations */ 20000, /* rollout_depth */ 40, /* num_samples */ 50,
+    /* num_iterations */ 20000,
+    /* rollout_depth */ 40,
+    /* num_samples */ 50,
     /* time_budget_seconds */ 5.0f
   );
 #endif
@@ -194,9 +196,8 @@ int main(int argc, char** argv) {
       }
     };
 
-  auto agent_ui = Tressette_Agent_UI(
-    &table, &ui_state, menu_result.player_index, (int)tressette::all_cards.size()
-  );
+  auto agent_ui =
+    Tressette_Agent_UI(&table, &ui_state, menu_result.player_index);
   Agent* agent =
     make_agent_pair(&agent_ui, make_ai_opponent(), menu_result, options.vs_ai);
 

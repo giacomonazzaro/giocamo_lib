@@ -1,26 +1,17 @@
 #pragma once
 
-#include <functional>
-#include <vector>
-
 #include <tabletop/tabletop.h>
 #include <tabletop/ui.h>
 #include <tressette/models.h>
 
-// Stack offsets from the first stack thing-id (add stacks_offset to get
-// the absolute thing_id).
-constexpr int TRESSETTE_HAND_0    = 0;
-constexpr int TRESSETTE_HAND_1    = 1;
-constexpr int TRESSETTE_TRICKS_0  = 2;
-constexpr int TRESSETTE_TRICKS_1  = 3;
-constexpr int TRESSETTE_STOCK_IDX = 4;
-constexpr int TRESSETTE_TABLE_IDX = 5;
+#include <functional>
+#include <vector>
 
 // Build the 6 stack Things for a Tressette table layout. `bottom_player` is
 // the seat (0 or 1) whose hand sits at the bottom of the screen — i.e. the
-// local player. The stack ordering (HAND_0, HAND_1, …) stays aligned with the
-// player index so agent code can look up by seat without remapping; only the
-// rects/face_up flip.
+// local player. The stacks are named "p0_hand", "p1_hand", "p0_tricks",
+// "p1_tricks", "stock" and "table"; game code finds them with find_thing().
+// Only the rects/face_up depend on which seat is at the bottom.
 std::vector<Thing> make_tressette_stacks(
   int bottom_player, bool show_opponent_hand
 );
@@ -35,4 +26,3 @@ make_card_draw_callback(
 void draw_tressette_player_hud(
   int player_index, int score, bool is_current, int hud_y
 );
-

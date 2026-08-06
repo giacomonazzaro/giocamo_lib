@@ -2,8 +2,8 @@
 
 #include <scopa/gameplay.h>
 #include <tabletop/config.h>
-#include <tabletop/tabletop.h>
 #include <tabletop/rendering.h>
+#include <tabletop/tabletop.h>
 
 #include <set>
 #include <string>
@@ -35,8 +35,8 @@ static int draw_capture_picker(
   const float row_height        = 56.0f;
   const float padding           = 12.0f;
   const float panel_width       = 360.0f;
-  const float panel_height =
-    padding * 2.0f + row_height * (float)number_of_options + 36.0f;
+  const float panel_height      = padding * 2.0f +
+                             row_height * (float)number_of_options + 36.0f;
   const float panel_x = (tt::WINDOW_WIDTH - panel_width) * 0.5f;
   const float panel_y = (tt::WINDOW_HEIGHT - panel_height) * 0.5f - 80.0f;
 
@@ -76,16 +76,15 @@ static int draw_capture_picker(
 }
 
 int Scopa_Agent_UI::choose_action(Game& game, const Choice& choice) {
-  auto&        state   = static_cast<scopa::Game_State&>(game);
-  const auto   actions = scopa::enumerate_actions(state);
-  auto         options = choice.actions(game);
-  auto*        option  = std::get_if<Choose_Option>(&options);
+  auto&      state   = static_cast<scopa::Game_State&>(game);
+  const auto actions = scopa::enumerate_actions(state);
+  auto       options = choice.actions(game);
+  auto*      option  = std::get_if<Choose_Option>(&options);
   if (!option || option->targets.empty()) return -1;
 
-  const int base       = stacks_offset;
-  const int hand_id    = base + (choice.player_index == 0 ? SCOPA_HAND_0
-                                                          : SCOPA_HAND_1);
-  const int table_id   = base + SCOPA_TABLE_IDX;
+  const int hand_id =
+    find_thing(*table_state, choice.player_index == 0 ? "p0_hand" : "p1_hand");
+  const int table_id = find_thing(*table_state, "table");
 
   // Cards in the hand that the rules let the player play. Every card in
   // hand is legal in Scopa — the action set just varies per card.
@@ -97,25 +96,31 @@ int Scopa_Agent_UI::choose_action(Game& game, const Choice& choice) {
   // Restrict drops: only from the local hand to the table, and only while
   // we're not already mid-pick. Once a card has been played-but-not-resolved
   // (waiting on capture choice) the only thing allowed is clicking a button.
-  Scopa_Agent_UI* self = this;
-  table_state->is_drop_allowed =
-    [hand_id, table_id, playable_hand, self, &state](int src, int dst, int cid) {
-      if (src == dst) return true;
-      if (self->pending_played_card_id != -1) return false;
-      return state.current_player == self->player_index && src == hand_id &&
-             dst == table_id && playable_hand.count(cid) > 0;
-    };
+  Scopa_Agent_UI* self         = this;
+  table_state->is_drop_allowed = [hand_id,
+                                  table_id,
+                                  playable_hand,
+                                  self,
+                                  &state](int src, int dst, int cid) {
+    if (src == dst) return true;
+    if (self->pending_played_card_id != -1) return false;
+    return state.current_player == self->player_index && src == hand_id &&
+           dst == table_id && playable_hand.count(cid) > 0;
+  };
 
   // While picking, highlight the table cards that belong to at least one of
   // the remaining capture options.
   ui_state->highlighted_things.clear();
   if (pending_played_card_id == -1) {
-    for (int card_id : playable_hand) ui_state->highlighted_things[card_id] = card_id;
+    for (int card_id : playable_hand)
+      ui_state->highlighted_things[card_id] = card_id;
   } else {
     for (const auto& subset : pending_capture_options) {
-      for (int card_id : subset) ui_state->highlighted_things[card_id] = card_id;
+      for (int card_id : subset)
+        ui_state->highlighted_things[card_id] = card_id;
     }
-    ui_state->highlighted_things[pending_played_card_id] = pending_played_card_id;
+    ui_state->highlighted_things[pending_played_card_id] =
+      pending_played_card_id;
   }
 
   // Capture picker has priority: if we're already mid-pick, render it and
