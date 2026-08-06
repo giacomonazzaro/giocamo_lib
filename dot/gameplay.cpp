@@ -13,8 +13,8 @@ namespace dot {
 std::vector<Card> all_cards;
 
 constexpr int DRAW_PER_ROUND = 5;  // Draw cards drawn each round (star adds 1).
-constexpr int NUM_ROUNDS      = 3;
-constexpr int WIN_TOKENS      = 5;  // Reaching this ends the game immediately.
+constexpr int NUM_ROUNDS     = 3;
+constexpr int WIN_TOKENS     = 5;  // Reaching this ends the game immediately.
 
 // Binomial coefficient C(n, k). Matches the counting in game/game.cpp.
 static long long binomial(int n, int k) {
@@ -69,9 +69,12 @@ static int color_count(
   int total = 0;
   for (int id : cards) {
     const Card& card = all_cards[id];
-    if (color == 0) total += card.blue_dots;
-    else if (color == 1) total += card.black_dots;
-    else total += card.red_dots;
+    if (color == 0)
+      total += card.blue_dots;
+    else if (color == 1)
+      total += card.black_dots;
+    else
+      total += card.red_dots;
   }
   return total;
 }
@@ -101,8 +104,10 @@ static int& tokens_for_color(Player& player, int color) {
 // the tokens pending so they carry into the next round.
 static void award_color(Game_State& state, int color, int& pending) {
   int shared = color_count(state, state.shared_pool, color);
-  int diff_0 = std::abs(color_count(state, state.players[0].pool, color) - shared);
-  int diff_1 = std::abs(color_count(state, state.players[1].pool, color) - shared);
+  int diff_0 =
+    std::abs(color_count(state, state.players[0].pool, color) - shared);
+  int diff_1 =
+    std::abs(color_count(state, state.players[1].pool, color) - shared);
   if (diff_0 == diff_1) return;  // Tie: tokens carry over to the next round.
 
   bool reward_smallest = (state.round == 1);  // Round 2 wants the smallest.
@@ -133,7 +138,8 @@ static int compute_discard_first(const Game_State& state) {
   if (state.players[0].tokens_blue != state.players[1].tokens_blue)
     return state.players[0].tokens_blue > state.players[1].tokens_blue ? 0 : 1;
   if (state.players[0].tokens_black != state.players[1].tokens_black)
-    return state.players[0].tokens_black > state.players[1].tokens_black ? 0 : 1;
+    return state.players[0].tokens_black > state.players[1].tokens_black ? 0
+                                                                         : 1;
   return 0;
 }
 
@@ -176,8 +182,10 @@ Game_State quick_setup(int seed) {
       Card copy = card;
       copy.id   = (int)all_cards.size();
       all_cards.push_back(copy);
-      if (copy.is_star) player.star_deck.push_back(copy.id);
-      else player.draw_deck.push_back(copy.id);
+      if (copy.is_star)
+        player.star_deck.push_back(copy.id);
+      else
+        player.draw_deck.push_back(copy.id);
     }
     // Shuffle the draw pile with a per-player stream so the two orders differ.
     auto rng = std::mt19937((unsigned)seed + 1 + player_index);
@@ -186,7 +194,7 @@ Game_State quick_setup(int seed) {
 
   state.round = 0;
   start_round(state);
-  state.begin_game(state.next_choice());  // The opening decision to present.
+  state.begin_game();  // The opening decision to present.
   return state;
 }
 
@@ -195,12 +203,15 @@ Game_State quick_setup(int seed) {
 // score the round and set up the discard phase (or end the game).
 static void resolve_split(Game_State& state, int index) {
   Player&          player = state.players[state.acting_player];
-  std::vector<int> picks  = combination_at((int)player.hand.size(), SHARED_COUNT, index);
+  std::vector<int> picks =
+    combination_at((int)player.hand.size(), SHARED_COUNT, index);
   std::vector<bool> to_shared(player.hand.size(), false);
   for (int position : picks) to_shared[position] = true;
   for (size_t i = 0; i < player.hand.size(); ++i) {
-    if (to_shared[i]) state.shared_pool.push_back(player.hand[i]);
-    else player.pool.push_back(player.hand[i]);
+    if (to_shared[i])
+      state.shared_pool.push_back(player.hand[i]);
+    else
+      player.pool.push_back(player.hand[i]);
   }
   player.hand.clear();
 
@@ -210,9 +221,9 @@ static void resolve_split(Game_State& state, int index) {
   }
   // Both players have committed; pause on the revealed shared pool so the
   // player can see what the opponent played before it is scored.
-  state.phase = Phase::ACKNOWLEDGE;
-  state.acting_player =
-    state.human_player >= 0 ? state.human_player : state.acting_player;
+  state.phase         = Phase::ACKNOWLEDGE;
+  state.acting_player = state.human_player >= 0 ? state.human_player
+                                                : state.acting_player;
 }
 
 // After the player has seen the revealed board: score the round and set up the
@@ -228,15 +239,17 @@ static void resolve_acknowledge(Game_State& state) {
 // Remove the chosen cards from the opponent's pool, then advance: the other
 // player discards, or once both have, start the next round.
 static void resolve_discard(Game_State& state, int index) {
-  auto& opponent_pool = state.players[1 - state.acting_player].pool;
-  std::vector<int>  picks =
+  auto&            opponent_pool = state.players[1 - state.acting_player].pool;
+  std::vector<int> picks =
     combination_at((int)opponent_pool.size(), discard_count(state), index);
   // Erase from the back so earlier positions stay valid.
   std::sort(picks.rbegin(), picks.rend());
-  for (int position : picks) opponent_pool.erase(opponent_pool.begin() + position);
+  for (int position : picks)
+    opponent_pool.erase(opponent_pool.begin() + position);
 
   if (state.acting_player == state.discard_first) {
-    state.acting_player = 1 - state.discard_first;  // The other player discards.
+    state.acting_player = 1 -
+                          state.discard_first;  // The other player discards.
     return;
   }
   state.round += 1;
@@ -256,7 +269,7 @@ Choice Game_State::next_choice() {
     choice.text_description = "Pick 3 cards for the shared pool";
     choice.actions          = [](Game& game) -> Choose {
       Game_State& state = static_cast<Game_State&>(game);
-      const auto& hand = state.players[state.acting_player].hand;
+      const auto& hand  = state.players[state.acting_player].hand;
       return Choose_Cards{
         std::vector<int>(hand.begin(), hand.end()), SHARED_COUNT, false
       };
@@ -264,7 +277,7 @@ Choice Game_State::next_choice() {
     choice.resolve = [](Game& game, int index) -> Choice {
       Game_State& state = static_cast<Game_State&>(game);
       resolve_split(state, index);
-      return state.next_choice();  // The next decision (or game over).
+      return no_choice;
     };
   } else if (phase == Phase::ACKNOWLEDGE) {
     choice.description      = "acknowledge";
@@ -277,14 +290,14 @@ Choice Game_State::next_choice() {
     choice.resolve = [](Game& game, int) -> Choice {
       Game_State& state = static_cast<Game_State&>(game);
       resolve_acknowledge(state);
-      return state.next_choice();  // The next decision (or game over).
+      return no_choice;
     };
   } else {
     choice.description      = "discard";
     choice.text_description = "Discard from the opponent's pool";
     choice.actions          = [](Game& game) -> Choose {
-      Game_State&      state = static_cast<Game_State&>(game);
-      const auto& pool = state.players[1 - state.acting_player].pool;
+      Game_State& state = static_cast<Game_State&>(game);
+      const auto& pool  = state.players[1 - state.acting_player].pool;
       return Choose_Cards{
         std::vector<int>(pool.begin(), pool.end()), discard_count(state), false
       };
@@ -292,7 +305,7 @@ Choice Game_State::next_choice() {
     choice.resolve = [](Game& game, int index) -> Choice {
       Game_State& state = static_cast<Game_State&>(game);
       resolve_discard(state, index);
-      return state.next_choice();  // The next decision (or game over).
+      return no_choice;
     };
   }
   return choice;

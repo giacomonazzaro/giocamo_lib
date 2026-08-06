@@ -57,7 +57,11 @@ int pending_action_count(Game& game) {
 }
 
 void resolve_choice(Game& game, int index) {
-  Choice next  = game._choice.resolve(game, index);
+  Choice next = game._choice.resolve(game, index);
+  // The resolve could not say what comes next, so ask the game. This is the
+  // only call to next_choice() once a game is running, which is what keeps the
+  // app loop and the searches on the same sequence of choices.
+  if (is_no_choice(next)) next = game.next_choice();
   game._choice = std::move(next);
 }
 
@@ -68,6 +72,8 @@ void game_loop(Game& game, Agent& agent, std::function<void(Game&)> callback) {
 
 bool game_frame(Game& game, Agent& agent) {
   assert(!game.is_game_over());
+  // resolve_choice already refilled the pending choice, so there is always a
+  // decision to present here.
   assert(pending_action_count(game) > 0);
 
   int action_index = agent.choose_action(game, game._choice);

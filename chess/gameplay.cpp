@@ -11,31 +11,35 @@ static bool on_board(int row, int col) {
   return row >= 0 && row < 8 && col >= 0 && col < 8;
 }
 
-// Forward direction of a player's pawns: white advances up the board (+1), black
-// down (-1).
+// Forward direction of a player's pawns: white advances up the board (+1),
+// black down (-1).
 static int pawn_forward(int player) { return player == 0 ? 1 : -1; }
 
 // Core attack test, working on the bare board so move generation can probe a
 // board copy without copying the whole game state.
-static bool is_square_attacked_on(const Board& board, int square, int by_player) {
+static bool is_square_attacked_on(
+  const Board& board, int square, int by_player
+) {
   int row = square_row(square);
   int col = square_col(square);
 
   // Pawn attacks: a by_player pawn sits one rank "behind" the square (from the
   // attacker's point of view) on an adjacent file.
-  int forward     = pawn_forward(by_player);
-  int pawn_value  = make_piece(PAWN, by_player);
-  int pawn_row    = row - forward;
+  int forward    = pawn_forward(by_player);
+  int pawn_value = make_piece(PAWN, by_player);
+  int pawn_row   = row - forward;
   for (int d_col = -1; d_col <= 1; d_col += 2) {
     int pawn_col = col + d_col;
-    if (on_board(pawn_row, pawn_col) && board[pawn_row][pawn_col] == pawn_value) {
+    if (on_board(pawn_row, pawn_col) &&
+        board[pawn_row][pawn_col] == pawn_value) {
       return true;
     }
   }
 
   // Knight attacks.
   static const int knight_offsets[8][2] = {
-    {1, 2}, {2, 1}, {-1, 2}, {-2, 1}, {1, -2}, {2, -1}, {-1, -2}, {-2, -1}};
+    {1, 2}, {2, 1}, {-1, 2}, {-2, 1}, {1, -2}, {2, -1}, {-1, -2}, {-2, -1}
+  };
   int knight_value = make_piece(KNIGHT, by_player);
   for (const auto& offset : knight_offsets) {
     int r = row + offset[0];
@@ -54,13 +58,13 @@ static bool is_square_attacked_on(const Board& board, int square, int by_player)
     }
   }
 
-  // Sliding attacks: walk each ray until the first piece. Diagonals are hit by a
-  // bishop or queen, orthogonals by a rook or queen.
+  // Sliding attacks: walk each ray until the first piece. Diagonals are hit by
+  // a bishop or queen, orthogonals by a rook or queen.
   static const int diagonal_dirs[4][2] = {{1, 1}, {1, -1}, {-1, 1}, {-1, -1}};
   static const int straight_dirs[4][2] = {{1, 0}, {-1, 0}, {0, 1}, {0, -1}};
-  int bishop_value = make_piece(BISHOP, by_player);
-  int rook_value   = make_piece(ROOK, by_player);
-  int queen_value  = make_piece(QUEEN, by_player);
+  int              bishop_value        = make_piece(BISHOP, by_player);
+  int              rook_value          = make_piece(ROOK, by_player);
+  int              queen_value         = make_piece(QUEEN, by_player);
 
   for (const auto& dir : diagonal_dirs) {
     int r = row + dir[0];
@@ -112,11 +116,9 @@ bool in_check(const Game_State& state, int player) {
   return is_square_attacked_on(state.board, king_square, 1 - player);
 }
 
-// Append a pawn move, expanding it into the four promotion choices when it lands
-// on the last rank.
-static void add_pawn_move(
-  Move_List& moves, int from, int to, int last_rank
-) {
+// Append a pawn move, expanding it into the four promotion choices when it
+// lands on the last rank.
+static void add_pawn_move(Move_List& moves, int from, int to, int last_rank) {
   if (square_row(to) == last_rank) {
     moves.push_back(Move{from, to, QUEEN});
     moves.push_back(Move{from, to, ROOK});
@@ -132,13 +134,14 @@ static void add_pawn_move(
 // check, since the general legality filter only inspects the landing square.
 static Move_List generate_pseudo_legal(const Game_State& state, int player) {
   Move_List moves;
-  int               opponent = 1 - player;
-  int               forward  = pawn_forward(player);
-  int               start_rank      = player == 0 ? 1 : 6;
-  int               last_rank       = player == 0 ? 7 : 0;
+  int       opponent   = 1 - player;
+  int       forward    = pawn_forward(player);
+  int       start_rank = player == 0 ? 1 : 6;
+  int       last_rank  = player == 0 ? 7 : 0;
 
   static const int knight_offsets[8][2] = {
-    {1, 2}, {2, 1}, {-1, 2}, {-2, 1}, {1, -2}, {2, -1}, {-1, -2}, {-2, -1}};
+    {1, 2}, {2, 1}, {-1, 2}, {-2, 1}, {1, -2}, {2, -1}, {-1, -2}, {-2, -1}
+  };
   static const int diagonal_dirs[4][2] = {{1, 1}, {1, -1}, {-1, 1}, {-1, -1}};
   static const int straight_dirs[4][2] = {{1, 0}, {-1, 0}, {0, 1}, {0, -1}};
 
@@ -192,13 +195,12 @@ static Move_List generate_pseudo_legal(const Game_State& state, int player) {
         }
       } else {
         // Sliding pieces: bishop diagonals, rook straights, queen both.
-        const int(*dirs)[2] = type == BISHOP ? diagonal_dirs : straight_dirs;
-        int num_dirs        = 4;
-        bool both           = type == QUEEN;
+        const int (*dirs)[2] = type == BISHOP ? diagonal_dirs : straight_dirs;
+        int  num_dirs        = 4;
+        bool both            = type == QUEEN;
         for (int pass = 0; pass < (both ? 2 : 1); ++pass) {
-          const int(*active)[2] = both
-            ? (pass == 0 ? diagonal_dirs : straight_dirs)
-            : dirs;
+          const int (*active)[2] =
+            both ? (pass == 0 ? diagonal_dirs : straight_dirs) : dirs;
           for (int d = 0; d < num_dirs; ++d) {
             int r = row + active[d][0];
             int c = col + active[d][1];
@@ -224,24 +226,27 @@ static Move_List generate_pseudo_legal(const Game_State& state, int player) {
   // Castling: the king is on its home square, the squares between it and the
   // rook are empty, the king is not currently in check, and the two squares it
   // crosses are not attacked.
-  int home_row = player == 0 ? 0 : 7;
-  bool kingside  = player == 0 ? state.white_can_castle_kingside
-                               : state.black_can_castle_kingside;
-  bool queenside = player == 0 ? state.white_can_castle_queenside
-                               : state.black_can_castle_queenside;
-  int king_value = make_piece(KING, player);
-  int rook_value = make_piece(ROOK, player);
-  bool king_in_check = is_square_attacked(state, square_of(home_row, 4), opponent);
+  int  home_row   = player == 0 ? 0 : 7;
+  bool kingside   = player == 0 ? state.white_can_castle_kingside
+                                : state.black_can_castle_kingside;
+  bool queenside  = player == 0 ? state.white_can_castle_queenside
+                                : state.black_can_castle_queenside;
+  int  king_value = make_piece(KING, player);
+  int  rook_value = make_piece(ROOK, player);
+  bool king_in_check =
+    is_square_attacked(state, square_of(home_row, 4), opponent);
 
   if (state.board[home_row][4] == king_value && !king_in_check) {
     if (kingside && state.board[home_row][7] == rook_value &&
-        state.board[home_row][5] == EMPTY && state.board[home_row][6] == EMPTY &&
+        state.board[home_row][5] == EMPTY &&
+        state.board[home_row][6] == EMPTY &&
         !is_square_attacked(state, square_of(home_row, 5), opponent) &&
         !is_square_attacked(state, square_of(home_row, 6), opponent)) {
       moves.push_back(Move{square_of(home_row, 4), square_of(home_row, 6), 0});
     }
     if (queenside && state.board[home_row][0] == rook_value &&
-        state.board[home_row][1] == EMPTY && state.board[home_row][2] == EMPTY &&
+        state.board[home_row][1] == EMPTY &&
+        state.board[home_row][2] == EMPTY &&
         state.board[home_row][3] == EMPTY &&
         !is_square_attacked(state, square_of(home_row, 3), opponent) &&
         !is_square_attacked(state, square_of(home_row, 2), opponent)) {
@@ -253,9 +258,9 @@ static Move_List generate_pseudo_legal(const Game_State& state, int player) {
 }
 
 // Apply only the board changes of `move` for `player`: move the piece, promote
-// it, remove an en-passant-captured pawn, and hop the castling rook. This is the
-// part move generation needs to test king safety, so it runs on a bare board
-// (a cheap 64-byte copy) without touching the rest of the game state.
+// it, remove an en-passant-captured pawn, and hop the castling rook. This is
+// the part move generation needs to test king safety, so it runs on a bare
+// board (a cheap 64-byte copy) without touching the rest of the game state.
 static void apply_board_move(
   Board& board, const Move& move, int player, int en_passant_target
 ) {
@@ -266,8 +271,8 @@ static void apply_board_move(
   int moving   = board[from_row][from_col];
   int type     = piece_type(moving);
 
-  bool is_en_passant =
-    type == PAWN && move.to == en_passant_target && board[to_row][to_col] == EMPTY;
+  bool is_en_passant = type == PAWN && move.to == en_passant_target &&
+                       board[to_row][to_col] == EMPTY;
 
   // Move the piece (promoting if a pawn reaches the last rank).
   board[from_row][from_col] = EMPTY;
@@ -287,9 +292,9 @@ static void apply_board_move(
   }
 }
 
-// Apply `move` to the full state without switching turn or deciding the outcome:
-// the board changes above, then refresh castling rights, the en-passant target
-// and the 50-move clock. Used inside apply_move.
+// Apply `move` to the full state without switching turn or deciding the
+// outcome: the board changes above, then refresh castling rights, the
+// en-passant target and the 50-move clock. Used inside apply_move.
 static void make_move_on_board(Game_State& state, const Move& move) {
   int player   = state.current_player;
   int from_row = square_row(move.from);
@@ -329,7 +334,8 @@ static void make_move_on_board(Game_State& state, const Move& move) {
 
   // En-passant target: only a pawn double-step offers one next turn.
   if (is_pawn_move && to_row - from_row == 2 * pawn_forward(player)) {
-    state.en_passant_target = square_of(from_row + pawn_forward(player), from_col);
+    state.en_passant_target =
+      square_of(from_row + pawn_forward(player), from_col);
   } else {
     state.en_passant_target = -1;
   }
@@ -358,20 +364,21 @@ Move_List legal_moves(const Game_State& state) {
   Move_List legal;
 
   // The king's square is the same for every non-king move, so find it once.
-  int  king_square = find_king_on(state.board, player);
-  bool in_check_now =
-    king_square >= 0 && is_square_attacked_on(state.board, king_square, opponent);
+  int  king_square  = find_king_on(state.board, player);
+  bool in_check_now = king_square >= 0 &&
+                      is_square_attacked_on(state.board, king_square, opponent);
 
   for (const Move& move : pseudo_legal) {
-    bool king_move  = move.from == king_square;
+    bool king_move = move.from == king_square;
     // A pawn reaching the en-passant target captures en passant, which clears
     // two squares on one rank and can discover a check, so it needs checking.
-    bool en_passant = !king_move && move.to == state.en_passant_target &&
-                      piece_type(state.board[square_row(move.from)]
-                                            [square_col(move.from)]) == PAWN;
+    bool en_passant =
+      !king_move && move.to == state.en_passant_target &&
+      piece_type(state.board[square_row(move.from)][square_col(move.from)]) ==
+        PAWN;
 
-    // Fast path: with the king safe and the moved piece off every king line, the
-    // move cannot expose the king — it is legal with no attack scan at all.
+    // Fast path: with the king safe and the moved piece off every king line,
+    // the move cannot expose the king — it is legal with no attack scan at all.
     if (king_square >= 0 && !king_move && !en_passant && !in_check_now &&
         !on_king_line(king_square, move.from)) {
       legal.push_back(move);
@@ -383,7 +390,8 @@ Move_List legal_moves(const Game_State& state) {
     Board board = state.board;
     apply_board_move(board, move, player, state.en_passant_target);
     int king_after = king_move ? move.to : king_square;
-    if (!is_square_attacked_on(board, king_after, opponent)) legal.push_back(move);
+    if (!is_square_attacked_on(board, king_after, opponent))
+      legal.push_back(move);
   }
   return legal;
 }
@@ -431,16 +439,17 @@ int compute_player_score(const Game_State& state, int player) {
 }
 
 Game_State quick_setup(int /*seed*/) {
-  Game_State game;
-  static const int back_rank[8] = {ROOK, KNIGHT, BISHOP, QUEEN,
-                                   KING, BISHOP, KNIGHT, ROOK};
+  Game_State       game;
+  static const int back_rank[8] = {
+    ROOK, KNIGHT, BISHOP, QUEEN, KING, BISHOP, KNIGHT, ROOK
+  };
   for (int col = 0; col < 8; ++col) {
     game.board[0][col] = make_piece(back_rank[col], 0);  // White back rank.
     game.board[1][col] = make_piece(PAWN, 0);            // White pawns.
     game.board[6][col] = make_piece(PAWN, 1);            // Black pawns.
     game.board[7][col] = make_piece(back_rank[col], 1);  // Black back rank.
   }
-  game.begin_game(game.next_choice());  // The opening decision to present.
+  game.begin_game();  // The opening decision to present.
   return game;
 }
 
@@ -449,10 +458,10 @@ Game_State quick_setup(int /*seed*/) {
 static void write_move_label(char* out, const Move& move) {
   static const char* promotion_chars = " pnbrqk";  // Indexed by Piece type.
   int                length          = 0;
-  out[length++] = (char)('a' + square_col(move.from));
-  out[length++] = (char)('1' + square_row(move.from));
-  out[length++] = (char)('a' + square_col(move.to));
-  out[length++] = (char)('1' + square_row(move.to));
+  out[length++]                      = (char)('a' + square_col(move.from));
+  out[length++]                      = (char)('1' + square_row(move.from));
+  out[length++]                      = (char)('a' + square_col(move.to));
+  out[length++]                      = (char)('1' + square_row(move.to));
   if (move.promotion != 0) out[length++] = promotion_chars[move.promotion];
   out[length] = '\0';
 }
@@ -476,7 +485,7 @@ Choice Game_State::next_choice() {
     // can stay non-owning const char*; 256 covers the 218-move ceiling, and it
     // is safe under MCTS's threaded rollouts.
     static thread_local char labels[256][6];
-    Choose_Option           option;
+    Choose_Option            option;
     for (int i = 0; i < moves.size(); ++i) {
       write_move_label(labels[i], moves[i]);
       option.targets.push_back(labels[i]);
@@ -489,7 +498,7 @@ Choice Game_State::next_choice() {
     Game_State& state = static_cast<Game_State&>(game);
     Move_List   moves = legal_moves(state);
     apply_move(state, moves[index]);
-    return state.next_choice();
+    return no_choice;
   };
 
   return choice;

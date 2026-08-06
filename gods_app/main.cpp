@@ -111,7 +111,7 @@ static Game_State quick_setup(std::optional<int> seed) {
     }
   }
 
-  game.begin_game(game.next_choice());  // The opening decision to present.
+  game.begin_game();  // The opening decision to present.
   return game;
 }
 

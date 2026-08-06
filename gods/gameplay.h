@@ -9,10 +9,11 @@
 
 #include "models.h"
 
-// Append follow-up choices to the game's queue, then return the next choice to
-// present. resolve callbacks use this to bridge gods' multi-choice card
-// effects to the single-Choice resolve interface.
-Choice resume(Game_State& game, std::vector<Choice> follow_ups);
+// Put the choices an effect produced on the game's queue, and return no_choice.
+// A resolve ends with this when a card effect asks further questions: it cannot
+// say which choice comes next, so resolve_choice takes the first queued one
+// through next_choice().
+Choice queue_follow_ups(Game_State& game, std::vector<Choice> follow_ups);
 
 // ---- Choice helpers ----
 //

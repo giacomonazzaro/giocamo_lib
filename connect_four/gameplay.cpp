@@ -75,8 +75,8 @@ int compute_player_score(const Game_State& state, int player) {
 }
 
 Game_State quick_setup(int /*seed*/) {
-  Game_State game;  // Empty board, player 0 to move.
-  game.begin_game(game.next_choice());  // The opening decision to present.
+  Game_State game;    // Empty board, player 0 to move.
+  game.begin_game();  // The opening decision to present.
   return game;
 }
 
@@ -91,9 +91,11 @@ Choice Game_State::next_choice() {
   // Offer the legal columns; option index i corresponds to legal_columns()[i].
   choice.actions = [](Game& game) -> Choose {
     // Static labels so the option targets can be non-owning const char*.
-    static const char* column_labels[COLS] = {"0", "1", "2", "3", "4", "5", "6"};
-    Game_State&        state               = static_cast<Game_State&>(game);
-    Choose_Option      option;
+    static const char* column_labels[COLS] = {
+      "0", "1", "2", "3", "4", "5", "6"
+    };
+    Game_State&   state = static_cast<Game_State&>(game);
+    Choose_Option option;
     for (int col : legal_columns(state)) {
       option.targets.push_back(column_labels[col]);
     }
@@ -105,7 +107,7 @@ Choice Game_State::next_choice() {
     Game_State&      state   = static_cast<Game_State&>(game);
     std::vector<int> columns = legal_columns(state);
     apply_move(state, columns[index]);
-    return state.next_choice();
+    return no_choice;
   };
 
   return choice;

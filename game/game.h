@@ -43,7 +43,7 @@ struct Game;
 struct Choice;
 
 struct Choice {
-  int player_index;
+  int player_index = -1;
   // Set from string literals (static lifetime), so these are non-owning views —
   // a Choice is built on every simulated ply during search, and a std::string
   // member would allocate each time. string_view compares by content, so `==`
@@ -56,28 +56,99 @@ struct Choice {
   std::function<Choice(Game&, int)> resolve;
 };
 
-// Abstract base. Concrete games (e.g. gods) subclass and override.
+// Abstract base. A concrete game derives from it.
 //
-// A game holds exactly one pending choice at a time. Resolving it produces the
-// next one, so the whole game is the sequence
+// A game waits on one choice at a time. Resolving the pending choice produces
+// the next one. A game therefore runs as:
 //   begin_game -> resolve -> resolve -> ... -> is_game_over.
-// Everything that walks a game — the app loop, minimax, mcts, self-play — reads
-// the pending choice with pending_choice() and advances with resolve_choice(),
-// so they all see the same sequence of decisions. A game may have its own
-// next_choice() to build a choice during setup, but nothing outside the game
-// calls it: doing so would advance a game whose next_choice() has side effects
-// (draining a queue of card effects, resolving a trick) past a decision the app
-// loop would have presented.
+//
+// Two functions do all the work:
+//   pending_choice(game) reads the choice the game waits on. It changes
+//     nothing. Any caller may read it, at any time, as often as it likes.
+//   resolve_choice(game, index) applies a choice and moves the game forward.
+//     It is the only way to move a game forward.
+//
+// A resolve often knows which choice comes next, and returns it. A resolve
+// that does not know returns no_choice instead. resolve_choice then asks the
+// game, by calling next_choice().
+//
+// next_choice() is allowed to change the game. It may take a pending effect
+// off a queue, or settle a step the game had left open. It therefore returns a
+// different choice on every call, and it must be called exactly once per
+// decision. resolve_choice is the only caller, which is what makes that true
+// for every caller at once: the app loop, minimax, mcts and self-play all move
+// a game forward through resolve_choice, and so all walk the same choices.
 struct Game {
   Choice _choice;
 
   virtual ~Game()                   = default;
   virtual bool is_game_over() const = 0;
+  // The choice the game waits on next. resolve_choice calls this when a resolve
+  // returned no_choice. Returns no_choice once the game is over.
+  virtual Choice next_choice() = 0;
 
-  // Seeds the first choice to present, before the game loop starts. Every later
-  // choice comes from a resolve, so this is only needed once during setup.
-  void begin_game(const Choice& choice) { _choice = choice; }
+  // Asks the game for its opening choice. Setup calls this once, after it has
+  // dealt the cards or set up the board.
+  void begin_game() { _choice = next_choice(); }
 };
+
+// What a resolve returns when it cannot say which choice comes next, and what
+// next_choice() returns once the game is over.
+inline const Choice no_choice = Choice{};
+
+// True for a choice that carries no decision: no resolve means it cannot move
+// the game anywhere.
+inline bool is_no_choice(const Choice& choice) { return !choice.resolve; }
+
+// ---- What a game must provide ----
+//
+// minimax.h and mcts.h are templates. Each one takes the concrete game type as
+// a parameter. Their requirements are therefore spread across template bodies.
+// This is the whole list.
+//
+// Every game must provide:
+//
+//   struct My_Game : Game {
+//     bool   is_game_over() const override;
+//     Choice next_choice() override;
+//   };
+//
+//   next_choice() returns the choice the game waits on next, and returns
+//   no_choice once the game is over. It may change the game while it works one
+//   out. Only resolve_choice calls it, so it runs once per decision.
+//
+//   Each resolve returns the choice that follows it. A resolve that cannot work
+//   that out returns no_choice, and resolve_choice falls back to next_choice().
+//
+//   The type must be copyable. A search copies a whole position per child node
+//   instead of undoing moves.
+//
+//   Setup calls begin_game() once, after it has dealt the cards or set up the
+//   board, and before any loop or search touches the game.
+//
+// minimax.h and mcts.h need one free function. Declare it in the same
+// namespace as the game type, because that is where a search looks for it:
+//
+//   float evaluate_state(My_Game& state, int player_index);
+//
+//   evaluate_state rates `state` for player_index. Higher is better. A search
+//   calls it at the bottom of every branch it looks at, so keep it cheap. A won
+//   position must rate above every unfinished position, and a lost position
+//   must rate below every unfinished position. A const reference also works.
+//
+// The _Stochastic agents need one more free function. A game with no hidden
+// information never uses those agents, and such a game may leave this out:
+//
+//   My_Game sample_state(
+//     const My_Game& state, int player_index, std::mt19937& rng
+//   );
+//
+//   sample_state returns one position that player_index cannot tell apart from
+//   `state`. It shuffles whatever player_index cannot see. The agent draws many
+//   such positions, searches each one, and votes.
+//
+// A missing function reads as "no matching function for call to
+// evaluate_state(...)", reported at the line inside the search that calls it.
 
 // The choice the game is currently waiting on.
 inline const Choice& pending_choice(const Game& game) { return game._choice; }

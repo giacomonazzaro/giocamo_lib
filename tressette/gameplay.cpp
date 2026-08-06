@@ -114,7 +114,7 @@ Choice play_card(Game_State& state, int card_id) {
   }
   // Trick complete: next_choice decides whether to pause on the acknowledge
   // step (human) or resolve it straight away (search/self-play).
-  return state.next_choice();
+  return no_choice;
 }
 
 static Choice wait_for_player_acknolwdgment(Game_State& state) {
@@ -213,7 +213,7 @@ Game_State quick_setup(std::optional<int> seed) {
 
   sort_hand(game, 0);
   sort_hand(game, 1);
-  game.begin_game(game.next_choice());  // The opening decision to present.
+  game.begin_game();  // The opening decision to present.
   return game;
 }
 

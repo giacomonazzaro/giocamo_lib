@@ -56,7 +56,7 @@ struct Test_Game : Game {
       );
       test_game.current_player = 1 - test_game.current_player;
       test_game.turn++;
-      return test_game.next_choice();
+      return no_choice;
     };
     return c;
   }
@@ -66,7 +66,9 @@ struct Agent_Scripted : Agent {
   const char* tag;
   explicit Agent_Scripted(const char* t) : tag(t) {}
   int choose_action(Game&, const Choice& c) override {
-    fprintf(stderr, "  [%s] scripted picks 0 for player %d\n", tag, c.player_index);
+    fprintf(
+      stderr, "  [%s] scripted picks 0 for player %d\n", tag, c.player_index
+    );
     return 0;
   }
 };
@@ -83,12 +85,12 @@ void run_peer(bool is_host, std::atomic<int>* turns_done) {
     conn.seed
   );
 
-  Test_Game      game;
-  game.log_tag         = is_host ? 0 : 1;
+  Test_Game game;
+  game.log_tag = is_host ? 0 : 1;
   Agent_Scripted scripted(tag);
-  Agent*         duel = make_online_duel(&scripted, conn.online, conn.player_index);
+  Agent* duel = make_online_duel(&scripted, conn.online, conn.player_index);
 
-  game.begin_game(game.next_choice());
+  game.begin_game();
   while (!game.is_game_over()) {
     // game_frame returns false while the remote agent has not answered yet.
     if (!game_frame(game, *duel)) {
@@ -97,7 +99,13 @@ void run_peer(bool is_host, std::atomic<int>* turns_done) {
     }
     turns_done->store(game.turn);
   }
-  fprintf(stderr, "[%s] done. turns=%d player=%d\n", tag, game.turn, game.current_player);
+  fprintf(
+    stderr,
+    "[%s] done. turns=%d player=%d\n",
+    tag,
+    game.turn,
+    game.current_player
+  );
 }
 
 }  // namespace

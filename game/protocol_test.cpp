@@ -1,10 +1,9 @@
-// The app loop and the search must walk the same sequence of choices.
+// The app loop and a search must walk the same sequence of choices.
 //
-// A game whose next_choice() has side effects — gods drains a queue of pending
-// card effects, tressette resolves a finished trick — breaks if anything calls
-// next_choice() a second time on a choice that resolve already produced. This
-// game drains a queue the same way, so a caller that does that skips the
-// queued choices entirely.
+// A game may build a choice by changing itself. Such a builder returns a
+// different choice on every call. A caller that asks the builder for the
+// pending choice therefore skips whatever resolve had already produced. The
+// game below builds choices by draining a queue, so it shows that skip.
 
 #include <cstdio>
 #include <string>
@@ -50,7 +49,7 @@ struct Queue_Game : Game {
       Queue_Game& queue_game = static_cast<Queue_Game&>(game);
       queue_game.turn += 1;
       if (queue_game.turn % 2 == 1) queue_game.queue.push_back("follow-up");
-      return queue_game.next_choice();
+      return no_choice;
     };
     return choice;
   }
@@ -63,7 +62,7 @@ static std::vector<std::string> walk_with_game_frame() {
   Queue_Game               game;
   Agent_Random             agent(1);
   std::vector<std::string> seen;
-  game.begin_game(game.next_choice());
+  game.begin_game();
   while (!game.is_game_over()) {
     seen.push_back(std::string(pending_choice(game).description));
     game_frame(game, agent);
@@ -76,7 +75,7 @@ static std::vector<std::string> walk_like_search() {
   Queue_Game               game;
   Agent_Random             agent(1);
   std::vector<std::string> seen;
-  game.begin_game(game.next_choice());
+  game.begin_game();
   while (!game.is_game_over()) {
     if (pending_action_count(game) == 0) break;
     seen.push_back(std::string(pending_choice(game).description));
@@ -121,7 +120,7 @@ int main() {
   // behind the caller's back, and the choice it just ate is never presented.
   Queue_Game game;
   game.queue.push_back("follow-up");
-  game.begin_game(game.next_choice());
+  game.begin_game();
   const std::string choice_before =
     std::string(pending_choice(game).description);
   const int                 turn_before   = game.turn;

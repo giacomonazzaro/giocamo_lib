@@ -14,7 +14,7 @@
 // Returns the winner index (0 = X, 1 = O), or -1 for a draw.
 static int play_game(Tic_Tac_Toe start, Agent& minimax_x, Agent& minimax_o) {
   Agent_Duel duel(&minimax_x, &minimax_o, false);
-  start.begin_game(start.next_choice());  // The opening decision to present.
+  start.begin_game();  // The opening decision to present.
   game_loop(start, duel);
   return start.winner();
 }

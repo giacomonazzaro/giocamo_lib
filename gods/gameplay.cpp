@@ -76,13 +76,12 @@ Choice make_choose_card_choice(
     auto& gs = static_cast<Game_State&>(g);
     return Choose_Card{pack_targets(get_targets(gs)), true};
   };
-  c.resolve = [get_targets,
-               on_chosen](Game& g, int option_index) -> Choice {
+  c.resolve = [get_targets, on_chosen](Game& g, int option_index) -> Choice {
     auto&   gs      = static_cast<Game_State&>(g);
     auto    targets = get_targets(gs);
     Card_Id chosen  = targets[option_index];
-    if (Card_Id::is_null(chosen)) return resume(gs, {});
-    return resume(gs, on_chosen(gs, chosen));
+    if (Card_Id::is_null(chosen)) return no_choice;
+    return queue_follow_ups(gs, on_chosen(gs, chosen));
   };
   return c;
 }
@@ -110,7 +109,7 @@ Choice make_choose_cards_choice(
                on_chosen](Game& g, int option_index) -> Choice {
     auto& gs     = static_cast<Game_State&>(g);
     auto  combos = all_combinations(get_targets(gs), get_count(gs), up_to);
-    return resume(gs, on_chosen(gs, combos[option_index]));
+    return queue_follow_ups(gs, on_chosen(gs, combos[option_index]));
   };
   return c;
 }
@@ -261,9 +260,12 @@ std::vector<Choice> play_card(Game_State& game, const Card_Id& card_id) {
     if (it != player.hand.end()) player.hand.erase(it);
   }
 
+  // Set before on_played runs. An effect looks up who owns the card it belongs
+  // to, and every card type needs an answer there, not just wonders.
+  card.owner = card_id.owner_index;
+
   std::vector<Choice> choices = game.all_cards[card.id].on_played(game);
   if (card.card_type == Card_Type::WONDER) {
-    card.owner = game.current_player;
     player.wonders.push_back(card.id);
   } else if (card.card_type == Card_Type::EVENT) {
     player.discard.push_back(card.id);
@@ -368,7 +370,7 @@ std::optional<Choice> make_claim_choice(Game_State& game) {
       Card& people = gs.get_card(chosen);
       people.owner = player_index;
     }
-    return resume(gs, {});
+    return no_choice;
   };
   return c;
 }
@@ -416,15 +418,14 @@ Choice make_main_choice(Game_State& game) {
     auto& gs = static_cast<Game_State&>(g);
     return Choose_Card{pack_targets(build_actions(gs)), true};
   };
-  c.resolve =
-    [build_actions](Game& g, int option_index) -> Choice {
+  c.resolve = [build_actions](Game& g, int option_index) -> Choice {
     auto&   gs      = static_cast<Game_State&>(g);
     auto    actions = build_actions(gs);
     Card_Id chosen  = actions[option_index];
     if (!Card_Id::is_null(chosen)) {
       auto choices     = play_card(gs, chosen);
       gs.current_phase = Game_Phase::POST_PLAY;
-      return resume(gs, choices);
+      return queue_follow_ups(gs, choices);
     }
     std::vector<Choice> result;
     Player&             player = gs.active_player();
@@ -433,7 +434,7 @@ Choice make_main_choice(Game_State& game) {
       for (auto& ch : extra) result.push_back(std::move(ch));
     }
     gs.current_phase = Game_Phase::POST_PASS_EFFECTS;
-    return resume(gs, result);
+    return queue_follow_ups(gs, result);
   };
   return c;
 }

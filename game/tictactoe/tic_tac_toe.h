@@ -40,7 +40,7 @@ struct Tic_Tac_Toe : Game {
   bool is_game_over() const override { return winner() != -1 || is_full(); }
 
   Choice next_choice() {
-      if (is_game_over()) return {};
+    if (is_game_over()) return {};
 
     Choice choice;
     choice.player_index     = current_player;
@@ -67,7 +67,7 @@ struct Tic_Tac_Toe : Game {
       const int cell     = empties[index];
       ttt.board[cell]    = ttt.current_player + 1;
       ttt.current_player = 1 - ttt.current_player;
-      return ttt.next_choice();
+      return no_choice;
     };
 
     return choice;

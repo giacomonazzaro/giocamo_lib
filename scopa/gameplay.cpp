@@ -16,11 +16,11 @@ static void erase_value(std::vector<int>& v, int value) {
 // exactly to `target`. Each subset is appended to `output` as a fresh
 // vector of card ids. Order within a subset matches the table order.
 static void enumerate_sum_subsets(
-  const Game_State&             state,
-  const std::vector<int>&       table_card_ids,
-  int                           start,
-  int                           target,
-  std::vector<int>&             current,
+  const Game_State&              state,
+  const std::vector<int>&        table_card_ids,
+  int                            start,
+  int                            target,
+  std::vector<int>&              current,
   std::vector<std::vector<int>>& output
 ) {
   if (target == 0 && !current.empty()) {
@@ -237,7 +237,7 @@ Choice Game_State::next_choice() {
     Game_State&         state   = static_cast<Game_State&>(game);
     std::vector<Action> actions = enumerate_actions(state);
     apply_action(state, actions[index]);
-    return state.next_choice();
+    return no_choice;
   };
 
   return choice;
@@ -277,7 +277,7 @@ Game_State quick_setup(std::optional<int> seed) {
 
   sort_hand(game, 0);
   sort_hand(game, 1);
-  game.begin_game(game.next_choice());  // The opening decision to present.
+  game.begin_game();  // The opening decision to present.
   return game;
 }
 

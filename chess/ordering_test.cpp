@@ -29,12 +29,12 @@ int main(int argc, char** argv) {
     chess::apply_move(state, moves[std::rand() % moves.size()]);
   }
 
-  state.begin_game(state.next_choice());  // The position is built by hand here.
-  auto start  = std::chrono::steady_clock::now();
-  int  action = agent.choose_action(state, pending_choice(state));
+  state.begin_game();  // The position is built by hand here.
+  auto start   = std::chrono::steady_clock::now();
+  int  action  = agent.choose_action(state, pending_choice(state));
   auto elapsed = std::chrono::duration<double, std::milli>(
                    std::chrono::steady_clock::now() - start
-                 )
+  )
                    .count();
 
   std::printf("depth %d: chose %d in %.1f ms\n", depth, action, elapsed);

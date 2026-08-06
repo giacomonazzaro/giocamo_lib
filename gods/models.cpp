@@ -105,7 +105,7 @@ std::vector<Card_Id> Game_State::card_list(
     });
     return a;
   }
-  const Player&    p   = players[player_id];
+  const Player&    p = players[player_id];
   array<const int> src;  // Empty unless the area names one of the lists below.
   if (area == "hand")
     src = p.hand;
@@ -186,8 +186,9 @@ Choice Game_State::next_choice() {
   return Choice{};
 }
 
-// Append follow-up choices to the queue, then yield the next choice to present.
-Choice resume(Game_State& game, std::vector<Choice> follow_ups) {
+// Put the choices an effect produced on the queue. resolve_choice takes the
+// first one off the queue, through next_choice().
+Choice queue_follow_ups(Game_State& game, std::vector<Choice> follow_ups) {
   for (auto& choice : follow_ups) game.queue.push_back(std::move(choice));
-  return game.next_choice();
+  return no_choice;
 }

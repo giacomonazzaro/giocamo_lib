@@ -679,9 +679,9 @@ struct Stars : Card_Design {
         card.power = power;
         card.owner = my_owner;
         player.hand.push_back(cid);
-        return resume(s, {});
+        return no_choice;
       }
-      return resume(s, draw_card(s, my_owner, false));
+      return queue_follow_ups(s, draw_card(s, my_owner, false));
     };
     return {c};
   }
