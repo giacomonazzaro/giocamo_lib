@@ -6,6 +6,8 @@
 #include <optional>
 #include <string>
 #include <tuple>
+#include <type_traits>
+#include <variant>
 #include <vector>
 
 #include "../struct/visit.hpp"
@@ -83,37 +85,29 @@ VISITABLE_STRUCT(Shape_Hexagon, radius);
 VISITABLE_STRUCT(Shape_Triangle, radius);
 VISITABLE_STRUCT(Shape_Rectangle, size, corner_radius);
 
-enum struct Shape_Type {
-  CIRCLE,
-  HEXAGON,
-  TRIANGLE,
-  RECTANGLE,
-};
-
-struct Shape {
-  Shape_Type type = Shape_Type::RECTANGLE;
-  union {
-    Shape_Circle    circle;
-    Shape_Hexagon   hexagon;
-    Shape_Triangle  triangle;
-    Shape_Rectangle rectangle;
-  };
-  // Default to a rounded rectangle, so a default-constructed Shape is valid.
-  Shape() : rectangle() {}
-};
+// The shape a thing has. A variant rather than a tagged union: it carries which
+// alternative is live, so std::visit reaches the right one without anyone
+// writing the tag-to-member mapping out by hand. Adding a shape here turns every
+// visit into a compile error until it is handled, where a switch would just
+// silently miss a case.
+//
+// The order is the one already written into saved layouts as an integer, so
+// index() keeps matching those files. Add new alternatives at the end.
+using Shape =
+  std::variant<Shape_Circle, Shape_Hexagon, Shape_Triangle, Shape_Rectangle>;
 
 // Bounding-box size of any shape (used for layout, hit-testing, drawing).
 inline Vector2 shape_size(const Shape& shape) {
-  switch (shape.type) {
-    case Shape_Type::RECTANGLE: return shape.rectangle.size;
-    case Shape_Type::CIRCLE:
-      return {shape.circle.radius * 2.0f, shape.circle.radius * 2.0f};
-    case Shape_Type::HEXAGON:
-      return {shape.hexagon.radius * 2.0f, shape.hexagon.radius * 2.0f};
-    case Shape_Type::TRIANGLE:
-      return {shape.triangle.radius * 2.0f, shape.triangle.radius * 2.0f};
-  }
-  return {0.0f, 0.0f};
+  return std::visit(
+    [](const auto& s) -> Vector2 {
+      if constexpr (std::is_same_v<std::decay_t<decltype(s)>, Shape_Rectangle>) {
+        return s.size;
+      } else {
+        return {s.radius * 2.0f, s.radius * 2.0f};
+      }
+    },
+    shape
+  );
 }
 
 // Point-in-convex-regular-polygon test, in the shape's local space (centered
@@ -142,39 +136,32 @@ inline bool point_in_regular_polygon(
 // True if a point in the shape's local space (relative to its center) lies
 // inside the shape.
 inline bool point_in_shape(const Shape& shape, float x, float y) {
-  switch (shape.type) {
-    case Shape_Type::RECTANGLE: {
-      float half_width  = shape.rectangle.size.x / 2.0f;
-      float half_height = shape.rectangle.size.y / 2.0f;
-      return -half_width <= x && x <= half_width && -half_height <= y &&
-             y <= half_height;
-    }
-    case Shape_Type::CIRCLE: {
-      float radius = shape.circle.radius;
-      return x * x + y * y <= radius * radius;
-    }
-    case Shape_Type::HEXAGON:
-      return point_in_regular_polygon(x, y, 6, shape.hexagon.radius);
-    case Shape_Type::TRIANGLE:
-      return point_in_regular_polygon(x, y, 3, shape.triangle.radius);
-  }
-  return false;
+  return std::visit(
+    [x, y](const auto& s) -> bool {
+      using S = std::decay_t<decltype(s)>;
+      if constexpr (std::is_same_v<S, Shape_Rectangle>) {
+        float half_width  = s.size.x / 2.0f;
+        float half_height = s.size.y / 2.0f;
+        return -half_width <= x && x <= half_width && -half_height <= y &&
+               y <= half_height;
+      } else if constexpr (std::is_same_v<S, Shape_Circle>) {
+        return x * x + y * y <= s.radius * s.radius;
+      } else if constexpr (std::is_same_v<S, Shape_Hexagon>) {
+        return point_in_regular_polygon(x, y, 6, s.radius);
+      } else {
+        return point_in_regular_polygon(x, y, 3, s.radius);
+      }
+    },
+    shape
+  );
 }
 
 // Build a rounded-rectangle shape from a size, the default for most things.
 inline Shape rectangle_shape(Vector2 size) {
-  Shape shape;
-  shape.type      = Shape_Type::RECTANGLE;
-  shape.rectangle = Shape_Rectangle{size, (float)tt::CARD_CORNER_RADIUS};
-  return shape;
+  return Shape_Rectangle{size, (float)tt::CARD_CORNER_RADIUS};
 }
 
-inline Shape circle_shape(float size) {
-  Shape shape;
-  shape.type   = Shape_Type::CIRCLE;
-  shape.circle = Shape_Circle{size / 2.0f};
-  return shape;
-}
+inline Shape circle_shape(float size) { return Shape_Circle{size / 2.0f}; }
 
 // Base visual entity with optional draw callback.
 struct Thing {
@@ -189,7 +176,7 @@ struct Thing {
   Transform2D transform = {};
 
   // A thing was assumed to be a rectangle before, centered at (0,0).
-  Shape   shape;
+  Shape   shape   = Shape_Rectangle{};
   Counter counter = {};
   bool    face_up = true;
   float   depth   = 0.0f;

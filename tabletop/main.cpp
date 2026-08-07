@@ -150,7 +150,7 @@ static Table_State make_demo_table() {
     root.transform = {tt::WINDOW_WIDTH / 2.0f, tt::WINDOW_HEIGHT / 2.0f, 0.0f};
     root._children  = {deck_id, hand_id, discard_id};
     // Wooden table surface filling the whole window (no rounded corners).
-    root.shape.rectangle.corner_radius = 0.0f;
+    std::get<Shape_Rectangle>(root.shape).corner_radius = 0.0f;
     root.image_path                    = "tabletop/data/wood.png";
     table.things.push_back(root);
     table.root = root_id;

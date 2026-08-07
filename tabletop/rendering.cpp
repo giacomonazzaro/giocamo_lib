@@ -262,8 +262,9 @@ void draw_thing(const Thing& thing, bool face_up) {
   float   y    = -h / 2.0f;
 
   // A rectangle's texture corners are rounded only when it has a corner radius.
-  bool rounded = thing.shape.type == Shape_Type::RECTANGLE &&
-                 thing.shape.rectangle.corner_radius > 0.0f;
+  const Shape_Rectangle* as_rectangle =
+    std::get_if<Shape_Rectangle>(&thing.shape);
+  bool rounded = as_rectangle && as_rectangle->corner_radius > 0.0f;
 
   // Thing background: image with rounded corners, or solid color fallback.
   Texture2D* texture = nullptr;
@@ -282,28 +283,24 @@ void draw_thing(const Thing& thing, bool face_up) {
     );
   } else if (w > 0.0f && h > 0.0f) {
     // Fallback: solid color background matching the thing's shape.
-    switch (thing.shape.type) {
-      case Shape_Type::RECTANGLE: {
-        float r = thing.shape.rectangle.corner_radius;
-        DrawRectangleRounded(
-          Rectangle{x, y, w, h}, r / std::min(w, h), 8, thing.color
-        );
-        break;
-      }
-      case Shape_Type::CIRCLE:
-        DrawCircleV({0.0f, 0.0f}, thing.shape.circle.radius, thing.color);
-        break;
-      case Shape_Type::HEXAGON:
-        DrawPoly(
-          {0.0f, 0.0f}, 6, thing.shape.hexagon.radius, 0.0f, thing.color
-        );
-        break;
-      case Shape_Type::TRIANGLE:
-        DrawPoly(
-          {0.0f, 0.0f}, 3, thing.shape.triangle.radius, 0.0f, thing.color
-        );
-        break;
-    }
+    std::visit(
+      [&](const auto& s) {
+        using S = std::decay_t<decltype(s)>;
+        if constexpr (std::is_same_v<S, Shape_Rectangle>) {
+          float r = s.corner_radius;
+          DrawRectangleRounded(
+            Rectangle{x, y, w, h}, r / std::min(w, h), 8, thing.color
+          );
+        } else if constexpr (std::is_same_v<S, Shape_Circle>) {
+          DrawCircleV({0.0f, 0.0f}, s.radius, thing.color);
+        } else if constexpr (std::is_same_v<S, Shape_Hexagon>) {
+          DrawPoly({0.0f, 0.0f}, 6, s.radius, 0.0f, thing.color);
+        } else {
+          DrawPoly({0.0f, 0.0f}, 3, s.radius, 0.0f, thing.color);
+        }
+      },
+      thing.shape
+    );
   }
 
   // Counter: a number centered in the thing, sized relative to the thing.

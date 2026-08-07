@@ -57,9 +57,7 @@ static Table_State init_table_state() {
   // children of the root, listed after the squares so every piece draws on top
   // of every square — otherwise a sliding piece would be hidden behind squares
   // drawn later in the tree. update_board positions them.
-  Shape piece_shape;
-  piece_shape.type = Shape_Type::RECTANGLE;
-  piece_shape.rectangle =
+  Shape piece_shape =
     Shape_Rectangle{{(float)CHESS_CELL, (float)CHESS_CELL}, 0.0f};
   for (int i = 0; i < PIECE_THING_COUNT; ++i) {
     Thing piece;

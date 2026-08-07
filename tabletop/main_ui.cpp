@@ -9,6 +9,7 @@
 #include <tuple>
 #include <type_traits>
 #include <typeinfo>
+#include <variant>
 #include <vector>
 
 #include "rendering.h"
@@ -69,16 +70,27 @@ void draw_vector(const char* name, T& values) {
   ImGui::TreePop();
 }
 
+template <class T>
+struct is_variant : std::false_type {};
+template <class... Alternatives>
+struct is_variant<std::variant<Alternatives...>> : std::true_type {};
+
 // Every field of a Thing goes through here, and so does every field of anything
 // nested inside it. Nothing in it knows what a Thing is:
 //   visitable -> an expandable child holding its own fields
 //   vector    -> an expandable, scrollable list of its elements
+//   variant   -> whichever alternative is live
 //   number    -> a widget that shows and edits it
 //   anything else -> its name and its type
 template <class T>
 void draw_field(const char* name, T& value) {
   if constexpr (is_std_vector<T>::value) {
     draw_vector(name, value);
+  } else if constexpr (is_variant<T>::value) {
+    // A variant knows which alternative is live, so std::visit hands us the
+    // right one. A union could not: nothing there links the tag to the member,
+    // which is why it had to be spelled out by hand everywhere it was used.
+    std::visit([&](auto& alternative) { draw_field(name, alternative); }, value);
   } else if constexpr (visit_struct::traits::is_visitable<T>::value) {
     // Id from the field name only, so the row text never affects it.
     if (ImGui::TreeNodeEx(name, 0, "%s: %s", name,

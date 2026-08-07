@@ -383,7 +383,7 @@ Thing create_table_root(
   root.transform.x = (float)width / 2.0f;
   root.transform.y = (float)height / 2.0f;
   // Table surface filling the whole window (square, no rounded corners).
-  root.shape.rectangle.corner_radius = 0.0f;
+  std::get<Shape_Rectangle>(root.shape).corner_radius = 0.0f;
   root.image_path                    = texture_path;
   return root;
 }
