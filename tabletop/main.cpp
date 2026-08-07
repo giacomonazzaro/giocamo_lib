@@ -14,143 +14,148 @@
 #include "ui.h"
 
 // Build the demo scene: 16 colored cards distributed across three containers.
-static Table_State make_demo_table() {
-  auto layout = load_from_json<Table_Layout>("table.json");
-  auto table  = Table_State(0, 0, layout);
+static Table_State make_demo_table(const std::string& filename) {
+  auto table = Table_State();
+  if (!filename.empty()) {
+    auto layout = load_from_json<Table_Layout>(filename);
+    table       = Table_State(0, 0, layout);
+  } else {
+    // Root's rectangle expressed in its own local space: origin sits at the
+    // root's center, so the rect spans -W/2..W/2 horizontally and -H/2..H/2
+    // vertically. This is the parent rect passed to place_inside() when
+    // anchoring containers against the window edges.
+    Rectangle root_rect = {
+      -(float)tt::WINDOW_WIDTH / 2.0f,
+      -(float)tt::WINDOW_HEIGHT / 2.0f,
+      (float)tt::WINDOW_WIDTH,
+      (float)tt::WINDOW_HEIGHT,
+    };
+
+    const int card_slot_width  = tt::CARD_WIDTH + 20;
+    const int card_slot_height = tt::CARD_HEIGHT + 20;
+    const int edge_padding     = 100;
+
+    // Four distinct colors for the blank cards.
+    Color card_colors[] = {
+      {180, 60, 60, 255},   // Red.
+      {60, 80, 180, 255},   // Blue.
+      {50, 150, 80, 255},   // Green.
+      {180, 160, 40, 255},  // Yellow.
+    };
+
+    // 16 blank cards with sequential ids (0-15). Each card carries a counter
+    // (value 1..16, range 0..16) so its number is drawn centered inside it.
+    for (int index = 0; index < 16; index++) {
+      Thing card   = make_card(index);
+      card.color   = card_colors[index % 4];
+      card.counter = {index + 1, 0, 16};
+      table.things.push_back(card);
+    }
+
+    // Deck: a stacked pile of 8 cards on the left.
+    const int deck_id = 16;
+    {
+      Thing deck;
+      deck.id       = deck_id;
+      deck.name     = "Deck";
+      deck.capacity = -1;
+      deck.spread_x = 0.0f;
+      deck.spread_y = (float)tt::PILE_SPREAD_Y;
+      deck.color    = {80, 80, 80, 80};
+      // Anchored to the left edge of the window, vertically centered. Sets
+      // both deck.size and deck.transform from the resulting rect.
+      set_local_rect(
+        deck,
+        place_inside(
+          root_rect,
+          card_slot_width,
+          card_slot_height,
+          "left",
+          "center",
+          edge_padding
+        )
+      );
+      for (int index = 0; index < 8; index++) deck.add_child(index);
+      table.things.push_back(deck);
+    }
+
+    // Hand: 8 cards fanned out horizontally at the bottom.
+    const int hand_id = 17;
+    {
+      Thing hand;
+      hand.id       = hand_id;
+      hand.name     = "Hand";
+      hand.capacity = -1;
+      hand.spread_x = (float)tt::HAND_SPREAD_X;
+      hand.spread_y = 0.0f;
+      hand.color    = {60, 100, 60, 80};
+      // Centered horizontally, anchored to the bottom edge of the window.
+      set_local_rect(
+        hand,
+        place_inside(
+          root_rect, 800, card_slot_height, "center", "bottom", edge_padding
+        )
+      );
+      for (int index = 8; index < 16; index++) hand.add_child(index);
+      table.things.push_back(hand);
+    }
+
+    // Discard pile: an empty drop zone on the right.
+    const int discard_id = 18;
+    {
+      Thing discard;
+      discard.id       = discard_id;
+      discard.name     = "Discard";
+      discard.capacity = -1;
+      discard.spread_x = 0.0f;
+      discard.spread_y = (float)tt::PILE_SPREAD_Y;
+      discard.color    = {100, 60, 60, 80};
+      // Mirrors the deck: anchored to the right edge, vertically centered.
+      set_local_rect(
+        discard,
+        place_inside(
+          root_rect,
+          card_slot_width,
+          card_slot_height,
+          "right",
+          "center",
+          edge_padding
+        )
+      );
+      table.things.push_back(discard);
+    }
+
+    // Root: full-screen invisible container that owns the three zones.
+    const int root_id = 19;
+    {
+      Thing root;
+      root.id   = root_id;
+      root.name = "root";
+      root.shape =
+        rectangle_shape({(float)tt::WINDOW_WIDTH, (float)tt::WINDOW_HEIGHT});
+      root.transform = {
+        tt::WINDOW_WIDTH / 2.0f, tt::WINDOW_HEIGHT / 2.0f, 0.0f
+      };
+      root._children = {deck_id, hand_id, discard_id};
+      // Wooden table surface filling the whole window (no rounded corners).
+      std::get<Shape_Rectangle>(root.shape).corner_radius = 0.0f;
+      root.image_path = "tabletop/data/wood.png";
+      table.things.push_back(root);
+      table.root = root_id;
+    }
+
+    // Lay out cards into their initial slot positions inside each container.
+    update_children_positions(deck_id, table, false);
+    update_children_positions(hand_id, table, false);
+  }
 
   table.is_drop_allowed = [](int, int, int) { return true; };
-
-  // Root's rectangle expressed in its own local space: origin sits at the
-  // root's center, so the rect spans -W/2..W/2 horizontally and -H/2..H/2
-  // vertically. This is the parent rect passed to place_inside() when
-  // anchoring containers against the window edges.
-  Rectangle root_rect = {
-    -(float)tt::WINDOW_WIDTH / 2.0f,
-    -(float)tt::WINDOW_HEIGHT / 2.0f,
-    (float)tt::WINDOW_WIDTH,
-    (float)tt::WINDOW_HEIGHT,
-  };
-
-  const int card_slot_width  = tt::CARD_WIDTH + 20;
-  const int card_slot_height = tt::CARD_HEIGHT + 20;
-  const int edge_padding     = 100;
-
-  // Four distinct colors for the blank cards.
-  Color card_colors[] = {
-    {180, 60, 60, 255},   // Red.
-    {60, 80, 180, 255},   // Blue.
-    {50, 150, 80, 255},   // Green.
-    {180, 160, 40, 255},  // Yellow.
-  };
-
-  // 16 blank cards with sequential ids (0-15). Each card carries a counter
-  // (value 1..16, range 0..16) so its number is drawn centered inside it.
-  for (int index = 0; index < 16; index++) {
-    Thing card   = make_card(index);
-    card.color   = card_colors[index % 4];
-    card.counter = {index + 1, 0, 16};
-    table.things.push_back(card);
-  }
-
-  // Deck: a stacked pile of 8 cards on the left.
-  const int deck_id = 16;
-  {
-    Thing deck;
-    deck.id       = deck_id;
-    deck.name     = "Deck";
-    deck.capacity = -1;
-    deck.spread_x = 0.0f;
-    deck.spread_y = (float)tt::PILE_SPREAD_Y;
-    deck.color    = {80, 80, 80, 80};
-    // Anchored to the left edge of the window, vertically centered. Sets
-    // both deck.size and deck.transform from the resulting rect.
-    set_local_rect(
-      deck,
-      place_inside(
-        root_rect,
-        card_slot_width,
-        card_slot_height,
-        "left",
-        "center",
-        edge_padding
-      )
-    );
-    for (int index = 0; index < 8; index++) deck.add_child(index);
-    table.things.push_back(deck);
-  }
-
-  // Hand: 8 cards fanned out horizontally at the bottom.
-  const int hand_id = 17;
-  {
-    Thing hand;
-    hand.id       = hand_id;
-    hand.name     = "Hand";
-    hand.capacity = -1;
-    hand.spread_x = (float)tt::HAND_SPREAD_X;
-    hand.spread_y = 0.0f;
-    hand.color    = {60, 100, 60, 80};
-    // Centered horizontally, anchored to the bottom edge of the window.
-    set_local_rect(
-      hand,
-      place_inside(
-        root_rect, 800, card_slot_height, "center", "bottom", edge_padding
-      )
-    );
-    for (int index = 8; index < 16; index++) hand.add_child(index);
-    table.things.push_back(hand);
-  }
-
-  // Discard pile: an empty drop zone on the right.
-  const int discard_id = 18;
-  {
-    Thing discard;
-    discard.id       = discard_id;
-    discard.name     = "Discard";
-    discard.capacity = -1;
-    discard.spread_x = 0.0f;
-    discard.spread_y = (float)tt::PILE_SPREAD_Y;
-    discard.color    = {100, 60, 60, 80};
-    // Mirrors the deck: anchored to the right edge, vertically centered.
-    set_local_rect(
-      discard,
-      place_inside(
-        root_rect,
-        card_slot_width,
-        card_slot_height,
-        "right",
-        "center",
-        edge_padding
-      )
-    );
-    table.things.push_back(discard);
-  }
-
-  // Root: full-screen invisible container that owns the three zones.
-  const int root_id = 19;
-  {
-    Thing root;
-    root.id   = root_id;
-    root.name = "root";
-    root.shape =
-      rectangle_shape({(float)tt::WINDOW_WIDTH, (float)tt::WINDOW_HEIGHT});
-    root.transform = {tt::WINDOW_WIDTH / 2.0f, tt::WINDOW_HEIGHT / 2.0f, 0.0f};
-    root._children = {deck_id, hand_id, discard_id};
-    // Wooden table surface filling the whole window (no rounded corners).
-    std::get<Shape_Rectangle>(root.shape).corner_radius = 0.0f;
-    root.image_path = "tabletop/data/wood.png";
-    table.things.push_back(root);
-    table.root = root_id;
-  }
-
-  // Lay out cards into their initial slot positions inside each container.
-  update_children_positions(deck_id, table, false);
-  update_children_positions(hand_id, table, false);
-
   return table;
 }
 
-int main() {
-  auto table = make_demo_table();
+int main(int argc, char** argv) {
+  auto filename = argc > 1 ? std::string(argv[1]) : "";
+  auto table    = make_demo_table(filename);
   run_tabletop(
     table,
     // Per-frame update. UP / DOWN change the value of the counter on the thing
