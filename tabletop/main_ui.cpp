@@ -16,6 +16,8 @@
 #include "rendering.h"
 #include "struct/print.h"
 #include "struct/visit.hpp"
+//
+#include "struct/json.h"
 
 namespace {
 
@@ -107,9 +109,6 @@ void set_alternative(Variant& value, int index, std::index_sequence<Index...>) {
 
 template <typename T>
 void draw_variant(const char* name, T& value) {
-  // A variant knows which alternative is live, so std::visit hands us the
-  // right one. A union could not: nothing there links the tag to the member,
-  // which is why it had to be spelled out by hand everywhere it was used.
   constexpr auto indices = std::make_index_sequence<std::variant_size_v<T>>{};
 
   // The dropdown picks which alternative is live. Choosing a different one
@@ -235,6 +234,11 @@ void draw_ui(Table_State& table, const Input&) {
       }
       ImGui::EndDisabled();
     }
+  }
+  static char filename[256] = "table.json";
+  ImGui::InputText("filename", filename, 256);
+  if (ImGui::Button("Save")) {
+    save_to_json<Table_Layout>(table, filename);
   }
   ImGui::End();
 

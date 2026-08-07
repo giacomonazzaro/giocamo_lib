@@ -1,9 +1,11 @@
 #pragma once
+#include <fstream>
 #include <iomanip>
 #include <iostream>
 #include <sstream>
 #include <string>
 #include <type_traits>
+#include <variant>
 #include <vector>
 
 #include "struct/visit.hpp"
@@ -188,6 +190,23 @@ auto to_json(const T& t, int = 0, bool = true)
   return std::to_string(static_cast<std::underlying_type_t<T>>(t));
 }
 
+// std::variant — tagged with the index of the active alternative.
+template <typename... Types>
+std::string to_json(
+  const std::variant<Types...>& variant, int indent = 0, bool pretty = true
+) {
+  std::string result = "{" + json_newline(pretty);
+  result += json_indent(indent + 1, pretty) + "\"index\":" + json_space(pretty);
+  result += std::to_string(variant.index()) + "," + json_newline(pretty);
+  result += json_indent(indent + 1, pretty) + "\"value\":" + json_space(pretty);
+  result += std::visit(
+    [&](const auto& value) { return to_json(value, indent + 1, pretty); },
+    variant
+  );
+  result += json_newline(pretty) + json_indent(indent, pretty) + "}";
+  return result;
+}
+
 // Visitable struct (excluded for enums, which are handled above).
 template <typename T, std::enable_if_t<!std::is_enum_v<T>, int>>
 std::string to_json(const T& t, int indent, bool pretty) {
@@ -274,6 +293,9 @@ bool from_json_impl(JsonParser& p, Array_Inline<T, Capacity>& out);
 template <typename T>
 auto from_json_impl(JsonParser& p, T& out) -> std::
   enable_if_t<visit_struct::traits::is_visitable<std::decay_t<T>>::value, bool>;
+
+template <typename... Types>
+bool from_json_impl(JsonParser& p, std::variant<Types...>& out);
 
 // Parse a JSON string (handles escape sequences)
 inline bool parse_json_string(JsonParser& p, std::string& out) {
@@ -515,6 +537,47 @@ inline bool from_json_impl(JsonParser& p, Array_Inline<T, Capacity>& out) {
     if (!from_json_impl(p, elem)) return false;
     out.push_back(std::move(elem));
   }
+}
+
+// Parse the alternative sitting at runtime position `index` of the variant.
+template <typename Variant, size_t Alternative = 0>
+inline bool parse_variant_alternative(
+  JsonParser& p, Variant& out, size_t index
+) {
+  if constexpr (Alternative < std::variant_size_v<Variant>) {
+    if (Alternative == index) {
+      auto value = std::variant_alternative_t<Alternative, Variant>();
+      if (!from_json_impl(p, value)) return false;
+      out = std::move(value);
+      return true;
+    }
+    return parse_variant_alternative<Variant, Alternative + 1>(p, out, index);
+  }
+  return false;
+}
+
+// std::variant — reads the index tag, then the matching alternative.
+template <typename... Types>
+inline bool from_json_impl(JsonParser& p, std::variant<Types...>& out) {
+  p.skip_whitespace();
+  if (!p.expect('{')) return false;
+
+  std::string field_name;
+  if (!parse_json_string(p, field_name) || field_name != "index") return false;
+  p.skip_whitespace();
+  if (!p.expect(':')) return false;
+  size_t index = 0;
+  if (!from_json_impl(p, index)) return false;
+
+  p.skip_whitespace();
+  if (!p.expect(',')) return false;
+  if (!parse_json_string(p, field_name) || field_name != "value") return false;
+  p.skip_whitespace();
+  if (!p.expect(':')) return false;
+  if (!parse_variant_alternative(p, out, index)) return false;
+
+  p.skip_whitespace();
+  return p.expect('}');
 }
 
 // Visitable struct

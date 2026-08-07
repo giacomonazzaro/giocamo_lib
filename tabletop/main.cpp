@@ -9,12 +9,15 @@
 #include "raylib.h"
 #include "rendering.h"
 #include "rlgl.h"
+#include "struct/json.h"
 #include "tabletop.h"
 #include "ui.h"
 
 // Build the demo scene: 16 colored cards distributed across three containers.
 static Table_State make_demo_table() {
-  auto table            = Table_State();
+  auto layout = load_from_json<Table_Layout>("table.json");
+  auto table  = Table_State(0, 0, layout);
+
   table.is_drop_allowed = [](int, int, int) { return true; };
 
   // Root's rectangle expressed in its own local space: origin sits at the
@@ -60,9 +63,9 @@ static Table_State make_demo_table() {
   // 16 blank cards with sequential ids (0-15). Each card carries a counter
   // (value 1..16, range 0..16) so its number is drawn centered inside it.
   for (int index = 0; index < 16; index++) {
-    Thing card    = make_card(index);
-    card.color    = card_colors[index % 4];
-    card.counter  = {index + 1, 0, 16};
+    Thing card   = make_card(index);
+    card.color   = card_colors[index % 4];
+    card.counter = {index + 1, 0, 16};
     table.things.push_back(card);
     table.draw_callbacks[index] = draw_card_border;
   }
@@ -144,14 +147,15 @@ static Table_State make_demo_table() {
   const int root_id = 19;
   {
     Thing root;
-    root.id        = root_id;
-    root.name      = "root";
-    root.shape     = rectangle_shape({(float)tt::WINDOW_WIDTH, (float)tt::WINDOW_HEIGHT});
+    root.id   = root_id;
+    root.name = "root";
+    root.shape =
+      rectangle_shape({(float)tt::WINDOW_WIDTH, (float)tt::WINDOW_HEIGHT});
     root.transform = {tt::WINDOW_WIDTH / 2.0f, tt::WINDOW_HEIGHT / 2.0f, 0.0f};
-    root._children  = {deck_id, hand_id, discard_id};
+    root._children = {deck_id, hand_id, discard_id};
     // Wooden table surface filling the whole window (no rounded corners).
     std::get<Shape_Rectangle>(root.shape).corner_radius = 0.0f;
-    root.image_path                    = "tabletop/data/wood.png";
+    root.image_path = "tabletop/data/wood.png";
     table.things.push_back(root);
     table.root = root_id;
   }
