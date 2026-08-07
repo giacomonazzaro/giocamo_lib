@@ -8,4 +8,4 @@
 // with no change here.
 //
 // Call this from the per-frame update, inside run_tabletop's draw pass.
-void draw_ui(Table_State& table, const Input& input);
+void draw_editor_ui(Table_State& table, const Input& input);

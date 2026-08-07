@@ -5,7 +5,7 @@
 // R to rotate.
 
 #include "config.h"
-#include "main_ui.h"
+#include "editor.h"
 #include "raylib.h"
 #include "rendering.h"
 #include "rlgl.h"
@@ -158,7 +158,7 @@ int main(int argc, char** argv) {
     // under the cursor, clamped to its [min, max] range. Returns false: the
     // demo never ends itself; closing the window stops the loop.
     [](Table_State& table, const Input& input) {
-      draw_ui(table, input);
+      draw_editor_ui(table, input);
 
       int delta = 0;
       if (key_pressed(input, KEY_UP)) delta = 1;

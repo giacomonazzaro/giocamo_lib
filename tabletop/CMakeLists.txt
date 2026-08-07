@@ -8,26 +8,19 @@ set(TABLETOP_SOURCES
     tabletop.cpp
     input_recorder.cpp
     rendering.cpp
+    editor.cpp
     ui.cpp
 )
 
-if(TARGET raylib AND NOT TARGET tabletop_lib)
-    add_library(tabletop_lib STATIC ${TABLETOP_SOURCES})
-    # Add parent dir so we can include <struct/json.h> for input recording.
-    target_include_directories(tabletop_lib PUBLIC . "${CMAKE_CURRENT_SOURCE_DIR}/..")
-    target_link_libraries(tabletop_lib PUBLIC raylib)
-endif()
-
-# When built as the top-level project, also compile the demo executable.
+# When built as the top-level project, pull in raylib ourselves. A parent
+# project has already defined the raylib target before adding this directory.
 if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
     set(BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
     set(BUILD_GAMES    OFF CACHE BOOL "" FORCE)
     add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/../raylib ${CMAKE_BINARY_DIR}/raylib_build)
+endif()
 
-    add_library(tabletop_lib STATIC ${TABLETOP_SOURCES})
-    target_include_directories(tabletop_lib PUBLIC . "${CMAKE_CURRENT_SOURCE_DIR}/..")
-    target_link_libraries(tabletop_lib PUBLIC raylib)
-
+if(TARGET raylib AND NOT TARGET tabletop_lib)
     # Dear ImGui, plus the raylib glue that draws its output through rlgl.
     # Both are sibling clones at the project root, like raylib.
     set(IMGUI_DIR   "${CMAKE_CURRENT_SOURCE_DIR}/../imgui")
@@ -42,7 +35,14 @@ if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
     target_include_directories(imgui PUBLIC "${IMGUI_DIR}" "${RLIMGUI_DIR}")
     target_link_libraries(imgui PUBLIC raylib)
 
-    add_executable(main main.cpp main_ui.cpp)
-    target_include_directories(main PRIVATE . "${CMAKE_CURRENT_SOURCE_DIR}/..")
-    target_link_libraries(main PRIVATE tabletop_lib raylib imgui)
+    add_library(tabletop_lib STATIC ${TABLETOP_SOURCES})
+    # Add parent dir so we can include <struct/json.h> for input recording.
+    target_include_directories(tabletop_lib PUBLIC . "${CMAKE_CURRENT_SOURCE_DIR}/..")
+    target_link_libraries(tabletop_lib PUBLIC raylib imgui)
+endif()
+
+# When built as the top-level project, also compile the demo executable.
+if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
+    add_executable(main main.cpp)
+    target_link_libraries(main PRIVATE tabletop_lib)
 endif()

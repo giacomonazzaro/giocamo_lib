@@ -5,6 +5,7 @@
 #include <online/setup.h>
 #include <raylib.h>
 #include <tabletop/config.h>
+#include <tabletop/editor.h>
 #include <tabletop/rendering.h>
 #include <tabletop/ui.h>
 
@@ -275,6 +276,8 @@ void play_game(
     }
 
     if (ui_state.playground) {
+      draw_editor_ui(table, input);
+
       // Replicate drop / rotate / shuffle to the remote so playground edits
       // appear on both screens. Polling the drop also drains the event so it
       // doesn't get replayed as a real move when we toggle off.

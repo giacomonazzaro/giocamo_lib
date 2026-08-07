@@ -1,4 +1,4 @@
-#include "main_ui.h"
+#include "editor.h"
 
 #include <imgui.h>
 #include <rlImGui.h>
@@ -182,7 +182,7 @@ void draw_field(const char* name, T& value) {
 
 }  // namespace
 
-void draw_ui(Table_State& table, const Input&) {
+void draw_editor_ui(Table_State& table, const Input&) {
   // run_tabletop opens the window, so this cannot happen any earlier.
   static bool imgui_ready = false;
   if (!imgui_ready) {
