@@ -9,6 +9,7 @@
 #include <tuple>
 #include <type_traits>
 #include <typeinfo>
+#include <utility>
 #include <variant>
 #include <vector>
 
@@ -75,6 +76,32 @@ struct is_variant : std::false_type {};
 template <class... Alternatives>
 struct is_variant<std::variant<Alternatives...>> : std::true_type {};
 
+// The type names of a variant's alternatives, for the dropdown. Built once per
+// variant type, and kept alive because ImGui holds on to the pointers.
+template <class Variant, size_t... Index>
+const std::vector<const char*>& alternative_names(std::index_sequence<Index...>) {
+  static const std::vector<std::string> names = {
+    get_type_name(std::variant_alternative_t<Index, Variant>{})...
+  };
+  static const std::vector<const char*> pointers = [] {
+    std::vector<const char*> result;
+    for (const std::string& text : names) result.push_back(text.c_str());
+    return result;
+  }();
+  return pointers;
+}
+
+// Make alternative number `index` the live one, built with its defaults. The
+// old alternative is destroyed, which is the whole point: a variant knows how
+// to do that, and a union does not.
+template <class Variant, size_t... Index>
+void set_alternative(Variant& value, int index, std::index_sequence<Index...>) {
+  ((index == (int)Index
+      ? (void)(value = std::variant_alternative_t<Index, Variant>{})
+      : (void)0),
+   ...);
+}
+
 // Every field of a Thing goes through here, and so does every field of anything
 // nested inside it. Nothing in it knows what a Thing is:
 //   visitable -> an expandable child holding its own fields
@@ -90,7 +117,36 @@ void draw_field(const char* name, T& value) {
     // A variant knows which alternative is live, so std::visit hands us the
     // right one. A union could not: nothing there links the tag to the member,
     // which is why it had to be spelled out by hand everywhere it was used.
-    std::visit([&](auto& alternative) { draw_field(name, alternative); }, value);
+    constexpr auto indices = std::make_index_sequence<std::variant_size_v<T>>{};
+
+    // The dropdown picks which alternative is live. Choosing a different one
+    // replaces the value with that type's defaults.
+    const std::vector<const char*>& names = alternative_names<T>(indices);
+    int                             index = (int)value.index();
+    if (ImGui::Combo(name, &index, names.data(), (int)names.size())) {
+      set_alternative(value, index, indices);
+    }
+
+    // Then the live alternative's own fields, indented under the dropdown
+    // rather than nested in a second node that would just repeat its name.
+    ImGui::Indent();
+    std::visit(
+      [](auto& alternative) {
+        using A = std::decay_t<decltype(alternative)>;
+        if constexpr (visit_struct::traits::is_visitable<A>::value) {
+          visit_struct::for_each(
+            alternative,
+            [](const char* field_name, auto& field) {
+              draw_field(field_name, field);
+            }
+          );
+        } else {
+          draw_field("value", alternative);
+        }
+      },
+      value
+    );
+    ImGui::Unindent();
   } else if constexpr (visit_struct::traits::is_visitable<T>::value) {
     // Id from the field name only, so the row text never affects it.
     if (ImGui::TreeNodeEx(name, 0, "%s: %s", name,
