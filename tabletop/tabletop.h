@@ -292,6 +292,12 @@ VISITABLE_STRUCT(Table_Layout, things, root);
 
 struct Input;
 
+struct Drop_Gesture {
+  int from_parent;
+  int to_parent;
+  int thing_id;
+};
+
 // Full table state passed to every render and input function.
 struct Table_State : Table_Layout {
   int width  = 0;
@@ -312,10 +318,10 @@ struct Table_State : Table_Layout {
   std::function<bool(int, int, int)> is_drop_allowed;
 
   // (from_parent, to_parent, thing_id) after a drop.
-  std::optional<std::tuple<int, int, int>> dropped_thing;
+  std::optional<Drop_Gesture> dropped_thing;
 
   // Returns dropped_thing and resets it to nullopt (consume-once event poll).
-  inline std::optional<std::tuple<int, int, int>> poll_dropped_thing() {
+  inline std::optional<Drop_Gesture> poll_dropped_thing() {
     auto result   = dropped_thing;
     dropped_thing = std::nullopt;
     return result;

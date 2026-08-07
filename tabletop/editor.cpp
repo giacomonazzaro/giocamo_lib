@@ -216,8 +216,8 @@ bool draw_editor_ui(Table_State& table, const Input&) {
   if (table.dropped_thing) {
     // (from_parent, to_parent, thing_id): the drop says which parent the thing
     // landed in, so there is never a reason to go looking for it.
-    selected_parent = std::get<1>(*table.dropped_thing);
-    selected_thing  = std::get<2>(*table.dropped_thing);
+    selected_parent = table.dropped_thing->to_parent;
+    selected_thing  = table.dropped_thing->thing_id;
   }
 
   // The table is drawn through the letterbox transform. The panel belongs in

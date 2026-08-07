@@ -57,12 +57,10 @@ int pending_action_count(Game& game) {
 }
 
 void resolve_choice(Game& game, int index) {
-  Choice next = game._choice.resolve(game, index);
-  // The resolve could not say what comes next, so ask the game. This is the
-  // only call to next_choice() once a game is running, which is what keeps the
-  // app loop and the searches on the same sequence of choices.
-  if (next.is_null()) next = game.next_choice();
-  game._choice = std::move(next);
+  Choice next_choice = game._choice.resolve(game, index);
+  // If resolve doesn't know what's the next choice, we ask the game.
+  if (next_choice.is_null()) next_choice = game.next_choice();
+  game._choice = std::move(next_choice);
 }
 
 void game_loop(Game& game, Agent& agent, std::function<void(Game&)> callback) {

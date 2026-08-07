@@ -225,9 +225,8 @@ void handle_mouse_release(Table_State& state) {
     state.world_transforms[thing_id].y,
   };
 
-  // Signal drop as (from_parent, to_parent, thing_id).
   state.dropped_thing =
-    std::make_tuple(drag.parent_id(), drag.hovered_id(), thing_id);
+    Drop_Gesture{drag.parent_id(), drag.hovered_id(), thing_id};
 
   int original_parent = drag.parent_id();
   int new_parent      = drag.hovered_id();
