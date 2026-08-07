@@ -87,9 +87,9 @@ VISITABLE_STRUCT(Shape_Rectangle, size, corner_radius);
 
 // The shape a thing has. A variant rather than a tagged union: it carries which
 // alternative is live, so std::visit reaches the right one without anyone
-// writing the tag-to-member mapping out by hand. Adding a shape here turns every
-// visit into a compile error until it is handled, where a switch would just
-// silently miss a case.
+// writing the tag-to-member mapping out by hand. Adding a shape here turns
+// every visit into a compile error until it is handled, where a switch would
+// just silently miss a case.
 //
 // The order is the one already written into saved layouts as an integer, so
 // index() keeps matching those files. Add new alternatives at the end.
@@ -100,7 +100,8 @@ using Shape =
 inline Vector2 shape_size(const Shape& shape) {
   return std::visit(
     [](const auto& s) -> Vector2 {
-      if constexpr (std::is_same_v<std::decay_t<decltype(s)>, Shape_Rectangle>) {
+      if constexpr (std::
+                      is_same_v<std::decay_t<decltype(s)>, Shape_Rectangle>) {
         return s.size;
       } else {
         return {s.radius * 2.0f, s.radius * 2.0f};
@@ -170,8 +171,10 @@ struct Thing {
   int         id   = 0;
 
   // Appearance.
-  Color       color      = {255, 255, 255, 50};
-  std::string image_path = "";
+  Color       color        = {255, 255, 255, 50};
+  Color       border_color = {0, 0, 0, 255};
+  float       border_width = 4;
+  std::string image_path   = "";
 
   Transform2D transform = {};
 
@@ -205,6 +208,8 @@ VISITABLE_STRUCT(
   id,
   image_path,
   color,
+  border_color,
+  border_width,
   shape,
   counter,
   transform,
@@ -418,7 +423,7 @@ void shuffle_thing(Table_State& state, int thing_id);
 // return the id of the copy. The copy is not attached to anything: the caller
 // decides which parent it joins. A thing's id is its index in state.things, so
 // each copy takes the next free index.
-int duplicate_thing(Table_State& state, int thing_id);
+int  duplicate_thing(Table_State& state, int thing_id);
 void process_input(Table_State& state, const Input& input);
 
 Rectangle world_rect(int thing_id, const Table_State& state);

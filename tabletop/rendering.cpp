@@ -303,6 +303,53 @@ void draw_thing(const Thing& thing, bool face_up) {
     );
   }
 
+  // Border, drawn over the background and following the thing's shape.
+  if (thing.border_width > 0.0f) {
+    std::visit(
+      [&](const auto& s) {
+        using S = std::decay_t<decltype(s)>;
+        if constexpr (std::is_same_v<S, Shape_Rectangle>) {
+          DrawRectangleRoundedLinesEx(
+            Rectangle{x, y, w, h},
+            s.corner_radius / std::min(w, h),
+            8,
+            thing.border_width,
+            thing.border_color
+          );
+        } else if constexpr (std::is_same_v<S, Shape_Circle>) {
+          DrawRing(
+            {0.0f, 0.0f},
+            s.radius - thing.border_width,
+            s.radius,
+            0.0f,
+            360.0f,
+            32,
+            thing.border_color
+          );
+        } else if constexpr (std::is_same_v<S, Shape_Hexagon>) {
+          DrawPolyLinesEx(
+            {0.0f, 0.0f},
+            6,
+            s.radius,
+            0.0f,
+            thing.border_width,
+            thing.border_color
+          );
+        } else {
+          DrawPolyLinesEx(
+            {0.0f, 0.0f},
+            3,
+            s.radius,
+            0.0f,
+            thing.border_width,
+            thing.border_color
+          );
+        }
+      },
+      thing.shape
+    );
+  }
+
   // Counter: a number centered in the thing, sized relative to the thing.
   if (thing.counter) {
     std::string text      = std::to_string(thing.counter.value);

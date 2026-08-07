@@ -43,23 +43,6 @@ static Table_State make_demo_table() {
     {180, 160, 40, 255},  // Yellow.
   };
 
-  // Draw a dark rounded border centered at origin (called after draw_thing,
-  // with the world transform already pushed onto the matrix stack).
-  auto draw_card_border = [](const Table_State&, const Input&, bool) {
-    float width            = (float)tt::CARD_WIDTH;
-    float height           = (float)tt::CARD_HEIGHT;
-    float radius           = (float)tt::CARD_CORNER_RADIUS;
-    Color border_color     = {20, 20, 20, 255};
-    float border_thickness = 5.0f;
-    DrawRectangleRoundedLinesEx(
-      Rectangle{-width / 2.0f, -height / 2.0f, width, height},
-      radius / std::min(width, height),
-      8,
-      border_thickness,
-      border_color
-    );
-  };
-
   // 16 blank cards with sequential ids (0-15). Each card carries a counter
   // (value 1..16, range 0..16) so its number is drawn centered inside it.
   for (int index = 0; index < 16; index++) {
@@ -67,7 +50,6 @@ static Table_State make_demo_table() {
     card.color   = card_colors[index % 4];
     card.counter = {index + 1, 0, 16};
     table.things.push_back(card);
-    table.draw_callbacks[index] = draw_card_border;
   }
 
   // Deck: a stacked pile of 8 cards on the left.
