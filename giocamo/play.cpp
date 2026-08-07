@@ -276,14 +276,15 @@ void play_game(
     }
 
     if (ui_state.playground) {
-      draw_editor_ui(table, input);
+      auto table_dirty = draw_editor_ui(table, input);
 
       // Replicate drop / rotate / shuffle to the remote so playground edits
       // appear on both screens. Polling the drop also drains the event so it
       // doesn't get replayed as a real move when we toggle off.
-      auto dropped     = table.poll_dropped_thing();
-      bool table_dirty = dropped.has_value() || key_pressed(input, KEY_R) ||
-                         key_pressed(input, KEY_S);
+      auto dropped = table.poll_dropped_thing();
+      table_dirty |= dropped.has_value();
+      table_dirty |= key_pressed(input, KEY_R);
+      table_dirty |= key_pressed(input, KEY_S);
       if (online && table_dirty) send_table_state(*online, table);
       return false;
     }

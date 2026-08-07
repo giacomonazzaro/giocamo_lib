@@ -21,7 +21,8 @@
 
 namespace {
 
-void draw_field(const char* name, Color& color) {
+// Every draw_field returns whether the value was edited this frame.
+bool draw_field(const char* name, Color& color) {
   float rgba[4] = {
     color.r / 255.0f, color.g / 255.0f, color.b / 255.0f, color.a / 255.0f
   };
@@ -30,16 +31,18 @@ void draw_field(const char* name, Color& color) {
     color.g = (unsigned char)(rgba[1] * 255.0f);
     color.b = (unsigned char)(rgba[2] * 255.0f);
     color.a = (unsigned char)(rgba[3] * 255.0f);
+    return true;
   }
+  return false;
 }
 
 template <class T>
-void draw_field(const char* name, T& value);
+bool draw_field(const char* name, T& value);
 
 // A list gets its own scroll area, five rows tall. Only the rows actually on
 // screen are built, so a vector of thousands costs the same as one of five.
 template <class T>
-void draw_vector(const char* name, T& values) {
+bool draw_vector(const char* name, T& values) {
   const int count = (int)values.size();
   // The field name alone is the id; the row text is only text. Otherwise the
   // count would be part of the id, and selecting a thing whose list is a
@@ -47,11 +50,12 @@ void draw_vector(const char* name, T& values) {
   if (!ImGui::TreeNodeEx(
         name, 0, "%s: %s (%d)", name, get_type_name(values).c_str(), count
       )) {
-    return;
+    return false;
   }
 
   // Frame height, not text height: a row holds a widget, which is taller than
   // a line of text by its padding.
+  bool        edited     = false;
   const float row_height = ImGui::GetFrameHeightWithSpacing();
   ImGui::PushID(name);
   if (ImGui::BeginChild(
@@ -65,13 +69,14 @@ void draw_vector(const char* name, T& values) {
       for (int index = clipper.DisplayStart; index < clipper.DisplayEnd;
            ++index) {
         std::string element = "[" + std::to_string(index) + "]";
-        draw_field(element.c_str(), values[index]);
+        edited |= draw_field(element.c_str(), values[index]);
       }
     }
   }
   ImGui::EndChild();
   ImGui::PopID();
   ImGui::TreePop();
+  return edited;
 }
 
 template <class T>
@@ -108,36 +113,39 @@ void set_alternative(Variant& value, int index, std::index_sequence<Index...>) {
 }
 
 template <typename T>
-void draw_variant(const char* name, T& value) {
+bool draw_variant(const char* name, T& value) {
   constexpr auto indices = std::make_index_sequence<std::variant_size_v<T>>{};
 
   // The dropdown picks which alternative is live. Choosing a different one
   // replaces the value with that type's defaults.
-  const std::vector<const char*>& names = alternative_names<T>(indices);
-  int                             index = (int)value.index();
+  const std::vector<const char*>& names  = alternative_names<T>(indices);
+  int                             index  = (int)value.index();
+  bool                            edited = false;
   if (ImGui::Combo(name, &index, names.data(), (int)names.size())) {
     set_alternative(value, index, indices);
+    edited = true;
   }
 
   // Then the live alternative's own fields, indented under the dropdown
   // rather than nested in a second node that would just repeat its name.
   ImGui::Indent();
   std::visit(
-    [](auto& alternative) {
+    [&](auto& alternative) {
       using A = std::decay_t<decltype(alternative)>;
       if constexpr (visit_struct::traits::is_visitable<A>::value) {
         visit_struct::for_each(
-          alternative, [](const char* field_name, auto& field) {
-            draw_field(field_name, field);
+          alternative, [&](const char* field_name, auto& field) {
+            edited |= draw_field(field_name, field);
           }
         );
       } else {
-        draw_field("value", alternative);
+        edited |= draw_field("value", alternative);
       }
     },
     value
   );
   ImGui::Unindent();
+  return edited;
 }
 
 // Every field of a Thing goes through here, and so does every field of anything
@@ -148,41 +156,49 @@ void draw_variant(const char* name, T& value) {
 //   number    -> a widget that shows and edits it
 //   anything else -> its name and its type
 template <class T>
-void draw_field(const char* name, T& value) {
+bool draw_field(const char* name, T& value) {
   if constexpr (is_std_vector<T>::value) {
-    draw_vector(name, value);
+    return draw_vector(name, value);
   } else if constexpr (is_variant<T>::value) {
-    draw_variant(name, value);
+    return draw_variant(name, value);
   } else if constexpr (visit_struct::traits::is_visitable<T>::value) {
     // Id from the field name only, so the row text never affects it.
+    bool edited = false;
     if (ImGui::TreeNodeEx(
           name, 0, "%s: %s", name, get_type_name(value).c_str()
         )) {
-      visit_struct::for_each(value, [](const char* field_name, auto& field) {
-        draw_field(field_name, field);
+      visit_struct::for_each(value, [&](const char* field_name, auto& field) {
+        edited |= draw_field(field_name, field);
       });
       ImGui::TreePop();
     }
+    return edited;
   } else if constexpr (std::is_same_v<T, std::string>) {
     ImGui::Text("%s: \"%s\"", name, value.c_str());
+    return false;
   } else if constexpr (std::is_same_v<T, bool>) {
-    ImGui::Checkbox(name, &value);
+    return ImGui::Checkbox(name, &value);
   } else if constexpr (std::is_floating_point_v<T>) {
     // Drag rather than slide: a slider needs a range, and a range is exactly
     // what reflection cannot tell us about an arbitrary field.
     float number = (float)value;
-    if (ImGui::DragFloat(name, &number, 1.0f)) value = (T)number;
+    if (!ImGui::DragFloat(name, &number, 1.0f)) return false;
+    value = (T)number;
+    return true;
   } else if constexpr (std::is_integral_v<T>) {
     int number = (int)value;
-    if (ImGui::DragInt(name, &number)) value = (T)number;
+    if (!ImGui::DragInt(name, &number)) return false;
+    value = (T)number;
+    return true;
   } else {
     ImGui::Text("%s: %s", name, get_type_name(value).c_str());
+    return false;
   }
 }
 
 }  // namespace
 
-void draw_editor_ui(Table_State& table, const Input&) {
+bool draw_editor_ui(Table_State& table, const Input&) {
   // run_tabletop opens the window, so this cannot happen any earlier.
   static bool imgui_ready = false;
   if (!imgui_ready) {
@@ -209,6 +225,7 @@ void draw_editor_ui(Table_State& table, const Input&) {
   end_screen_fit();
   rlImGuiBegin();
 
+  bool edited = false;
   ImGui::SetNextWindowPos(ImVec2(10, 10), ImGuiCond_FirstUseEver);
   ImGui::SetNextWindowSize(ImVec2(340, 560), ImGuiCond_FirstUseEver);
   if (ImGui::Begin("Thing")) {
@@ -216,11 +233,17 @@ void draw_editor_ui(Table_State& table, const Input&) {
       ImGui::TextUnformatted("Drop a card to inspect it.");
     } else {
       Thing& thing = table.things[selected_thing];
+
+      auto thing_edited = false;
       ImGui::Text("things[%d]", selected_thing);
       ImGui::Separator();
-      visit_struct::for_each(thing, [](const char* name, auto& field) {
-        draw_field(name, field);
+      visit_struct::for_each(thing, [&](const char* name, auto& field) {
+        thing_edited |= draw_field(name, field);
       });
+      if (thing_edited) {
+        update_children_positions(selected_thing, table, /*sort=*/false);
+      }
+      edited |= thing_edited;
 
       ImGui::Separator();
       const bool has_parent = selected_parent >= 0 &&
@@ -231,6 +254,7 @@ void draw_editor_ui(Table_State& table, const Input&) {
         table.things[selected_parent].add_child(copy);
         update_children_positions(selected_parent, table, /*sort=*/false);
         selected_thing = copy;  // Show what was just made.
+        edited         = true;
       }
       ImGui::EndDisabled();
     }
@@ -244,4 +268,5 @@ void draw_editor_ui(Table_State& table, const Input&) {
 
   rlImGuiEnd();
   begin_screen_fit();
+  return edited;
 }
