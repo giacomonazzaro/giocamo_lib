@@ -52,8 +52,9 @@ void draw_vector(const char* name, T& values) {
   // a line of text by its padding.
   const float row_height = ImGui::GetFrameHeightWithSpacing();
   ImGui::PushID(name);
-  if (ImGui::BeginChild("list", ImVec2(0.0f, row_height * 5.0f),
-                        ImGuiChildFlags_Borders)) {
+  if (ImGui::BeginChild(
+        "list", ImVec2(0.0f, row_height * 5.0f), ImGuiChildFlags_Borders
+      )) {
     // Rows are one line each, which is what lets the clipper skip the rest.
     // An element expanded into a taller row makes the scrollbar an estimate.
     ImGuiListClipper clipper;
@@ -79,7 +80,9 @@ struct is_variant<std::variant<Alternatives...>> : std::true_type {};
 // The type names of a variant's alternatives, for the dropdown. Built once per
 // variant type, and kept alive because ImGui holds on to the pointers.
 template <class Variant, size_t... Index>
-const std::vector<const char*>& alternative_names(std::index_sequence<Index...>) {
+const std::vector<const char*>& alternative_names(
+  std::index_sequence<Index...>
+) {
   static const std::vector<std::string> names = {
     get_type_name(std::variant_alternative_t<Index, Variant>{})...
   };
@@ -102,6 +105,42 @@ void set_alternative(Variant& value, int index, std::index_sequence<Index...>) {
    ...);
 }
 
+template <typename T>
+void draw_variant(const char* name, T& value) {
+  // A variant knows which alternative is live, so std::visit hands us the
+  // right one. A union could not: nothing there links the tag to the member,
+  // which is why it had to be spelled out by hand everywhere it was used.
+  constexpr auto indices = std::make_index_sequence<std::variant_size_v<T>>{};
+
+  // The dropdown picks which alternative is live. Choosing a different one
+  // replaces the value with that type's defaults.
+  const std::vector<const char*>& names = alternative_names<T>(indices);
+  int                             index = (int)value.index();
+  if (ImGui::Combo(name, &index, names.data(), (int)names.size())) {
+    set_alternative(value, index, indices);
+  }
+
+  // Then the live alternative's own fields, indented under the dropdown
+  // rather than nested in a second node that would just repeat its name.
+  ImGui::Indent();
+  std::visit(
+    [](auto& alternative) {
+      using A = std::decay_t<decltype(alternative)>;
+      if constexpr (visit_struct::traits::is_visitable<A>::value) {
+        visit_struct::for_each(
+          alternative, [](const char* field_name, auto& field) {
+            draw_field(field_name, field);
+          }
+        );
+      } else {
+        draw_field("value", alternative);
+      }
+    },
+    value
+  );
+  ImGui::Unindent();
+}
+
 // Every field of a Thing goes through here, and so does every field of anything
 // nested inside it. Nothing in it knows what a Thing is:
 //   visitable -> an expandable child holding its own fields
@@ -114,43 +153,12 @@ void draw_field(const char* name, T& value) {
   if constexpr (is_std_vector<T>::value) {
     draw_vector(name, value);
   } else if constexpr (is_variant<T>::value) {
-    // A variant knows which alternative is live, so std::visit hands us the
-    // right one. A union could not: nothing there links the tag to the member,
-    // which is why it had to be spelled out by hand everywhere it was used.
-    constexpr auto indices = std::make_index_sequence<std::variant_size_v<T>>{};
-
-    // The dropdown picks which alternative is live. Choosing a different one
-    // replaces the value with that type's defaults.
-    const std::vector<const char*>& names = alternative_names<T>(indices);
-    int                             index = (int)value.index();
-    if (ImGui::Combo(name, &index, names.data(), (int)names.size())) {
-      set_alternative(value, index, indices);
-    }
-
-    // Then the live alternative's own fields, indented under the dropdown
-    // rather than nested in a second node that would just repeat its name.
-    ImGui::Indent();
-    std::visit(
-      [](auto& alternative) {
-        using A = std::decay_t<decltype(alternative)>;
-        if constexpr (visit_struct::traits::is_visitable<A>::value) {
-          visit_struct::for_each(
-            alternative,
-            [](const char* field_name, auto& field) {
-              draw_field(field_name, field);
-            }
-          );
-        } else {
-          draw_field("value", alternative);
-        }
-      },
-      value
-    );
-    ImGui::Unindent();
+    draw_variant(name, value);
   } else if constexpr (visit_struct::traits::is_visitable<T>::value) {
     // Id from the field name only, so the row text never affects it.
-    if (ImGui::TreeNodeEx(name, 0, "%s: %s", name,
-                          get_type_name(value).c_str())) {
+    if (ImGui::TreeNodeEx(
+          name, 0, "%s: %s", name, get_type_name(value).c_str()
+        )) {
       visit_struct::for_each(value, [](const char* field_name, auto& field) {
         draw_field(field_name, field);
       });
@@ -188,7 +196,7 @@ void draw_ui(Table_State& table, const Input&) {
   // every frame, so the drop has to be caught on the frame it happens and kept
   // here. Read it rather than poll_dropped_thing(), which would consume the
   // event that game logic is waiting for.
-  static int selected_thing = -1;
+  static int selected_thing  = -1;
   static int selected_parent = -1;
   if (table.dropped_thing) {
     // (from_parent, to_parent, thing_id): the drop says which parent the thing
