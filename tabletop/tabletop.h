@@ -426,6 +426,12 @@ void handle_rotate_thing(
   Table_State& state, const Input& input, bool clockwise = true
 );
 void shuffle_thing(Table_State& state, int thing_id);
+
+// Copy `thing_id` and everything below it onto the end of state.things, and
+// return the id of the copy. The copy is not attached to anything: the caller
+// decides which parent it joins. A thing's id is its index in state.things, so
+// each copy takes the next free index.
+int duplicate_thing(Table_State& state, int thing_id);
 void process_input(Table_State& state, const Input& input);
 
 Rectangle world_rect(int thing_id, const Table_State& state);

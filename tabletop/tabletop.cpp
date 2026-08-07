@@ -388,6 +388,37 @@ Thing create_table_root(
   return root;
 }
 
+int duplicate_thing(Table_State& state, int thing_id) {
+  const int copy_id = (int)state.things.size();
+  Thing     copy    = state.things[thing_id];  // Copy before things can grow.
+  copy.id           = copy_id;
+  state.things.push_back(std::move(copy));
+
+  // Draw callbacks are keyed by id, so without an entry of its own the copy
+  // would render as a bare shape, missing whatever is painted on top of it.
+  auto found = state.draw_callbacks.find(thing_id);
+  if (found != state.draw_callbacks.end()) {
+    auto callback                 = found->second;
+    state.draw_callbacks[copy_id] = callback;
+  }
+
+  // Held by value: the recursion appends, which invalidates any reference or
+  // iterator into state.things.
+  const std::vector<int> children = state.things[thing_id].children();
+  std::vector<int>       copies;
+  copies.reserve(children.size());
+  for (int child_id : children) {
+    copies.push_back(duplicate_thing(state, child_id));
+  }
+  state.things[copy_id]._children = copies;
+
+  // draw_table grows these to match things, but process_input runs before it
+  // and hit-tests children by id, so they have to cover the new things now.
+  state.world_transforms.resize(state.things.size());
+  state.world_transforms_animated.resize(state.things.size());
+  return copy_id;
+}
+
 void update_children_positions(int parent_id, Table_State& state, bool sort) {
   if (parent_id == state.root) return;
   Thing& parent   = state.things[parent_id];

@@ -3,6 +3,7 @@
 #include <imgui.h>
 #include <rlImGui.h>
 
+#include <algorithm>
 #include <cstdlib>
 #include <string>
 #include <tuple>
@@ -120,8 +121,12 @@ void draw_ui(Table_State& table, const Input&) {
   // here. Read it rather than poll_dropped_thing(), which would consume the
   // event that game logic is waiting for.
   static int selected_thing = -1;
+  static int selected_parent = -1;
   if (table.dropped_thing) {
-    selected_thing = std::get<2>(*table.dropped_thing);
+    // (from_parent, to_parent, thing_id): the drop says which parent the thing
+    // landed in, so there is never a reason to go looking for it.
+    selected_parent = std::get<1>(*table.dropped_thing);
+    selected_thing  = std::get<2>(*table.dropped_thing);
   }
 
   // The table is drawn through the letterbox transform. The panel belongs in
@@ -141,6 +146,18 @@ void draw_ui(Table_State& table, const Input&) {
       visit_struct::for_each(thing, [](const char* name, auto& field) {
         draw_field(name, field);
       });
+
+      ImGui::Separator();
+      const bool has_parent = selected_parent >= 0 &&
+                              selected_parent < (int)table.things.size();
+      ImGui::BeginDisabled(!has_parent);
+      if (ImGui::Button("Duplicate")) {
+        const int copy = duplicate_thing(table, selected_thing);
+        table.things[selected_parent].add_child(copy);
+        update_children_positions(selected_parent, table, /*sort=*/false);
+        selected_thing = copy;  // Show what was just made.
+      }
+      ImGui::EndDisabled();
     }
   }
   ImGui::End();
