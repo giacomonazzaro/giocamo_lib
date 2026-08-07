@@ -72,7 +72,7 @@ static Table_State init_table_state(
   // One Thing per card; ids match all_cards indices. Cream face so the
   // colored dots stand out.
   for (const dot::Card& card : dot::all_cards) {
-    Thing thing = make_card(card.id);
+    Thing thing = make_card();
     thing.color = {235, 225, 205, 255};
     table.things.push_back(thing);
     table.draw_callbacks[card.id] =
@@ -84,18 +84,14 @@ static Table_State init_table_state(
     make_dot_stacks(bottom_player, show_opponent_hand);
   std::vector<int> stack_ids;
   for (Thing& stack : stacks) {
-    stack.id = (int)table.things.size();
-    stack_ids.push_back(stack.id);
-    table.things.push_back(std::move(stack));
+    stack_ids.push_back(add_thing(table, std::move(stack)));
   }
 
   // Empty texture path: the table is drawn with root.color (a dark surface).
   auto root      = create_table_root(tt::WINDOW_WIDTH, tt::WINDOW_HEIGHT, "");
-  root.id        = (int)table.things.size();
   root._children = stack_ids;
   root.color     = {15, 15, 15, 255};
-  table.things.push_back(root);
-  table.root = root.id;
+  table.root = add_thing(table, std::move(root));
 
   update_table_from_game(table, state);
   return table;

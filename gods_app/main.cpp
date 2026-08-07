@@ -165,7 +165,7 @@ void init_table_layout(
   // Cards aligned with all_cards so card.id is the shared key.
   for (const auto& gc : gods_state.all_cards) {
     auto  image_path = get_image_path(card_designs[gc.id]->name);
-    Thing card       = make_card(gc.id, image_path);
+    Thing card       = make_card(image_path);
     table_state.things.push_back(card);
   }
 
@@ -176,9 +176,7 @@ void init_table_layout(
     make_gods_stacks(bottom_player, window_width, window_height);
   std::vector<int> stack_ids_in_order;
   for (Thing& s : stacks) {
-    s.id = (int)table_state.things.size();
-    stack_ids_in_order.push_back(s.id);
-    table_state.things.push_back(std::move(s));
+    stack_ids_in_order.push_back(add_thing(table_state, std::move(s)));
   }
 
   // Root: sits at the end of `things`, owns all stacks as direct children.
@@ -188,13 +186,11 @@ void init_table_layout(
   root.shape = rectangle_shape({(float)window_width, (float)window_height});
   root.transform.x = (float)window_width / 2.0f;
   root.transform.y = (float)window_height / 2.0f;
-  root.id          = (int)table_state.things.size();
   root._children   = stack_ids_in_order;
   root.capacity    = 0;
   // Transparent so the shader background drawn behind the table shows through.
   root.color = {0, 0, 0, 0};
-  table_state.things.push_back(root);
-  table_state.root = root.id;
+  table_state.root = add_thing(table_state, std::move(root));
 
   populate_stacks_from_gods_state(table_state, gods_state);
 }

@@ -55,7 +55,7 @@ static Table_State init_table_state(connect_four::Game_State& state) {
   // from any column, so the empty board shows none of them.
   for (int row = 0; row < connect_four::ROWS; ++row) {
     for (int col = 0; col < connect_four::COLS; ++col) {
-      Thing disc = make_card(row * connect_four::COLS + col);
+      Thing disc = make_card();
       disc.shape = circle_shape((float)CONNECT_FOUR_DISC);
       table.things.push_back(disc);
     }
@@ -65,18 +65,14 @@ static Table_State init_table_state(connect_four::Game_State& state) {
   std::vector<Thing> columns = make_connect_four_columns();
   std::vector<int>   column_ids;
   for (Thing& column : columns) {
-    column.id = (int)table.things.size();
-    column_ids.push_back(column.id);
-    table.things.push_back(std::move(column));
+    column_ids.push_back(add_thing(table, std::move(column)));
   }
 
   auto root = create_table_root(
     tt::WINDOW_WIDTH, tt::WINDOW_HEIGHT, "tabletop/data/wood.png"
   );
-  root.id       = (int)table.things.size();
   root._children = column_ids;
-  table.things.push_back(root);
-  table.root = root.id;
+  table.root = add_thing(table, std::move(root));
 
   update_board(table, state);
   return table;

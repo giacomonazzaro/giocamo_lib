@@ -168,7 +168,6 @@ inline Shape circle_shape(float size) { return Shape_Circle{size / 2.0f}; }
 struct Thing {
   // Info.
   std::string name = "thing";
-  int         id   = 0;
 
   // Appearance.
   Color       color        = {255, 255, 255, 50};
@@ -205,7 +204,6 @@ struct Thing {
 VISITABLE_STRUCT(
   Thing,
   name,
-  id,
   image_path,
   color,
   border_color,
@@ -393,6 +391,14 @@ inline bool key_down(const Input& input, int key) {
          input.keys_down.end();
 }
 
+// Append `thing` to the table and return the id it now has. A thing's id is its
+// index in `things`, so this is the only place that has to know it.
+inline int add_thing(Table_State& state, Thing thing) {
+  const int id = (int)state.things.size();
+  state.things.push_back(std::move(thing));
+  return id;
+}
+
 // Thing-id of the thing called `name`, or -1 if the table has none. Names are
 // how game code addresses the zones it cares about ("p0_hand", "stock", ...),
 // so a zone can be added or reordered in the layout without moving anything
@@ -432,7 +438,7 @@ Rectangle world_rect(int thing_id, const Table_State& state);
 // spread_x / spread_y.
 void update_children_positions(int parent_id, Table_State& state, bool sort);
 
-Thing make_card(int id, const std::string& image_path = "");
+Thing make_card(const std::string& image_path = "");
 
 template <typename F>
 void visit_things_recursive(

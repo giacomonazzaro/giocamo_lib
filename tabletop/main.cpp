@@ -46,7 +46,7 @@ static Table_State make_demo_table(const std::string& filename) {
     // 16 blank cards with sequential ids (0-15). Each card carries a counter
     // (value 1..16, range 0..16) so its number is drawn centered inside it.
     for (int index = 0; index < 16; index++) {
-      Thing card   = make_card(index);
+      Thing card   = make_card();
       card.color   = card_colors[index % 4];
       card.counter = {index + 1, 0, 16};
       table.things.push_back(card);
@@ -56,7 +56,6 @@ static Table_State make_demo_table(const std::string& filename) {
     const int deck_id = 16;
     {
       Thing deck;
-      deck.id       = deck_id;
       deck.name     = "Deck";
       deck.capacity = -1;
       deck.spread_x = 0.0f;
@@ -83,7 +82,6 @@ static Table_State make_demo_table(const std::string& filename) {
     const int hand_id = 17;
     {
       Thing hand;
-      hand.id       = hand_id;
       hand.name     = "Hand";
       hand.capacity = -1;
       hand.spread_x = (float)tt::HAND_SPREAD_X;
@@ -104,7 +102,6 @@ static Table_State make_demo_table(const std::string& filename) {
     const int discard_id = 18;
     {
       Thing discard;
-      discard.id       = discard_id;
       discard.name     = "Discard";
       discard.capacity = -1;
       discard.spread_x = 0.0f;
@@ -129,7 +126,6 @@ static Table_State make_demo_table(const std::string& filename) {
     const int root_id = 19;
     {
       Thing root;
-      root.id   = root_id;
       root.name = "root";
       root.shape =
         rectangle_shape({(float)tt::WINDOW_WIDTH, (float)tt::WINDOW_HEIGHT});

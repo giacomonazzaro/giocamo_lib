@@ -34,7 +34,7 @@ static Table_State init_table_state(
 
   // One Thing per card; ids 0..39 match all_cards indices.
   for (const auto& card : state.all_cards) {
-    Thing thing = make_card(card.id);
+    Thing thing = make_card();
     if (card.suit == scopa::Suit::COPPE) thing.color = {50, 100, 50, 255};
     if (card.suit == scopa::Suit::DENARI) thing.color = {150, 120, 20, 255};
     if (card.suit == scopa::Suit::BASTONI) thing.color = {80, 50, 50, 255};
@@ -49,9 +49,7 @@ static Table_State init_table_state(
     make_scopa_stacks(bottom_player, show_opponent_hand);
   std::vector<int> stack_ids;
   for (Thing& stack : stacks) {
-    stack.id = (int)table.things.size();
-    stack_ids.push_back(stack.id);
-    table.things.push_back(std::move(stack));
+    stack_ids.push_back(add_thing(table, std::move(stack)));
   }
 
   // Populate stack children from game state.
@@ -69,10 +67,8 @@ static Table_State init_table_state(
   auto root = create_table_root(
     tt::WINDOW_WIDTH, tt::WINDOW_HEIGHT, "tabletop/data/wood.png"
   );
-  root.id        = (int)table.things.size();
   root._children = stack_ids;
-  table.things.push_back(root);
-  table.root = root.id;
+  table.root = add_thing(table, std::move(root));
   for (int stack_id : stack_ids) {
     update_children_positions(stack_id, table, false);
   }

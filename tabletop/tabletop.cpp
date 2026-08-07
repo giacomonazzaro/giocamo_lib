@@ -390,8 +390,8 @@ Thing create_table_root(
 
 int duplicate_thing(Table_State& state, int thing_id) {
   const int copy_id = (int)state.things.size();
-  Thing     copy    = state.things[thing_id];  // Copy before things can grow.
-  copy.id           = copy_id;
+  // Copy before things can grow: push_back may reallocate.
+  Thing copy = state.things[thing_id];
   state.things.push_back(std::move(copy));
 
   // Draw callbacks are keyed by id, so without an entry of its own the copy
@@ -494,9 +494,8 @@ void update_children_positions(int parent_id, Table_State& state, bool sort) {
   }
 }
 
-Thing make_card(int id, const std::string& image_path) {
+Thing make_card(const std::string& image_path) {
   auto card = Thing{};
-  card.id   = id;
   if (!image_path.empty()) {
     card.image_path = image_path;
   }

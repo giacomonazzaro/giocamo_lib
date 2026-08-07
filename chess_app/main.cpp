@@ -47,9 +47,8 @@ static Table_State init_table_state() {
   std::vector<Thing> squares = make_chess_squares();
   std::vector<int>   square_ids;
   for (Thing& square : squares) {
-    square.id = (int)table.things.size();  // 0..63 == row*8 + col.
-    square_ids.push_back(square.id);
-    table.things.push_back(std::move(square));
+    // Ends up at 0..63 == row*8 + col.
+    square_ids.push_back(add_thing(table, std::move(square)));
   }
 
   // Piece Things: a square body that draws a piece image (set in update_board).
@@ -62,7 +61,7 @@ static Table_State init_table_state() {
   for (int i = 0; i < PIECE_THING_COUNT; ++i) {
     Thing piece;
     piece.name  = "piece" + std::to_string(i);
-    piece.id    = (int)table.things.size();  // PIECE_THING_BASE + i.
+    // Lands at PIECE_THING_BASE + i.
     piece.shape = piece_shape;
     piece.color = Color{0, 0, 0, 0};  // Only used if the image fails to load.
     table.things.push_back(piece);
@@ -71,13 +70,11 @@ static Table_State init_table_state() {
   auto root = create_table_root(
     tt::WINDOW_WIDTH, tt::WINDOW_HEIGHT, "tabletop/data/wood.png"
   );
-  root.id        = (int)table.things.size();
   root._children = square_ids;
   for (int i = 0; i < PIECE_THING_COUNT; ++i) {
     root._children.push_back(PIECE_THING_BASE + i);
   }
-  table.things.push_back(root);
-  table.root = root.id;
+  table.root = add_thing(table, std::move(root));
 
   return table;
 }
