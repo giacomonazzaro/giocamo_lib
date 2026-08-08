@@ -1,6 +1,7 @@
 #include "cards.h"
 
 #include <algorithm>
+#include <cassert>
 
 #include "gameplay.h"
 #include "models.h"
@@ -821,9 +822,14 @@ const unordered_map<string, Factory>& card_classes() {
 }
 
 Card_Type type_from_string(const string& s) {
-  if (s == "wonder") return Card_Type::WONDER;
+  // "creation" and "character" are what the cards themselves say; both stay in
+  // play, which is the wonder slot as far as the rules are concerned.
+  if (s == "wonder" || s == "creation" || s == "character") {
+    return Card_Type::WONDER;
+  }
   if (s == "event") return Card_Type::EVENT;
   if (s == "people") return Card_Type::PEOPLE;
+  assert(false && "unknown card type in cards.json");
   return Card_Type::EVENT;
 }
 

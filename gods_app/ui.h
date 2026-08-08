@@ -15,9 +15,8 @@ std::vector<Thing> make_gods_stacks(
   int bottom_player, int window_width, int window_height
 );
 
-// Resolve a card name to its image path under gods/cards/fronts/, or empty
-// string if no matching image exists on disk.
-std::string get_image_path(const std::string& card_name);
+// Full path of a card's art, given the file name cards.json records for it.
+std::string get_image_path(const std::string& image_file);
 
 // Draw the power badge in the top-right corner of a card. If `destroyed` is
 // true, overlays a darkening rounded rectangle. Coordinates are relative — the

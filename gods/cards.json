@@ -1,275 +1,378 @@
 [
   {
+    "name": "Demigod",
+    "type": "character",
+    "color": "red",
+    "power": 0,
+    "effect": "Act: Destroy a character.",
+    "image": "demigod.png"
+  },
+  {
+    "name": "Prophet",
+    "type": "character",
+    "color": "red",
+    "power": 0,
+    "effect": "Act: Claim a people, then sacrifice this.",
+    "image": "prophet.png"
+  },
+  {
+    "name": "War",
+    "type": "creation",
+    "color": "red",
+    "power": 0,
+    "effect": "When a people is swayed by an opponent, you may destroy it.",
+    "image": "war.png"
+  },
+  {
+    "name": "Fire",
+    "type": "creation",
+    "color": "red",
+    "power": 0,
+    "effect": "Your red events get +○.",
+    "image": "fire.png"
+  },
+  {
+    "name": "Apocalypse",
+    "type": "event",
+    "color": "red",
+    "power": 0,
+    "effect": "Play up to ○ extra cards this turn.",
+    "image": "apocalypse.png"
+  },
+  {
     "name": "Miracle",
     "type": "event",
-    "power": 0,
     "color": "red",
-    "effect": "Play another event, it gets +○."
+    "power": 0,
+    "effect": "Add ○ +1 counters on a creation.",
+    "image": "miracle.png"
   },
   {
-    "name": "Forgive",
+    "name": "Petrification",
     "type": "event",
-    "power": 0,
     "color": "red",
-    "effect": "Add ○ +1 counters on a people."
+    "power": 0,
+    "effect": "Add ○ -1 counters on a creation.",
+    "image": "petrification.png"
   },
   {
-    "name": "Blessing",
+    "name": "Miracle",
     "type": "event",
-    "power": 0,
     "color": "red",
-    "effect": "Add ○ +1 counters on a wonder."
+    "power": 0,
+    "effect": "Play another event, it gets +○.",
+    "image": "miracle_2.png"
   },
   {
-    "name": "Spring",
+    "name": "Withering",
     "type": "event",
-    "power": 0,
-    "color": "green",
-    "effect": "Add ○ +1 counters on a people."
-  },
-  {
-    "name": "Earthquake",
-    "type": "event",
-    "power": 0,
-    "color": "green",
-    "effect": "Destroy all peoples with power ○ or less."
-  },
-  {
-    "name": "Flood",
-    "type": "event",
-    "power": 0,
-    "color": "green",
-    "effect": "Put ○ -1 counters on all people."
-  },
-  {
-    "name": "Prophecy",
-    "type": "event",
-    "power": 0,
     "color": "blue",
-    "effect": "You may play up to ○ extra cards this turn."
+    "power": 0,
+    "effect": "A player discards the top ○ cards of their deck.",
+    "image": "withering.png"
+  },
+  {
+    "name": "Transfiguration",
+    "type": "event",
+    "color": "red",
+    "power": 0,
+    "effect": "Set the power of a people to 1 or ○.",
+    "image": "transfiguration.png"
   },
   {
     "name": "Flashback",
     "type": "event",
+    "color": "red",
     "power": 0,
+    "effect": "Return ○ cards from your discard to your hand.",
+    "image": "flashback.png"
+  },
+  {
+    "name": "Multiplication",
+    "type": "event",
+    "color": "red",
+    "power": 0,
+    "effect": "Play another event, replicating its effect ○ times.",
+    "image": "multiplication.png"
+  },
+  {
+    "name": "Awakening",
+    "type": "event",
+    "color": "red",
+    "power": 0,
+    "effect": "Play any number of events from your discard pile.",
+    "image": "awakening.png"
+  },
+  {
+    "name": "Epiphany",
+    "type": "event",
     "color": "blue",
-    "effect": "Return ○ event cards from your discard pile to your hand."
+    "power": 0,
+    "effect": "Search your deck for a card. Play it, then shuffle.",
+    "image": "epiphany.png"
   },
   {
-    "name": "Darkness",
+    "name": "Epiphany",
     "type": "event",
-    "power": 0,
     "color": "red",
-    "effect": "The opponent discards ○ cards from their hand."
+    "power": 0,
+    "effect": "Sway a people.",
+    "image": "epiphany_2.png"
   },
   {
-    "name": "Unmaking",
+    "name": "Betrayal",
     "type": "event",
-    "power": 0,
     "color": "red",
-    "effect": "Destroy a wonder with power ○ or less."
+    "power": 0,
+    "effect": "The opponent discards ○ cards from their hand.",
+    "image": "betrayal.png"
   },
   {
-    "name": "Revolt",
-    "type": "event",
-    "power": 0,
-    "color": "red",
-    "effect": "Destroy a people with power ○ or less."
-  },
-  {
-    "name": "Regrowth",
-    "type": "event",
-    "power": 0,
+    "name": "Life",
+    "type": "creation",
     "color": "green",
-    "effect": "Restore a people with power ○ or less."
+    "power": 0,
+    "effect": "Green creations enter under your control.",
+    "image": "life.png"
   },
   {
-    "name": "Eruption",
-    "type": "event",
-    "power": 0,
+    "name": "Forests",
+    "type": "creation",
     "color": "green",
-    "effect": "Shuffle up to ○ blue wonders into their owners' decks."
+    "power": 0,
+    "effect": "Peoples enter under your control.",
+    "image": "forests.png"
   },
   {
-    "name": "Time Warp",
-    "type": "event",
+    "name": "Dragon",
+    "type": "character",
+    "color": "green",
     "power": 0,
-    "color": "blue",
-    "effect": "Return up to ○ wonders from play to their owners' hands."
+    "effect": "Act: Destroy a people.",
+    "image": "dragon.png"
+  },
+  {
+    "name": "Animals",
+    "type": "creation",
+    "color": "green",
+    "power": 0,
+    "effect": "This is worth ○ points.",
+    "image": "animals.png"
+  },
+  {
+    "name": "Deserts",
+    "type": "creation",
+    "color": "green",
+    "power": 0,
+    "effect": "When a people is destroyed, sway it.",
+    "image": "deserts.png"
+  },
+  {
+    "name": "Earthquake",
+    "type": "event",
+    "color": "green",
+    "power": 0,
+    "effect": "Destroy a people.",
+    "image": "earthquake.png"
+  },
+  {
+    "name": "Abundance",
+    "type": "event",
+    "color": "green",
+    "power": 0,
+    "effect": "Add ○ +1 counters on a people.",
+    "image": "abundance.png"
+  },
+  {
+    "name": "Abundance",
+    "type": "event",
+    "color": "green",
+    "power": 0,
+    "effect": "Restore any number of destroyed peoples. Sway them.",
+    "image": "abundance_2.png"
+  },
+  {
+    "name": "Abundance",
+    "type": "event",
+    "color": "green",
+    "power": 0,
+    "effect": "Destroy or sway a people.",
+    "image": "abundance_3.png"
+  },
+  {
+    "name": "Mountains",
+    "type": "creation",
+    "color": "green",
+    "power": 0,
+    "effect": "Your peoples are indestructible.",
+    "image": "mountains.png"
+  },
+  {
+    "name": "Leviathan",
+    "type": "character",
+    "color": "green",
+    "power": 0,
+    "effect": "Act: Put a -1 counter on a people.",
+    "image": "leviathan.png"
   },
   {
     "name": "Aurora",
     "type": "event",
-    "power": 0,
     "color": "blue",
-    "effect": "Draw ○ cards."
+    "power": 0,
+    "effect": "Draw ○ cards.",
+    "image": "aurora.png"
   },
   {
-    "name": "Meteorite",
+    "name": "Transfiguration",
     "type": "event",
-    "power": 0,
     "color": "blue",
-    "effect": "Destroy all opponent peoples with power ○ or less."
+    "power": 0,
+    "effect": "Swap the base power of two creations.",
+    "image": "transfiguration_2.png"
   },
   {
-    "name": "Fire",
-    "type": "wonder",
+    "name": "Eclipse",
+    "type": "event",
+    "color": "blue",
     "power": 0,
-    "color": "red",
-    "effect": "Your red events get +○."
-  },
-  {
-    "name": "Wisdom",
-    "type": "wonder",
-    "power": 0,
-    "color": "red",
-    "effect": "When you pass, you may play a card with power ○ or less."
-  },
-  {
-    "name": "Rivers",
-    "type": "wonder",
-    "power": 0,
-    "color": "green",
-    "effect": "You can score tied peoples with power ○ or less."
-  },
-  {
-    "name": "Forests",
-    "type": "wonder",
-    "power": 0,
-    "color": "green",
-    "effect": "When you pass, you may restore a people with power ○ or less."
-  },
-  {
-    "name": "Deserts",
-    "type": "wonder",
-    "power": 0,
-    "color": "green",
-    "effect": "You can score destroyed peoples with power ○ or less."
+    "effect": "Sway all peoples.",
+    "image": "eclipse.png"
   },
   {
     "name": "Sky",
-    "type": "wonder",
-    "power": 0,
+    "type": "creation",
     "color": "blue",
-    "effect": "Your other blue wonders get +○."
+    "power": 0,
+    "effect": "Your other blue creations get +○.",
+    "image": "sky.png"
   },
   {
     "name": "Sun",
-    "type": "wonder",
-    "power": 0,
+    "type": "creation",
     "color": "blue",
-    "effect": "Your green wonders get +○."
+    "power": 0,
+    "effect": "Your green creations get +○.",
+    "image": "sun.png"
   },
   {
-    "name": "Light",
-    "type": "wonder",
-    "power": 0,
+    "name": "Void",
+    "type": "creation",
     "color": "blue",
-    "effect": "When you end the game, you may play a card with power ○ or less."
+    "power": 0,
+    "effect": "Opponent creations have no abilities.",
+    "image": "void.png"
   },
   {
-    "name": "War",
-    "type": "wonder",
-    "power": 0,
-    "color": "red",
-    "effect": "When you pass, you may destroy a people with power ○ or less."
-  },
-  {
-    "name": "Love",
-    "type": "wonder",
-    "power": 0,
-    "color": "red",
-    "effect": "Your peoples are worth ○ points extra."
-  },
-  {
-    "name": "Knowledge",
-    "type": "wonder",
-    "power": 0,
-    "color": "red",
-    "effect": "Opponent events get -○, down to a minimum of 1 power."
-  },
-  {
-    "name": "Mountains",
-    "type": "wonder",
-    "power": 0,
-    "color": "green",
-    "effect": "Your peoples with power ○ or less are indestructible."
-  },
-  {
-    "name": "Animals",
-    "type": "wonder",
-    "power": 0,
-    "color": "green",
-    "effect": "This is worth ○ points at the end of the game."
-  },
-  {
-    "name": "Seas",
-    "type": "wonder",
-    "power": 0,
-    "color": "green",
-    "effect": "Your alive peoples with power ○ or less are worth +1 points."
-  },
-  {
-    "name": "Moon",
-    "type": "wonder",
-    "power": 0,
+    "name": "Black Hole",
+    "type": "creation",
     "color": "blue",
-    "effect": "Whenever you have less than ○ cards in hand, draw back to ○."
-  },
-  {
-    "name": "Stars",
-    "type": "wonder",
     "power": 0,
-    "color": "blue",
-    "effect": "When you draw cards, you may do from the shared deck. They have power ○."
+    "effect": "When this enters, put a creation from play to your hand.",
+    "image": "black_hole.png"
   },
   {
-    "name": "Greeks",
-    "type": "people",
-    "power": 2,
-    "color": "yellow",
-    "effect": "You have twice or more cards in hand than the opponent."
+    "name": "Portal",
+    "type": "creation",
+    "color": "blue",
+    "power": 0,
+    "effect": "When this enters, you may put a creation into play. It has power ○.",
+    "image": "portal.png"
+  },
+  {
+    "name": "Stardust",
+    "type": "creation",
+    "color": "blue",
+    "power": 0,
+    "effect": "When this enters, draw ○ cards.",
+    "image": "stardust.png"
+  },
+  {
+    "name": "Aliens",
+    "type": "creation",
+    "color": "blue",
+    "power": 0,
+    "effect": "When this enters, you may put a people into play. It has power ○.",
+    "image": "aliens.png"
   },
   {
     "name": "Egyptians",
     "type": "people",
-    "power": 4,
     "color": "yellow",
-    "effect": "You have the most total power among green wonders."
+    "power": 0,
+    "effect": "",
+    "image": "egyptians.png"
+  },
+  {
+    "name": "Greeks",
+    "type": "people",
+    "color": "yellow",
+    "power": 0,
+    "effect": "",
+    "image": "greeks.png"
   },
   {
     "name": "Romans",
     "type": "people",
-    "power": 4,
     "color": "yellow",
-    "effect": "You have the most total power among red wonders."
+    "power": 0,
+    "effect": "",
+    "image": "romans.png"
   },
   {
     "name": "Judeans",
     "type": "people",
-    "power": 4,
     "color": "yellow",
-    "effect": "You have the most total power among blue wonders."
-  },
-  {
-    "name": "Vikings",
-    "type": "people",
-    "power": 2,
-    "color": "yellow",
-    "effect": "You have the most cards in your deck."
-  },
-  {
-    "name": "Babylonians",
-    "type": "people",
-    "power": 3,
-    "color": "yellow",
-    "effect": "You have the most total power among wonders."
+    "power": 0,
+    "effect": "",
+    "image": "judeans.png"
   },
   {
     "name": "Minoans",
     "type": "people",
-    "power": 3,
     "color": "yellow",
-    "effect": "You have the most wonders."
+    "power": 0,
+    "effect": "",
+    "image": "minoans.png"
+  },
+  {
+    "name": "Arabs",
+    "type": "people",
+    "color": "yellow",
+    "power": 0,
+    "effect": "",
+    "image": "arabs.png"
+  },
+  {
+    "name": "Babylonians",
+    "type": "people",
+    "color": "yellow",
+    "power": 0,
+    "effect": "",
+    "image": "babylonians.png"
+  },
+  {
+    "name": "Indians",
+    "type": "people",
+    "color": "yellow",
+    "power": 0,
+    "effect": "",
+    "image": "indians.png"
+  },
+  {
+    "name": "Incas",
+    "type": "people",
+    "color": "yellow",
+    "power": 0,
+    "effect": "",
+    "image": "incas.png"
+  },
+  {
+    "name": "Vikings",
+    "type": "people",
+    "color": "yellow",
+    "power": 0,
+    "effect": "",
+    "image": "vikings.png"
   }
 ]

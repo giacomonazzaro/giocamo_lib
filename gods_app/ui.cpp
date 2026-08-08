@@ -106,17 +106,9 @@ std::vector<Thing> make_gods_stacks(
   return out;
 }
 
-std::string get_image_path(const std::string& card_name) {
-  std::string name = card_name;
-  if (name.size() == 1) name = "0" + name;
-  std::transform(name.begin(), name.end(), name.begin(), [](unsigned char c) {
-    return (char)std::tolower(c);
-  });
-  std::replace(name.begin(), name.end(), ' ', '_');
-  // Don't FileExists-gate — raylib handles missing files by returning a
-  // null texture, which the renderer falls back from. The check was also
-  // unreliable on emscripten depending on cwd.
-  return IMAGES_DIR + "/" + name + ".png";
+std::string get_image_path(const std::string& image_file) {
+  if (image_file.empty()) return "";
+  return IMAGES_DIR + "/" + image_file;
 }
 
 void draw_card_power_badge(const std::string& power, bool destroyed) {

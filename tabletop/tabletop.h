@@ -298,6 +298,21 @@ struct Drop_Gesture {
   int thing_id;
 };
 
+inline bool operator==(const Drop_Gesture& a, const Drop_Gesture& b) {
+  return a.from_parent == b.from_parent && a.to_parent == b.to_parent &&
+         a.thing_id == b.thing_id;
+}
+
+// So a gesture can key a map of the gestures a choice accepts.
+template <>
+struct std::hash<Drop_Gesture> {
+  size_t operator()(const Drop_Gesture& gesture) const {
+    return (size_t)gesture.from_parent * 73856093 ^
+           (size_t)gesture.to_parent * 19349663 ^
+           (size_t)gesture.thing_id * 83492791;
+  }
+};
+
 // Full table state passed to every render and input function.
 struct Table_State : Table_Layout {
   int width  = 0;

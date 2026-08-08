@@ -43,6 +43,9 @@
 
 namespace fs_helpers {
 
+// Art file of each card, indexed like card_designs.
+static std::vector<std::string> card_images;
+
 // Load and apply cards.json → C++ card_designs registry.
 // Path is gods/cards.json relative to the current working directory.
 static void load_card_designs() {
@@ -56,14 +59,16 @@ static void load_card_designs() {
 
   std::vector<std::tuple<std::string, std::string, std::string, std::string>>
     entries;
+  card_images.clear();
   for (size_t i = 0; i < data.size(); ++i) {
     const auto& d = data[i];
     entries.emplace_back(
-      std::to_string(i),
+      d.value("name", ""),
       d.value("type", ""),
       d.value("color", ""),
       d.value("effect", "")
     );
+    card_images.push_back(d.value("image", ""));
   }
   set_card_designs(entries);
 }
@@ -164,7 +169,7 @@ void init_table_layout(
 
   // Cards aligned with all_cards so card.id is the shared key.
   for (const auto& gc : gods_state.all_cards) {
-    auto  image_path = get_image_path(card_designs[gc.id]->name);
+    auto  image_path = get_image_path(fs_helpers::card_images[gc.id]);
     Thing card       = make_card(image_path);
     table_state.things.push_back(card);
   }

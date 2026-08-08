@@ -269,6 +269,8 @@ std::vector<Choice> play_card(Game_State& game, const Card_Id& card_id) {
     player.wonders.push_back(card.id);
   } else if (card.card_type == Card_Type::EVENT) {
     player.discard.push_back(card.id);
+  } else if (card.card_type == Card_Type::PEOPLE) {
+    game.peoples.push_back(card.id);
   }
   card.counters = 0;
 

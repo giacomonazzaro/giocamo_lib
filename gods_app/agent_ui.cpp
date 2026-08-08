@@ -1,9 +1,11 @@
 #include "agent_ui.h"
 
+#include <game/game.h>
 #include <raylib.h>
 #include <tabletop/config.h>
 #include <tabletop/tabletop.h>
 
+#include <unordered_map>
 #include <variant>
 
 Stack_Indices stack_indices(const Table_State& table_state, int player_index) {
@@ -37,6 +39,11 @@ void sync_game_state_from_table(
       gods_state.peoples.push_back(pid);
     }
   }
+  // The shared deck is a zone like any other: a card dragged out of it in
+  // playground has to leave it here too, or it stays in the game's shared deck
+  // while also sitting in whichever zone it was dropped into.
+  gods_state.shared_deck =
+    table_state.things[find_thing(table_state, "shared_deck")].children();
 }
 
 void update_stacks(Table_State& table_state, Game_State& gods_state) {
@@ -59,6 +66,7 @@ void update_stacks(Table_State& table_state, Game_State& gods_state) {
     refresh(s.peoples, owned_people);
     refresh(s.wonders, gods_state.players[i].wonders);
   }
+  refresh(find_thing(table_state, "shared_deck"), gods_state.shared_deck);
 }
 
 int Agent_UI::choose_action(Game& state, const Choice& choice) {
