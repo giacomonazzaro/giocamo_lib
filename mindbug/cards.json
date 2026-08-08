@@ -1,0 +1,258 @@
+[
+  {
+    "name": "Axolotl Healer",
+    "power": 4,
+    "keywords": ["poisonous"],
+    "text": "Play: Gain 2 life points",
+    "copies": 2,
+    "image": "axolotl-healer.png"
+  },
+  {
+    "name": "Bee Bear",
+    "power": 8,
+    "keywords": [],
+    "text": "Cannot be blocked by creatures with power 6 or less",
+    "copies": 1,
+    "image": "bee-bear.png"
+  },
+  {
+    "name": "Brain Fly",
+    "power": 4,
+    "keywords": [],
+    "text": "Play: Take control of a creature with power 6 or more",
+    "copies": 1,
+    "image": "brain-fly.png"
+  },
+  {
+    "name": "Chameleon Sniper",
+    "power": 1,
+    "keywords": ["sneaky"],
+    "text": "Attack: The opponent loses a life point",
+    "copies": 1,
+    "image": "chamaleon-sniper.png"
+  },
+  {
+    "name": "Compost Dragon",
+    "power": 3,
+    "keywords": ["hunter"],
+    "text": "Play: Play a card from your discard pile",
+    "copies": 2,
+    "image": "compost-dragon.png"
+  },
+  {
+    "name": "Deathweaver",
+    "power": 2,
+    "keywords": ["poisonous"],
+    "text": "The opponent cannot activate play effects",
+    "copies": 1,
+    "image": "deathweaver.png"
+  },
+  {
+    "name": "Elephantopus",
+    "power": 7,
+    "keywords": ["tough"],
+    "text": "The opponent cannot block with creatures with power 4 or less",
+    "copies": 1,
+    "image": "elephantopus.png"
+  },
+  {
+    "name": "Explosive Toad",
+    "power": 5,
+    "keywords": ["frenzy"],
+    "text": "Defeated: Defeat a creature",
+    "copies": 2,
+    "image": "explosive-toad.png"
+  },
+  {
+    "name": "Ferret Bomber",
+    "power": 2,
+    "keywords": ["sneaky"],
+    "text": "Play: The opponent discards 2 cards",
+    "copies": 2,
+    "image": "ferret-bomber.png"
+  },
+  {
+    "name": "Giraffodile",
+    "power": 7,
+    "keywords": [],
+    "text": "Play: Draw your discard pile",
+    "copies": 1,
+    "image": "giraffodile.png"
+  },
+  {
+    "name": "Goblin Werewolf",
+    "power": 2,
+    "keywords": ["hunter"],
+    "text": "Has +6 power while it is your turn",
+    "copies": 2,
+    "image": "goblin-werewolf.png"
+  },
+  {
+    "name": "Gorillion",
+    "power": 10,
+    "keywords": [],
+    "text": "",
+    "copies": 1,
+    "image": "gorillion.png"
+  },
+  {
+    "name": "Grave Robber",
+    "power": 7,
+    "keywords": ["tough"],
+    "text": "Play: Play a card from the opponent's discard pile",
+    "copies": 2,
+    "image": "grave-robber.png"
+  },
+  {
+    "name": "Harpy Mother",
+    "power": 5,
+    "keywords": [],
+    "text": "Defeated: Take control of up to 2 creatures with power 5 or less",
+    "copies": 1,
+    "image": "harpy-mother.png"
+  },
+  {
+    "name": "Kangasaurus Rex",
+    "power": 7,
+    "keywords": [],
+    "text": "Play: Defeat all enemy creatures with power 4 or less",
+    "copies": 2,
+    "image": "kangasaurus-rex.png"
+  },
+  {
+    "name": "Killer Bee",
+    "power": 5,
+    "keywords": ["hunter"],
+    "text": "Play: The opponent loses a life point",
+    "copies": 2,
+    "image": "killer-bee.png"
+  },
+  {
+    "name": "Lone Yeti",
+    "power": 5,
+    "keywords": ["tough"],
+    "text": "While this is your only allied creature, it has +5 power and FRENZY",
+    "copies": 1,
+    "image": "lone-yeti.png"
+  },
+  {
+    "name": "Luchataur",
+    "power": 9,
+    "keywords": ["frenzy"],
+    "text": "",
+    "copies": 2,
+    "image": "luchataur.png"
+  },
+  {
+    "name": "Mysterious Mermaid",
+    "power": 7,
+    "keywords": [],
+    "text": "Play: Set your life points equal to the opponent's",
+    "copies": 1,
+    "image": "mysterious-mermaid.png"
+  },
+  {
+    "name": "Plated Scorpion",
+    "power": 2,
+    "keywords": ["tough", "poisonous"],
+    "text": "",
+    "copies": 2,
+    "image": "plated-scorpion.png"
+  },
+  {
+    "name": "Rhino Turtle",
+    "power": 8,
+    "keywords": ["frenzy", "tough"],
+    "text": "",
+    "copies": 2,
+    "image": "rhino-turtle.png"
+  },
+  {
+    "name": "Shark Dog",
+    "power": 4,
+    "keywords": ["hunter"],
+    "text": "Attack: Defeat an enemy creature with power 6 or more",
+    "copies": 1,
+    "image": "shark-dog.png"
+  },
+  {
+    "name": "Sharky Crab-Dog-Mummypus",
+    "power": 5,
+    "keywords": [],
+    "text": "Has HUNTER while an enemy creature does. Repeat for SNEAKY, FRENZY, and POISONOUS",
+    "copies": 1,
+    "image": "sharky-crab-dog-mummy.png"
+  },
+  {
+    "name": "Shield Bugs",
+    "power": 4,
+    "keywords": ["tough"],
+    "text": "Other allied creatures have +1 power",
+    "copies": 2,
+    "image": "shield-bugs.png"
+  },
+  {
+    "name": "Snail Hydra",
+    "power": 9,
+    "keywords": [],
+    "text": "Attack: If you control fewer creatures than the opponent, defeat a creature",
+    "copies": 2,
+    "image": "snail-hydra.png"
+  },
+  {
+    "name": "Snail Thrower",
+    "power": 1,
+    "keywords": ["poisonous"],
+    "text": "Other allied creatures with power 4 or less have HUNTER and POISONOUS",
+    "copies": 1,
+    "image": "snail-thrower.png"
+  },
+  {
+    "name": "Spider Owl",
+    "power": 3,
+    "keywords": ["sneaky", "poisonous"],
+    "text": "",
+    "copies": 2,
+    "image": "spider-owl.png"
+  },
+  {
+    "name": "Strange Barrel",
+    "power": 6,
+    "keywords": [],
+    "text": "Defeated: Steal 2 random cards from the opponent's hand",
+    "copies": 1,
+    "image": "strange-barrel.png"
+  },
+  {
+    "name": "Tiger Squirrel",
+    "power": 3,
+    "keywords": ["sneaky"],
+    "text": "Play: Defeat an enemy creature with power 7 or more",
+    "copies": 2,
+    "image": "tiger-squirrel.png"
+  },
+  {
+    "name": "Turbo Bug",
+    "power": 4,
+    "keywords": [],
+    "text": "Attack: The opponent loses all life points except one",
+    "copies": 1,
+    "image": "turbo-bug.png"
+  },
+  {
+    "name": "Tusked Extorter",
+    "power": 8,
+    "keywords": [],
+    "text": "Attack: The opponent discards a card",
+    "copies": 2,
+    "image": "tusked-extorter.png"
+  },
+  {
+    "name": "Urchin Hurler",
+    "power": 5,
+    "keywords": ["hunter"],
+    "text": "Other allied creatures have +2 power while it is your turn",
+    "copies": 1,
+    "image": "urchin-hurler.png"
+  }
+]
