@@ -43,9 +43,10 @@ int compute_player_score(const Game_State& state, int player);
 
 // ---- Mechanics the card effects are written with ----
 
-// Put a creature into play under `controller` and trigger its Play ability.
-// `owner` is the player whose discard pile it returns to. Returns its index.
-int enter_play(Game_State& state, int design, int owner, int controller);
+// Put a card into play as a creature under `controller` and trigger its Play
+// ability. `owner` is the player whose discard pile it returns to when it is
+// defeated. Returns the creature's index.
+int enter_play(Game_State& state, int card, int owner, int controller);
 
 void lose_life(Game_State& state, int player, int amount);
 
@@ -68,12 +69,18 @@ Choice make_choice(
   std::function<void(Game_State&, int)>        on_chosen
 );
 
+// Every selection of `count` targets (or of up to `count`, if up_to), in the
+// order a multi-choice indexes them: option i picks combination i.
+std::vector<std::vector<int>> target_combinations(
+  const std::vector<int>& targets, int count, bool up_to
+);
+
 Choice make_multi_choice(
-  int                                                      player,
-  const char*                                              description,
-  std::function<std::vector<int>(Game_State&)>             get_targets,
-  int                                                      count,
-  bool                                                     up_to,
+  int                                                       player,
+  const char*                                               description,
+  std::function<std::vector<int>(Game_State&)>              get_targets,
+  int                                                       count,
+  bool                                                      up_to,
   std::function<void(Game_State&, const std::vector<int>&)> on_chosen
 );
 
@@ -89,21 +96,32 @@ inline int pack_turn_action(const Turn_Action& action) {
 // to see it, without a duplicate definition across translation units.)
 inline float evaluate_state(const Game_State& state, int player) {
   const int opponent = 1 - player;
-  if (state.game_over) return state.winner == player ? 1000.0f : -1000.0f;
+  if (state.game_over) return state.winner == player ? 2.0f : 0.0f;
 
-  float score =
-    10.0f * (float)(state.players[player].life - state.players[opponent].life);
-  score += 2.0f * (float)(state.players[player].mindbugs -
-                          state.players[opponent].mindbugs);
-  for (int i = 0; i < state.creatures.size(); ++i) {
-    if (!state.creatures[i].alive) continue;
-    const float power = (float)effective_power(state, i);
-    score += state.creatures[i].controller == player ? power : -power;
-  }
-  score += (float)(state.players[player].hand.size() +
-                   state.players[player].draw_pile.size());
-  score -= (float)(state.players[opponent].hand.size() +
-                   state.players[opponent].draw_pile.size());
+  // float life     = state.players[player].life;
+  // float life_opp = state.players[opponent].life;
+  float mindbugs = std::min(
+    state.players[player].mindbugs, state.players[opponent].hand.size()
+  );
+  float mindbugs_opp = std::min(
+    state.players[opponent].mindbugs, state.players[player].hand.size()
+  );
+
+  // for (int i = 0; i < state.creatures.size(); ++i) {
+  //   if (!state.creatures[i].alive) continue;
+  //   const float power = (float)effective_power(state,
+  //   i); score += state.creatures[i].controller == player
+  //   ? power : -power;
+  // }
+  float cards_left = state.players[player].hand.size() +
+                     state.players[player].draw_pile.size();
+  float cards_left_opp = state.players[opponent].hand.size() +
+                         state.players[opponent].draw_pile.size();
+
+  float score = cards_left + 2 * mindbugs;
+  score /= (cards_left + cards_left_opp) + 2 * (mindbugs + mindbugs_opp);
+
+  assert(score >= 0.0f && score <= 1.0f);
   return score;
 }
 
@@ -116,6 +134,9 @@ inline Game_State sample_state(
   Game_State sampled = concrete;
   Player&    them    = sampled.players[1 - player];
 
+  // TODO(claude): This is wrong! Hidden cards is a random sample of all the
+  // cards in Mindbug that are not visible (in playe, in discard, or in my
+  // hand). You are just shuffling cards as if you knew what they are.
   Array_Inline<int, 24> hidden;
   hidden.append(them.hand.begin(), them.hand.end());
   hidden.append(them.draw_pile.begin(), them.draw_pile.end());
@@ -125,6 +146,7 @@ inline Game_State sample_state(
   them.hand.assign(hidden.begin(), hidden.begin() + hand_size);
   them.draw_pile.assign(hidden.begin() + hand_size, hidden.end());
 
+  // This is also wrong, I don't know cards in my deck.
   Player& us = sampled.players[player];
   std::shuffle(us.draw_pile.begin(), us.draw_pile.end(), rng);
   return sampled;

@@ -59,34 +59,38 @@ bool load_card_designs(const std::string& path) {
 
 // ---- Effect helpers ----
 
-// Discard the cards at `positions` (a sorted list of hand positions).
-static void discard_from_hand(
-  Game_State& state, int player, const std::vector<int>& positions
-) {
-  for (int i = (int)positions.size() - 1; i >= 0; --i) {
-    Player& hand_owner = state.players[player];
-    state.players[player].discard.push_back(hand_owner.hand[positions[i]]);
-    hand_owner.hand.erase(hand_owner.hand.begin() + positions[i]);
+// Every card of a pile, as choice targets.
+static std::vector<int> cards_of(const Array_Inline<int, 24>& pile) {
+  return std::vector<int>(pile.begin(), pile.end());
+}
+
+// Take `card` out of a pile. It is always there: choice targets are read from
+// the pile itself.
+static void remove_card(Array_Inline<int, 24>& pile, int card) {
+  for (int i = 0; i < pile.size(); ++i) {
+    if (pile[i] != card) continue;
+    pile.erase(pile.begin() + i);
+    return;
   }
 }
 
-// Positions of every card in a pile, as choice targets.
-static std::vector<int> all_positions(int count) {
-  std::vector<int> positions;
-  for (int i = 0; i < count; ++i) positions.push_back(i);
-  return positions;
+static void discard_from_hand(
+  Game_State& state, int player, const std::vector<int>& cards
+) {
+  for (int card : cards) {
+    remove_card(state.players[player].hand, card);
+    state.players[player].discard.push_back(card);
+  }
 }
 
-// Play the card at `position` of `pile_owner`'s discard pile, under the
-// control of `controller`. It keeps its owner, so it returns to the same
-// discard pile when it is defeated.
+// Play `card` out of `pile_owner`'s discard pile, under the control of
+// `controller`. It keeps its owner, so it returns to the same discard pile
+// when it is defeated.
 static void play_from_discard(
-  Game_State& state, int pile_owner, int controller, int position
+  Game_State& state, int pile_owner, int controller, int card
 ) {
-  Player&   pile   = state.players[pile_owner];
-  const int design = pile.discard[position];
-  pile.discard.erase(pile.discard.begin() + position);
-  enter_play(state, design, pile_owner, controller);
+  remove_card(state.players[pile_owner].discard, card);
+  enter_play(state, card, pile_owner, controller);
 }
 
 // A number in [0, bound). Only Strange Barrel needs this.
@@ -98,7 +102,7 @@ static int next_random(Game_State& state, int bound) {
 // ---- Abilities ----
 
 void trigger_play(Game_State& state, int creature_index) {
-  const int design = state.creatures[creature_index].design;
+  const int design = creature_design(state, creature_index);
   const int me     = state.creatures[creature_index].controller;
   const int them   = 1 - me;
 
@@ -120,11 +124,9 @@ void trigger_play(Game_State& state, int creature_index) {
       state.queue.push_back(make_choice(
         me,
         "play-from-discard",
-        [me](Game_State& game) {
-          return all_positions(game.players[me].discard.size());
-        },
-        [me](Game_State& game, int position) {
-          play_from_discard(game, me, me, position);
+        [me](Game_State& game) { return cards_of(game.players[me].discard); },
+        [me](Game_State& game, int card) {
+          play_from_discard(game, me, me, card);
         }
       ));
       break;
@@ -133,13 +135,11 @@ void trigger_play(Game_State& state, int creature_index) {
       state.queue.push_back(make_multi_choice(
         them,
         "discard",
-        [them](Game_State& game) {
-          return all_positions(game.players[them].hand.size());
-        },
+        [them](Game_State& game) { return cards_of(game.players[them].hand); },
         2,
         false,
-        [them](Game_State& game, const std::vector<int>& positions) {
-          discard_from_hand(game, them, positions);
+        [them](Game_State& game, const std::vector<int>& cards) {
+          discard_from_hand(game, them, cards);
         }
       ));
       break;
@@ -156,10 +156,10 @@ void trigger_play(Game_State& state, int creature_index) {
         me,
         "play-from-discard",
         [them](Game_State& game) {
-          return all_positions(game.players[them].discard.size());
+          return cards_of(game.players[them].discard);
         },
-        [me, them](Game_State& game, int position) {
-          play_from_discard(game, them, me, position);
+        [me, them](Game_State& game, int card) {
+          play_from_discard(game, them, me, card);
         }
       ));
       break;
@@ -191,7 +191,7 @@ void trigger_play(Game_State& state, int creature_index) {
 }
 
 void trigger_attack(Game_State& state, int creature_index) {
-  const int design = state.creatures[creature_index].design;
+  const int design = creature_design(state, creature_index);
   const int me     = state.creatures[creature_index].controller;
   const int them   = 1 - me;
 
@@ -227,11 +227,9 @@ void trigger_attack(Game_State& state, int creature_index) {
       state.queue.push_back(make_choice(
         them,
         "discard",
-        [them](Game_State& game) {
-          return all_positions(game.players[them].hand.size());
-        },
-        [them](Game_State& game, int position) {
-          discard_from_hand(game, them, {position});
+        [them](Game_State& game) { return cards_of(game.players[them].hand); },
+        [them](Game_State& game, int card) {
+          discard_from_hand(game, them, {card});
         }
       ));
       break;
@@ -241,7 +239,7 @@ void trigger_attack(Game_State& state, int creature_index) {
 }
 
 void trigger_defeated(Game_State& state, int creature_index) {
-  const int design = state.creatures[creature_index].design;
+  const int design = creature_design(state, creature_index);
   const int me     = state.creatures[creature_index].controller;
   const int them   = 1 - me;
 

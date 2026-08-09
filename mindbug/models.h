@@ -79,17 +79,20 @@ extern std::vector<Card_Design> card_designs;
 // A creature that has been played. Defeated creatures keep their slot with
 // alive=false so an index stays valid for as long as a game runs.
 struct Creature {
-  int  design     = 0;
+  int  card       = 0;  // Index into Game_State.all_cards.
   int  owner      = 0;  // Whose discard pile it returns to when defeated.
   int  controller = 0;  // Who attacks and blocks with it; a Mindbug flips this.
   bool exhausted  = false;  // Tough has already saved it once.
   bool alive      = true;
 };
 
+// Card collections hold indices into Game_State.all_cards, so the two copies
+// of a card stay apart — which is what lets the app give each one its own
+// place on the table.
 struct Player {
-  Array_Inline<int, 16> hand;       // Card designs.
+  Array_Inline<int, 24> hand;
   Array_Inline<int, 8>  draw_pile;  // Face-down, in draw order (back = top).
-  Array_Inline<int, 16> discard;
+  Array_Inline<int, 24> discard;
   int                   life     = STARTING_LIFE;
   int                   mindbugs = STARTING_MINDBUGS;
 };
@@ -111,6 +114,9 @@ struct Turn_Action {
 };
 
 struct Game_State : Game {
+  // The 20 cards dealt this game, each holding the design it shows. Fixed at
+  // setup; every other list refers to a card by its index here.
+  Array_Inline<int, 24>      all_cards;
   Player                     players[2];
   Array_Inline<Creature, 32> creatures;
 
@@ -120,11 +126,13 @@ struct Game_State : Game {
   int   winner         = -1;
 
   // Set while a creature is played, until the Mindbug decision resolves.
-  int played_design = -1;
+  int played_card = -1;
   // Set while an attack resolves.
   int attacker     = -1;
   int blocker      = -1;
   int attack_count = 0;  // Attacks this creature has made this turn (frenzy).
+  // A hunter's controller gave the block decision back to the defender.
+  bool hunter_declined = false;
   // The opponent spent a Mindbug, so the active player takes another turn.
   bool extra_turn = false;
 
@@ -141,5 +149,15 @@ struct Game_State : Game {
   Player& active_player() { return players[current_player]; }
   Player& opponent() { return players[1 - current_player]; }
 };
+
+// The design a dealt card shows.
+inline int design_of(const Game_State& state, int card) {
+  return state.all_cards[card];
+}
+
+// The design of the creature in play at `creature_index`.
+inline int creature_design(const Game_State& state, int creature_index) {
+  return design_of(state, state.creatures[creature_index].card);
+}
 
 }  // namespace mindbug

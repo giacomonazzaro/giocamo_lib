@@ -205,6 +205,7 @@ struct Agent_Minimax : Agent {
     Game_T&   concrete    = static_cast<Game_T&>(state);
     const int num_actions = pending_action_count(state);
     if (num_actions <= 0) return 0;
+    printf("Num actions: %d\n", num_actions);
 
     std::vector<float> scores = minimax_scores<Game_T>(
       concrete,

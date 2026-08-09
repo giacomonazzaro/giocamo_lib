@@ -21,18 +21,20 @@ std::vector<int> creatures_of(const Game_State& state, int player) {
 int effective_power(const Game_State& state, int creature_index) {
   const Creature& creature = state.creatures[creature_index];
   const bool      its_turn = state.current_player == creature.controller;
-  int             power    = card_designs[creature.design].power;
+  const int       design   = creature_design(state, creature_index);
+  int             power    = card_designs[design].power;
   int             allies   = 0;
   for (int i = 0; i < state.creatures.size(); ++i) {
     const Creature& other = state.creatures[i];
     if (!other.alive || other.controller != creature.controller) continue;
     allies += 1;
     if (i == creature_index) continue;
-    if (other.design == SHIELD_BUGS) power += 1;
-    if (other.design == URCHIN_HURLER && its_turn) power += 2;
+    const int other_design = creature_design(state, i);
+    if (other_design == SHIELD_BUGS) power += 1;
+    if (other_design == URCHIN_HURLER && its_turn) power += 2;
   }
-  if (creature.design == GOBLIN_WEREWOLF && its_turn) power += 6;
-  if (creature.design == LONE_YETI && allies == 1) power += 5;
+  if (design == GOBLIN_WEREWOLF && its_turn) power += 6;
+  if (design == LONE_YETI && allies == 1) power += 5;
   return power;
 }
 
@@ -41,19 +43,20 @@ static int keywords_of(
   const Game_State& state, int creature_index, bool mirror
 ) {
   const Creature& creature = state.creatures[creature_index];
-  int             keywords = card_designs[creature.design].keywords;
+  const int       design   = creature_design(state, creature_index);
+  int             keywords = card_designs[design].keywords;
   std::vector<int> allies  = creatures_of(state, creature.controller);
 
-  if (creature.design == LONE_YETI && allies.size() == 1) keywords |= FRENZY;
+  if (design == LONE_YETI && allies.size() == 1) keywords |= FRENZY;
   if (effective_power(state, creature_index) <= 4) {
     for (int ally : allies) {
       if (ally != creature_index &&
-          state.creatures[ally].design == SNAIL_THROWER) {
+          creature_design(state, ally) == SNAIL_THROWER) {
         keywords |= HUNTER | POISONOUS;
       }
     }
   }
-  if (creature.design == SHARKY_CRAB_DOG_MUMMYPUS && mirror) {
+  if (design == SHARKY_CRAB_DOG_MUMMYPUS && mirror) {
     for (int enemy : creatures_of(state, 1 - creature.controller)) {
       keywords |= keywords_of(state, enemy, false) &
                   (HUNTER | SNEAKY | FRENZY | POISONOUS);
@@ -85,10 +88,10 @@ bool can_block(const Game_State& state, int attacker, int blocker) {
   if (effective_keywords(state, attacker) & SNEAKY) {
     if (!(effective_keywords(state, blocker) & SNEAKY)) return false;
   }
-  const int power = effective_power(state, blocker);
-  if (state.creatures[attacker].design == BEE_BEAR && power <= 6) return false;
-  if (state.creatures[attacker].design == ELEPHANTOPUS && power <= 4)
-    return false;
+  const int power           = effective_power(state, blocker);
+  const int attacker_design = creature_design(state, attacker);
+  if (attacker_design == BEE_BEAR && power <= 6) return false;
+  if (attacker_design == ELEPHANTOPUS && power <= 4) return false;
   return true;
 }
 
@@ -109,9 +112,7 @@ int compute_player_score(const Game_State& state, int player) {
 
 // ---- Choice helpers ----
 
-// Every selection of `count` targets out of `targets` (or of up to `count`, if
-// up_to), in the order action_options_count enumerates them.
-static std::vector<std::vector<int>> combinations(
+std::vector<std::vector<int>> target_combinations(
   const std::vector<int>& targets, int count, bool up_to
 ) {
   const int                     size = (int)targets.size();
@@ -121,7 +122,7 @@ static std::vector<std::vector<int>> combinations(
     return result;
   }
   const int first = up_to ? 0 : count;
-  for (int k = first; k <= count; ++k) {
+  for (int k = first; k <= std::min(count, size); ++k) {
     if (k == 0) {
       result.push_back({});
       continue;
@@ -180,7 +181,9 @@ Choice make_multi_choice(
   choice.resolve =
     [get_targets, count, up_to, on_chosen](Game& game, int index) -> Choice {
     Game_State& state = static_cast<Game_State&>(game);
-    on_chosen(state, combinations(get_targets(state), count, up_to)[index]);
+    on_chosen(
+      state, target_combinations(get_targets(state), count, up_to)[index]
+    );
     return null_choice;
   };
   return choice;
@@ -199,9 +202,9 @@ void lose_life(Game_State& state, int player, int amount) {
   if (state.players[player].life <= 0) end_game(state, 1 - player);
 }
 
-int enter_play(Game_State& state, int design, int owner, int controller) {
+int enter_play(Game_State& state, int card, int owner, int controller) {
   auto creature       = Creature();
-  creature.design     = design;
+  creature.card       = card;
   creature.owner      = owner;
   creature.controller = controller;
   state.creatures.push_back(creature);
@@ -209,7 +212,7 @@ int enter_play(Game_State& state, int design, int owner, int controller) {
 
   // A Deathweaver on the other side switches the Play ability off.
   for (int enemy : creatures_of(state, 1 - controller)) {
-    if (state.creatures[enemy].design == DEATHWEAVER) return index;
+    if (creature_design(state, enemy) == DEATHWEAVER) return index;
   }
   trigger_play(state, index);
   return index;
@@ -224,7 +227,7 @@ void defeat_creature(Game_State& state, int creature_index) {
     return;
   }
   creature.alive = false;
-  state.players[creature.owner].discard.push_back(creature.design);
+  state.players[creature.owner].discard.push_back(creature.card);
   trigger_defeated(state, creature_index);
 }
 
@@ -253,7 +256,7 @@ static Choice make_turn_choice(Game_State& state) {
       state.phase        = Phase::ATTACK;
     } else {
       Player& player      = state.active_player();
-      state.played_design = player.hand[action.index];
+      state.played_card = player.hand[action.index];
       player.hand.erase(player.hand.begin() + action.index);
       state.phase = Phase::MINDBUG;
     }
@@ -266,16 +269,16 @@ static Choice make_turn_choice(Game_State& state) {
 // opponent or not, and end the turn. Stealing gives the active player another
 // turn.
 static void resolve_played_creature(Game_State& state, bool stolen) {
-  const int owner  = state.current_player;
-  const int thief  = 1 - owner;
-  const int design = state.played_design;
-  state.played_design = -1;
-  state.phase         = Phase::TURN_END;
+  const int owner   = state.current_player;
+  const int thief   = 1 - owner;
+  const int card    = state.played_card;
+  state.played_card = -1;
+  state.phase       = Phase::TURN_END;
   if (stolen) {
     state.players[thief].mindbugs -= 1;
     state.extra_turn = true;
   }
-  enter_play(state, design, owner, stolen ? thief : owner);
+  enter_play(state, card, owner, stolen ? thief : owner);
 }
 
 static Choice make_mindbug_choice(Game_State& state) {
@@ -305,26 +308,37 @@ static std::vector<int> legal_blockers(const Game_State& state) {
 }
 
 static Choice make_block_choice(Game_State& state) {
-  // A hunter's controller picks the blocker; otherwise the defender does.
+  // A hunter's controller picks the blocker, unless they pass the decision
+  // back; then the defender chooses as usual.
   const int  controller = state.creatures[state.attacker].controller;
-  const bool hunter = (effective_keywords(state, state.attacker) & HUNTER) != 0;
+  const bool hunter =
+    !state.hunter_declined &&
+    (effective_keywords(state, state.attacker) & HUNTER) != 0;
 
   auto choice             = Choice();
   choice.player_index     = hunter ? controller : 1 - controller;
-  choice.description      = "block";
-  choice.text_description = hunter ? "Choose the blocker" : "Block the attack?";
-  choice.actions          = [](Game& game) -> Choose {
+  choice.description      = hunter ? "hunt" : "block";
+  choice.text_description = hunter ? "Choose the blocker, or leave it to the "
+                                     "opponent"
+                                   : "Block the attack?";
+  choice.actions = [](Game& game) -> Choose {
     auto options = Choose_Card();
     for (int blocker : legal_blockers(static_cast<Game_State&>(game))) {
       options.targets.push_back(blocker);
     }
-    options.targets.push_back(-1);  // Let it through.
+    // The last option: leave the decision to the defender when a hunter is
+    // choosing, let the attack through when the defender is.
+    options.targets.push_back(-1);
     options.up_to = true;
     return options;
   };
-  choice.resolve = [](Game& game, int index) -> Choice {
+  choice.resolve = [hunter](Game& game, int index) -> Choice {
     Game_State&      state    = static_cast<Game_State&>(game);
     std::vector<int> blockers = legal_blockers(state);
+    if (index >= (int)blockers.size() && hunter) {
+      state.hunter_declined = true;  // The defender is asked next.
+      return null_choice;
+    }
     state.blocker = index < (int)blockers.size() ? blockers[index] : -1;
     state.phase   = Phase::COMBAT;
     return null_choice;
@@ -377,6 +391,12 @@ static void end_turn(Game_State& state) {
   state.phase = Phase::TURN;
 }
 
+static bool has_targets(const Choose& choose) {
+  return std::visit(
+    [](const auto& option) { return option.targets.size() > 0; }, choose
+  );
+}
+
 Choice Game_State::next_choice() {
   Game_State& state = *this;
   while (!state.game_over) {
@@ -385,7 +405,7 @@ Choice Game_State::next_choice() {
     if (!state.queue.empty()) {
       Choice choice = state.queue.front();
       state.queue.erase(state.queue.begin());
-      if (action_options_count(choice.actions(state)) > 0) return choice;
+      if (has_targets(choice.actions(state))) return choice;
       continue;
     }
 
@@ -407,6 +427,7 @@ Choice Game_State::next_choice() {
 
       case Phase::ATTACK:
         state.attack_count += 1;
+        state.hunter_declined = false;
         trigger_attack(state, state.attacker);
         state.phase = Phase::BLOCK;
         continue;
@@ -448,15 +469,20 @@ Game_State quick_setup(int seed) {
 
   auto state        = Game_State();
   state.random_seed = (unsigned int)seed + 1;
-  int dealt         = 0;
+
+  // Only the cards dealt to the two players take part in the game.
+  const int dealt_count = 2 * (HAND_SIZE + DRAW_PILE_SIZE);
+  state.all_cards.assign(deck.begin(), deck.begin() + dealt_count);
+
+  int card = 0;
   for (int player = 0; player < 2; ++player) {
-    // ponytail: the dealt 10 cards are split 5/5 at random. The rules let a
-    // player pick which 5 go to hand — add that as a setup choice if wanted.
+    // The dealt 10 cards are split 5/5 at random. On the rules sheet the
+    // player picks which 5 of the 10 go to hand.
     for (int i = 0; i < HAND_SIZE; ++i) {
-      state.players[player].hand.push_back(deck[dealt++]);
+      state.players[player].hand.push_back(card++);
     }
     for (int i = 0; i < DRAW_PILE_SIZE; ++i) {
-      state.players[player].draw_pile.push_back(deck[dealt++]);
+      state.players[player].draw_pile.push_back(card++);
     }
   }
   state.begin_game();
