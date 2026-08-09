@@ -171,7 +171,8 @@ Agent* make_agent_pair(
   return make_duel(local_agent, opponent, menu_result);
 }
 
-void play_game(
+// The loop both call shapes share.
+static void run_game(
   Game&                                      state,
   Table_State&                               table,
   UI_State&                                  ui_state,
@@ -185,6 +186,11 @@ void play_game(
   std::function<void(const nlohmann::json&)> on_message
 ) {
   auto current_choice = std::optional<Choice>();
+
+  // Deal the game the seat agreed on. A game its caller set up already has
+  // nothing left to do here.
+  state.init(menu_result.seed);
+  if (update_table_from_game) update_table_from_game();
 
   // Nullable handle to the remote peer. Outside online mode this stays null
   // and every send/recv branch below short-circuits.
@@ -316,6 +322,57 @@ void play_game(
   // run_tabletop already closed the window when it was the one that opened it
   // (no menu ran first). Closing it twice frees raylib's render batch twice.
   if (IsWindowReady()) CloseWindow();
+}
+
+void play_game(
+  Game&                                      state,
+  Table_State&                               table,
+  UI_State&                                  ui_state,
+  Agent&                                     agent,
+  Input_Feed&                                input_feed,
+  const Menu_Result&                         menu_result,
+  const std::string&                         window_title,
+  std::function<void()>                      update_table_from_game,
+  std::function<std::vector<int>()>          compute_scores,
+  std::function<void()>                      update_game_from_table,
+  std::function<void(const nlohmann::json&)> on_message
+) {
+  run_game(
+    state,
+    table,
+    ui_state,
+    agent,
+    input_feed,
+    menu_result,
+    window_title,
+    update_table_from_game,
+    compute_scores,
+    update_game_from_table,
+    on_message
+  );
+}
+
+void play_game(
+  Giocamo&           giocamo,
+  UI_State&          ui_state,
+  Agent&             agent,
+  Input_Feed&        input_feed,
+  const Menu_Result& menu_result,
+  const std::string& window_title
+) {
+  run_game(
+    giocamo.game,
+    giocamo.table,
+    ui_state,
+    agent,
+    input_feed,
+    menu_result,
+    window_title,
+    [&giocamo] { giocamo.update_table_from_game(); },
+    [&giocamo] { return giocamo.player_scores(); },
+    [&giocamo] { giocamo.update_game_from_table(); },
+    [&giocamo](const nlohmann::json& message) { giocamo.on_message(message); }
+  );
 }
 
 // // All CLI options understood by the binary.

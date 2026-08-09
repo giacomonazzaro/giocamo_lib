@@ -21,90 +21,113 @@
 #include "agent_ui.h"
 #include "ui.h"
 
-// Copy the game state into the table: every zone owns the cards the game says
-// it holds, and a hand is only face up for the player it belongs to.
-static void update_table_from_game(
-  Table_State&         table,
-  mindbug::Game_State& state,
-  int                  bottom_player,
-  bool                 show_opponent_hand
-) {
-  // Clicking a card also starts dragging it, and the card the player just
-  // clicked is about to change zone. End the drag first, or the layout would
-  // look for it in the zone it has already left.
-  table.drag_state = Drag_State();
+// Mindbug on the table. The table is laid out once here; play_game deals the
+// game and drives the loop through these hooks.
+struct Mindbug_Giocamo : Giocamo {
+  UI_State& ui_state;
+  int       bottom_player;
+  bool      show_opponent_hand;
 
-  auto set_zone = [&](const std::string& name, const std::vector<int>& cards) {
-    const int zone               = find_thing(table, name);
-    table.things[zone]._children = cards;
-    update_children_positions(zone, table, false);
-  };
+  Mindbug_Giocamo(
+    mindbug::Game_State& state,
+    UI_State&            ui_state,
+    int                  bottom_player,
+    bool                 show_opponent_hand
+  )
+      : Giocamo(state, Table_State())
+      , ui_state(ui_state)
+      , bottom_player(bottom_player)
+      , show_opponent_hand(show_opponent_hand) {
+    table.is_drop_allowed = [](int, int, int) { return false; };
 
-  for (int player = 0; player < 2; ++player) {
-    const std::string      prefix     = "p" + std::to_string(player) + "_";
-    const mindbug::Player& hand_owner = state.players[player];
-    set_zone(prefix + "hand", {hand_owner.hand.begin(), hand_owner.hand.end()});
-    set_zone(
-      prefix + "draw",
-      {hand_owner.draw_pile.begin(), hand_owner.draw_pile.end()}
-    );
-    set_zone(
-      prefix + "discard", {hand_owner.discard.begin(), hand_owner.discard.end()}
-    );
+    // One Thing per card of the deal; ids match the game's card indices. The
+    // deal comes later, so a card takes its art in update_table_from_game.
+    const int card_count = 2 * (mindbug::HAND_SIZE + mindbug::DRAW_PILE_SIZE);
+    for (int card = 0; card < card_count; ++card) {
+      table.things.push_back(make_card());
+      table.draw_callbacks[card] =
+        make_card_draw_callback(this->state(), ui_state, card);
+    }
 
-    set_zone(
-      prefix + "creatures",
-      {hand_owner.creatures.begin(), hand_owner.creatures.end()}
-    );
+    auto zone_ids = std::vector<int>();
+    for (Thing& zone : make_mindbug_stacks(
+           bottom_player, tt::WINDOW_WIDTH, tt::WINDOW_HEIGHT
+         )) {
+      zone_ids.push_back(add_thing(table, std::move(zone)));
+    }
 
-    // You always see your own hand; the opponent's is face down unless both
-    // players share this screen.
-    const bool visible = player == bottom_player || show_opponent_hand;
-    table.things[find_thing(table, prefix + "hand")].face_up = visible;
+    // Empty texture path: the table is drawn with root.color.
+    auto root      = create_table_root(tt::WINDOW_WIDTH, tt::WINDOW_HEIGHT, "");
+    root._children = zone_ids;
+    root.color     = {18, 20, 26, 255};
+    table.root     = add_thing(table, std::move(root));
+
+    table.draw_callbacks[-1] = [this](const Table_State&, const Input&, bool) {
+      draw_mindbug_hud(this->state(), this->bottom_player);
+    };
   }
 
-  // The creature waiting on a Mindbug decision is face up for both players —
-  // the opponent has to see what they may take.
-  set_zone(
-    "played",
-    state.played_card == -1 ? std::vector<int>{}
-                            : std::vector<int>{state.played_card}
-  );
-}
-
-static Table_State init_table_state(
-  mindbug::Game_State& state,
-  UI_State&            ui_state,
-  int                  bottom_player,
-  bool                 show_opponent_hand
-) {
-  auto table            = Table_State();
-  table.is_drop_allowed = [](int, int, int) { return false; };
-
-  // One Thing per dealt card; ids match the game's card indices.
-  for (int card = 0; card < state.all_cards.size(); ++card) {
-    const mindbug::Card_Design& design =
-      mindbug::card_designs[mindbug::design_of(state, card)];
-    table.things.push_back(make_card(get_image_path(design.image)));
-    table.draw_callbacks[card] = make_card_draw_callback(state, ui_state, card);
+  mindbug::Game_State& state() {
+    return static_cast<mindbug::Game_State&>(game);
   }
 
-  std::vector<int> zone_ids;
-  for (Thing& zone : make_mindbug_stacks(
-         bottom_player, tt::WINDOW_WIDTH, tt::WINDOW_HEIGHT
-       )) {
-    zone_ids.push_back(add_thing(table, std::move(zone)));
+  // Every zone owns the cards the game says it holds, and a hand is only face
+  // up for the player it belongs to.
+  void update_table_from_game() override {
+    mindbug::Game_State& state = this->state();
+
+    // Clicking a card also starts dragging it, and the card the player just
+    // clicked is about to change zone. End the drag first, or the layout would
+    // look for it in the zone it has already left.
+    table.drag_state = Drag_State();
+
+    for (int card = 0; card < state.all_cards.size(); ++card) {
+      const mindbug::Card_Design& design =
+        mindbug::card_designs[mindbug::design_of(state, card)];
+      table.things[card].image_path = get_image_path(design.image);
+    }
+
+    auto set_zone = [&](const std::string& name, const std::vector<int>& cards) {
+      const int zone               = find_thing(table, name);
+      table.things[zone]._children = cards;
+      update_children_positions(zone, table, false);
+    };
+
+    for (int player = 0; player < 2; ++player) {
+      const std::string      prefix = "p" + std::to_string(player) + "_";
+      const mindbug::Player& seat   = state.players[player];
+      set_zone(prefix + "hand", {seat.hand.begin(), seat.hand.end()});
+      set_zone(prefix + "draw", {seat.draw_pile.begin(), seat.draw_pile.end()});
+      set_zone(prefix + "discard", {seat.discard.begin(), seat.discard.end()});
+      set_zone(
+        prefix + "creatures", {seat.creatures.begin(), seat.creatures.end()}
+      );
+
+      // You always see your own hand; the opponent's is face down unless both
+      // players share this screen.
+      const bool visible = player == bottom_player || show_opponent_hand;
+      table.things[find_thing(table, prefix + "hand")].face_up = visible;
+    }
+
+    // The creature waiting on a Mindbug decision is face up for both players —
+    // the opponent has to see what they may take.
+    set_zone(
+      "played",
+      state.played_card == -1 ? std::vector<int>{}
+                              : std::vector<int>{state.played_card}
+    );
   }
 
-  // Empty texture path: the table is drawn with root.color.
-  auto root      = create_table_root(tt::WINDOW_WIDTH, tt::WINDOW_HEIGHT, "");
-  root._children = zone_ids;
-  root.color     = {18, 20, 26, 255};
-  table.root     = add_thing(table, std::move(root));
+  // Leaving playground: the game is the truth, so put the table back.
+  void update_game_from_table() override { update_table_from_game(); }
 
-  update_table_from_game(table, state, bottom_player, show_opponent_hand);
-  return table;
-}
+  std::vector<int> player_scores() override {
+    return {
+      mindbug::compute_player_score(this->state(), 0),
+      mindbug::compute_player_score(this->state(), 1),
+    };
+  }
+};
 
 static Agent* make_ai_opponent() {
   // Mindbug hides the opponent's hand, so the search votes over sampled deals.
@@ -134,39 +157,19 @@ int main(int argc, char** argv) {
     options.seed
   );
 
-  auto state    = mindbug::quick_setup(menu_result.seed);
-  auto ui_state = UI_State(tt::WINDOW_WIDTH, tt::WINDOW_HEIGHT);
-
   // The local player sits at the bottom; in online play that may be seat 1.
   // Both hands are shown only in hot-seat, where one screen is shared.
   const int  bottom_player = menu_result.player_index;
   const bool hot_seat      = !options.vs_ai && !menu_result.is_online();
-  auto       table = init_table_state(state, ui_state, bottom_player, hot_seat);
 
-  table.draw_callbacks[-1] =
-    [&state, bottom_player](const Table_State&, const Input&, bool) {
-      draw_mindbug_hud(state, bottom_player);
-    };
+  auto state   = mindbug::Game_State();
+  auto ui_state = UI_State(tt::WINDOW_WIDTH, tt::WINDOW_HEIGHT);
+  auto giocamo = Mindbug_Giocamo(state, ui_state, bottom_player, hot_seat);
 
-  auto   agent_ui = Mindbug_Agent_UI(&table, &ui_state, bottom_player);
+  auto   agent_ui = Mindbug_Agent_UI(&giocamo.table, &ui_state, bottom_player);
   Agent* agent =
     make_agent_pair(&agent_ui, make_ai_opponent(), menu_result, options.vs_ai);
 
-  play_game(
-    state,
-    table,
-    ui_state,
-    *agent,
-    inputs,
-    menu_result,
-    "Mindbug",
-    [&] { update_table_from_game(table, state, bottom_player, hot_seat); },
-    [&] {
-      return std::vector<int>{
-        mindbug::compute_player_score(state, 0),
-        mindbug::compute_player_score(state, 1),
-      };
-    }
-  );
+  play_game(giocamo, ui_state, *agent, inputs, menu_result, "Mindbug");
   return 0;
 }

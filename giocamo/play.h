@@ -89,6 +89,31 @@ Agent* make_agent_pair(
   bool               vs_ai
 );
 
+struct Giocamo {
+  Game&       game;
+  Table_State table;
+
+  Giocamo(Game& game, Table_State table) : game(game), table(table) {}
+
+  virtual ~Giocamo()                                = default;
+  virtual void             update_table_from_game() = 0;
+  virtual std::vector<int> player_scores() = 0;  // TODO(giacomo): not needed
+  virtual void             update_game_from_table() {}
+  virtual void             on_message(const nlohmann::json& msg) {}
+};
+
+// Standard game loop. Initializes the game with the seat's seed, runs the
+// table-top loop until the window closes or the game ends, then draws the
+// result screen.
+void play_game(
+  Giocamo&           giocamo,
+  UI_State&          ui_state,
+  Agent&             agent,
+  Input_Feed&        input_feed,
+  const Menu_Result& menu_result,
+  const std::string& window_title
+);
+
 // Standard game loop. Runs the table-top interactive loop until the window
 // closes or the game ends; on game-over draws the result screen.
 //
@@ -109,17 +134,18 @@ Agent* make_agent_pair(
 //                           resumes from it. If null, the table is instead
 //                           restored from the game via update_table_from_game.
 // `on_message`            — handles online messages play_game doesn't itself
-//                           recognize (anything but "playground"/"table_state").
+//                           recognize (anything but
+//                           "playground"/"table_state").
 void play_game(
-  Game&                             state,
-  Table_State&                      table,
-  UI_State&                         ui_state,
-  Agent&                            agent,
-  Input_Feed&                       input_feed,
-  const Menu_Result&                menu_result,
-  const std::string&                window_title,
-  std::function<void()>             update_table_from_game,
-  std::function<std::vector<int>()> compute_scores,
-  std::function<void()>             update_game_from_table = nullptr,
-  std::function<void(const nlohmann::json&)> on_message    = nullptr
+  Game&                                      state,
+  Table_State&                               table,
+  UI_State&                                  ui_state,
+  Agent&                                     agent,
+  Input_Feed&                                input_feed,
+  const Menu_Result&                         menu_result,
+  const std::string&                         window_title,
+  std::function<void()>                      update_table_from_game,
+  std::function<std::vector<int>()>          compute_scores,
+  std::function<void()>                      update_game_from_table = nullptr,
+  std::function<void(const nlohmann::json&)> on_message             = nullptr
 );

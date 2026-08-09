@@ -89,6 +89,11 @@ struct Game {
   virtual bool   is_game_over() const = 0;
   virtual Choice next_choice()        = 0;
 
+  // Set the game up — deal the cards, place the pieces — and ask for the
+  // opening choice with begin_game(). play_game calls it once, before anything
+  // else reads the state. A game with nothing to randomize ignores `seed`.
+  virtual void init(int seed = 0) {}
+
   // Asks the game for its opening choice. Setup calls this once, after it has
   // dealt the cards or set up the board.
   void begin_game() { _choice = next_choice(); }

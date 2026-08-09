@@ -464,32 +464,35 @@ Choice Game_State::next_choice() {
 
 // ---- Setup ----
 
-Game_State quick_setup(int seed) {
+void Game_State::init(int seed) {
   assert(!card_designs.empty() && "load_card_designs() has not been called");
 
-  auto deck = full_deck_designs();
   auto rng  = std::mt19937((unsigned int)seed);
+  auto deck = full_deck_designs();
   std::shuffle(deck.begin(), deck.end(), rng);
-
-  auto state        = Game_State();
-  state.random_seed = (unsigned int)seed + 1;
+  random_seed = (unsigned int)rng();
 
   // Only the cards dealt to the two players take part in the game.
   const int dealt_count = 2 * (HAND_SIZE + DRAW_PILE_SIZE);
-  state.all_cards.assign(deck.begin(), deck.begin() + dealt_count);
+  all_cards.assign(deck.begin(), deck.begin() + dealt_count);
 
   int card = 0;
   for (int player = 0; player < 2; ++player) {
     // The dealt 10 cards are split 5/5 at random. On the rules sheet the
     // player picks which 5 of the 10 go to hand.
     for (int i = 0; i < HAND_SIZE; ++i) {
-      state.players[player].hand.push_back(card++);
+      players[player].hand.push_back(card++);
     }
     for (int i = 0; i < DRAW_PILE_SIZE; ++i) {
-      state.players[player].draw_pile.push_back(card++);
+      players[player].draw_pile.push_back(card++);
     }
   }
-  state.begin_game();
+  begin_game();
+}
+
+Game_State quick_setup(int seed) {
+  auto state = Game_State();
+  state.init(seed);
   return state;
 }
 

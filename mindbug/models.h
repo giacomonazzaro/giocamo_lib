@@ -139,6 +139,7 @@ struct Game_State : Game {
 
   bool   is_game_over() const override { return game_over; }
   Choice next_choice() override;
+  void   init(int seed = 0) override;
 
   Player& active_player() { return players[current_player]; }
   Player& opponent() { return players[1 - current_player]; }
