@@ -109,9 +109,9 @@ static Table_State init_table_state(
 
 static Agent* make_ai_opponent() {
   // Mindbug hides the opponent's hand, so the search votes over sampled deals.
-  return new Agent_Minimax<mindbug::Game_State>(
-    /* max_depth   */ 15
-    // /* num_samples */ 16
+  return new Agent_Minimax_Stochastic<mindbug::Game_State>(
+    /* max_depth   */ 15,
+    /* num_samples */ 30
   );
 }
 

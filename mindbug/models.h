@@ -90,20 +90,20 @@ struct Creature {
 // of a card stay apart — which is what lets the app give each one its own
 // place on the table.
 struct Player {
-  Array_Inline<int, 24> hand;
-  Array_Inline<int, 8>  draw_pile;  // Face-down, in draw order (back = top).
-  Array_Inline<int, 24> discard;
+  Array_Inline<int, 5>  hand;
+  Array_Inline<int, 5>  draw_pile;  // Face-down, in draw order (back = top).
+  Array_Inline<int, 10> discard;
   int                   life     = STARTING_LIFE;
   int                   mindbugs = STARTING_MINDBUGS;
 };
 
 // What the game does next once the pending effects are done.
 enum class Phase {
-  TURN,      // The active player plays a creature or attacks with one.
-  MINDBUG,   // The opponent decides whether to steal the creature being played.
-  ATTACK,    // The attacker's Attack ability triggers.
-  BLOCK,     // A blocker is picked, by the defender or by a hunter's controller.
-  COMBAT,    // The block (or lack of one) is resolved.
+  TURN,     // The active player plays a creature or attacks with one.
+  MINDBUG,  // The opponent decides whether to steal the creature being played.
+  ATTACK,   // The attacker's Attack ability triggers.
+  BLOCK,    // A blocker is picked, by the defender or by a hunter's controller.
+  COMBAT,   // The block (or lack of one) is resolved.
   TURN_END,  // Refill the hand, then pass the turn.
 };
 

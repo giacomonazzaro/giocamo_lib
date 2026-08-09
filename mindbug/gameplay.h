@@ -18,6 +18,19 @@ bool load_card_designs(const std::string& path = "mindbug/cards.json");
 // 5 face down, and ask for the first decision.
 Game_State quick_setup(int seed);
 
+// The whole 48-card deck as a list of designs, each repeated as many times as
+// the card is printed. Setup deals out of it, and a search samples the cards it
+// cannot see out of what is left of it.
+inline Array_Inline<int, 48> full_deck_designs() {
+  auto deck = Array_Inline<int, 48>();
+  for (int design = 0; design < (int)card_designs.size(); ++design) {
+    for (int copy = 0; copy < card_designs[design].copies; ++copy) {
+      deck.push_back(design);
+    }
+  }
+  return deck;
+}
+
 // Power after the auras and self conditions that change it.
 int effective_power(const Game_State& state, int creature_index);
 
@@ -117,38 +130,52 @@ inline float evaluate_state(const Game_State& state, int player) {
                      state.players[player].draw_pile.size();
   float cards_left_opp = state.players[opponent].hand.size() +
                          state.players[opponent].draw_pile.size();
+  if (cards_left == 0 && state.current_player == player) return 0.0f;
+  if (cards_left_opp == 0 && state.current_player == opponent) return 2.0f;
 
   float score = cards_left + 2 * mindbugs;
-  score /= (cards_left + cards_left_opp) + 2 * (mindbugs + mindbugs_opp);
+  float den   = (cards_left + cards_left_opp) + 2 * (mindbugs + mindbugs_opp);
+  if (den > 0.0f)
+    score /= den;
+  else
+    score = 0.5f;
 
   assert(score >= 0.0f && score <= 1.0f);
   return score;
 }
 
-// One position `player` cannot tell apart from `state`: what they cannot see is
-// the opponent's hand and the order of both draw piles. Pool the opponent's
-// hand with their draw pile, reshuffle, and deal it back the same way.
+// One position `player` cannot tell apart from `state`.
+//
+// A player has seen their own hand, both discard piles and everything in play.
+// Every other card is the same unknown to them: the opponent's hand, both draw
+// piles and the 28 cards the deal set aside are one pool, and a card in a
+// hidden zone could be any card of the deck that has not been shown. So take
+// the deck, drop what has been seen, shuffle the rest, and deal the hidden
+// cards again out of it. The zones keep their sizes; only what the cards are
+// changes.
 inline Game_State sample_state(
   const Game_State& concrete, int player, std::mt19937& rng
 ) {
-  Game_State sampled = concrete;
-  Player&    them    = sampled.players[1 - player];
+  auto sampled = Game_State(concrete);
 
-  // TODO(claude): This is wrong! Hidden cards is a random sample of all the
-  // cards in Mindbug that are not visible (in playe, in discard, or in my
-  // hand). You are just shuffling cards as if you knew what they are.
-  Array_Inline<int, 24> hidden;
-  hidden.append(them.hand.begin(), them.hand.end());
-  hidden.append(them.draw_pile.begin(), them.draw_pile.end());
-  std::shuffle(hidden.begin(), hidden.end(), rng);
+  auto is_hidden = std::vector<bool>(sampled.all_cards.size(), false);
+  for (int card : sampled.players[player].draw_pile) is_hidden[card] = true;
+  for (int card : sampled.players[1 - player].hand) is_hidden[card] = true;
+  for (int card : sampled.players[1 - player].draw_pile) is_hidden[card] = true;
 
-  const int hand_size = them.hand.size();
-  them.hand.assign(hidden.begin(), hidden.begin() + hand_size);
-  them.draw_pile.assign(hidden.begin() + hand_size, hidden.end());
+  auto unseen = full_deck_designs();
+  for (int card = 0; card < (int)is_hidden.size(); ++card) {
+    if (is_hidden[card]) continue;
+    auto shown =
+      std::find(unseen.begin(), unseen.end(), design_of(sampled, card));
+    if (shown != unseen.end()) unseen.erase(shown);
+  }
+  std::shuffle(unseen.begin(), unseen.end(), rng);
 
-  // This is also wrong, I don't know cards in my deck.
-  Player& us = sampled.players[player];
-  std::shuffle(us.draw_pile.begin(), us.draw_pile.end(), rng);
+  int next = 0;
+  for (int card = 0; card < (int)is_hidden.size(); ++card) {
+    if (is_hidden[card]) sampled.all_cards[card] = unseen[next++];
+  }
   return sampled;
 }
 

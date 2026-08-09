@@ -458,13 +458,8 @@ Choice Game_State::next_choice() {
 Game_State quick_setup(int seed) {
   assert(!card_designs.empty() && "load_card_designs() has not been called");
 
-  std::vector<int> deck;
-  for (int design = 0; design < (int)card_designs.size(); ++design) {
-    for (int copy = 0; copy < card_designs[design].copies; ++copy) {
-      deck.push_back(design);
-    }
-  }
-  auto rng = std::mt19937((unsigned int)seed);
+  auto deck = full_deck_designs();
+  auto rng  = std::mt19937((unsigned int)seed);
   std::shuffle(deck.begin(), deck.end(), rng);
 
   auto state        = Game_State();

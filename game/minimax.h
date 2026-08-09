@@ -215,7 +215,9 @@ struct Agent_Minimax : Agent {
       num_threads,
       [] { return false; }
     );
-    return argmax_randomized(scores);
+    auto result = argmax_randomized(scores);
+    printf("value: %f\n", scores[result]);
+    return result;
   }
 };
 
@@ -289,6 +291,7 @@ struct Agent_Minimax_Stochastic : Agent_Minimax<Game_T> {
     const int player_index = pending_choice(state).player_index;
     if (num_actions <= 0) return 0;
     if (num_actions == 1) return 0;
+    printf("Num actions: %d\n", num_actions);
 
     static thread_local std::mt19937 rng{std::random_device{}()};
     std::vector<int>                 votes(num_actions, 0);
@@ -311,6 +314,7 @@ struct Agent_Minimax_Stochastic : Agent_Minimax<Game_T> {
     // scoress[s] is written by exactly one thread (index s), so no
     // synchronisation is needed when reading the results after joining.
     auto scoress = std::vector<std::vector<float>>(num_samples);
+    auto avg     = std::vector<float>(num_actions, 0.0f);
     auto threads = std::vector<std::thread>(num_samples);
     for (int s = 0; s < num_samples; ++s) {
       threads[s] = std::thread([&, s] {
@@ -325,9 +329,16 @@ struct Agent_Minimax_Stochastic : Agent_Minimax<Game_T> {
       });
     }
     for (auto& t : threads) t.join();
+    for (int s = 0; s < num_samples; ++s) {
+      for (int a = 0; a < num_actions; ++a)
+        avg[a] += scoress[s][a] / num_samples;
+    }
+
     for (const auto& scores : scoress) votes[argmax_randomized(scores)] += 1;
 #endif
 
-    return argmax_randomized(votes);
+    auto result = argmax_randomized(votes);
+    printf("Score: %f\n", avg[result]);
+    return result;
   }
 };

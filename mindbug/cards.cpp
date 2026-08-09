@@ -1,10 +1,10 @@
 #include "cards.h"
 
 #include <mindbug/gameplay.h>
-#include <nlohmann/json.hpp>
 
 #include <fstream>
 #include <iostream>
+#include <nlohmann/json.hpp>
 
 namespace mindbug {
 
@@ -60,13 +60,15 @@ bool load_card_designs(const std::string& path) {
 // ---- Effect helpers ----
 
 // Every card of a pile, as choice targets.
-static std::vector<int> cards_of(const Array_Inline<int, 24>& pile) {
+template <int N>
+static std::vector<int> cards_of(const Array_Inline<int, N>& pile) {
   return std::vector<int>(pile.begin(), pile.end());
 }
 
 // Take `card` out of a pile. It is always there: choice targets are read from
 // the pile itself.
-static void remove_card(Array_Inline<int, 24>& pile, int card) {
+template <int N>
+static void remove_card(Array_Inline<int, N>& pile, int card) {
   for (int i = 0; i < pile.size(); ++i) {
     if (pile[i] != card) continue;
     pile.erase(pile.begin() + i);
@@ -181,7 +183,9 @@ void trigger_play(Game_State& state, int creature_index) {
       state.queue.push_back(make_choice(
         me,
         "defeat",
-        [them](Game_State& game) { return creature_targets(game, them, 7, 99); },
+        [them](Game_State& game) {
+          return creature_targets(game, them, 7, 99);
+        },
         [](Game_State& game, int target) { defeat_creature(game, target); }
       ));
       break;
@@ -202,7 +206,9 @@ void trigger_attack(Game_State& state, int creature_index) {
       state.queue.push_back(make_choice(
         me,
         "defeat",
-        [them](Game_State& game) { return creature_targets(game, them, 6, 99); },
+        [them](Game_State& game) {
+          return creature_targets(game, them, 6, 99);
+        },
         [](Game_State& game, int target) { defeat_creature(game, target); }
       ));
       break;

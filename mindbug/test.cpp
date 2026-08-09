@@ -8,6 +8,7 @@
 #include <mindbug/cards.h>
 #include <mindbug/gameplay.h>
 
+#include <cmath>
 #include <iostream>
 
 using namespace mindbug;
@@ -176,6 +177,65 @@ static void test_hunter_declines() {
   check(state.players[1].life == STARTING_LIFE - 1, "an unblocked attack hits");
 }
 
+// A sampled deal keeps everything the player has seen and stays a deal the
+// 48-card deck could have produced.
+static void test_sampling() {
+  Game_State   state = quick_setup(11);
+  std::mt19937 rng(11);
+
+  // Move the game along so there is something in play and in a discard pile.
+  Agent_Random agent(11);
+  for (int i = 0; i < 30 && !state.is_game_over(); ++i) {
+    resolve_choice(state, agent.choose_action(state, pending_choice(state)));
+  }
+
+  for (int player = 0; player < 2; ++player) {
+    Game_State sampled = sample_state(state, player, rng);
+
+    for (int card : state.players[player].hand) {
+      check(
+        design_of(sampled, card) == design_of(state, card), "my hand is kept"
+      );
+    }
+    for (int i = 0; i < state.creatures.size(); ++i) {
+      check(
+        creature_design(sampled, i) == creature_design(state, i),
+        "creatures are kept"
+      );
+    }
+    for (int seat = 0; seat < 2; ++seat) {
+      for (int card : state.players[seat].discard) {
+        check(
+          design_of(sampled, card) == design_of(state, card),
+          "discard piles are kept"
+        );
+      }
+      check(
+        sampled.players[seat].hand.size() ==
+          state.players[seat].hand.size(),
+        "hand sizes are kept"
+      );
+      check(
+        sampled.players[seat].draw_pile.size() ==
+          state.players[seat].draw_pile.size(),
+        "draw pile sizes are kept"
+      );
+    }
+
+    // No design turns up more often than the deck prints it.
+    std::vector<int> dealt(DESIGN_COUNT, 0);
+    for (int card = 0; card < sampled.all_cards.size(); ++card) {
+      dealt[design_of(sampled, card)] += 1;
+    }
+    for (int design = 0; design < DESIGN_COUNT; ++design) {
+      check(
+        dealt[design] <= card_designs[design].copies,
+        "a sampled deal fits in the deck"
+      );
+    }
+  }
+}
+
 static void test_random_games() {
   const int num_games = 200;
   for (int game_index = 0; game_index < num_games; ++game_index) {
@@ -185,6 +245,9 @@ static void test_random_games() {
     while (!state.is_game_over() && decisions < 2000) {
       resolve_choice(state, agent.choose_action(state, pending_choice(state)));
       decisions += 1;
+      check(
+        std::isfinite(evaluate_state(state, 0)), "the evaluation is a number"
+      );
     }
     check(state.is_game_over(), "a random game ends");
     check(state.winner == 0 || state.winner == 1, "a random game has a winner");
@@ -227,6 +290,7 @@ int main() {
   test_tough();
   test_mindbug_steal();
   test_hunter_declines();
+  test_sampling();
   test_random_games();
   test_search_agent();
 
