@@ -128,8 +128,14 @@ inline float evaluate_state(const Game_State& state, int player) {
   // }
   float cards_left = state.players[player].hand.size() +
                      state.players[player].draw_pile.size();
+
   float cards_left_opp = state.players[opponent].hand.size() +
                          state.players[opponent].draw_pile.size();
+
+  for (size_t i = 0; i < state.creatures.size(); i++) {
+    state.creatures[i].controller == player ? cards_left += 1
+                                            : cards_left_opp += 1;
+  }
   if (cards_left == 0 && state.current_player == player) return 0.0f;
   if (cards_left_opp == 0 && state.current_player == opponent) return 2.0f;
 
