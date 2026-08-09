@@ -76,22 +76,14 @@ struct Card_Design {
 
 extern std::vector<Card_Design> card_designs;
 
-// A creature that has been played. Defeated creatures keep their slot with
-// alive=false so an index stays valid for as long as a game runs.
-struct Creature {
-  int  card       = 0;  // Index into Game_State.all_cards.
-  int  owner      = 0;  // Whose discard pile it returns to when defeated.
-  int  controller = 0;  // Who attacks and blocks with it; a Mindbug flips this.
-  bool exhausted  = false;  // Tough has already saved it once.
-  bool alive      = true;
-};
-
 // Card collections hold indices into Game_State.all_cards, so the two copies
 // of a card stay apart — which is what lets the app give each one its own
-// place on the table.
+// place on the table. A card is in exactly one of them, and which player holds
+// it in `creatures` is what "controls that creature" means.
 struct Player {
   Array_Inline<int, 5>  hand;
   Array_Inline<int, 5>  draw_pile;  // Face-down, in draw order (back = top).
+  Array_Inline<int, 10> creatures;  // In play, in the order they were played.
   Array_Inline<int, 10> discard;
   int                   life     = STARTING_LIFE;
   int                   mindbugs = STARTING_MINDBUGS;
@@ -104,21 +96,23 @@ enum class Phase {
   ATTACK,   // The attacker's Attack ability triggers.
   BLOCK,    // A blocker is picked, by the defender or by a hunter's controller.
   COMBAT,   // The block (or lack of one) is resolved.
+  FRENZY,   // A frenzy creature that survived may attack a second time.
   TURN_END,  // Refill the hand, then pass the turn.
 };
 
-// A turn action: play hand[index], or attack with creatures[index].
+// A turn action: play `card` from hand, or attack with it.
 struct Turn_Action {
   bool is_attack = false;
-  int  index     = 0;
+  int  card      = 0;
 };
 
 struct Game_State : Game {
   // The 20 cards dealt this game, each holding the design it shows. Fixed at
   // setup; every other list refers to a card by its index here.
-  Array_Inline<int, 24>      all_cards;
-  Player                     players[2];
-  Array_Inline<Creature, 32> creatures;
+  Array_Inline<int, 24> all_cards;
+  Player                players[2];
+  // Creatures in play whose Tough keyword has already saved them once.
+  Array_Inline<int, 8> exhausted_cards;
 
   int   current_player = 0;
   Phase phase          = Phase::TURN;
@@ -155,9 +149,33 @@ inline int design_of(const Game_State& state, int card) {
   return state.all_cards[card];
 }
 
-// The design of the creature in play at `creature_index`.
-inline int creature_design(const Game_State& state, int creature_index) {
-  return design_of(state, state.creatures[creature_index].card);
+// The player who has `card` in play, or -1 if it is not in play.
+inline int controller_of(const Game_State& state, int card) {
+  for (int player = 0; player < 2; ++player) {
+    for (int in_play : state.players[player].creatures) {
+      if (in_play == card) return player;
+    }
+  }
+  return -1;
+}
+
+inline bool is_in_play(const Game_State& state, int card) {
+  return controller_of(state, card) != -1;
+}
+
+// True once Tough has saved this creature, so the next defeat takes it.
+inline bool is_exhausted(const Game_State& state, int card) {
+  for (int exhausted : state.exhausted_cards) {
+    if (exhausted == card) return true;
+  }
+  return false;
+}
+
+// Cards a player still has: in hand, face down, and in play.
+inline int cards_left(const Game_State& state, int player) {
+  return state.players[player].hand.size() +
+         state.players[player].draw_pile.size() +
+         state.players[player].creatures.size();
 }
 
 }  // namespace mindbug

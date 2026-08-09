@@ -65,17 +65,6 @@ static std::vector<int> cards_of(const Array_Inline<int, N>& pile) {
   return std::vector<int>(pile.begin(), pile.end());
 }
 
-// Take `card` out of a pile. It is always there: choice targets are read from
-// the pile itself.
-template <int N>
-static void remove_card(Array_Inline<int, N>& pile, int card) {
-  for (int i = 0; i < pile.size(); ++i) {
-    if (pile[i] != card) continue;
-    pile.erase(pile.begin() + i);
-    return;
-  }
-}
-
 static void discard_from_hand(
   Game_State& state, int player, const std::vector<int>& cards
 ) {
@@ -86,13 +75,12 @@ static void discard_from_hand(
 }
 
 // Play `card` out of `pile_owner`'s discard pile, under the control of
-// `controller`. It keeps its owner, so it returns to the same discard pile
-// when it is defeated.
+// `controller`.
 static void play_from_discard(
   Game_State& state, int pile_owner, int controller, int card
 ) {
   remove_card(state.players[pile_owner].discard, card);
-  enter_play(state, card, pile_owner, controller);
+  enter_play(state, card, controller);
 }
 
 // A number in [0, bound). Only Strange Barrel needs this.
@@ -103,9 +91,9 @@ static int next_random(Game_State& state, int bound) {
 
 // ---- Abilities ----
 
-void trigger_play(Game_State& state, int creature_index) {
-  const int design = creature_design(state, creature_index);
-  const int me     = state.creatures[creature_index].controller;
+void trigger_play(Game_State& state, int card) {
+  const int design = design_of(state, card);
+  const int me     = controller_of(state, card);
   const int them   = 1 - me;
 
   switch (design) {
@@ -116,9 +104,7 @@ void trigger_play(Game_State& state, int creature_index) {
         me,
         "take-control",
         [](Game_State& game) { return creature_targets(game, -1, 6, 99); },
-        [me](Game_State& game, int target) {
-          game.creatures[target].controller = me;
-        }
+        [me](Game_State& game, int target) { take_control(game, target, me); }
       ));
       break;
 
@@ -194,9 +180,9 @@ void trigger_play(Game_State& state, int creature_index) {
   }
 }
 
-void trigger_attack(Game_State& state, int creature_index) {
-  const int design = creature_design(state, creature_index);
-  const int me     = state.creatures[creature_index].controller;
+void trigger_attack(Game_State& state, int card) {
+  const int design = design_of(state, card);
+  const int me     = controller_of(state, card);
   const int them   = 1 - me;
 
   switch (design) {
@@ -244,9 +230,9 @@ void trigger_attack(Game_State& state, int creature_index) {
   }
 }
 
-void trigger_defeated(Game_State& state, int creature_index) {
-  const int design = creature_design(state, creature_index);
-  const int me     = state.creatures[creature_index].controller;
+void trigger_defeated(Game_State& state, int card, int controller) {
+  const int design = design_of(state, card);
+  const int me     = controller;
   const int them   = 1 - me;
 
   switch (design) {
@@ -267,7 +253,7 @@ void trigger_defeated(Game_State& state, int creature_index) {
         2,
         true,
         [me](Game_State& game, const std::vector<int>& targets) {
-          for (int target : targets) game.creatures[target].controller = me;
+          for (int target : targets) take_control(game, target, me);
         }
       ));
       break;

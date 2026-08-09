@@ -19,7 +19,7 @@ using namespace mindbug;
 // The attacking creature, named so the defender knows what is coming.
 static std::string attacker_name(const Game_State& state) {
   if (state.attacker == -1) return "";
-  const int design = creature_design(state, state.attacker);
+  const int design = design_of(state, state.attacker);
   return card_designs[design].name + " (" +
          std::to_string(effective_power(state, state.attacker)) + ")";
 }
@@ -36,6 +36,8 @@ static std::string instruction(const Game_State& state, const Choice& choice) {
     return attacker_name(state) +
            " is attacking. Choose the blocker, or leave the choice to the "
            "opponent";
+  if (choice.description == "frenzy")
+    return attacker_name(state) + " survived. Attack a second time?";
   if (choice.description == "defeat") return "Choose a creature to defeat";
   if (choice.description == "take-control")
     return "Choose a creature to take control of";
@@ -47,20 +49,8 @@ static std::string instruction(const Game_State& state, const Choice& choice) {
 
 // The card on the table an action target stands for, or -1 when the target is
 // "no creature" — the option to let an attack through.
-static int card_of_target(
-  const Game_State& state, const Choice& choice, int target
-) {
-  if (choice.description == "turn") {
-    const Turn_Action action = Turn_Action{(target & 256) != 0, target & 255};
-    if (action.is_attack) return state.creatures[action.index].card;
-    return state.players[choice.player_index].hand[action.index];
-  }
-  // A creature target is an index into creatures; everything else is already a
-  // card.
-  if (choice.description == "block" || choice.description == "hunt" ||
-      choice.description == "defeat" || choice.description == "take-control") {
-    return target == -1 ? -1 : state.creatures[target].card;
-  }
+static int card_of_target(const Choice& choice, int target) {
+  if (choice.description == "turn") return unpack_turn_action(target).card;
   return target;
 }
 
@@ -104,7 +94,7 @@ int Mindbug_Agent_UI::choose_action(Game& game, const Choice& choice) {
   // One target to pick: highlight them all and take the one clicked.
   if (std::holds_alternative<Choose_Card>(actions)) {
     for (int i = 0; i < (int)targets.size(); ++i) {
-      const int card = card_of_target(state, choice, targets[i]);
+      const int card = card_of_target(choice, targets[i]);
       if (card == -1) {
         // A hunter leaves the choice to the defender; the defender lets the
         // attack through.
@@ -128,7 +118,7 @@ int Mindbug_Agent_UI::choose_action(Game& game, const Choice& choice) {
   // Several targets to pick: click to add to the selection, then confirm.
   const Choose_Cards& multiple = std::get<Choose_Cards>(actions);
   for (int target : targets) {
-    const int card = card_of_target(state, choice, target);
+    const int card = card_of_target(choice, target);
     const bool picked =
       std::find(selection.begin(), selection.end(), target) != selection.end();
     if (!picked) ui_state->highlighted_things[card] = card;

@@ -24,12 +24,9 @@ static void check(bool condition, const char* what) {
 // A creature in play, skipping the Play ability.
 static int put(Game_State& state, int design, int controller) {
   state.all_cards.push_back(design);
-  auto creature       = Creature();
-  creature.card       = state.all_cards.size() - 1;
-  creature.owner      = controller;
-  creature.controller = controller;
-  state.creatures.push_back(creature);
-  return state.creatures.size() - 1;
+  const int card = state.all_cards.size() - 1;
+  state.players[controller].creatures.push_back(card);
+  return card;
 }
 
 // A card in a player's hand.
@@ -119,16 +116,21 @@ static void test_blocking() {
   const int bear = put(state, BEE_BEAR, 0);
   check(can_block(state, bear, gorillion), "Bee Bear is blocked by power 10");
   check(!can_block(state, bear, owl), "Bee Bear is not blocked by power 3");
+
+  // Elephantopus holds small blockers back on its ally's attacks too.
+  check(can_block(state, gorillion, owl), "power 3 blocks before Elephantopus");
+  put(state, ELEPHANTOPUS, 1);
+  check(!can_block(state, gorillion, owl), "Elephantopus holds power 3 back");
 }
 
 static void test_tough() {
   auto      state  = Game_State();
   const int turtle = put(state, RHINO_TURTLE, 0);
   defeat_creature(state, turtle);
-  check(state.creatures[turtle].alive, "tough survives the first defeat");
-  check(state.creatures[turtle].exhausted, "tough is exhausted instead");
+  check(is_in_play(state, turtle), "tough survives the first defeat");
+  check(is_exhausted(state, turtle), "tough is exhausted instead");
   defeat_creature(state, turtle);
-  check(!state.creatures[turtle].alive, "tough dies the second time");
+  check(!is_in_play(state, turtle), "tough dies the second time");
   check(
     state.players[0].discard.size() == 1, "a defeated creature is discarded"
   );
@@ -148,9 +150,8 @@ static void test_mindbug_steal() {
   check(pending_choice(state).player_index == 1, "offered to the opponent");
 
   resolve_choice(state, 0);  // Player 1 uses a Mindbug.
-  check(state.creatures.size() == 1, "the creature is in play");
-  check(state.creatures[0].controller == 1, "it changed sides");
-  check(state.creatures[0].owner == 0, "it kept its owner");
+  check(state.players[1].creatures.size() == 1, "the creature changed sides");
+  check(state.players[0].creatures.size() == 0, "and left its player");
   check(state.players[1].mindbugs == 1, "a Mindbug is spent");
   check(pending_choice(state).player_index == 0, "the player plays again");
 }
@@ -197,11 +198,13 @@ static void test_sampling() {
         design_of(sampled, card) == design_of(state, card), "my hand is kept"
       );
     }
-    for (int i = 0; i < state.creatures.size(); ++i) {
-      check(
-        creature_design(sampled, i) == creature_design(state, i),
-        "creatures are kept"
-      );
+    for (int seat = 0; seat < 2; ++seat) {
+      for (int card : state.players[seat].creatures) {
+        check(
+          design_of(sampled, card) == design_of(state, card),
+          "creatures are kept"
+        );
+      }
     }
     for (int seat = 0; seat < 2; ++seat) {
       for (int card : state.players[seat].discard) {
@@ -234,6 +237,91 @@ static void test_sampling() {
       );
     }
   }
+}
+
+// The search must keep what it worked out. A root move the search only proved
+// "no better than the best" must never be played over the best one: here,
+// defeating the enemy Snail Hydra beats exhausting its own Tough Elephantopus,
+// which changes nothing at all.
+static void test_search_keeps_the_best_move() {
+  auto      state = Game_State();
+  const int toad  = put(state, EXPLOSIVE_TOAD, 0);
+  put(state, ELEPHANTOPUS, 0);  // Tough: defeating it only exhausts it.
+  put(state, GORILLION, 0);
+  put(state, SNAIL_HYDRA, 1);
+  put(state, HARPY_MOTHER, 1);
+  put(state, STRANGE_BARREL, 1);
+  deal(state, TURBO_BUG, 0);
+  deal(state, KILLER_BEE, 0);
+  deal(state, FERRET_BOMBER, 1);
+  deal(state, SHIELD_BUGS, 1);
+  state.players[0].life = 2;
+  state.players[1].life = 2;
+
+  defeat_creature(state, toad);  // Defeated: defeat a creature.
+  state.begin_game();
+  check(
+    pending_choice(state).description == "defeat", "the toad asks for a target"
+  );
+
+  auto        agent   = Agent_Minimax_Stochastic<Game_State>(17, 10);
+  const auto  choose  = pending_choice(state).actions(state);
+  const auto& targets = std::get<Choose_Card>(choose).targets;
+  int         misses  = 0;
+  for (int attempt = 0; attempt < 5; ++attempt) {
+    const int action = agent.choose_action(state, pending_choice(state));
+    if (controller_of(state, targets[action]) != 1) misses += 1;
+  }
+  if (misses > 0) std::cerr << "picked its own creature " << misses << "/5\n";
+  check(misses == 0, "the search plays the move it proved best");
+}
+
+// A frenzy creature attacks a second time only if it is still in play: here
+// the Explosive Toad it defeats takes it down with its Defeated ability.
+static void test_frenzy_second_attack() {
+  auto      state  = Game_State();
+  const int bull   = put(state, LUCHATAUR, 0);       // Frenzy, power 9.
+  const int toad   = put(state, EXPLOSIVE_TOAD, 1);  // Defeated: defeat a creature.
+  deal(state, GORILLION, 0);
+  deal(state, GORILLION, 1);
+  state.begin_game();
+
+  resolve_choice(state, pending_action_count(state) - 1);  // Attack with it.
+  check(pending_choice(state).description == "block", "the defender blocks");
+  resolve_choice(state, 0);  // Block with the toad.
+
+  check(!is_in_play(state, toad), "the toad is defeated");
+  check(pending_choice(state).description == "defeat", "its ability triggers");
+
+  // The toad's controller takes the attacker down with it.
+  const auto  choose  = pending_choice(state).actions(state);
+  const auto& targets = std::get<Choose_Card>(choose).targets;
+  int         option  = 0;
+  for (int i = 0; i < (int)targets.size(); ++i) {
+    if (targets[i] == bull) option = i;
+  }
+  resolve_choice(state, option);
+
+  check(!is_in_play(state, bull), "the attacker is defeated too");
+  check(state.players[1].life == STARTING_LIFE, "it does not attack again");
+}
+
+// Attacking a second time is the controller's choice, not automatic.
+static void test_frenzy_is_optional() {
+  auto state = Game_State();
+  put(state, LUCHATAUR, 0);  // Frenzy, and nothing to block it.
+  deal(state, GORILLION, 0);
+  deal(state, GORILLION, 1);
+  state.begin_game();
+
+  resolve_choice(state, pending_action_count(state) - 1);  // Attack with it.
+  check(state.players[1].life == STARTING_LIFE - 1, "the attack goes through");
+  check(pending_choice(state).description == "frenzy", "frenzy is offered");
+  check(pending_choice(state).player_index == 0, "to the attacking player");
+
+  resolve_choice(state, 1);  // End the turn instead.
+  check(state.players[1].life == STARTING_LIFE - 1, "the second attack is off");
+  check(state.current_player == 1, "and the turn passes");
 }
 
 static void test_random_games() {
@@ -290,6 +378,9 @@ int main() {
   test_tough();
   test_mindbug_steal();
   test_hunter_declines();
+  test_search_keeps_the_best_move();
+  test_frenzy_second_attack();
+  test_frenzy_is_optional();
   test_sampling();
   test_random_games();
   test_search_agent();

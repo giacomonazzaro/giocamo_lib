@@ -8,56 +8,41 @@ namespace mindbug {
 
 // ---- Queries ----
 
-std::vector<int> creatures_of(const Game_State& state, int player) {
-  std::vector<int> result;
-  for (int i = 0; i < state.creatures.size(); ++i) {
-    if (state.creatures[i].alive && state.creatures[i].controller == player) {
-      result.push_back(i);
-    }
-  }
-  return result;
-}
+int effective_power(const Game_State& state, int card) {
+  const int     controller = controller_of(state, card);
+  const bool    its_turn   = state.current_player == controller;
+  const int     design     = design_of(state, card);
+  const Player& player     = state.players[controller];
+  int           power      = card_designs[design].power;
 
-int effective_power(const Game_State& state, int creature_index) {
-  const Creature& creature = state.creatures[creature_index];
-  const bool      its_turn = state.current_player == creature.controller;
-  const int       design   = creature_design(state, creature_index);
-  int             power    = card_designs[design].power;
-  int             allies   = 0;
-  for (int i = 0; i < state.creatures.size(); ++i) {
-    const Creature& other = state.creatures[i];
-    if (!other.alive || other.controller != creature.controller) continue;
-    allies += 1;
-    if (i == creature_index) continue;
-    const int other_design = creature_design(state, i);
-    if (other_design == SHIELD_BUGS) power += 1;
-    if (other_design == URCHIN_HURLER && its_turn) power += 2;
+  for (int ally : player.creatures) {
+    if (ally == card) continue;
+    const int ally_design = design_of(state, ally);
+    if (ally_design == SHIELD_BUGS) power += 1;
+    if (ally_design == URCHIN_HURLER && its_turn) power += 2;
   }
   if (design == GOBLIN_WEREWOLF && its_turn) power += 6;
-  if (design == LONE_YETI && allies == 1) power += 5;
+  if (design == LONE_YETI && player.creatures.size() == 1) power += 5;
   return power;
 }
 
 // mirror=false stops Sharky from copying another Sharky's copied keywords.
-static int keywords_of(
-  const Game_State& state, int creature_index, bool mirror
-) {
-  const Creature& creature = state.creatures[creature_index];
-  const int       design   = creature_design(state, creature_index);
-  int             keywords = card_designs[design].keywords;
-  std::vector<int> allies  = creatures_of(state, creature.controller);
+static int keywords_of(const Game_State& state, int card, bool mirror) {
+  const int     controller = controller_of(state, card);
+  const int     design     = design_of(state, card);
+  const Player& player     = state.players[controller];
+  int           keywords   = card_designs[design].keywords;
 
-  if (design == LONE_YETI && allies.size() == 1) keywords |= FRENZY;
-  if (effective_power(state, creature_index) <= 4) {
-    for (int ally : allies) {
-      if (ally != creature_index &&
-          creature_design(state, ally) == SNAIL_THROWER) {
+  if (design == LONE_YETI && player.creatures.size() == 1) keywords |= FRENZY;
+  if (effective_power(state, card) <= 4) {
+    for (int ally : player.creatures) {
+      if (ally != card && design_of(state, ally) == SNAIL_THROWER) {
         keywords |= HUNTER | POISONOUS;
       }
     }
   }
   if (design == SHARKY_CRAB_DOG_MUMMYPUS && mirror) {
-    for (int enemy : creatures_of(state, 1 - creature.controller)) {
+    for (int enemy : state.players[1 - controller].creatures) {
       keywords |= keywords_of(state, enemy, false) &
                   (HUNTER | SNEAKY | FRENZY | POISONOUS);
     }
@@ -65,21 +50,21 @@ static int keywords_of(
   return keywords;
 }
 
-int effective_keywords(const Game_State& state, int creature_index) {
-  return keywords_of(state, creature_index, true);
+int effective_keywords(const Game_State& state, int card) {
+  return keywords_of(state, card, true);
 }
 
 std::vector<int> creature_targets(
   const Game_State& state, int controller, int min_power, int max_power
 ) {
-  std::vector<int> targets;
-  for (int i = 0; i < state.creatures.size(); ++i) {
-    if (!state.creatures[i].alive) continue;
-    if (controller != -1 && state.creatures[i].controller != controller)
-      continue;
-    const int power = effective_power(state, i);
-    if (power < min_power || power > max_power) continue;
-    targets.push_back(i);
+  auto targets = std::vector<int>();
+  for (int player = 0; player < 2; ++player) {
+    if (controller != -1 && player != controller) continue;
+    for (int card : state.players[player].creatures) {
+      const int power = effective_power(state, card);
+      if (power < min_power || power > max_power) continue;
+      targets.push_back(card);
+    }
   }
   return targets;
 }
@@ -88,21 +73,23 @@ bool can_block(const Game_State& state, int attacker, int blocker) {
   if (effective_keywords(state, attacker) & SNEAKY) {
     if (!(effective_keywords(state, blocker) & SNEAKY)) return false;
   }
-  const int power           = effective_power(state, blocker);
-  const int attacker_design = creature_design(state, attacker);
-  if (attacker_design == BEE_BEAR && power <= 6) return false;
-  if (attacker_design == ELEPHANTOPUS && power <= 4) return false;
+  const int power = effective_power(state, blocker);
+  if (design_of(state, attacker) == BEE_BEAR && power <= 6) return false;
+
+  if (power <= 4) {
+    const int controller = controller_of(state, attacker);
+    for (int ally : state.players[controller].creatures) {
+      if (design_of(state, ally) == ELEPHANTOPUS) return false;
+    }
+  }
   return true;
 }
 
 std::vector<Turn_Action> turn_actions(const Game_State& state) {
-  std::vector<Turn_Action> actions;
-  for (int i = 0; i < state.players[state.current_player].hand.size(); ++i) {
-    actions.push_back(Turn_Action{false, i});
-  }
-  for (int i : creatures_of(state, state.current_player)) {
-    actions.push_back(Turn_Action{true, i});
-  }
+  auto          actions = std::vector<Turn_Action>();
+  const Player& player  = state.players[state.current_player];
+  for (int card : player.hand) actions.push_back(Turn_Action{false, card});
+  for (int card : player.creatures) actions.push_back(Turn_Action{true, card});
   return actions;
 }
 
@@ -115,8 +102,8 @@ int compute_player_score(const Game_State& state, int player) {
 std::vector<std::vector<int>> target_combinations(
   const std::vector<int>& targets, int count, bool up_to
 ) {
-  const int                     size = (int)targets.size();
-  std::vector<std::vector<int>> result;
+  const int size   = (int)targets.size();
+  auto      result = std::vector<std::vector<int>>();
   if (!up_to && size <= count) {
     result.push_back(targets);
     return result;
@@ -127,10 +114,10 @@ std::vector<std::vector<int>> target_combinations(
       result.push_back({});
       continue;
     }
-    std::vector<bool> mask(size, false);
+    auto mask = std::vector<bool>(size, false);
     std::fill(mask.end() - k, mask.end(), true);
     do {
-      std::vector<int> selection;
+      auto selection = std::vector<int>();
       for (int i = 0; i < size; ++i) {
         if (mask[i]) selection.push_back(targets[i]);
       }
@@ -202,33 +189,32 @@ void lose_life(Game_State& state, int player, int amount) {
   if (state.players[player].life <= 0) end_game(state, 1 - player);
 }
 
-int enter_play(Game_State& state, int card, int owner, int controller) {
-  auto creature       = Creature();
-  creature.card       = card;
-  creature.owner      = owner;
-  creature.controller = controller;
-  state.creatures.push_back(creature);
-  const int index = state.creatures.size() - 1;
-
-  // A Deathweaver on the other side switches the Play ability off.
-  for (int enemy : creatures_of(state, 1 - controller)) {
-    if (creature_design(state, enemy) == DEATHWEAVER) return index;
-  }
-  trigger_play(state, index);
-  return index;
+void take_control(Game_State& state, int card, int controller) {
+  remove_card(state.players[1 - controller].creatures, card);
+  state.players[controller].creatures.push_back(card);
 }
 
-void defeat_creature(Game_State& state, int creature_index) {
-  Creature& creature = state.creatures[creature_index];
-  if (!creature.alive) return;
-  if ((effective_keywords(state, creature_index) & TOUGH) &&
-      !creature.exhausted) {
-    creature.exhausted = true;
+void enter_play(Game_State& state, int card, int controller) {
+  state.players[controller].creatures.push_back(card);
+  remove_card(state.exhausted_cards, card);  // Tough starts over.
+
+  // A Deathweaver on the other side switches the Play ability off.
+  for (int enemy : state.players[1 - controller].creatures) {
+    if (design_of(state, enemy) == DEATHWEAVER) return;
+  }
+  trigger_play(state, card);
+}
+
+void defeat_creature(Game_State& state, int card) {
+  const int controller = controller_of(state, card);
+  if (controller == -1) return;
+  if ((effective_keywords(state, card) & TOUGH) && !is_exhausted(state, card)) {
+    state.exhausted_cards.push_back(card);
     return;
   }
-  creature.alive = false;
-  state.players[creature.owner].discard.push_back(creature.card);
-  trigger_defeated(state, creature_index);
+  remove_card(state.players[controller].creatures, card);
+  state.players[controller].discard.push_back(card);
+  trigger_defeated(state, card, controller);
 }
 
 // ---- Phases ----
@@ -251,13 +237,12 @@ static Choice make_turn_choice(Game_State& state) {
     Game_State&       state  = static_cast<Game_State&>(game);
     const Turn_Action action = turn_actions(state)[index];
     if (action.is_attack) {
-      state.attacker     = action.index;
+      state.attacker     = action.card;
       state.attack_count = 0;
       state.phase        = Phase::ATTACK;
     } else {
-      Player& player      = state.active_player();
-      state.played_card = player.hand[action.index];
-      player.hand.erase(player.hand.begin() + action.index);
+      state.played_card = action.card;
+      remove_card(state.active_player().hand, action.card);
       state.phase = Phase::MINDBUG;
     }
     return null_choice;
@@ -269,8 +254,7 @@ static Choice make_turn_choice(Game_State& state) {
 // opponent or not, and end the turn. Stealing gives the active player another
 // turn.
 static void resolve_played_creature(Game_State& state, bool stolen) {
-  const int owner   = state.current_player;
-  const int thief   = 1 - owner;
+  const int thief   = 1 - state.current_player;
   const int card    = state.played_card;
   state.played_card = -1;
   state.phase       = Phase::TURN_END;
@@ -278,7 +262,7 @@ static void resolve_played_creature(Game_State& state, bool stolen) {
     state.players[thief].mindbugs -= 1;
     state.extra_turn = true;
   }
-  enter_play(state, card, owner, stolen ? thief : owner);
+  enter_play(state, card, stolen ? thief : state.current_player);
 }
 
 static Choice make_mindbug_choice(Game_State& state) {
@@ -296,10 +280,28 @@ static Choice make_mindbug_choice(Game_State& state) {
   return choice;
 }
 
+// A frenzy creature that survived its first attack may attack again, and its
+// controller decides whether it does.
+static Choice make_frenzy_choice(Game_State& state) {
+  auto choice             = Choice();
+  choice.player_index     = controller_of(state, state.attacker);
+  choice.description      = "frenzy";
+  choice.text_description = "Attack a second time?";
+  choice.actions          = [](Game&) -> Choose {
+    return Choose_Option{{"Attack again", "End turn"}};
+  };
+  choice.resolve = [](Game& game, int index) -> Choice {
+    Game_State& state = static_cast<Game_State&>(game);
+    state.phase = index == 0 ? Phase::ATTACK : Phase::TURN_END;
+    return null_choice;
+  };
+  return choice;
+}
+
 static std::vector<int> legal_blockers(const Game_State& state) {
-  const int        defender = 1 - state.creatures[state.attacker].controller;
-  std::vector<int> blockers;
-  for (int candidate : creatures_of(state, defender)) {
+  const int defender = 1 - controller_of(state, state.attacker);
+  auto      blockers = std::vector<int>();
+  for (int candidate : state.players[defender].creatures) {
     if (can_block(state, state.attacker, candidate)) {
       blockers.push_back(candidate);
     }
@@ -310,10 +312,9 @@ static std::vector<int> legal_blockers(const Game_State& state) {
 static Choice make_block_choice(Game_State& state) {
   // A hunter's controller picks the blocker, unless they pass the decision
   // back; then the defender chooses as usual.
-  const int  controller = state.creatures[state.attacker].controller;
-  const bool hunter =
-    !state.hunter_declined &&
-    (effective_keywords(state, state.attacker) & HUNTER) != 0;
+  const int  controller = controller_of(state, state.attacker);
+  const bool hunter     = !state.hunter_declined &&
+                      (effective_keywords(state, state.attacker) & HUNTER) != 0;
 
   auto choice             = Choice();
   choice.player_index     = hunter ? controller : 1 - controller;
@@ -321,7 +322,7 @@ static Choice make_block_choice(Game_State& state) {
   choice.text_description = hunter ? "Choose the blocker, or leave it to the "
                                      "opponent"
                                    : "Block the attack?";
-  choice.actions = [](Game& game) -> Choose {
+  choice.actions          = [](Game& game) -> Choose {
     auto options = Choose_Card();
     for (int blocker : legal_blockers(static_cast<Game_State&>(game))) {
       options.targets.push_back(blocker);
@@ -333,8 +334,8 @@ static Choice make_block_choice(Game_State& state) {
     return options;
   };
   choice.resolve = [hunter](Game& game, int index) -> Choice {
-    Game_State&      state    = static_cast<Game_State&>(game);
-    std::vector<int> blockers = legal_blockers(state);
+    Game_State& state    = static_cast<Game_State&>(game);
+    auto        blockers = legal_blockers(state);
     if (index >= (int)blockers.size() && hunter) {
       state.hunter_declined = true;  // The defender is asked next.
       return null_choice;
@@ -352,11 +353,11 @@ static Choice make_block_choice(Game_State& state) {
 static void resolve_combat(Game_State& state) {
   const int attacker = state.attacker;
   if (state.blocker == -1) {
-    lose_life(state, 1 - state.creatures[attacker].controller, 1);
+    lose_life(state, 1 - controller_of(state, attacker), 1);
   } else {
-    const int  blocker         = state.blocker;
-    const int  attacker_power  = effective_power(state, attacker);
-    const int  blocker_power   = effective_power(state, blocker);
+    const int  blocker        = state.blocker;
+    const int  attacker_power = effective_power(state, attacker);
+    const int  blocker_power  = effective_power(state, blocker);
     const bool blocker_defeated =
       attacker_power >= blocker_power ||
       (effective_keywords(state, attacker) & POISONOUS);
@@ -368,10 +369,10 @@ static void resolve_combat(Game_State& state) {
   }
   state.blocker = -1;
 
-  const bool attacks_again = state.creatures[attacker].alive &&
-                             state.attack_count < 2 &&
-                             (effective_keywords(state, attacker) & FRENZY);
-  state.phase = attacks_again ? Phase::ATTACK : Phase::TURN_END;
+  const bool may_attack_again = is_in_play(state, attacker) &&
+                                state.attack_count < 2 &&
+                                (effective_keywords(state, attacker) & FRENZY);
+  state.phase = may_attack_again ? Phase::FRENZY : Phase::TURN_END;
 }
 
 static void end_turn(Game_State& state) {
@@ -403,7 +404,7 @@ Choice Game_State::next_choice() {
     // Effects that owe a decision come first. One whose targets have all gone
     // in the meantime is dropped.
     if (!state.queue.empty()) {
-      Choice choice = state.queue.front();
+      auto choice = state.queue.front();
       state.queue.erase(state.queue.begin());
       if (has_targets(choice.actions(state))) return choice;
       continue;
@@ -426,6 +427,12 @@ Choice Game_State::next_choice() {
         return make_mindbug_choice(state);
 
       case Phase::ATTACK:
+        // A Defeated ability may have taken the attacker out between the two
+        // attacks of a frenzy creature.
+        if (!is_in_play(state, state.attacker)) {
+          state.phase = Phase::TURN_END;
+          continue;
+        }
         state.attack_count += 1;
         state.hunter_declined = false;
         trigger_attack(state, state.attacker);
@@ -434,7 +441,7 @@ Choice Game_State::next_choice() {
 
       case Phase::BLOCK:
         // An Attack ability may have taken the attacker out.
-        if (!state.creatures[state.attacker].alive) {
+        if (!is_in_play(state, state.attacker)) {
           state.phase = Phase::TURN_END;
           continue;
         }
@@ -446,6 +453,8 @@ Choice Game_State::next_choice() {
         return make_block_choice(state);
 
       case Phase::COMBAT: resolve_combat(state); continue;
+
+      case Phase::FRENZY: return make_frenzy_choice(state);
 
       case Phase::TURN_END: end_turn(state); continue;
     }

@@ -31,25 +31,35 @@ inline Array_Inline<int, 48> full_deck_designs() {
   return deck;
 }
 
-// Power after the auras and self conditions that change it.
-int effective_power(const Game_State& state, int creature_index);
+// Power of a creature in play, after the auras and self conditions that change
+// it.
+int effective_power(const Game_State& state, int card);
 
 // Keywords the creature has right now, printed ones plus granted ones.
-int effective_keywords(const Game_State& state, int creature_index);
-
-// Creatures a player controls, in play order.
-std::vector<int> creatures_of(const Game_State& state, int player);
+int effective_keywords(const Game_State& state, int card);
 
 // True if `blocker` is allowed to block `attacker`.
 bool can_block(const Game_State& state, int attacker, int blocker);
+
+// Take `card` out of one of a player's card lists. It is always in the list:
+// the callers read the card out of the list itself.
+template <int N>
+void remove_card(Array_Inline<int, N>& cards, int card) {
+  for (int i = 0; i < cards.size(); ++i) {
+    if (cards[i] != card) continue;
+    cards.erase(cards.begin() + i);
+    return;
+  }
+}
 
 // The actions the active player may take. The pending choice offers these in
 // order, so an action index means the same thing here and in the UI.
 std::vector<Turn_Action> turn_actions(const Game_State& state);
 
 // Take a creature out of play: exhaust it instead if Tough has not been used
-// yet, otherwise discard it and trigger its Defeated ability.
-void defeat_creature(Game_State& state, int creature_index);
+// yet, otherwise put it in its controller's discard pile and trigger its
+// Defeated ability.
+void defeat_creature(Game_State& state, int card);
 
 // 1 for the winner, 0 otherwise. Feeds the game-over score line.
 int compute_player_score(const Game_State& state, int player);
@@ -57,14 +67,16 @@ int compute_player_score(const Game_State& state, int player);
 // ---- Mechanics the card effects are written with ----
 
 // Put a card into play as a creature under `controller` and trigger its Play
-// ability. `owner` is the player whose discard pile it returns to when it is
-// defeated. Returns the creature's index.
-int enter_play(Game_State& state, int card, int owner, int controller);
+// ability.
+void enter_play(Game_State& state, int card, int controller);
+
+// Move a creature already in play to the other player.
+void take_control(Game_State& state, int card, int controller);
 
 void lose_life(Game_State& state, int player, int amount);
 
-// Alive creatures a player controls (-1 for either player) whose power is
-// between min_power and max_power.
+// Creatures a player has in play (-1 for either player) whose power is between
+// min_power and max_power.
 std::vector<int> creature_targets(
   const Game_State& state, int controller, int min_power, int max_power
 );
@@ -72,8 +84,8 @@ std::vector<int> creature_targets(
 // ---- Choice helpers ----
 //
 // get_targets runs again when the choice resolves, so an option index always
-// means the same target. Targets are creature indices, hand positions or
-// discard positions, depending on the effect; `description` says which.
+// means the same target. Every target is a card; `description` says which zone
+// it is in.
 
 Choice make_choice(
   int                                          player,
@@ -97,10 +109,14 @@ Choice make_multi_choice(
   std::function<void(Game_State&, const std::vector<int>&)> on_chosen
 );
 
-// The int a turn action is carried as in the pending choice: the hand position
-// or creature index, with bit 8 set for an attack.
+// The int a turn action is carried as in the pending choice: the card, with bit
+// 8 set when the action is an attack.
 inline int pack_turn_action(const Turn_Action& action) {
-  return action.index | (action.is_attack ? 256 : 0);
+  return action.card | (action.is_attack ? 256 : 0);
+}
+
+inline Turn_Action unpack_turn_action(int packed) {
+  return Turn_Action{(packed & 256) != 0, packed & 255};
 }
 
 // Rates the position for `player`. A win beats every unfinished position and a
@@ -120,27 +136,14 @@ inline float evaluate_state(const Game_State& state, int player) {
     state.players[opponent].mindbugs, state.players[player].hand.size()
   );
 
-  // for (int i = 0; i < state.creatures.size(); ++i) {
-  //   if (!state.creatures[i].alive) continue;
-  //   const float power = (float)effective_power(state,
-  //   i); score += state.creatures[i].controller == player
-  //   ? power : -power;
-  // }
-  float cards_left = state.players[player].hand.size() +
-                     state.players[player].draw_pile.size();
+  float my_cards    = cards_left(state, player);
+  float their_cards = cards_left(state, opponent);
 
-  float cards_left_opp = state.players[opponent].hand.size() +
-                         state.players[opponent].draw_pile.size();
+  if (my_cards == 0 && state.current_player == player) return 0.0f;
+  if (their_cards == 0 && state.current_player == opponent) return 2.0f;
 
-  for (size_t i = 0; i < state.creatures.size(); i++) {
-    state.creatures[i].controller == player ? cards_left += 1
-                                            : cards_left_opp += 1;
-  }
-  if (cards_left == 0 && state.current_player == player) return 0.0f;
-  if (cards_left_opp == 0 && state.current_player == opponent) return 2.0f;
-
-  float score = cards_left + 2 * mindbugs;
-  float den   = (cards_left + cards_left_opp) + 2 * (mindbugs + mindbugs_opp);
+  float score = my_cards + 2 * mindbugs;
+  float den   = (my_cards + their_cards) + 2 * (mindbugs + mindbugs_opp);
   if (den > 0.0f)
     score /= den;
   else

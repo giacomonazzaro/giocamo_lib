@@ -30,6 +30,3 @@ make_card_draw_callback(
 // Life points, Mindbugs left, and whose turn it is. `local_seat` is "You".
 void draw_mindbug_hud(const mindbug::Game_State& state, int local_seat);
 
-// The creature in play holding `card`, or -1 when the card is not on the
-// board. Both the card faces and the agent use it to reach a card's creature.
-int creature_of_card(const mindbug::Game_State& state, int card);

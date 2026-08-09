@@ -52,11 +52,10 @@ static void update_table_from_game(
       prefix + "discard", {hand_owner.discard.begin(), hand_owner.discard.end()}
     );
 
-    std::vector<int> creatures;
-    for (int creature : mindbug::creatures_of(state, player)) {
-      creatures.push_back(state.creatures[creature].card);
-    }
-    set_zone(prefix + "creatures", creatures);
+    set_zone(
+      prefix + "creatures",
+      {hand_owner.creatures.begin(), hand_owner.creatures.end()}
+    );
 
     // You always see your own hand; the opponent's is face down unless both
     // players share this screen.
@@ -110,8 +109,8 @@ static Table_State init_table_state(
 static Agent* make_ai_opponent() {
   // Mindbug hides the opponent's hand, so the search votes over sampled deals.
   return new Agent_Minimax_Stochastic<mindbug::Game_State>(
-    /* max_depth   */ 15,
-    /* num_samples */ 30
+    /* max_depth   */ 13,
+    /* num_samples */ 15
   );
 }
 

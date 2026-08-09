@@ -5,6 +5,7 @@
 #include <cstdio>
 #include <functional>
 #include <limits>
+#include <mutex>
 #include <optional>
 #include <vector>
 
@@ -113,16 +114,24 @@ float minimax(
 
 }  // namespace minimax_detail
 
-// Search every action of `state`'s pending choice and return their scores,
-// indexed by action. The best action gets its exact score; actions that get cut
-// come back as an upper bound (see the shared lower bound below), which is all
-// that picking the best one needs. The root actions are resolved once and
-// ordered best-first like every interior node. When `num_threads != 1` the
-// actions are split across threads; each score is written by exactly one
-// thread, so the disjoint writes need no locking. `aborted` is forwarded to the
-// search (see minimax).
+// What a root search found: every action's score, and the action to play.
+//
+// Only `best_action` may be played. A score is exact for an action that beat
+// everything searched before it, and an upper bound for one the shared lower
+// bound cut — a bound that ties the best score proves nothing about its action,
+// so picking by the largest score can play a move the search never looked into.
+struct Search_Result {
+  std::vector<float> scores;
+  int                best_action = 0;
+};
+
+// Search every action of `state`'s pending choice. The root actions are
+// resolved once and ordered best-first like every interior node. When
+// `num_threads != 1` the actions are split across threads; each score is
+// written by exactly one thread, so the disjoint writes need no locking.
+// `aborted` is forwarded to the search (see minimax).
 template <class Game_T, typename Aborted>
-std::vector<float> minimax_scores(
+Search_Result minimax_scores(
   Game_T& state,
   int     num_actions,
   int     player_index,
@@ -132,23 +141,27 @@ std::vector<float> minimax_scores(
 ) {
   using minimax_detail::minimax;
   using minimax_detail::order_children;
-  const float        inf = std::numeric_limits<float>::infinity();
-  std::vector<float> scores(num_actions, -inf);
+  const float inf    = std::numeric_limits<float>::infinity();
+  auto        result = Search_Result();
+  result.scores      = std::vector<float>(num_actions, -inf);
 
   // Resolve and order the root children once, exactly like an interior node.
   bool maximizing = pending_choice(state).player_index == player_index;
   auto children   = std::vector<Game_T>(num_actions, state);
   auto indices    = order_children(children, player_index, maximizing);
+  result.best_action = indices[0];
 
   // Shared lower bound across the root moves: each move is searched with the
   // best score found so far as its alpha, so a move that cannot beat it is cut
   // early. With the best move searched first (the ordering above), this prunes
-  // most of the rest. The winning move still gets its exact score; the others
-  // may come back as a bound, which is fine for picking the best.
-  // ponytail: threads update this float without locking; the value only ever
-  // rises, so a missed update just costs a little pruning, never a wrong move.
-  // Add a lock only if a data-race sanitizer must stay clean.
-  float shared_alpha = -inf;
+  // most of the rest.
+  //
+  // A move only raises the bound by beating every move searched before it, and
+  // that is also the only way it can become the move to play: it is then the
+  // one whose score the search worked out exactly, with every other move proven
+  // no better. The lock is held only for that handful of updates.
+  float      shared_alpha = -inf;
+  std::mutex best_mutex;
 
   auto search_one = [&](int action_index) {
     float score = minimax(
@@ -159,8 +172,13 @@ std::vector<float> minimax_scores(
       player_index,
       aborted
     );
-    scores[action_index] = score;
-    if (score > shared_alpha) shared_alpha = score;
+    result.scores[action_index] = score;
+
+    auto lock = std::lock_guard<std::mutex>(best_mutex);
+    if (score > shared_alpha) {
+      shared_alpha       = score;
+      result.best_action = action_index;
+    }
   };
 
 #ifdef __EMSCRIPTEN__
@@ -186,7 +204,7 @@ std::vector<float> minimax_scores(
     for (auto& thread : threads) thread.join();
   }
 #endif
-  return scores;
+  return result;
 }
 
 // Alpha-beta minimax agent. Root-parallel: minimax_scores splits the root moves
@@ -207,7 +225,7 @@ struct Agent_Minimax : Agent {
     if (num_actions <= 0) return 0;
     printf("Num actions: %d\n", num_actions);
 
-    std::vector<float> scores = minimax_scores<Game_T>(
+    auto result = minimax_scores<Game_T>(
       concrete,
       num_actions,
       pending_choice(state).player_index,
@@ -215,9 +233,8 @@ struct Agent_Minimax : Agent {
       num_threads,
       [] { return false; }
     );
-    auto result = argmax_randomized(scores);
-    printf("value: %f\n", scores[result]);
-    return result;
+    printf("value: %f\n", result.scores[result.best_action]);
+    return result.best_action;
   }
 };
 
@@ -258,7 +275,7 @@ struct Agent_Minimax_Timed : Agent {
     int best_action     = 0;
     int completed_depth = 0;
     for (int depth = 1; depth <= max_depth; ++depth) {
-      std::vector<float> scores = minimax_scores<Game_T>(
+      auto result = minimax_scores<Game_T>(
         concrete,
         num_actions,
         pending_choice(state).player_index,
@@ -268,7 +285,7 @@ struct Agent_Minimax_Timed : Agent {
       );
       // Keep the deepest fully completed depth; a partial one is unreliable.
       if (aborted()) break;
-      best_action     = (int)argmax_randomized(scores);
+      best_action     = result.best_action;
       completed_depth = depth;
     }
     std::fprintf(stderr, "minimax: reached depth %d\n", completed_depth);
@@ -302,18 +319,18 @@ struct Agent_Minimax_Stochastic : Agent_Minimax<Game_T> {
     // action indices line up with the ones the caller will resolve.
 #ifdef __EMSCRIPTEN__
     for (int s = 0; s < num_samples; ++s) {
-      Game_T             sampled = sample_state(concrete, player_index, rng);
-      std::vector<float> scores  = minimax_scores<Game_T>(
+      Game_T sampled = sample_state(concrete, player_index, rng);
+      auto   result  = minimax_scores<Game_T>(
         sampled, num_actions, player_index, this->max_depth, 1, [] {
           return false;
         }
       );
-      votes[argmax(scores)] += 1;
+      votes[result.best_action] += 1;
     }
 #else
-    // scoress[s] is written by exactly one thread (index s), so no
-    // synchronisation is needed when reading the results after joining.
-    auto scoress = std::vector<std::vector<float>>(num_samples);
+    // results[s] is written by exactly one thread (index s), so no
+    // synchronisation is needed when reading them after joining.
+    auto results = std::vector<Search_Result>(num_samples);
     auto avg     = std::vector<float>(num_actions, 0.0f);
     auto threads = std::vector<std::thread>(num_samples);
     for (int s = 0; s < num_samples; ++s) {
@@ -321,7 +338,7 @@ struct Agent_Minimax_Stochastic : Agent_Minimax<Game_T> {
         // Local rng per thread: avoids contention and gives distinct sequences.
         std::mt19937 local_rng{std::random_device{}()};
         Game_T       sampled = sample_state(concrete, player_index, local_rng);
-        scoress[s]           = minimax_scores<Game_T>(
+        results[s]           = minimax_scores<Game_T>(
           sampled, num_actions, player_index, this->max_depth, 1, [] {
             return false;
           }
@@ -331,10 +348,9 @@ struct Agent_Minimax_Stochastic : Agent_Minimax<Game_T> {
     for (auto& t : threads) t.join();
     for (int s = 0; s < num_samples; ++s) {
       for (int a = 0; a < num_actions; ++a)
-        avg[a] += scoress[s][a] / num_samples;
+        avg[a] += results[s].scores[a] / num_samples;
+      votes[results[s].best_action] += 1;
     }
-
-    for (const auto& scores : scoress) votes[argmax_randomized(scores)] += 1;
 #endif
 
     auto result = argmax_randomized(votes);

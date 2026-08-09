@@ -24,13 +24,6 @@ std::string get_image_path(const std::string& image_file) {
   return IMAGES_DIR + "/" + image_file;
 }
 
-int creature_of_card(const mindbug::Game_State& state, int card) {
-  for (int i = 0; i < state.creatures.size(); ++i) {
-    if (state.creatures[i].alive && state.creatures[i].card == card) return i;
-  }
-  return -1;
-}
-
 // One zone: a rectangle parent that spreads its cards out by spread_x /
 // spread_y. Invisible itself; only the cards in it are drawn.
 static Thing make_stack(
@@ -135,10 +128,9 @@ make_card_draw_callback(
 
       // Power is only worth showing while the card is in play, where auras and
       // the turn can push it away from the printed number.
-      const int creature = creature_of_card(state, card);
-      if (creature != -1) {
-        const std::string power =
-          std::to_string(mindbug::effective_power(state, creature));
+      if (mindbug::is_in_play(state, card)) {
+        const auto power =
+          std::to_string(mindbug::effective_power(state, card));
         const float badge_x = -half_width + 22.0f;
         const float badge_y = -half_height + 22.0f;
         DrawCircle((int)badge_x, (int)badge_y, 21.0f, ::Color{20, 20, 20, 235});
@@ -152,7 +144,7 @@ make_card_draw_callback(
         );
         // The creature that is attacking right now, so the defender sees what
         // they are being asked to block.
-        if (creature == state.attacker) {
+        if (card == state.attacker) {
           DrawRectangleRoundedLinesEx(
             Rectangle{
               -half_width - 7.0f,
@@ -169,7 +161,7 @@ make_card_draw_callback(
 
         // An exhausted creature has used up the save its Tough keyword gives
         // it.
-        if (state.creatures[creature].exhausted) {
+        if (mindbug::is_exhausted(state, card)) {
           DrawRectangleRounded(
             Rectangle{
               -half_width,
