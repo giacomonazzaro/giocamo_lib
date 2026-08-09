@@ -64,11 +64,13 @@ static std::vector<int> targets_of(const Choose& actions) {
 }
 
 int Mindbug_Agent_UI::choose_action(Game& game, const Choice& choice) {
-  Game_State&  state  = static_cast<Game_State&>(game);
-  const Input& input  = *ui_state->input;
-  Choose       actions = choice.actions(game);
+  Game_State&  state    = static_cast<Game_State&>(game);
+  auto&        ui_state = this->ui_state;
+  auto&        table    = this->table;
+  const Input& input    = *ui_state.input;
+  Choose       actions  = choice.actions(game);
 
-  ui_state->highlighted_things.clear();
+  ui_state.highlighted_things.clear();
   render_text(
     instruction(state, choice),
     (float)tt::WINDOW_WIDTH / 2.0f - 300.0f,
@@ -78,7 +80,7 @@ int Mindbug_Agent_UI::choose_action(Game& game, const Choice& choice) {
   );
 
   // Buttons run down the right-hand side, under the score line.
-  Rectangle button = ui_state->place(200, 46, "right", "center", 24);
+  Rectangle button = ui_state.place(200, 46, "right", "center", 24);
 
   // The Mindbug decision is the only choice that isn't about a card.
   if (auto* options = std::get_if<Choose_Option>(&actions)) {
@@ -98,17 +100,17 @@ int Mindbug_Agent_UI::choose_action(Game& game, const Choice& choice) {
       if (card == -1) {
         // A hunter leaves the choice to the defender; the defender lets the
         // attack through.
-        const char* label =
-          choice.description == "hunt" ? "Opponent chooses" : "Don't block";
+        const char* label = choice.description == "hunt" ? "Opponent chooses"
+                                                         : "Don't block";
         if (immediate_button(button, label, input)) {
-          ui_state->highlighted_things.clear();
+          ui_state.highlighted_things.clear();
           return i;
         }
         continue;
       }
-      ui_state->highlighted_things[card] = card;
-      if (thing_pressed(card, *table, input)) {
-        ui_state->highlighted_things.clear();
+      ui_state.highlighted_things[card] = card;
+      if (thing_pressed(card, table, input)) {
+        ui_state.highlighted_things.clear();
         return i;
       }
     }
@@ -118,24 +120,23 @@ int Mindbug_Agent_UI::choose_action(Game& game, const Choice& choice) {
   // Several targets to pick: click to add to the selection, then confirm.
   const Choose_Cards& multiple = std::get<Choose_Cards>(actions);
   for (int target : targets) {
-    const int card = card_of_target(choice, target);
-    const bool picked =
-      std::find(selection.begin(), selection.end(), target) != selection.end();
-    if (!picked) ui_state->highlighted_things[card] = card;
+    const int  card   = card_of_target(choice, target);
+    const bool picked = std::find(selection.begin(), selection.end(), target) !=
+                        selection.end();
+    if (!picked) ui_state.highlighted_things[card] = card;
     if (!picked && (int)selection.size() < multiple.count &&
-        thing_pressed(card, *table, input)) {
+        thing_pressed(card, table, input)) {
       selection.push_back(target);
     }
   }
 
-  const bool complete =
-    multiple.up_to || (int)selection.size() == multiple.count ||
-    (int)selection.size() == (int)targets.size();
+  const bool complete = multiple.up_to ||
+                        (int)selection.size() == multiple.count ||
+                        (int)selection.size() == (int)targets.size();
   if (!complete) return -1;
 
-  const std::string label =
-    "Confirm " + std::to_string((int)selection.size()) + "/" +
-    std::to_string(multiple.count);
+  const std::string label = "Confirm " + std::to_string((int)selection.size()) +
+                            "/" + std::to_string(multiple.count);
   if (!immediate_button(button, label, input)) return -1;
 
   // Answer with the option holding exactly the picked targets.
@@ -144,7 +145,7 @@ int Mindbug_Agent_UI::choose_action(Game& game, const Choice& choice) {
   std::sort(selection.begin(), selection.end());
   for (int i = 0; i < (int)combinations.size(); ++i) {
     if (combinations[i] != selection) continue;
-    ui_state->highlighted_things.clear();
+    ui_state.highlighted_things.clear();
     selection.clear();
     return i;
   }

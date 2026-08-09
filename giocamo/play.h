@@ -68,14 +68,22 @@ void draw_game_over_screen(
 );
 
 // Parsed command-line options shared by every game app.
-//   --hot-seat   → vs_ai=false, skip_menu=true (one screen, two players).
-//   --skip-menu  → skip the menu, default to vs-AI.
-//   --seed=N     → deterministic deal for solo play. When omitted, the parser
-//                  generates a random seed so the field always has a value.
+//   --hot-seat        → vs_ai=false, skip_menu=true (one screen, two players).
+//   --skip-menu       → skip the menu, default to vs-AI.
+//   --seed=N          → deterministic deal for solo play. When omitted, the
+//                       parser generates a random seed so the field always has
+//                       a value.
+//   --record=PATH     → play live and write the input stream to PATH.
+//   --playback=PATH   → replay the input stream in PATH instead of the mouse.
 struct Play_Options {
-  bool vs_ai     = true;
-  bool skip_menu = false;
-  int  seed      = 0;
+  bool        vs_ai      = true;
+  bool        skip_menu  = false;
+  int         seed       = 0;
+  Input_Mode  input_mode = Input_Mode::Live;
+  std::string input_file_path;  // Where to write it, or where to read it.
+
+  // --local-host / --local-join.
+  std::optional<Online_Connection> local_connection;
 };
 Play_Options parse_play_args(int argc, char** argv);
 
@@ -89,14 +97,29 @@ Agent* make_agent_pair(
   bool               vs_ai
 );
 
-struct Giocamo {
-  Game&       game;
+struct Agent_UI : Agent {
   Table_State table;
+  UI_State    ui_state;
 
-  Giocamo(Game& game, Table_State table) : game(game), table(table) {}
+  Agent_UI(int window_width, int window_height)
+      : ui_state(window_width, window_height) {}
+};
+
+struct Giocamo {
+  Game&        game;
+  Agent_UI&    agent_ui;
+  Table_State& table;
+
+  int  bottom_player;
+  bool hot_seat;
+
+  Giocamo(Game& game, Agent_UI& agent_ui)
+      : game(game), agent_ui(agent_ui), table(agent_ui.table) {}
 
   virtual ~Giocamo()                                = default;
+  virtual void             init_table()             = 0;
   virtual void             update_table_from_game() = 0;
+  virtual Agent*           agent_opponent()         = 0;
   virtual std::vector<int> player_scores() = 0;  // TODO(giacomo): not needed
   virtual void             update_game_from_table() {}
   virtual void             on_message(const nlohmann::json& msg) {}
@@ -148,4 +171,8 @@ void play_game(
   std::function<std::vector<int>()>          compute_scores,
   std::function<void()>                      update_game_from_table = nullptr,
   std::function<void(const nlohmann::json&)> on_message             = nullptr
+);
+
+void play_game(
+  Giocamo& giocamo, Play_Options& options, const std::string& window_title
 );

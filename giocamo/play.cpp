@@ -48,23 +48,21 @@ void send_table_state(const Online& online, const Table_State& table_state) {
 }
 
 Menu_Result run_menu(
-  const std::string& title,
-  int                window_width,
-  int                window_height,
-  Input_Feed&        inputs,
-  int                argc,  // TODO(claude): std::optional<Online_Connection>
-  char**             argv,  // TODO(claude): std::optional<Online_Connection>
-  // TODO(giacomo): make a wrapper that uses argc,argv so API is not broken.
-  bool skip_menu,
-  int  cli_seed
+  const std::string&               title,
+  int                              window_width,
+  int                              window_height,
+  Input_Feed&                      inputs,
+  std::optional<Online_Connection> local_connection,
+  bool                             skip_menu,
+  int                              cli_seed
 ) {
   // --local-host / --local-join bypass the menu and STUN/ntfy entirely.
-  if (auto local_conn = setup_local_from_argv(argc, argv)) {
+  if (local_connection) {
     Menu_Result result;
     result.mode         = Menu_Result::ONLINE;
-    result.online       = local_conn->online;
-    result.player_index = local_conn->player_index;
-    result.seed         = local_conn->seed;
+    result.online       = local_connection->online;
+    result.player_index = local_connection->player_index;
+    result.seed         = local_connection->seed;
     return result;
   }
   if (skip_menu) {
@@ -149,6 +147,12 @@ Play_Options parse_play_args(int argc, char** argv) {
     } else if (arg.rfind("--seed=", 0) == 0) {
       options.seed = std::atoi(arg.c_str() + 7);
       seed_given   = true;
+    } else if (arg.rfind("--record=", 0) == 0) {
+      options.input_mode      = Input_Mode::Record;
+      options.input_file_path = arg.substr(9);
+    } else if (arg.rfind("--playback=", 0) == 0) {
+      options.input_mode      = Input_Mode::Playback;
+      options.input_file_path = arg.substr(11);
     }
   }
   // Make seed always carry a real value so callers never have to think about
@@ -156,6 +160,8 @@ Play_Options parse_play_args(int argc, char** argv) {
   if (!seed_given) {
     options.seed = (int)std::random_device{}();
   }
+
+  options.local_connection = setup_local_from_argv(argc, argv);
   return options;
 }
 
@@ -353,18 +359,37 @@ void play_game(
 }
 
 void play_game(
-  Giocamo&           giocamo,
-  UI_State&          ui_state,
-  Agent&             agent,
-  Input_Feed&        input_feed,
-  const Menu_Result& menu_result,
-  const std::string& window_title
+  Giocamo& giocamo, Play_Options& options, const std::string& window_title
 ) {
+  auto input_feed  = Input_Feed(options.input_mode, options.input_file_path);
+  auto menu_result = run_menu(
+    "Mindbug",
+    tt::WINDOW_WIDTH,
+    tt::WINDOW_HEIGHT,
+    input_feed,
+    options.local_connection,
+    options.skip_menu,
+    options.seed
+  );
+
+  // The local player sits at the bottom; in online play that may be seat 1.
+  // Both hands are shown only in hot-seat, where one screen is shared.
+  giocamo.bottom_player = menu_result.player_index;
+  giocamo.hot_seat      = !options.vs_ai && !menu_result.is_online();
+
+  giocamo.init_table();
+
+  auto& ui_state = giocamo.agent_ui.ui_state;
+
+  Agent* agent = make_agent_pair(
+    &giocamo.agent_ui, giocamo.agent_opponent(), menu_result, options.vs_ai
+  );
+
   run_game(
     giocamo.game,
     giocamo.table,
     ui_state,
-    agent,
+    *agent,
     input_feed,
     menu_result,
     window_title,
@@ -374,94 +399,3 @@ void play_game(
     [&giocamo](const nlohmann::json& message) { giocamo.on_message(message); }
   );
 }
-
-// // All CLI options understood by the binary.
-// struct Cli_Args {
-//   bool        skip_menu_vs_ai = false;
-//   Input_Mode  input_mode      = Input_Mode::Live;
-//   std::string input_file_path;  // For Record/Playback.
-//   int         window_width  = tt::WINDOW_WIDTH;
-//   int         window_height = tt::WINDOW_HEIGHT;
-//   // When true, boot from data/debug_*.json (the saved layout + game state).
-//   // Default is a fresh deal via quick_setup; --load opts into the snapshot.
-//   bool load_from_disk = false;
-//   // --hot-seat: two humans share the screen. Skips the menu and routes the
-//   // opponent seat to the same Agent_UI as the local one.
-//   bool hot_seat = false;
-
-//   std::optional<Online_Connection> local_conn;
-// };
-// VISITABLE_STRUCT(
-//   Cli_Args,
-//   skip_menu_vs_ai,
-//   input_mode,
-//   input_file_path,
-//   window_width,
-//   window_height,
-//   load_from_disk,
-//   hot_seat
-// );
-
-// static Cli_Args parse_cli_args(int argc, char** argv) {
-//   Cli_Args args;
-//   for (int i = 1; i < argc; ++i) {
-//     std::string a = argv[i];
-//     if (a == "agent") {
-//       args.skip_menu_vs_ai = true;
-//     } else if (a == "--load") {
-//       args.load_from_disk = true;
-//     } else if (a == "--hot-seat") {
-//       args.hot_seat = true;
-//     } else if (a.rfind("--record=", 0) == 0) {
-//       args.input_mode      = Input_Mode::Record;
-//       args.input_file_path = a.substr(9);
-//     } else if (a.rfind("--playback=", 0) == 0) {
-//       args.input_mode      = Input_Mode::Playback;
-//       args.input_file_path = a.substr(11);
-//     } else if (a.rfind("--width=", 0) == 0) {
-//       args.window_width = std::stoi(a.substr(8));
-//     } else if (a.rfind("--height=", 0) == 0) {
-//       args.window_height = std::stoi(a.substr(9));
-//     }
-//   }
-//   args.local_conn = setup_local_from_argv(argc, argv);
-//   print(args);
-//   return args;
-// }
-
-// void play(const Cli_Args& args) {
-//   auto inputs = Input_Feed(args.input_mode, args.input_file_path);
-
-//   // run_menu folds in --local-host / --local-join, the skip-menu fallback,
-//   and
-//   // the menu itself. "agent" and --hot-seat both skip the menu (vs-AI duel).
-//   bool skip_menu   = args.skip_menu_vs_ai || args.hot_seat;
-//   auto menu_result = run_menu(
-//     "Giocamo",
-//     tt::WINDOW_WIDTH,
-//     tt::WINDOW_HEIGHT,
-//     inputs,
-//     args.local_conn,
-//     skip_menu,
-//     /*cli_seed=*/(int)std::random_device{}()
-//   );
-
-//   // nullptr means local-only; otherwise borrow the bundle from menu_result.
-//   const Online* online = menu_result.is_online() ? &menu_result.online
-//                                                  : nullptr;
-
-//   game.init();
-//   void play_game(
-//     Game & state,
-//     Table_State & table,
-//     UI_State & ui_state,
-//     Agent & agent,
-//     Input_Feed & input_feed,
-//     const Menu_Result&                         menu_result,
-//     const std::string&                         window_title,
-//     std::function<void()>                      update_table_from_game,
-//     std::function<std::vector<int>()>          compute_scores,
-//     std::function<void()>                      update_game_from_table,
-//     std::function<void(const nlohmann::json&)> on_message
-//   )
-// }

@@ -1,13 +1,7 @@
-- Adaptive resolution
+- mindbugs should be things in a container 
+Adaptive resolution
 - Finish wrapper for setting thing.children so animation are always handled.
 - power as sub-thing
-- generalize to templated play_game
-    - game setup function
-    - table setup function
-    - UI
-    - game_frame()
-    - table_from_game()
-    - game_from_table()
 
 
 Major bugs

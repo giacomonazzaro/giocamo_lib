@@ -467,6 +467,9 @@ Choice Game_State::next_choice() {
 void Game_State::init(int seed) {
   assert(!card_designs.empty() && "load_card_designs() has not been called");
 
+  // A deal starts from an empty game, whatever was played here before.
+  *this = Game_State();
+
   auto rng  = std::mt19937((unsigned int)seed);
   auto deck = full_deck_designs();
   std::shuffle(deck.begin(), deck.end(), rng);

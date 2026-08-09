@@ -24,20 +24,15 @@
 // Mindbug on the table. The table is laid out once here; play_game deals the
 // game and drives the loop through these hooks.
 struct Mindbug_Giocamo : Giocamo {
-  UI_State& ui_state;
-  int       bottom_player;
-  bool      show_opponent_hand;
+  bool show_opponent_hand;
 
-  Mindbug_Giocamo(
-    mindbug::Game_State& state,
-    UI_State&            ui_state,
-    int                  bottom_player,
-    bool                 show_opponent_hand
-  )
-      : Giocamo(state, Table_State())
-      , ui_state(ui_state)
-      , bottom_player(bottom_player)
-      , show_opponent_hand(show_opponent_hand) {
+  Mindbug_Giocamo(mindbug::Game_State& game, Mindbug_Agent_UI& agent_ui)
+      : Giocamo(game, agent_ui) {}
+
+  void init_table() override {
+    auto bottom_player = this->bottom_player;
+    auto hot_seat      = this->hot_seat;
+
     table.is_drop_allowed = [](int, int, int) { return false; };
 
     // One Thing per card of the deal; ids match the game's card indices. The
@@ -45,8 +40,9 @@ struct Mindbug_Giocamo : Giocamo {
     const int card_count = 2 * (mindbug::HAND_SIZE + mindbug::DRAW_PILE_SIZE);
     for (int card = 0; card < card_count; ++card) {
       table.things.push_back(make_card());
-      table.draw_callbacks[card] =
-        make_card_draw_callback(this->state(), ui_state, card);
+      table.draw_callbacks[card] = make_card_draw_callback(
+        this->mindbug_game(), this->agent_ui.ui_state, card
+      );
     }
 
     auto zone_ids = std::vector<int>();
@@ -63,18 +59,22 @@ struct Mindbug_Giocamo : Giocamo {
     table.root     = add_thing(table, std::move(root));
 
     table.draw_callbacks[-1] = [this](const Table_State&, const Input&, bool) {
-      draw_mindbug_hud(this->state(), this->bottom_player);
+      draw_mindbug_hud(this->mindbug_game(), this->bottom_player);
     };
   }
 
-  mindbug::Game_State& state() {
+  mindbug::Game_State& mindbug_game() {
     return static_cast<mindbug::Game_State&>(game);
+  }
+
+  Mindbug_Agent_UI& mindbug_agent_ui() {
+    return static_cast<Mindbug_Agent_UI&>(agent_ui);
   }
 
   // Every zone owns the cards the game says it holds, and a hand is only face
   // up for the player it belongs to.
   void update_table_from_game() override {
-    mindbug::Game_State& state = this->state();
+    mindbug::Game_State& state = this->mindbug_game();
 
     // Clicking a card also starts dragging it, and the card the player just
     // clicked is about to change zone. End the drag first, or the layout would
@@ -87,11 +87,12 @@ struct Mindbug_Giocamo : Giocamo {
       table.things[card].image_path = get_image_path(design.image);
     }
 
-    auto set_zone = [&](const std::string& name, const std::vector<int>& cards) {
-      const int zone               = find_thing(table, name);
-      table.things[zone]._children = cards;
-      update_children_positions(zone, table, false);
-    };
+    auto set_zone =
+      [&](const std::string& name, const std::vector<int>& cards) {
+        const int zone               = find_thing(table, name);
+        table.things[zone]._children = cards;
+        update_children_positions(zone, table, false);
+      };
 
     for (int player = 0; player < 2; ++player) {
       const std::string      prefix = "p" + std::to_string(player) + "_";
@@ -118,24 +119,20 @@ struct Mindbug_Giocamo : Giocamo {
     );
   }
 
-  // Leaving playground: the game is the truth, so put the table back.
-  void update_game_from_table() override { update_table_from_game(); }
+  Agent* agent_opponent() override {
+    return new Agent_Minimax_Stochastic<mindbug::Game_State>(
+      /* max_depth   */ 13,
+      /* num_samples */ 15
+    );
+  }
 
   std::vector<int> player_scores() override {
     return {
-      mindbug::compute_player_score(this->state(), 0),
-      mindbug::compute_player_score(this->state(), 1),
+      mindbug::compute_player_score(this->mindbug_game(), 0),
+      mindbug::compute_player_score(this->mindbug_game(), 1),
     };
   }
 };
-
-static Agent* make_ai_opponent() {
-  // Mindbug hides the opponent's hand, so the search votes over sampled deals.
-  return new Agent_Minimax_Stochastic<mindbug::Game_State>(
-    /* max_depth   */ 13,
-    /* num_samples */ 15
-  );
-}
 
 int main(int argc, char** argv) {
   auto options = parse_play_args(argc, argv);
@@ -145,31 +142,14 @@ int main(int argc, char** argv) {
     return 1;
   }
 
-  auto inputs      = Input_Feed(Input_Mode::Live, "");
-  auto menu_result = run_menu(
-    "Mindbug",
-    tt::WINDOW_WIDTH,
-    tt::WINDOW_HEIGHT,
-    inputs,
-    argc,
-    argv,
-    options.skip_menu,
-    options.seed
-  );
+  auto game     = mindbug::Game_State();
+  auto agent_ui = Mindbug_Agent_UI(tt::WINDOW_WIDTH, tt::WINDOW_HEIGHT);
+  auto giocamo  = Mindbug_Giocamo(game, agent_ui);
 
-  // The local player sits at the bottom; in online play that may be seat 1.
-  // Both hands are shown only in hot-seat, where one screen is shared.
-  const int  bottom_player = menu_result.player_index;
-  const bool hot_seat      = !options.vs_ai && !menu_result.is_online();
+  // Agent* agent = make_agent_pair(
+  //   &agent_ui, giocamo.agent_opponent(), menu_result, options.vs_ai
+  // );
 
-  auto state   = mindbug::Game_State();
-  auto ui_state = UI_State(tt::WINDOW_WIDTH, tt::WINDOW_HEIGHT);
-  auto giocamo = Mindbug_Giocamo(state, ui_state, bottom_player, hot_seat);
-
-  auto   agent_ui = Mindbug_Agent_UI(&giocamo.table, &ui_state, bottom_player);
-  Agent* agent =
-    make_agent_pair(&agent_ui, make_ai_opponent(), menu_result, options.vs_ai);
-
-  play_game(giocamo, ui_state, *agent, inputs, menu_result, "Mindbug");
+  play_game(giocamo, options, "Mindbug");
   return 0;
 }
