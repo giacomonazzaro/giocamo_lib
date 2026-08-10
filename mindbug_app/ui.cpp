@@ -118,13 +118,10 @@ std::vector<Thing> make_mindbug_stacks(
 
 std::function<void(const Table_State&, const Input&, bool)>
 make_card_draw_callback(
-  const mindbug::Game_State&     state,
-  const std::unordered_set<int>& highlighted_things,
-  int                            card
+  const mindbug::Game_State& state, int card, bool highlighted
 ) {
-  return [&state, &highlighted_things, card](
-           const Table_State&, const Input&, bool face_up
-         ) {
+  return [&state, card,
+          highlighted](const Table_State&, const Input&, bool face_up) {
       if (!face_up) return;
       const float half_width  = (float)tt::CARD_WIDTH / 2.0f;
       const float half_height = (float)tt::CARD_HEIGHT / 2.0f;
@@ -179,7 +176,9 @@ make_card_draw_callback(
         }
       }
 
-      if (highlighted_things.count(card) > 0) {
+      // The border of a card the pending choice can take. Part of the card's
+      // face, so a card in front of it covers it like the rest of the card.
+      if (highlighted) {
         DrawRectangleRoundedLinesEx(
           Rectangle{
             -half_width,
@@ -194,6 +193,18 @@ make_card_draw_callback(
         );
       }
     };
+}
+
+void highlight_card(
+  Table_State& table, const mindbug::Game_State& state, int card
+) {
+  table.draw_callbacks[card] = make_card_draw_callback(state, card, true);
+}
+
+void clear_highlights(Table_State& table, const mindbug::Game_State& state) {
+  for (int card = 0; card < state.all_cards.size(); ++card) {
+    table.draw_callbacks[card] = make_card_draw_callback(state, card);
+  }
 }
 
 // One player's line: life points and Mindbugs left.

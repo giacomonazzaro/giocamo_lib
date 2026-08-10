@@ -40,9 +40,8 @@ struct Mindbug_Giocamo : Giocamo {
     const int card_count = 2 * (mindbug::HAND_SIZE + mindbug::DRAW_PILE_SIZE);
     for (int card = 0; card < card_count; ++card) {
       table.things.push_back(make_card());
-      table.draw_callbacks[card] = make_card_draw_callback(
-        this->mindbug_game(), this->agent_ui.highlighted_things, card
-      );
+      table.draw_callbacks[card] =
+        make_card_draw_callback(this->mindbug_game(), card);
     }
 
     auto zone_ids = std::vector<int>();

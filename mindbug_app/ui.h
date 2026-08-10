@@ -6,7 +6,6 @@
 
 #include <functional>
 #include <string>
-#include <unordered_set>
 #include <vector>
 
 // The table zones, laid out with the local player (`bottom_player`) along the
@@ -21,14 +20,22 @@ std::vector<Thing> make_mindbug_stacks(
 std::string get_image_path(const std::string& image_file);
 
 // Face decoration for one card: the power it has right now while it is in play
-// (auras change it), a mark when it is exhausted, and a border when the
-// pending choice can take it.
+// (auras change it), a mark when it is exhausted, and the border of a card the
+// pending choice can take.
 std::function<void(const Table_State&, const Input&, bool)>
 make_card_draw_callback(
-  const mindbug::Game_State&     state,
-  const std::unordered_set<int>& highlighted_things,
-  int                            card
+  const mindbug::Game_State& state, int card, bool highlighted = false
 );
+
+// Ask for a card to be drawn with the border that says the pending choice can
+// take it. The border is part of the card's own face, so a card in front of it
+// covers it like the rest of the card.
+void highlight_card(
+  Table_State& table, const mindbug::Game_State& state, int card
+);
+
+// Take that border off every card.
+void clear_highlights(Table_State& table, const mindbug::Game_State& state);
 
 // Life points, Mindbugs left, and whose turn it is. `local_seat` is "You".
 void draw_mindbug_hud(const mindbug::Game_State& state, int local_seat);

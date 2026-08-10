@@ -328,7 +328,8 @@ struct Table_State : Table_Layout {
   std::unordered_map<
     int,
     std::function<void(const Table_State&, const Input&, bool)>>
-                                     draw_callbacks;
+    draw_callbacks;
+
   Thing_Location                     zoomed_thing_id;
   std::function<bool(int, int, int)> is_drop_allowed;
 

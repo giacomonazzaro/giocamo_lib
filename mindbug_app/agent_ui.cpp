@@ -69,7 +69,7 @@ int Mindbug_Agent_UI::choose_action(Game& game, const Choice& choice) {
   const Input& input   = *this->input;
   Choose       actions = choice.actions(game);
 
-  highlighted_things.clear();
+  clear_highlights(table, state);
   render_text(
     instruction(state, choice),
     (float)tt::WINDOW_WIDTH / 2.0f - 300.0f,
@@ -101,17 +101,11 @@ int Mindbug_Agent_UI::choose_action(Game& game, const Choice& choice) {
         // attack through.
         const char* label = choice.description == "hunt" ? "Opponent chooses"
                                                          : "Don't block";
-        if (immediate_button(button, label, input)) {
-          highlighted_things.clear();
-          return i;
-        }
+        if (immediate_button(button, label, input)) return i;
         continue;
       }
-      highlighted_things.insert(card);
-      if (thing_pressed(card, table, input)) {
-        highlighted_things.clear();
-        return i;
-      }
+      highlight_card(table, state, card);
+      if (thing_pressed(card, table, input)) return i;
     }
     return -1;
   }
@@ -122,7 +116,7 @@ int Mindbug_Agent_UI::choose_action(Game& game, const Choice& choice) {
     const int  card   = card_of_target(choice, target);
     const bool picked = std::find(selection.begin(), selection.end(), target) !=
                         selection.end();
-    if (!picked) highlighted_things.insert(card);
+    if (!picked) highlight_card(table, state, card);
     if (!picked && (int)selection.size() < multiple.count &&
         thing_pressed(card, table, input)) {
       selection.push_back(target);
@@ -144,7 +138,6 @@ int Mindbug_Agent_UI::choose_action(Game& game, const Choice& choice) {
   std::sort(selection.begin(), selection.end());
   for (int i = 0; i < (int)combinations.size(); ++i) {
     if (combinations[i] != selection) continue;
-    highlighted_things.clear();
     selection.clear();
     return i;
   }

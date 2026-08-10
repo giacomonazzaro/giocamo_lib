@@ -394,7 +394,7 @@ void play_game(
     giocamo.table,
     [&agent_ui](const Input& input) { agent_ui.input = &input; },
     playground,
-    [&agent_ui] { agent_ui.highlighted_things.clear(); },
+    [] {},  // Highlights are drawn as they are asked for, none are stored.
     *agent,
     input_feed,
     menu_result,
