@@ -21,6 +21,17 @@
 #include "agent_ui.h"
 #include "ui.h"
 
+// On desktop the art sits relative to the working directory; on web it is
+// preloaded at an absolute path in MEMFS, and the emscripten working directory
+// isn't guaranteed to be "/".
+#ifdef __EMSCRIPTEN__
+static const std::string IMAGES_DIR = "/mindbug/card-images";
+#else
+static const std::string IMAGES_DIR = "mindbug/card-images";
+#endif
+
+std::string get_image_path(const std::string& image_file);
+
 std::vector<Thing> make_mindbug_zones(
   int bottom_player, int window_width, int window_height
 );
@@ -103,10 +114,6 @@ struct Mindbug_Giocamo : Giocamo {
         mindbug::card_designs[mindbug::design_of(state, card)];
       table.things[card].image_path = get_image_path(design.image);
     }
-
-    // The choice they belonged to is over. Whoever is asked next puts back the
-    // ones it needs.
-    clear_highlights(table, state);
 
     auto set_zone =
       [&](const std::string& name, const std::vector<int>& cards) {
@@ -245,6 +252,11 @@ std::vector<Thing> make_mindbug_zones(
   zones.push_back(make_container_thing(played, 0, pile, true, "played"));
 
   return zones;
+}
+
+std::string get_image_path(const std::string& image_file) {
+  if (image_file.empty()) return "";
+  return IMAGES_DIR + "/" + image_file;
 }
 
 int main(int argc, char** argv) {

@@ -10,20 +10,6 @@
 // otherwise.
 #include <raylib.h>
 
-// On desktop the art sits relative to the working directory; on web it is
-// preloaded at an absolute path in MEMFS, and the emscripten working directory
-// isn't guaranteed to be "/".
-#ifdef __EMSCRIPTEN__
-static const std::string IMAGES_DIR = "/mindbug/card-images";
-#else
-static const std::string IMAGES_DIR = "mindbug/card-images";
-#endif
-
-std::string get_image_path(const std::string& image_file) {
-  if (image_file.empty()) return "";
-  return IMAGES_DIR + "/" + image_file;
-}
-
 std::function<void(const Table_State&, const Input&, bool)>
 make_card_draw_callback(
   const mindbug::Game_State& state, int card, bool highlighted
@@ -101,18 +87,6 @@ make_card_draw_callback(
       );
     }
   };
-}
-
-void highlight_card(
-  Table_State& table, const mindbug::Game_State& state, int card
-) {
-  table.draw_callbacks[card] = make_card_draw_callback(state, card, true);
-}
-
-void clear_highlights(Table_State& table, const mindbug::Game_State& state) {
-  for (int card = 0; card < state.all_cards.size(); ++card) {
-    table.draw_callbacks[card] = make_card_draw_callback(state, card);
-  }
 }
 
 // One player's line: life points. The Mindbugs are on the table.
