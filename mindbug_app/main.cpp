@@ -86,6 +86,10 @@ struct Mindbug_Giocamo : Giocamo {
       table.things[card].image_path = get_image_path(design.image);
     }
 
+    // The choice they belonged to is over. Whoever is asked next puts back the
+    // ones it needs.
+    clear_highlights(table, state);
+
     auto set_zone =
       [&](const std::string& name, const std::vector<int>& cards) {
         const int zone               = find_thing(table, name);
