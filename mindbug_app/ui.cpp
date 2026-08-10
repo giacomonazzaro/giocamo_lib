@@ -89,29 +89,13 @@ make_card_draw_callback(
   };
 }
 
-// One player's line: life points. The Mindbugs are on the table.
-static std::string player_line(const mindbug::Game_State& state, int player) {
-  return "life " + std::to_string(state.players[player].life);
-}
-
 void draw_mindbug_hud(const mindbug::Game_State& state, int local_seat) {
-  const Color white = {235, 235, 235, 255};
-  const Color dim   = {160, 160, 160, 255};
-  float       y     = 16.0f;
-
-  render_text("Mindbug", 16.0f, y, 28, white);
-  y += 36.0f;
-  render_text("You: " + player_line(state, local_seat), 16.0f, y, 20, white);
-  y += 26.0f;
-  render_text(
-    "Opponent: " + player_line(state, 1 - local_seat), 16.0f, y, 20, white
-  );
-  y += 26.0f;
+  render_text("Mindbug", 16.0f, 16.0f, 28, Color{235, 235, 235, 255});
   render_text(
     state.current_player == local_seat ? "Your turn" : "Opponent's turn",
     16.0f,
-    y,
+    52.0f,
     20,
-    dim
+    Color{160, 160, 160, 255}
   );
 }

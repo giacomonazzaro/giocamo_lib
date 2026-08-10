@@ -36,6 +36,9 @@ std::vector<Thing> make_mindbug_zones(
   int bottom_player, int window_width, int window_height
 );
 
+// Diameter of the life counter.
+static constexpr int LIFE_COUNTER_SIZE = 90;
+
 // Mindbug on the table. The table is laid out once here; play_game deals the
 // game and drives the loop through these hooks.
 struct Mindbug_Giocamo : Giocamo {
@@ -66,6 +69,15 @@ struct Mindbug_Giocamo : Giocamo {
       }
     }
 
+    // Life is a counter per player: the Thing draws its own value.
+    for (int player = 0; player < 2; ++player) {
+      auto counter    = Thing();
+      counter.shape   = circle_shape(LIFE_COUNTER_SIZE);
+      counter.color   = {190, 40, 45, 255};
+      counter.counter = {mindbug::STARTING_LIFE, 0, 20};
+      table.things.push_back(std::move(counter));
+    }
+
     auto zone_ids = std::vector<int>();
     auto zones =
       make_mindbug_zones(bottom_player, tt::WINDOW_WIDTH, tt::WINDOW_HEIGHT);
@@ -89,6 +101,11 @@ struct Mindbug_Giocamo : Giocamo {
   static int mindbug_thing(int player, int index) {
     return 2 * (mindbug::HAND_SIZE + mindbug::DRAW_PILE_SIZE) +
            player * mindbug::STARTING_MINDBUGS + index;
+  }
+
+  // The counter Thing holding a player's life. The two follow the Mindbugs.
+  static int life_thing(int player) {
+    return mindbug_thing(1, mindbug::STARTING_MINDBUGS) + player;
   }
 
   mindbug::Game_State& mindbug_game() {
@@ -140,6 +157,8 @@ struct Mindbug_Giocamo : Giocamo {
         mindbugs.push_back(thing);
       }
       set_zone(prefix + "mindbugs", mindbugs);
+      table.things[life_thing(player)].counter.value = seat.life;
+      set_zone(prefix + "life", {life_thing(player)});
 
       // You always see your own hand; the opponent's is face down unless both
       // players share this screen.
@@ -202,9 +221,13 @@ std::vector<Thing> make_mindbug_zones(
     place_next(hand, card_width, card_height, "left", "center", margin);
   Rectangle discard =
     place_next(hand, card_width, card_height, "right", "center", margin);
-  // The two Mindbugs sit out on the flank, beside the creatures.
+  // The two Mindbugs sit out on the flank, beside the creatures, and the life
+  // counter on the flank opposite.
   Rectangle mindbugs = place_next(
     creatures, card_width + 90, card_height, "left", "center", margin
+  );
+  Rectangle life = place_next(
+    draw_pile, LIFE_COUNTER_SIZE, LIFE_COUNTER_SIZE, "left", "center", margin
   );
 
   // The opponent's zones mirror them across the middle of the screen.
@@ -226,6 +249,7 @@ std::vector<Thing> make_mindbug_zones(
       draw_pile = mirrored(draw_pile);
       discard   = mirrored(discard);
       mindbugs  = mirrored(mindbugs);
+      life      = mirrored(life);
     }
 
     zones.push_back(
@@ -242,6 +266,9 @@ std::vector<Thing> make_mindbug_zones(
     ));
     zones.push_back(
       make_container_thing(mindbugs, 90, 0, true, zone_name(p, "mindbugs"))
+    );
+    zones.push_back(
+      make_container_thing(life, 0, 0, true, zone_name(p, "life"))
     );
   }
 

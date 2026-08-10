@@ -16,5 +16,5 @@ make_card_draw_callback(
   const mindbug::Game_State& state, int card, bool highlighted = false
 );
 
-// Life points and whose turn it is. `local_seat` is "You".
+// Whose turn it is. `local_seat` is "You".
 void draw_mindbug_hud(const mindbug::Game_State& state, int local_seat);
