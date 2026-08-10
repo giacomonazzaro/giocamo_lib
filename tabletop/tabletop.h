@@ -170,9 +170,9 @@ struct Thing {
   std::string name = "thing";
 
   // Appearance.
-  Color       color        = {255, 255, 255, 50};
+  Color       color        = {255, 255, 255, 255};
   Color       border_color = {0, 0, 0, 255};
-  float       border_width = 4;
+  float       border_width = 0;
   std::string image_path   = "";
 
   Transform2D transform = {};
@@ -237,6 +237,24 @@ inline Rectangle local_rect(const Thing& thing) {
     size.x,
     size.y,
   };
+}
+
+inline Thing make_container_thing(
+  Rectangle    rect,
+  float        spread_x,
+  float        spread_y,
+  bool         face_up,
+  std::string  name,
+  const Color& color = {255, 255, 255, 0}
+) {
+  auto thing = Thing();
+  set_local_rect(thing, rect);
+  thing.spread_x = spread_x;
+  thing.spread_y = spread_y;
+  thing.face_up  = face_up;
+  thing.name     = std::move(name);
+  thing.color    = color;
+  return thing;
 }
 
 // Build a full-window root thing centered on a width×height screen, textured

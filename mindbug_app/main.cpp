@@ -21,6 +21,10 @@
 #include "agent_ui.h"
 #include "ui.h"
 
+std::vector<Thing> make_mindbug_zones(
+  int bottom_player, int window_width, int window_height
+);
+
 // Mindbug on the table. The table is laid out once here; play_game deals the
 // game and drives the loop through these hooks.
 struct Mindbug_Giocamo : Giocamo {
@@ -52,9 +56,9 @@ struct Mindbug_Giocamo : Giocamo {
     }
 
     auto zone_ids = std::vector<int>();
-    for (Thing& zone : make_mindbug_stacks(
-           bottom_player, tt::WINDOW_WIDTH, tt::WINDOW_HEIGHT
-         )) {
+    auto zones =
+      make_mindbug_zones(bottom_player, tt::WINDOW_WIDTH, tt::WINDOW_HEIGHT);
+    for (Thing& zone : zones) {
       zone_ids.push_back(add_thing(table, std::move(zone)));
     }
 
@@ -124,7 +128,7 @@ struct Mindbug_Giocamo : Giocamo {
       // A spent Mindbug is turned face down and stays on the table.
       auto mindbugs = std::vector<int>();
       for (int i = 0; i < mindbug::STARTING_MINDBUGS; ++i) {
-        const int thing            = mindbug_thing(player, i);
+        const int thing             = mindbug_thing(player, i);
         table.things[thing].face_up = i < seat.mindbugs;
         mindbugs.push_back(thing);
       }
@@ -147,7 +151,7 @@ struct Mindbug_Giocamo : Giocamo {
 
   Agent* agent_opponent() override {
     return new Agent_Minimax_Stochastic<mindbug::Game_State>(
-      /* max_depth   */ 13,
+      /* max_depth   */ 10,
       /* num_samples */ 15
     );
   }
@@ -159,6 +163,89 @@ struct Mindbug_Giocamo : Giocamo {
     };
   }
 };
+
+std::vector<Thing> make_mindbug_zones(
+  int bottom_player, int window_width, int window_height
+) {
+  const int card_width  = tt::CARD_WIDTH;
+  const int card_height = tt::CARD_HEIGHT;
+  const int margin      = 24;
+  const int fan         = tt::CARD_WIDTH + 10;  // Spread of a row of cards.
+  const int pile        = -3;                   // Spread of a near-flat pile.
+
+  // const int row_width   = 6 * fan + card_width;
+  const int row_width = 5 * tt::CARD_WIDTH + 10;
+
+  // The root is centered on the screen, so the window spans
+  // (-width/2, -height/2) to (width/2, height/2) in root-local coordinates.
+  Rectangle window = {
+    -(float)window_width / 2.0f,
+    -(float)window_height / 2.0f,
+    (float)window_width,
+    (float)window_height
+  };
+
+  // Bottom seat: hand along the bottom edge, creatures in the half above it,
+  // draw pile and discard pile out on the flanks.
+  Rectangle hand =
+    place_inside(window, row_width, card_height, "center", "bottom", margin);
+  Rectangle creatures =
+    place_next(hand, row_width, card_height, "center", "top", margin);
+  Rectangle draw_pile =
+    place_next(hand, card_width, card_height, "left", "center", margin);
+  Rectangle discard =
+    place_next(hand, card_width, card_height, "right", "center", margin);
+  // The two Mindbugs sit out on the flank, beside the creatures.
+  Rectangle mindbugs = place_next(
+    creatures, card_width + 90, card_height, "left", "center", margin
+  );
+
+  // The opponent's zones mirror them across the middle of the screen.
+  auto mirrored = [](Rectangle r) -> Rectangle {
+    return {r.x, -r.y - r.height, r.width, r.height};
+  };
+
+  const int top_player = 1 - bottom_player;
+  auto      zone_name  = [](int seat, const char* zone) {
+    return "p" + std::to_string(seat) + "_" + zone;
+  };
+
+  // A draw pile is face down for both players; everything else is open.
+  std::vector<Thing> zones;
+  for (int p : {bottom_player, top_player}) {
+    if (p == top_player) {
+      hand      = mirrored(hand);
+      creatures = mirrored(creatures);
+      draw_pile = mirrored(draw_pile);
+      discard   = mirrored(discard);
+      mindbugs  = mirrored(mindbugs);
+    }
+
+    zones.push_back(
+      make_container_thing(hand, fan, 0, true, zone_name(p, "hand"))
+    );
+    zones.push_back(
+      make_container_thing(creatures, fan, 0, true, zone_name(p, "creatures"))
+    );
+    zones.push_back(
+      make_container_thing(draw_pile, 0, pile, false, zone_name(p, "draw"))
+    );
+    zones.push_back(make_container_thing(
+      discard, 0, p == bottom_player ? 35 : -35, true, zone_name(p, "discard")
+    ));
+    zones.push_back(
+      make_container_thing(mindbugs, 90, 0, true, zone_name(p, "mindbugs"))
+    );
+  }
+
+  // The creature waiting on a Mindbug decision.
+  Rectangle played =
+    place_inside(window, card_width, card_height, "center", "center");
+  played.x += 200;
+  zones.push_back(make_container_thing(played, 0, pile, true, "played"));
+
+  return zones;
+}
 
 int main(int argc, char** argv) {
   auto options = parse_play_args(argc, argv);
