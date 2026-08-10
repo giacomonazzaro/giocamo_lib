@@ -64,13 +64,12 @@ static std::vector<int> targets_of(const Choose& actions) {
 }
 
 int Mindbug_Agent_UI::choose_action(Game& game, const Choice& choice) {
-  Game_State&  state    = static_cast<Game_State&>(game);
-  auto&        ui_state = this->ui_state;
-  auto&        table    = this->table;
-  const Input& input    = *ui_state.input;
-  Choose       actions  = choice.actions(game);
+  Game_State&  state   = static_cast<Game_State&>(game);
+  auto&        table   = this->table;
+  const Input& input   = *this->input;
+  Choose       actions = choice.actions(game);
 
-  ui_state.highlighted_things.clear();
+  highlighted_things.clear();
   render_text(
     instruction(state, choice),
     (float)tt::WINDOW_WIDTH / 2.0f - 300.0f,
@@ -80,7 +79,7 @@ int Mindbug_Agent_UI::choose_action(Game& game, const Choice& choice) {
   );
 
   // Buttons run down the right-hand side, under the score line.
-  Rectangle button = ui_state.place(200, 46, "right", "center", 24);
+  Rectangle button = place_on_screen(200, 46, "right", "center", 24);
 
   // The Mindbug decision is the only choice that isn't about a card.
   if (auto* options = std::get_if<Choose_Option>(&actions)) {
@@ -103,14 +102,14 @@ int Mindbug_Agent_UI::choose_action(Game& game, const Choice& choice) {
         const char* label = choice.description == "hunt" ? "Opponent chooses"
                                                          : "Don't block";
         if (immediate_button(button, label, input)) {
-          ui_state.highlighted_things.clear();
+          highlighted_things.clear();
           return i;
         }
         continue;
       }
-      ui_state.highlighted_things[card] = card;
+      highlighted_things.insert(card);
       if (thing_pressed(card, table, input)) {
-        ui_state.highlighted_things.clear();
+        highlighted_things.clear();
         return i;
       }
     }
@@ -123,7 +122,7 @@ int Mindbug_Agent_UI::choose_action(Game& game, const Choice& choice) {
     const int  card   = card_of_target(choice, target);
     const bool picked = std::find(selection.begin(), selection.end(), target) !=
                         selection.end();
-    if (!picked) ui_state.highlighted_things[card] = card;
+    if (!picked) highlighted_things.insert(card);
     if (!picked && (int)selection.size() < multiple.count &&
         thing_pressed(card, table, input)) {
       selection.push_back(target);
@@ -145,7 +144,7 @@ int Mindbug_Agent_UI::choose_action(Game& game, const Choice& choice) {
   std::sort(selection.begin(), selection.end());
   for (int i = 0; i < (int)combinations.size(); ++i) {
     if (combinations[i] != selection) continue;
-    ui_state.highlighted_things.clear();
+    highlighted_things.clear();
     selection.clear();
     return i;
   }

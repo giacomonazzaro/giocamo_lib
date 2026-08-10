@@ -6,6 +6,7 @@
 
 #include <functional>
 #include <string>
+#include <unordered_set>
 #include <vector>
 
 // The table zones, laid out with the local player (`bottom_player`) along the
@@ -24,7 +25,9 @@ std::string get_image_path(const std::string& image_file);
 // pending choice can take it.
 std::function<void(const Table_State&, const Input&, bool)>
 make_card_draw_callback(
-  const mindbug::Game_State& state, UI_State& ui_state, int card
+  const mindbug::Game_State&     state,
+  const std::unordered_set<int>& highlighted_things,
+  int                            card
 );
 
 // Life points, Mindbugs left, and whose turn it is. `local_seat` is "You".

@@ -41,7 +41,7 @@ struct Mindbug_Giocamo : Giocamo {
     for (int card = 0; card < card_count; ++card) {
       table.things.push_back(make_card());
       table.draw_callbacks[card] = make_card_draw_callback(
-        this->mindbug_game(), this->agent_ui.ui_state, card
+        this->mindbug_game(), this->agent_ui.highlighted_things, card
       );
     }
 
@@ -143,7 +143,7 @@ int main(int argc, char** argv) {
   }
 
   auto game     = mindbug::Game_State();
-  auto agent_ui = Mindbug_Agent_UI(tt::WINDOW_WIDTH, tt::WINDOW_HEIGHT);
+  auto agent_ui = Mindbug_Agent_UI();
   auto giocamo  = Mindbug_Giocamo(game, agent_ui);
 
   // Agent* agent = make_agent_pair(

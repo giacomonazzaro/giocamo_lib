@@ -100,6 +100,15 @@ bool immediate_button(
   return hovered;
 }
 
+Rectangle place_on_screen(
+  int width, int height, const std::string& x, const std::string& y, int padding
+) {
+  Rectangle screen = {
+    0.0f, 0.0f, (float)tt::WINDOW_WIDTH, (float)tt::WINDOW_HEIGHT
+  };
+  return place_inside(screen, width, height, x, y, padding);
+}
+
 UI_State::UI_State(int width, int height)
     : window_width(width), window_height(height) {}
 

@@ -118,10 +118,13 @@ std::vector<Thing> make_mindbug_stacks(
 
 std::function<void(const Table_State&, const Input&, bool)>
 make_card_draw_callback(
-  const mindbug::Game_State& state, UI_State& ui_state, int card
+  const mindbug::Game_State&     state,
+  const std::unordered_set<int>& highlighted_things,
+  int                            card
 ) {
-  return
-    [&state, &ui_state, card](const Table_State&, const Input&, bool face_up) {
+  return [&state, &highlighted_things, card](
+           const Table_State&, const Input&, bool face_up
+         ) {
       if (!face_up) return;
       const float half_width  = (float)tt::CARD_WIDTH / 2.0f;
       const float half_height = (float)tt::CARD_HEIGHT / 2.0f;
@@ -176,7 +179,7 @@ make_card_draw_callback(
         }
       }
 
-      if (ui_state.highlighted_things.count(card) > 0) {
+      if (highlighted_things.count(card) > 0) {
         DrawRectangleRoundedLinesEx(
           Rectangle{
             -half_width,

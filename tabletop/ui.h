@@ -23,6 +23,16 @@ Rectangle place_inside(
   int                padding = 0
 );
 
+// Place a rectangle against the edges of the screen. Same as place_inside on
+// the whole window.
+Rectangle place_on_screen(
+  int                width,
+  int                height,
+  const std::string& x       = "left",
+  const std::string& y       = "top",
+  int                padding = 0
+);
+
 struct Button {
   Rectangle   rect;
   std::string text;

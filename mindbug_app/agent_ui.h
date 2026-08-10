@@ -16,9 +16,6 @@ struct Mindbug_Agent_UI : Agent_UI {
   // Targets picked so far, for a choice that takes more than one.
   std::vector<int> selection;
 
-  Mindbug_Agent_UI(int window_width, int window_height)
-      : Agent_UI(window_width, window_height) {}
-
   void message(const std::string&) override {}
 
   int choose_action(Game& game, const Choice& choice) override;

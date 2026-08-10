@@ -181,7 +181,9 @@ Agent* make_agent_pair(
 static void run_game(
   Game&                                      state,
   Table_State&                               table,
-  UI_State&                                  ui_state,
+  std::function<void(const Input&)>          set_frame_input,
+  bool&                                      playground,
+  std::function<void()>                      clear_highlights,
   Agent&                                     agent,
   Input_Feed&                                input_feed,
   const Menu_Result&                         menu_result,
@@ -227,8 +229,8 @@ static void run_game(
   // Returning true tells run_tabletop to exit the loop — we use that to
   // stop as soon as the game ends so the game-over screen can take over.
   auto update = [&](Table_State& table, const Input& input) {
-    // The UI agent reads the current frame's input through ui_state.
-    ui_state.input = &input;
+    // The UI agent reads the current frame through the input it is handed.
+    set_frame_input(input);
 
     // Drain any messages the remote sent us this frame. Two kinds matter
     // here: a "playground" flip from the other peer (mirror it locally) and a
@@ -239,11 +241,11 @@ static void run_game(
         std::string type = incoming->value("type", "");
         if (type == "playground") {
           bool remote_on = incoming->value("on", false);
-          if (remote_on != ui_state.playground) {
-            ui_state.playground = remote_on;
-            if (ui_state.playground) {
+          if (remote_on != playground) {
+            playground = remote_on;
+            if (playground) {
               table.is_drop_allowed = [](int, int, int) { return true; };
-              ui_state.highlighted_things.clear();
+              clear_highlights();
             } else {
               leave_playground();
             }
@@ -262,16 +264,15 @@ static void run_game(
     };
     Rectangle button_rect =
       place_inside(screen_rect, 160, 32, "right", "top", 20);
-    std::string label = ui_state.playground ? "Playground: ON"
-                                            : "Playground: OFF";
+    std::string label = playground ? "Playground: ON" : "Playground: OFF";
     if (immediate_button(button_rect, label, input, Color{20, 20, 20, 100})) {
-      ui_state.playground = !ui_state.playground;
-      if (ui_state.playground) {
+      playground = !playground;
+      if (playground) {
         // Anything goes while playing around. Wipe the "legal move" borders
         // the agent left over the player's hand — they're misleading while
         // the game loop is paused.
         table.is_drop_allowed = [](int, int, int) { return true; };
-        ui_state.highlighted_things.clear();
+        clear_highlights();
       } else {
         // Commit (or discard) the playground edits. The next game_frame call
         // re-installs is_drop_allowed via the agent.
@@ -282,13 +283,13 @@ static void run_game(
       if (online) {
         nlohmann::json msg;
         msg["type"] = "playground";
-        msg["on"]   = ui_state.playground;
+        msg["on"]   = playground;
         send_message(*online, msg);
-        if (ui_state.playground) send_table_state(*online, table);
+        if (playground) send_table_state(*online, table);
       }
     }
 
-    if (ui_state.playground) {
+    if (playground) {
       auto table_dirty = draw_editor_ui(table, input);
 
       // Replicate drop / rotate / shuffle to the remote so playground edits
@@ -346,7 +347,9 @@ void play_game(
   run_game(
     state,
     table,
-    ui_state,
+    [&ui_state](const Input& input) { ui_state.input = &input; },
+    ui_state.playground,
+    [&ui_state] { ui_state.highlighted_things.clear(); },
     agent,
     input_feed,
     menu_result,
@@ -379,16 +382,19 @@ void play_game(
 
   giocamo.init_table();
 
-  auto& ui_state = giocamo.agent_ui.ui_state;
-
   Agent* agent = make_agent_pair(
     &giocamo.agent_ui, giocamo.agent_opponent(), menu_result, options.vs_ai
   );
 
+  Agent_UI& agent_ui  = giocamo.agent_ui;
+  bool      playground = false;
+
   run_game(
     giocamo.game,
     giocamo.table,
-    ui_state,
+    [&agent_ui](const Input& input) { agent_ui.input = &input; },
+    playground,
+    [&agent_ui] { agent_ui.highlighted_things.clear(); },
     *agent,
     input_feed,
     menu_result,

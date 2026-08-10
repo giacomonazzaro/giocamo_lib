@@ -1,5 +1,6 @@
 - mindbugs should be things in a container 
-Adaptive resolution
+- move card implementation to mindbug/cards.cpp
+- Adaptive resolution
 - Finish wrapper for setting thing.children so animation are always handled.
 - power as sub-thing
 

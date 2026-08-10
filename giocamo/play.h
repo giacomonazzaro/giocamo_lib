@@ -9,6 +9,7 @@
 #include <functional>
 #include <nlohmann/json.hpp>
 #include <optional>
+#include <unordered_set>
 
 #include "menu.h"
 
@@ -99,10 +100,11 @@ Agent* make_agent_pair(
 
 struct Agent_UI : Agent {
   Table_State table;
-  UI_State    ui_state;
-
-  Agent_UI(int window_width, int window_height)
-      : ui_state(window_width, window_height) {}
+  // The frame being drawn, so choose_action can read the mouse. The loop sets
+  // it before asking the agent for a move.
+  const Input* input = nullptr;
+  // Things the pending choice can take, outlined by the game's draw callbacks.
+  std::unordered_set<int> highlighted_things;
 };
 
 struct Giocamo {
