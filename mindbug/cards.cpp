@@ -72,6 +72,7 @@ static void discard_from_hand(
     remove_card(state.players[player].hand, card);
     state.players[player].discard.push_back(card);
   }
+  draw_back_up_to_hand_size(state);
 }
 
 // Play `card` out of `pile_owner`'s discard pile, under the control of

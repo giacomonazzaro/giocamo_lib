@@ -188,4 +188,6 @@ inline Game_State sample_state(
   return sampled;
 }
 
+void draw_back_up_to_hand_size(Game_State& state);
+
 }  // namespace mindbug

@@ -243,6 +243,7 @@ static Choice make_turn_choice(Game_State& state) {
     } else {
       state.played_card = action.card;
       remove_card(state.active_player().hand, action.card);
+      draw_back_up_to_hand_size(state);
       state.phase = Phase::MINDBUG;
     }
     return null_choice;
@@ -292,7 +293,7 @@ static Choice make_frenzy_choice(Game_State& state) {
   };
   choice.resolve = [](Game& game, int index) -> Choice {
     Game_State& state = static_cast<Game_State&>(game);
-    state.phase = index == 0 ? Phase::ATTACK : Phase::TURN_END;
+    state.phase       = index == 0 ? Phase::ATTACK : Phase::TURN_END;
     return null_choice;
   };
   return choice;
@@ -375,12 +376,19 @@ static void resolve_combat(Game_State& state) {
   state.phase = may_attack_again ? Phase::FRENZY : Phase::TURN_END;
 }
 
+void draw_back_up_to_hand_size(Game_State& state) {
+  for (int i : {0, 1}) {
+    Player& p = state.players[i];
+    while (p.hand.size() < HAND_SIZE && p.draw_pile.size() > 0) {
+      p.hand.push_back(p.draw_pile.back());
+      p.draw_pile.pop_back();
+    }
+  }
+}
+
 static void end_turn(Game_State& state) {
   Player& player = state.active_player();
-  while (player.hand.size() < HAND_SIZE && player.draw_pile.size() > 0) {
-    player.hand.push_back(player.draw_pile.back());
-    player.draw_pile.pop_back();
-  }
+  draw_back_up_to_hand_size(state);
   state.attacker     = -1;
   state.blocker      = -1;
   state.attack_count = 0;
