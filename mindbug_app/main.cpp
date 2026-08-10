@@ -88,7 +88,7 @@ struct Mindbug_Giocamo : Giocamo {
     // Empty texture path: the table is drawn with root.color.
     auto root      = create_table_root(tt::WINDOW_WIDTH, tt::WINDOW_HEIGHT, "");
     root._children = zone_ids;
-    root.color     = {18, 20, 26, 255};
+    root.color     = {0, 0, 0, 0};
     table.root     = add_thing(table, std::move(root));
 
     table.draw_callbacks[-1] = [this](const Table_State&, const Input&, bool) {
