@@ -10,8 +10,9 @@
 
 // The table zones, laid out with the local player (`bottom_player`) along the
 // bottom and the opponent at the top. Zones are named by seat — "p0_hand",
-// "p1_creatures", "p0_draw", "p1_discard" — plus "played" for the creature
-// waiting on a Mindbug decision. Game code finds them with find_thing().
+// "p1_creatures", "p0_draw", "p1_discard", "p0_mindbugs" — plus "played" for
+// the creature waiting on a Mindbug decision. Game code finds them with
+// find_thing().
 std::vector<Thing> make_mindbug_stacks(
   int bottom_player, int window_width, int window_height
 );
@@ -37,6 +38,6 @@ void highlight_card(
 // Take that border off every card.
 void clear_highlights(Table_State& table, const mindbug::Game_State& state);
 
-// Life points, Mindbugs left, and whose turn it is. `local_seat` is "You".
+// Life points and whose turn it is. `local_seat` is "You".
 void draw_mindbug_hud(const mindbug::Game_State& state, int local_seat);
 

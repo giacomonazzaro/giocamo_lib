@@ -44,6 +44,13 @@ struct Mindbug_Giocamo : Giocamo {
         make_card_draw_callback(this->mindbug_game(), card);
     }
 
+    // The Mindbugs are cards too, two per player, right after the deal.
+    for (int player = 0; player < 2; ++player) {
+      for (int i = 0; i < mindbug::STARTING_MINDBUGS; ++i) {
+        table.things.push_back(make_card(get_image_path("mindbug.png")));
+      }
+    }
+
     auto zone_ids = std::vector<int>();
     for (Thing& zone : make_mindbug_stacks(
            bottom_player, tt::WINDOW_WIDTH, tt::WINDOW_HEIGHT
@@ -60,6 +67,13 @@ struct Mindbug_Giocamo : Giocamo {
     table.draw_callbacks[-1] = [this](const Table_State&, const Input&, bool) {
       draw_mindbug_hud(this->mindbug_game(), this->bottom_player);
     };
+  }
+
+  // The Thing holding player's Mindbug number `index`. They follow the dealt
+  // cards, so their ids are fixed by the deal size.
+  static int mindbug_thing(int player, int index) {
+    return 2 * (mindbug::HAND_SIZE + mindbug::DRAW_PILE_SIZE) +
+           player * mindbug::STARTING_MINDBUGS + index;
   }
 
   mindbug::Game_State& mindbug_game() {
@@ -106,6 +120,15 @@ struct Mindbug_Giocamo : Giocamo {
       set_zone(
         prefix + "creatures", {seat.creatures.begin(), seat.creatures.end()}
       );
+
+      // A spent Mindbug is turned face down and stays on the table.
+      auto mindbugs = std::vector<int>();
+      for (int i = 0; i < mindbug::STARTING_MINDBUGS; ++i) {
+        const int thing            = mindbug_thing(player, i);
+        table.things[thing].face_up = i < seat.mindbugs;
+        mindbugs.push_back(thing);
+      }
+      set_zone(prefix + "mindbugs", mindbugs);
 
       // You always see your own hand; the opponent's is face down unless both
       // players share this screen.

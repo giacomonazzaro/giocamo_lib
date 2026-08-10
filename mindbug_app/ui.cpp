@@ -68,6 +68,10 @@ std::vector<Thing> make_mindbug_stacks(
     place_next(hand, card_width, card_height, "left", "center", margin);
   Rectangle discard =
     place_next(hand, card_width, card_height, "right", "center", margin);
+  // The two Mindbugs sit out on the flank, beside the creatures.
+  Rectangle mindbugs = place_next(
+    creatures, card_width + 90, card_height, "left", "center", margin
+  );
 
   // The opponent's zones mirror them across the middle of the screen.
   auto mirrored = [](Rectangle rect) {
@@ -98,7 +102,10 @@ std::vector<Thing> make_mindbug_stacks(
     make_stack(draw_pile, 0, pile, false, zone_name(bottom_player, "draw"))
   );
   stacks.push_back(
-    make_stack(discard, 10, pile, true, zone_name(bottom_player, "discard"))
+    make_stack(discard, 0, 35, true, zone_name(bottom_player, "discard"))
+  );
+  stacks.push_back(
+    make_stack(mindbugs, 90, 0, true, zone_name(bottom_player, "mindbugs"))
   );
   stacks.push_back(
     make_stack(mirrored(hand), fan, 0, true, zone_name(top_player, "hand"))
@@ -109,8 +116,11 @@ std::vector<Thing> make_mindbug_stacks(
   stacks.push_back(make_stack(
     mirrored(draw_pile), 0, pile, false, zone_name(top_player, "draw")
   ));
+  stacks.push_back(
+    make_stack(mirrored(discard), 0, 35, true, zone_name(top_player, "discard"))
+  );
   stacks.push_back(make_stack(
-    mirrored(discard), 10, pile, true, zone_name(top_player, "discard")
+    mirrored(mindbugs), 90, 0, true, zone_name(top_player, "mindbugs")
   ));
   stacks.push_back(make_stack(played, 0, pile, true, "played"));
   return stacks;
@@ -120,66 +130,49 @@ std::function<void(const Table_State&, const Input&, bool)>
 make_card_draw_callback(
   const mindbug::Game_State& state, int card, bool highlighted
 ) {
-  return [&state, card,
+  return [&state,
+          card,
           highlighted](const Table_State&, const Input&, bool face_up) {
-      if (!face_up) return;
-      const float half_width  = (float)tt::CARD_WIDTH / 2.0f;
-      const float half_height = (float)tt::CARD_HEIGHT / 2.0f;
+    if (!face_up) return;
+    const float half_width  = (float)tt::CARD_WIDTH / 2.0f;
+    const float half_height = (float)tt::CARD_HEIGHT / 2.0f;
 
-      // Power is only worth showing while the card is in play, where auras and
-      // the turn can push it away from the printed number.
-      if (mindbug::is_in_play(state, card)) {
-        const auto power =
-          std::to_string(mindbug::effective_power(state, card));
-        const float badge_x = -half_width + 22.0f;
-        const float badge_y = -half_height + 22.0f;
-        DrawCircle((int)badge_x, (int)badge_y, 21.0f, ::Color{20, 20, 20, 235});
-        const int size = 28;
-        render_text(
-          power,
-          badge_x - (float)text_width(power, size) / 2.0f,
-          badge_y - (float)size / 2.0f,
-          size,
-          Color{255, 255, 255, 255}
+    // Power is only worth showing while the card is in play, where auras and
+    // the turn can push it away from the printed number.
+    if (mindbug::is_in_play(state, card)) {
+      const auto  power = std::to_string(mindbug::effective_power(state, card));
+      const float badge_x = -half_width + 22.0f;
+      const float badge_y = -half_height + 22.0f;
+      DrawCircle((int)badge_x, (int)badge_y, 21.0f, ::Color{20, 20, 20, 235});
+      const int size = 28;
+      render_text(
+        power,
+        badge_x - (float)text_width(power, size) / 2.0f,
+        badge_y - (float)size / 2.0f,
+        size,
+        Color{255, 255, 255, 255}
+      );
+      // The creature that is attacking right now, so the defender sees what
+      // they are being asked to block.
+      if (card == state.attacker) {
+        DrawRectangleRoundedLinesEx(
+          Rectangle{
+            -half_width - 7.0f,
+            -half_height - 7.0f,
+            (float)tt::CARD_WIDTH + 14.0f,
+            (float)tt::CARD_HEIGHT + 14.0f
+          },
+          0.18f,
+          8,
+          6.0f,
+          Color{225, 60, 60, 255}
         );
-        // The creature that is attacking right now, so the defender sees what
-        // they are being asked to block.
-        if (card == state.attacker) {
-          DrawRectangleRoundedLinesEx(
-            Rectangle{
-              -half_width - 7.0f,
-              -half_height - 7.0f,
-              (float)tt::CARD_WIDTH + 14.0f,
-              (float)tt::CARD_HEIGHT + 14.0f
-            },
-            0.18f,
-            8,
-            6.0f,
-            Color{225, 60, 60, 255}
-          );
-        }
-
-        // An exhausted creature has used up the save its Tough keyword gives
-        // it.
-        if (mindbug::is_exhausted(state, card)) {
-          DrawRectangleRounded(
-            Rectangle{
-              -half_width,
-              -half_height,
-              (float)tt::CARD_WIDTH,
-              (float)tt::CARD_HEIGHT
-            },
-            0.18f,
-            8,
-            ::Color{0, 0, 0, 110}
-          );
-        }
       }
 
-      // The border of a card the pending choice can take. Part of the card's
-      // face, so a card in front of it covers it like the rest of the card.
-      if (highlighted) {
-        DrawRectangleRoundedLinesEx(
+      // An exhausted creature has used up the save its Tough keyword gives
+      // it.
+      if (mindbug::is_exhausted(state, card)) {
+        DrawRectangleRounded(
           Rectangle{
             -half_width,
             -half_height,
@@ -188,11 +181,28 @@ make_card_draw_callback(
           },
           0.18f,
           8,
-          5.0f,
-          Color{255, 215, 0, 230}
+          ::Color{0, 0, 0, 110}
         );
       }
-    };
+    }
+
+    // The border of a card the pending choice can take. Part of the card's
+    // face, so a card in front of it covers it like the rest of the card.
+    if (highlighted) {
+      DrawRectangleRoundedLinesEx(
+        Rectangle{
+          -half_width,
+          -half_height,
+          (float)tt::CARD_WIDTH,
+          (float)tt::CARD_HEIGHT
+        },
+        0.18f,
+        8,
+        5.0f,
+        Color{255, 215, 0, 230}
+      );
+    }
+  };
 }
 
 void highlight_card(
@@ -207,10 +217,9 @@ void clear_highlights(Table_State& table, const mindbug::Game_State& state) {
   }
 }
 
-// One player's line: life points and Mindbugs left.
+// One player's line: life points. The Mindbugs are on the table.
 static std::string player_line(const mindbug::Game_State& state, int player) {
-  return "life " + std::to_string(state.players[player].life) +
-         "    mindbugs " + std::to_string(state.players[player].mindbugs);
+  return "life " + std::to_string(state.players[player].life);
 }
 
 void draw_mindbug_hud(const mindbug::Game_State& state, int local_seat) {
