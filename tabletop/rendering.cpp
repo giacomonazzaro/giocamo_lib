@@ -619,6 +619,12 @@ void end_screen_fit() { rlPopMatrix(); }
 
 void open_table_window(int width, int height, const std::string& title) {
   if (IsWindowReady()) return;
+#ifdef __EMSCRIPTEN__
+  // The browser sizes the canvas (the page's CSS does the fitting), and asking
+  // WebGL for multisampling or a resizable window gets a black canvas instead
+  // of a context.
+  SetConfigFlags(FLAG_WINDOW_HIGHDPI);
+#else
   // Request 4x multisampling and high-DPI so on Retina displays the GL
   // framebuffer is created at physical pixel resolution (2x logical) —
   // effectively free supersampling on top of MSAA. Resizable so the layout can
@@ -626,6 +632,7 @@ void open_table_window(int width, int height, const std::string& title) {
   SetConfigFlags(
     FLAG_MSAA_4X_HINT | FLAG_WINDOW_HIGHDPI | FLAG_WINDOW_RESIZABLE
   );
+#endif
   InitWindow(width, height, title.c_str());
   SetTargetFPS(tt::TARGET_FPS);
 }

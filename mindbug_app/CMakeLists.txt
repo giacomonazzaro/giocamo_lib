@@ -52,7 +52,7 @@ if(EMSCRIPTEN)
         -s MAX_WEBGL_VERSION=2 \
         -s MIN_WEBGL_VERSION=2 \
         --shell-file ${CMAKE_CURRENT_SOURCE_DIR}/../raylib/src/minshell.html \
-        --preload-file ${ASSETS_ROOT}/data/fonts@/data/fonts \
+        --preload-file ${ASSETS_ROOT}/data/fonts/Cinzel/Cinzel-VariableFont_wght.ttf@/data/fonts/Cinzel/Cinzel-VariableFont_wght.ttf \
         --preload-file ${ASSETS_ROOT}/mindbug/cards.json@/mindbug/cards.json \
         --preload-file ${ASSETS_ROOT}/mindbug/card-images@/mindbug/card-images \
         --preload-file ${ASSETS_ROOT}/tabletop/background.frag@/tabletop/background.frag \
