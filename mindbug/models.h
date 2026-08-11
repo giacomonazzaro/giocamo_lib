@@ -82,10 +82,14 @@ extern std::vector<Card_Design> card_designs;
 // place on the table. A card is in exactly one of them, and which player holds
 // it in `creatures` is what "controls that creature" means.
 struct Player {
-  Array_Inline<int, 5>  hand;
+  // Capacities are what a zone can hold at its fullest, not what it usually
+  // holds: past it an Array_Inline goes to the heap, and a state is copied on
+  // every node a search looks at. A hand refills to 5 but Giraffodile empties a
+  // discard pile into it, and every card a player owns can end up discarded.
+  Array_Inline<int, 16> hand;
   Array_Inline<int, 5>  draw_pile;  // Face-down, in draw order (back = top).
-  Array_Inline<int, 10> creatures;  // In play, in the order they were played.
-  Array_Inline<int, 10> discard;
+  Array_Inline<int, 12> creatures;  // In play, in the order they were played.
+  Array_Inline<int, 20> discard;
   int                   life     = STARTING_LIFE;
   int                   mindbugs = STARTING_MINDBUGS;
 };

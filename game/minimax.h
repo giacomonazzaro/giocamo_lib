@@ -48,13 +48,17 @@ using Deadline = Clock::time_point;
 // once.
 template <class Game_T>
 Array_Inline<int, 64> order_children(
-  std::vector<Game_T>& children, int player_index, bool maximizing
+  std::vector<Game_T>&    children,
+  const Choice&           choice,
+  int                     player_index,
+  bool                    maximizing,
+  Array_Inline<float, 64>& scores
 ) {
   int  num_actions = (int)children.size();
-  auto scores      = Array_Inline<float, 64>();
   auto indices     = Array_Inline<int, 64>();
+  scores.clear();
   for (int i = 0; i < num_actions; ++i) {
-    resolve_choice(children[i], i);
+    resolve_choice(children[i], choice, i);
     scores.push_back(evaluate_state(children[i], player_index));
     indices.push_back(i);
   }
@@ -91,8 +95,54 @@ float minimax(
   const float inf        = std::numeric_limits<float>::infinity();
   float       value      = maximizing ? -inf : inf;
 
-  auto children = std::vector<Game_T>(num_actions, state);
-  auto indices  = order_children(children, player_index, maximizing);
+  // Near the leaves, ordering costs more than it saves: it builds and resolves
+  // every child of a node that a cutoff often leaves after one or two. Below
+  // this depth the children are built one at a time in their natural order and
+  // the loop stops as soon as the window closes. Measured on mindbug: 2 is the
+  // best cut-off (1 and 3 are both slower).
+  constexpr int LAZY_DEPTH = 2;
+  if (depth <= LAZY_DEPTH) {
+    Choice last_choice = std::move(state._choice);
+    for (int i = 0; i < num_actions; i++) {
+      Game_T child = state;
+      resolve_choice(child, last_choice, i);
+      // At the last ply a child's value is just its static evaluation.
+      float score =
+        depth == 1
+          ? evaluate_state(child, player_index)
+          : minimax(child, depth - 1, alpha, beta, player_index, aborted);
+      if (aborted()) break;  // Incomplete; the caller drops the result.
+      if (maximizing) {
+        value = std::max(value, score);
+        alpha = std::max(alpha, value);
+      } else {
+        value = std::min(value, score);
+        beta  = std::min(beta, value);
+      }
+      if (alpha >= beta) break;
+    }
+    state._choice = std::move(last_choice);
+    return value;
+  }
+
+  // One buffer of children per depth, kept between nodes: a fresh vector per
+  // node allocates and frees on every visit, and there are millions of them.
+  // A node at `depth` only ever touches its own row, and its children search at
+  // depth - 1. clear() + push_back copy-constructs into capacity that is
+  // already there.
+  static thread_local std::vector<std::vector<Game_T>> scratch;
+  if ((int)scratch.size() <= depth) scratch.resize(depth + 1);
+  std::vector<Game_T>& children = scratch[depth];
+
+  // Copying the pending choice into every child is most of a node's cost, so
+  // it is lifted out of the parent for the copy and put back after.
+  Choice choice = std::move(state._choice);
+  children.clear();
+  for (int i = 0; i < num_actions; ++i) children.push_back(state);
+  auto   scores   = Array_Inline<float, 64>();
+  auto   indices =
+    order_children(children, choice, player_index, maximizing, scores);
+  state._choice = std::move(choice);
 
   for (int i = 0; i < num_actions; i++) {
     int   action_index = indices[i];
@@ -146,9 +196,13 @@ Search_Result minimax_scores(
   result.scores      = std::vector<float>(num_actions, -inf);
 
   // Resolve and order the root children once, exactly like an interior node.
-  bool maximizing = pending_choice(state).player_index == player_index;
-  auto children   = std::vector<Game_T>(num_actions, state);
-  auto indices    = order_children(children, player_index, maximizing);
+  bool   maximizing = pending_choice(state).player_index == player_index;
+  Choice choice     = std::move(state._choice);
+  auto   children   = std::vector<Game_T>(num_actions, state);
+  auto   scores     = Array_Inline<float, 64>();
+  auto   indices =
+    order_children(children, choice, player_index, maximizing, scores);
+  state._choice = std::move(choice);
   result.best_action = indices[0];
 
   // Shared lower bound across the root moves: each move is searched with the
@@ -296,6 +350,9 @@ struct Agent_Minimax_Timed : Agent {
 template <class Game_T>
 struct Agent_Minimax_Stochastic : Agent_Minimax<Game_T> {
   int num_samples = 20;
+  // Where the sampled deals come from. Fixed, so the same position searched
+  // again gives the same answer and a change to the search can be measured.
+  unsigned int sampling_seed = 1;
 
   Agent_Minimax_Stochastic(int max_depth = 6, int num_samples = 20)
       : Agent_Minimax<Game_T>(max_depth), num_samples(num_samples) {}
@@ -336,7 +393,7 @@ struct Agent_Minimax_Stochastic : Agent_Minimax<Game_T> {
     for (int s = 0; s < num_samples; ++s) {
       threads[s] = std::thread([&, s] {
         // Local rng per thread: avoids contention and gives distinct sequences.
-        std::mt19937 local_rng{std::random_device{}()};
+        std::mt19937 local_rng{sampling_seed * 2654435761u + (unsigned)s};
         Game_T       sampled = sample_state(concrete, player_index, local_rng);
         results[s]           = minimax_scores<Game_T>(
           sampled, num_actions, player_index, this->max_depth, 1, [] {
@@ -353,6 +410,7 @@ struct Agent_Minimax_Stochastic : Agent_Minimax<Game_T> {
     }
 #endif
 
+    sampling_seed += 1;
     auto result = argmax_randomized(votes);
     printf("Score: %f\n", avg[result]);
     return result;

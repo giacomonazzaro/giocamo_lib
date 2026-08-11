@@ -61,8 +61,10 @@ bool load_card_designs(const std::string& path) {
 
 // Every card of a pile, as choice targets.
 template <int N>
-static std::vector<int> cards_of(const Array_Inline<int, N>& pile) {
-  return std::vector<int>(pile.begin(), pile.end());
+static Targets cards_of(const Array_Inline<int, N>& pile) {
+  auto cards = Targets();
+  cards.assign(pile.begin(), pile.end());
+  return cards;
 }
 
 static void discard_from_hand(
@@ -155,7 +157,7 @@ void trigger_play(Game_State& state, int card) {
 
     case KANGASAURUS_REX: {
       // Snapshot first: defeating one creature can move the others around.
-      std::vector<int> victims = creature_targets(state, them, 0, 4);
+      auto victims = creature_targets(state, them, 0, 4);
       for (int victim : victims) defeat_creature(state, victim);
       break;
     }

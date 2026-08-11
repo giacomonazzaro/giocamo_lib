@@ -34,12 +34,11 @@ static int keywords_of(const Game_State& state, int card, bool mirror) {
   int           keywords   = card_designs[design].keywords;
 
   if (design == LONE_YETI && player.creatures.size() == 1) keywords |= FRENZY;
-  if (effective_power(state, card) <= 4) {
-    for (int ally : player.creatures) {
-      if (ally != card && design_of(state, ally) == SNAIL_THROWER) {
-        keywords |= HUNTER | POISONOUS;
-      }
-    }
+  // The power is only worth working out when an ally can arm this creature.
+  for (int ally : player.creatures) {
+    if (ally == card || design_of(state, ally) != SNAIL_THROWER) continue;
+    if (effective_power(state, card) <= 4) keywords |= HUNTER | POISONOUS;
+    break;
   }
   if (design == SHARKY_CRAB_DOG_MUMMYPUS && mirror) {
     for (int enemy : state.players[1 - controller].creatures) {
@@ -54,10 +53,10 @@ int effective_keywords(const Game_State& state, int card) {
   return keywords_of(state, card, true);
 }
 
-std::vector<int> creature_targets(
+Targets creature_targets(
   const Game_State& state, int controller, int min_power, int max_power
 ) {
-  auto targets = std::vector<int>();
+  auto targets = Targets();
   for (int player = 0; player < 2; ++player) {
     if (controller != -1 && player != controller) continue;
     for (int card : state.players[player].creatures) {
@@ -69,24 +68,25 @@ std::vector<int> creature_targets(
   return targets;
 }
 
-bool can_block(const Game_State& state, int attacker, int blocker) {
-  if (effective_keywords(state, attacker) & SNEAKY) {
+bool can_block(
+  const Game_State& state,
+  int               attacker,
+  int               attacker_keywords,
+  bool              attacker_has_elephantopus,
+  int               blocker
+) {
+  if (attacker_keywords & SNEAKY) {
     if (!(effective_keywords(state, blocker) & SNEAKY)) return false;
   }
   const int power = effective_power(state, blocker);
   if (design_of(state, attacker) == BEE_BEAR && power <= 6) return false;
 
-  if (power <= 4) {
-    const int controller = controller_of(state, attacker);
-    for (int ally : state.players[controller].creatures) {
-      if (design_of(state, ally) == ELEPHANTOPUS) return false;
-    }
-  }
+  if (attacker_has_elephantopus && power <= 4) return false;
   return true;
 }
 
-std::vector<Turn_Action> turn_actions(const Game_State& state) {
-  auto          actions = std::vector<Turn_Action>();
+Turn_Moves turn_actions(const Game_State& state) {
+  auto          actions = Turn_Moves();
   const Player& player  = state.players[state.current_player];
   for (int card : player.hand) actions.push_back(Turn_Action{false, card});
   for (int card : player.creatures) actions.push_back(Turn_Action{true, card});
@@ -100,12 +100,12 @@ int compute_player_score(const Game_State& state, int player) {
 // ---- Choice helpers ----
 
 std::vector<std::vector<int>> target_combinations(
-  const std::vector<int>& targets, int count, bool up_to
+  const Targets& targets, int count, bool up_to
 ) {
   const int size   = (int)targets.size();
   auto      result = std::vector<std::vector<int>>();
   if (!up_to && size <= count) {
-    result.push_back(targets);
+    result.push_back(std::vector<int>(targets.begin(), targets.end()));
     return result;
   }
   const int first = up_to ? 0 : count;
@@ -130,8 +130,8 @@ std::vector<std::vector<int>> target_combinations(
 Choice make_choice(
   int                                          player,
   const char*                                  description,
-  std::function<std::vector<int>(Game_State&)> get_targets,
-  std::function<void(Game_State&, int)>        on_chosen
+  std::function<Targets(Game_State&)>   get_targets,
+  std::function<void(Game_State&, int)> on_chosen
 ) {
   auto choice             = Choice();
   choice.player_index     = player;
@@ -151,7 +151,7 @@ Choice make_choice(
 Choice make_multi_choice(
   int                                                       player,
   const char*                                               description,
-  std::function<std::vector<int>(Game_State&)>              get_targets,
+  std::function<Targets(Game_State&)>                       get_targets,
   int                                                       count,
   bool                                                      up_to,
   std::function<void(Game_State&, const std::vector<int>&)> on_chosen
@@ -305,11 +305,19 @@ static Choice make_frenzy_choice(Game_State& state) {
   return choice;
 }
 
-static std::vector<int> legal_blockers(const Game_State& state) {
-  const int defender = 1 - controller_of(state, state.attacker);
-  auto      blockers = std::vector<int>();
-  for (int candidate : state.players[defender].creatures) {
-    if (can_block(state, state.attacker, candidate)) {
+static Targets legal_blockers(const Game_State& state) {
+  const int controller = controller_of(state, state.attacker);
+  const int keywords   = effective_keywords(state, state.attacker);
+  // Elephantopus holds small blockers back for as long as its controller has
+  // it in play, not only on the attacks it makes itself.
+  bool elephantopus = false;
+  for (int ally : state.players[controller].creatures) {
+    if (design_of(state, ally) == ELEPHANTOPUS) elephantopus = true;
+  }
+
+  auto blockers = Targets();
+  for (int candidate : state.players[1 - controller].creatures) {
+    if (can_block(state, state.attacker, keywords, elephantopus, candidate)) {
       blockers.push_back(candidate);
     }
   }
@@ -343,11 +351,11 @@ static Choice make_block_choice(Game_State& state) {
   choice.resolve = [hunter](Game& game, int index) -> Choice {
     Game_State& state    = static_cast<Game_State&>(game);
     auto        blockers = legal_blockers(state);
-    if (index >= (int)blockers.size() && hunter) {
+    if (index >= blockers.size() && hunter) {
       state.hunter_declined = true;  // The defender is asked next.
       return null_choice;
     }
-    state.blocker = index < (int)blockers.size() ? blockers[index] : -1;
+    state.blocker = index < blockers.size() ? blockers[index] : -1;
     state.phase   = Phase::COMBAT;
     return null_choice;
   };

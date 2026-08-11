@@ -25,6 +25,12 @@ if(NOT TARGET mindbug_lib)
     target_link_libraries(mindbug_lib PUBLIC game nlohmann_json::nlohmann_json)
 endif()
 
+# Times the search on fixed positions, for comparing changes to it.
+if(NOT TARGET mindbug_benchmark)
+    add_executable(mindbug_benchmark benchmark.cpp)
+    target_link_libraries(mindbug_benchmark PRIVATE mindbug_lib)
+endif()
+
 # Rules checks plus a batch of random games, to catch a rule that stops the
 # game from ever ending.
 if(NOT TARGET mindbug_test)

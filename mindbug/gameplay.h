@@ -31,6 +31,11 @@ inline Array_Inline<int, 48> full_deck_designs() {
   return deck;
 }
 
+// A list of cards a choice offers, or of moves a player has. Held inline: the
+// search builds these on every node it looks at.
+using Targets    = Array_Inline<int, 8>;
+using Turn_Moves = Array_Inline<Turn_Action, 8>;
+
 // Power of a creature in play, after the auras and self conditions that change
 // it.
 int effective_power(const Game_State& state, int card);
@@ -38,8 +43,16 @@ int effective_power(const Game_State& state, int card);
 // Keywords the creature has right now, printed ones plus granted ones.
 int effective_keywords(const Game_State& state, int card);
 
-// True if `blocker` is allowed to block `attacker`.
-bool can_block(const Game_State& state, int attacker, int blocker);
+// True if `blocker` is allowed to block `attacker`. `attacker_keywords` is
+// passed in because a loop over the creatures that could block works them out
+// once, and they are the same for every one of them.
+bool can_block(
+  const Game_State& state,
+  int               attacker,
+  int               attacker_keywords,
+  bool              attacker_has_elephantopus,
+  int               blocker
+);
 
 // Take `card` out of one of a player's card lists. It is always in the list:
 // the callers read the card out of the list itself.
@@ -54,7 +67,7 @@ void remove_card(Array_Inline<int, N>& cards, int card) {
 
 // The actions the active player may take. The pending choice offers these in
 // order, so an action index means the same thing here and in the UI.
-std::vector<Turn_Action> turn_actions(const Game_State& state);
+Turn_Moves turn_actions(const Game_State& state);
 
 // Take a creature out of play: exhaust it instead if Tough has not been used
 // yet, otherwise put it in its controller's discard pile and trigger its
@@ -77,7 +90,7 @@ void lose_life(Game_State& state, int player, int amount);
 
 // Creatures a player has in play (-1 for either player) whose power is between
 // min_power and max_power.
-std::vector<int> creature_targets(
+Targets creature_targets(
   const Game_State& state, int controller, int min_power, int max_power
 );
 
@@ -88,22 +101,22 @@ std::vector<int> creature_targets(
 // it is in.
 
 Choice make_choice(
-  int                                          player,
-  const char*                                  description,
-  std::function<std::vector<int>(Game_State&)> get_targets,
-  std::function<void(Game_State&, int)>        on_chosen
+  int                                   player,
+  const char*                           description,
+  std::function<Targets(Game_State&)>   get_targets,
+  std::function<void(Game_State&, int)> on_chosen
 );
 
 // Every selection of `count` targets (or of up to `count`, if up_to), in the
 // order a multi-choice indexes them: option i picks combination i.
 std::vector<std::vector<int>> target_combinations(
-  const std::vector<int>& targets, int count, bool up_to
+  const Targets& targets, int count, bool up_to
 );
 
 Choice make_multi_choice(
   int                                                       player,
   const char*                                               description,
-  std::function<std::vector<int>(Game_State&)>              get_targets,
+  std::function<Targets(Game_State&)>                       get_targets,
   int                                                       count,
   bool                                                      up_to,
   std::function<void(Game_State&, const std::vector<int>&)> on_chosen

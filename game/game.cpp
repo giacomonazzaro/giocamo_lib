@@ -56,11 +56,15 @@ int pending_action_count(Game& game) {
   return action_options_count(game._choice.actions(game));
 }
 
-void resolve_choice(Game& game, int index) {
-  Choice next_choice = game._choice.resolve(game, index);
+void resolve_choice(Game& game, const Choice& choice, int index) {
+  Choice next_choice = choice.resolve(game, index);
   // If resolve doesn't know what's the next choice, we ask the game.
   if (next_choice.is_null()) next_choice = game.next_choice();
   game._choice = std::move(next_choice);
+}
+
+void resolve_choice(Game& game, int index) {
+  resolve_choice(game, game._choice, index);
 }
 
 void game_loop(Game& game, Agent& agent, std::function<void(Game&)> callback) {

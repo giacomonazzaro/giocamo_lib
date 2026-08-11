@@ -105,24 +105,33 @@ static void test_keywords() {
   );
 }
 
+// Whether the attacking side holds an Elephantopus, which the blocking rules
+// need and a blocker loop works out once.
+static bool has_elephantopus(const Game_State& state, int attacker) {
+  for (int ally : state.players[controller_of(state, attacker)].creatures) {
+    if (design_of(state, ally) == ELEPHANTOPUS) return true;
+  }
+  return false;
+}
+
 static void test_blocking() {
   auto      state     = Game_State();
   const int sniper    = put(state, CHAMELEON_SNIPER, 0);  // Sneaky.
   const int owl       = put(state, SPIDER_OWL, 1);        // Sneaky.
   const int gorillion = put(state, GORILLION, 1);
-  check(can_block(state, sniper, owl), "sneaky blocks sneaky");
+  check(can_block(state, sniper, effective_keywords(state, sniper), has_elephantopus(state, sniper), owl), "sneaky blocks sneaky");
   check(
-    !can_block(state, sniper, gorillion), "sneaky is not blocked by others"
+    !can_block(state, sniper, effective_keywords(state, sniper), has_elephantopus(state, sniper), gorillion), "sneaky is not blocked by others"
   );
 
   const int bear = put(state, BEE_BEAR, 0);
-  check(can_block(state, bear, gorillion), "Bee Bear is blocked by power 10");
-  check(!can_block(state, bear, owl), "Bee Bear is not blocked by power 3");
+  check(can_block(state, bear, effective_keywords(state, bear), has_elephantopus(state, bear), gorillion), "Bee Bear is blocked by power 10");
+  check(!can_block(state, bear, effective_keywords(state, bear), has_elephantopus(state, bear), owl), "Bee Bear is not blocked by power 3");
 
   // Elephantopus holds small blockers back on its ally's attacks too.
-  check(can_block(state, gorillion, owl), "power 3 blocks before Elephantopus");
+  check(can_block(state, gorillion, effective_keywords(state, gorillion), has_elephantopus(state, gorillion), owl), "power 3 blocks before Elephantopus");
   put(state, ELEPHANTOPUS, 1);
-  check(!can_block(state, gorillion, owl), "Elephantopus holds power 3 back");
+  check(!can_block(state, gorillion, effective_keywords(state, gorillion), has_elephantopus(state, gorillion), owl), "Elephantopus holds power 3 back");
 }
 
 static void test_tough() {

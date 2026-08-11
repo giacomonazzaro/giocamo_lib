@@ -176,6 +176,13 @@ int pending_action_count(Game& game);
 // the new pending choice.
 void resolve_choice(Game& game, int index);
 
+// The same, applying `choice` instead of the game's own pending one. A search
+// copies a position per child, and every child waits on the same choice — so
+// it is taken out of the parent once and applied to each child from here,
+// instead of riding along in every copy. A Choice holds two std::functions,
+// which a copy has to allocate for.
+void resolve_choice(Game& game, const Choice& choice, int index);
+
 // Forward declaration; defined in agent.h.
 struct Agent;
 
