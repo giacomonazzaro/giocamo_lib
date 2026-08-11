@@ -383,12 +383,11 @@ void play_game(
   giocamo.hot_seat      = !options.vs_ai && !menu_result.is_online();
 
   // A saved game stands in for the deal when one was asked for and found.
-  if (options.load_from_disk) {
-    auto loaded = giocamo.load_game(options.load_path);
-    if (!loaded) giocamo.init_table();
-  } else {
-    giocamo.init_table();
+  // Either way the game holds a position before the table is laid out over it.
+  if (!(options.load_from_disk && giocamo.load_game(options.load_path))) {
+    giocamo.game.init(menu_result.seed);
   }
+  giocamo.init_table();
 
   Agent* agent = make_agent_pair(
     &giocamo.agent_ui, giocamo.agent_opponent(), menu_result, options.vs_ai
