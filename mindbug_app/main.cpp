@@ -48,7 +48,7 @@ static constexpr int LIFE_COUNTER_SIZE = 90;
 struct Mindbug_Giocamo : Giocamo {
   bool show_opponent_hand;
 
-  Mindbug_Giocamo(Game_State& game, Mindbug_Agent_UI& agent_ui)
+  Mindbug_Giocamo(mindbug::Game_State& game, Mindbug_Agent_UI& agent_ui)
       : Giocamo(game, agent_ui) {}
 
   void init_table() override {
@@ -59,7 +59,7 @@ struct Mindbug_Giocamo : Giocamo {
 
     // One Thing per card of the deal; ids match the game's card indices. The
     // deal comes later, so a card takes its art in update_table_from_game.
-    const int card_count = 2 * (HAND_SIZE + DRAW_PILE_SIZE);
+    const int card_count = 2 * (mindbug::HAND_SIZE + mindbug::DRAW_PILE_SIZE);
     for (int card = 0; card < card_count; ++card) {
       table.things.push_back(make_card());
       table.draw_callbacks[card] =
@@ -68,7 +68,7 @@ struct Mindbug_Giocamo : Giocamo {
 
     // The Mindbugs are cards too, two per player, right after the deal.
     for (int player = 0; player < 2; ++player) {
-      for (int i = 0; i < STARTING_MINDBUGS; ++i) {
+      for (int i = 0; i < mindbug::STARTING_MINDBUGS; ++i) {
         table.things.push_back(make_card(get_image_path("mindbug.png")));
       }
     }
@@ -78,7 +78,7 @@ struct Mindbug_Giocamo : Giocamo {
       auto counter    = Thing();
       counter.shape   = circle_shape(LIFE_COUNTER_SIZE);
       counter.color   = {190, 40, 45, 255};
-      counter.counter = {STARTING_LIFE, 0, 20};
+      counter.counter = {mindbug::STARTING_LIFE, 0, 20};
       table.things.push_back(std::move(counter));
     }
 
@@ -103,16 +103,18 @@ struct Mindbug_Giocamo : Giocamo {
   // The Thing holding player's Mindbug number `index`. They follow the dealt
   // cards, so their ids are fixed by the deal size.
   static int mindbug_thing(int player, int index) {
-    return 2 * (HAND_SIZE + DRAW_PILE_SIZE) + player * STARTING_MINDBUGS +
-           index;
+    return 2 * (mindbug::HAND_SIZE + mindbug::DRAW_PILE_SIZE) +
+           player * mindbug::STARTING_MINDBUGS + index;
   }
 
   // The counter Thing holding a player's life. The two follow the Mindbugs.
   static int life_thing(int player) {
-    return mindbug_thing(1, STARTING_MINDBUGS) + player;
+    return mindbug_thing(1, mindbug::STARTING_MINDBUGS) + player;
   }
 
-  Game_State& mindbug_game() { return static_cast<Game_State&>(game); }
+  mindbug::Game_State& mindbug_game() {
+    return static_cast<mindbug::Game_State&>(game);
+  }
 
   Mindbug_Agent_UI& mindbug_agent_ui() {
     return static_cast<Mindbug_Agent_UI&>(agent_ui);
@@ -121,7 +123,7 @@ struct Mindbug_Giocamo : Giocamo {
   // Every zone owns the cards the game says it holds, and a hand is only face
   // up for the player it belongs to.
   void update_table_from_game() override {
-    Game_State& state = this->mindbug_game();
+    mindbug::Game_State& state = this->mindbug_game();
 
     // Clicking a card also starts dragging it, and the card the player just
     // clicked is about to change zone. End the drag first, or the layout would
@@ -129,7 +131,8 @@ struct Mindbug_Giocamo : Giocamo {
     table.drag_state = Drag_State();
 
     for (int card = 0; card < state.all_cards.size(); ++card) {
-      const Card_Design& design     = card_designs[design_of(state, card)];
+      const mindbug::Card_Design& design =
+        mindbug::card_designs[mindbug::design_of(state, card)];
       table.things[card].image_path = get_image_path(design.image);
     }
 
@@ -141,8 +144,8 @@ struct Mindbug_Giocamo : Giocamo {
       };
 
     for (int player = 0; player < 2; ++player) {
-      const std::string prefix = "p" + std::to_string(player) + "_";
-      const Player&     seat   = state.players[player];
+      const std::string      prefix = "p" + std::to_string(player) + "_";
+      const mindbug::Player& seat   = state.players[player];
       set_zone(prefix + "hand", {seat.hand.begin(), seat.hand.end()});
       set_zone(prefix + "draw", {seat.draw_pile.begin(), seat.draw_pile.end()});
       set_zone(prefix + "discard", {seat.discard.begin(), seat.discard.end()});
@@ -152,7 +155,7 @@ struct Mindbug_Giocamo : Giocamo {
 
       // A spent Mindbug is turned face down and stays on the table.
       auto mindbugs = std::vector<int>();
-      for (int i = 0; i < STARTING_MINDBUGS; ++i) {
+      for (int i = 0; i < mindbug::STARTING_MINDBUGS; ++i) {
         const int thing             = mindbug_thing(player, i);
         table.things[thing].face_up = i < seat.mindbugs;
         mindbugs.push_back(thing);
@@ -175,7 +178,7 @@ struct Mindbug_Giocamo : Giocamo {
                               : std::vector<int>{state.played_card}
     );
 
-    save_to_json<Game_State>(mindbug_game(), SNAPSHOT_PATH);
+    save_to_json<mindbug::Game_State>(mindbug_game(), SNAPSHOT_PATH);
     save_to_json<Table_Layout>(table, "data/debug_table_state.json");
     printf("Saved debug snapshot to data/debug_*.json\n");
   }
@@ -186,7 +189,7 @@ struct Mindbug_Giocamo : Giocamo {
   bool load_game(const std::string& path) override {
     try {
       mindbug_game() =
-        load_from_json<Game_State>(path.empty() ? SNAPSHOT_PATH : path);
+        load_from_json<mindbug::Game_State>(path.empty() ? SNAPSHOT_PATH : path);
     } catch (const std::exception& error) {
       std::cerr << error.what() << "\n";
       return false;
@@ -196,7 +199,7 @@ struct Mindbug_Giocamo : Giocamo {
   }
 
   Agent* agent_opponent() override {
-    return new Agent_Minimax<Game_State>(
+    return new Agent_Minimax_Stochastic<mindbug::Game_State>(
       /* max_depth   */ 13
       // /* num_samples */ 15
     );
@@ -204,8 +207,8 @@ struct Mindbug_Giocamo : Giocamo {
 
   std::vector<int> player_scores() override {
     return {
-      compute_player_score(this->mindbug_game(), 0),
-      compute_player_score(this->mindbug_game(), 1),
+      mindbug::compute_player_score(this->mindbug_game(), 0),
+      mindbug::compute_player_score(this->mindbug_game(), 1),
     };
   }
 };
@@ -309,12 +312,12 @@ std::string get_image_path(const std::string& image_file) {
 int main(int argc, char** argv) {
   auto options = parse_play_args(argc, argv);
 
-  if (!load_card_designs()) {
+  if (!mindbug::load_card_designs()) {
     std::cerr << "run mindbug_app from the repository root\n";
     return 1;
   }
 
-  auto game     = Game_State();
+  auto game     = mindbug::Game_State();
   auto agent_ui = Mindbug_Agent_UI();
   auto giocamo  = Mindbug_Giocamo(game, agent_ui);
 

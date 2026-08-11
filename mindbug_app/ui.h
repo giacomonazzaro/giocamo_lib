@@ -13,8 +13,8 @@
 // pending choice can take.
 std::function<void(const Table_State&, const Input&, bool)>
 make_card_draw_callback(
-  const Game_State& state, int card, bool highlighted = false
+  const mindbug::Game_State& state, int card, bool highlighted = false
 );
 
 // Whose turn it is. `local_seat` is "You".
-void draw_mindbug_hud(const Game_State& state, int local_seat);
+void draw_mindbug_hud(const mindbug::Game_State& state, int local_seat);

@@ -4,7 +4,7 @@
 
 #include "cards.h"
 
-// namespace mindbug {
+namespace mindbug {
 
 // ---- Queries ----
 
@@ -513,4 +513,4 @@ Game_State quick_setup(int seed) {
   return state;
 }
 
-// }  // namespace mindbug
+}  // namespace mindbug

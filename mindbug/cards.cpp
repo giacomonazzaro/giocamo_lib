@@ -6,7 +6,7 @@
 #include <iostream>
 #include <nlohmann/json.hpp>
 
-// namespace mindbug {
+namespace mindbug {
 
 std::vector<Card_Design> card_designs;
 
@@ -274,4 +274,4 @@ void trigger_defeated(Game_State& state, int card, int controller) {
   }
 }
 
-// }  // namespace mindbug
+}  // namespace mindbug

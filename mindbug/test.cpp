@@ -11,7 +11,7 @@
 #include <cmath>
 #include <iostream>
 
-// using namespace mindbug;
+using namespace mindbug;
 
 static int failures = 0;
 

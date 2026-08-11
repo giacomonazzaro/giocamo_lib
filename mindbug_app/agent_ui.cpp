@@ -14,7 +14,7 @@
 // otherwise.
 #include <raylib.h>
 
-// using namespace mindbug;
+using namespace mindbug;
 
 // The attacking creature, named so the defender knows what is coming.
 static std::string attacker_name(const Game_State& state) {
@@ -64,12 +64,14 @@ static std::vector<int> targets_of(const Choose& actions) {
 }
 
 static void highlight_card(
-  Table_State& table, const Game_State& state, int card
+  Table_State& table, const mindbug::Game_State& state, int card
 ) {
   table.draw_callbacks[card] = make_card_draw_callback(state, card, true);
 }
 
-static void clear_highlights(Table_State& table, const Game_State& state) {
+static void clear_highlights(
+  Table_State& table, const mindbug::Game_State& state
+) {
   for (int card = 0; card < state.all_cards.size(); ++card) {
     table.draw_callbacks[card] = make_card_draw_callback(state, card);
   }

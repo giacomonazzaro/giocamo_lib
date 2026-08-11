@@ -8,7 +8,7 @@
 #include <string>
 #include <vector>
 
-// namespace mindbug {
+namespace mindbug {
 
 // Fill card_designs from a cards.json file. Must be called once before any
 // game is set up. Returns false if the file is missing or malformed.
@@ -195,4 +195,4 @@ inline Game_State sample_state(
 
 void draw_back_up_to_hand_size(Game_State& state);
 
-// }  // namespace mindbug
+}  // namespace mindbug

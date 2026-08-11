@@ -7,7 +7,7 @@
 #include <string>
 #include <vector>
 
-// namespace mindbug {
+namespace mindbug {
 
 // Mindbug: First Contact. Two players, 3 life points and 2 Mindbugs each.
 // On your turn you either play a creature or attack with one.
@@ -89,7 +89,6 @@ struct Player {
   int                   life     = STARTING_LIFE;
   int                   mindbugs = STARTING_MINDBUGS;
 };
-VISITABLE_STRUCT(Player, hand, draw_pile, creatures, discard, life, mindbugs);
 
 // What the game does next once the pending effects are done.
 enum class Phase {
@@ -107,7 +106,6 @@ struct Turn_Action {
   bool is_attack = false;
   int  card      = 0;
 };
-VISITABLE_STRUCT(Turn_Action, is_attack, card);
 
 struct Game_State : Game {
   // The 20 cards dealt this game, each holding the design it shows. Fixed at
@@ -147,23 +145,6 @@ struct Game_State : Game {
   Player& active_player() { return players[current_player]; }
   Player& opponent() { return players[1 - current_player]; }
 };
-VISITABLE_STRUCT(
-  Game_State,
-  all_cards,
-  players,
-  exhausted_cards,
-  current_player,
-  phase,
-  game_over,
-  winner,
-  played_card,
-  attacker,
-  blocker,
-  attack_count,
-  hunter_declined,
-  extra_turn,
-  random_seed
-);
 
 // The design a dealt card shows.
 inline int design_of(const Game_State& state, int card) {
@@ -199,4 +180,30 @@ inline int cards_left(const Game_State& state, int player) {
          state.players[player].creatures.size();
 }
 
-// }  // namespace mindbug
+}  // namespace mindbug
+
+// visit_struct opens its own namespace, so these belong at global scope.
+VISITABLE_STRUCT(
+  mindbug::Player, hand, draw_pile, creatures, discard, life, mindbugs);
+
+VISITABLE_STRUCT(
+  mindbug::Turn_Action, is_attack, card);
+
+VISITABLE_STRUCT(
+  mindbug::Game_State,
+  all_cards,
+  players,
+  exhausted_cards,
+  current_player,
+  phase,
+  game_over,
+  winner,
+  played_card,
+  attacker,
+  blocker,
+  attack_count,
+  hunter_declined,
+  extra_turn,
+  random_seed
+);
+
