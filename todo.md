@@ -1,4 +1,5 @@
-- mindbugs should be things in a container 
+- Update all games implemetation to new Giocamo API
+- Simplfy Giocamo (play.cpp)
 - move card implementation to mindbug/cards.cpp
 - Adaptive resolution
 - Finish wrapper for setting thing.children so animation are always handled.

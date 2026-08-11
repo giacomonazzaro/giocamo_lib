@@ -617,6 +617,23 @@ void begin_screen_fit() {
 
 void end_screen_fit() { rlPopMatrix(); }
 
+void open_table_window(int width, int height, const std::string& title) {
+  if (IsWindowReady()) return;
+  // Request 4x multisampling and high-DPI so on Retina displays the GL
+  // framebuffer is created at physical pixel resolution (2x logical) —
+  // effectively free supersampling on top of MSAA. Resizable so the layout can
+  // fit any window.
+  SetConfigFlags(
+    FLAG_MSAA_4X_HINT | FLAG_WINDOW_HIGHDPI | FLAG_WINDOW_RESIZABLE
+  );
+  InitWindow(width, height, title.c_str());
+  SetTargetFPS(tt::TARGET_FPS);
+}
+
+void close_table_window() {
+  if (IsWindowReady()) CloseWindow();
+}
+
 void run_tabletop(
   Table_State&                                    table,
   std::function<bool(Table_State&, const Input&)> update,
@@ -626,17 +643,7 @@ void run_tabletop(
   const std::string&                              window_name
 ) {
   bool owns_window = !IsWindowReady();
-  if (owns_window) {
-    // Request 4x multisampling and high-DPI so on Retina displays the GL
-    // framebuffer is created at physical pixel resolution (2x logical) —
-    // effectively free supersampling on top of MSAA. Resizable so the layout
-    // can fit any window.
-    SetConfigFlags(
-      FLAG_MSAA_4X_HINT | FLAG_WINDOW_HIGHDPI | FLAG_WINDOW_RESIZABLE
-    );
-    InitWindow(window_width, window_height, window_name.c_str());
-    SetTargetFPS(tt::TARGET_FPS);
-  }
+  open_table_window(window_width, window_height, window_name);
 
   while (!WindowShouldClose()) {
     auto input = next_input(input_feed);
@@ -653,11 +660,11 @@ void run_tabletop(
     // immediate-mode UI, so it stays inside the screen-fit transform.
     bool end = update(table, input);
     end_screen_fit();
-    if (end) break;
     EndDrawing();
+    if (end) break;
   }
 
-  if (owns_window) CloseWindow();
+  if (owns_window) close_table_window();
 }
 
 void run_tabletop(

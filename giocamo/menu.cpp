@@ -105,15 +105,10 @@ Menu_Result run_menu(
   int W = window_width;
   int H = window_height;
 
-  // On the web the browser resizes the canvas (via CSS, below); only the
-  // desktop window needs the resizable flag.
-#ifdef __EMSCRIPTEN__
-  SetConfigFlags(FLAG_WINDOW_HIGHDPI);
-#else
-  SetConfigFlags(FLAG_WINDOW_HIGHDPI | FLAG_WINDOW_RESIZABLE);
-#endif
-  InitWindow(W, H, title.c_str());
-  SetTargetFPS(tt::TARGET_FPS);
+  // The menu draws into the window every other screen draws into, and does not
+  // own it: it is opened once here if nothing has yet, and closed by play_game
+  // when everything is done with it.
+  open_table_window(W, H, title);
 #ifdef __EMSCRIPTEN__
   // FLAG_WINDOW_HIGHDPI is not implemented on PLATFORM_WEB. Resize the
   // canvas pixel buffer to physical resolution for Retina sharpness
@@ -437,6 +432,5 @@ Menu_Result run_menu(
   }
 
   // User closed window during the menu.
-  CloseWindow();
   std::exit(0);
 }

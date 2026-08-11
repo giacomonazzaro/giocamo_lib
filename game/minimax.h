@@ -48,10 +48,10 @@ using Deadline = Clock::time_point;
 // once.
 template <class Game_T>
 Array_Inline<int, 64> order_children(
-  std::vector<Game_T>&    children,
-  const Choice&           choice,
-  int                     player_index,
-  bool                    maximizing,
+  std::vector<Game_T>&     children,
+  const Choice&            choice,
+  int                      player_index,
+  bool                     maximizing,
   Array_Inline<float, 64>& scores
 ) {
   int  num_actions = (int)children.size();
@@ -139,8 +139,8 @@ float minimax(
   Choice choice = std::move(state._choice);
   children.clear();
   for (int i = 0; i < num_actions; ++i) children.push_back(state);
-  auto   scores   = Array_Inline<float, 64>();
-  auto   indices =
+  auto scores = Array_Inline<float, 64>();
+  auto indices =
     order_children(children, choice, player_index, maximizing, scores);
   state._choice = std::move(choice);
 
@@ -202,7 +202,7 @@ Search_Result minimax_scores(
   auto   scores     = Array_Inline<float, 64>();
   auto   indices =
     order_children(children, choice, player_index, maximizing, scores);
-  state._choice = std::move(choice);
+  state._choice      = std::move(choice);
   result.best_action = indices[0];
 
   // Shared lower bound across the root moves: each move is searched with the
@@ -412,7 +412,7 @@ struct Agent_Minimax_Stochastic : Agent_Minimax<Game_T> {
 
     sampling_seed += 1;
     auto result = argmax_randomized(votes);
-    printf("Score: %f\n", avg[result]);
+    // printf("Score: %f\n", avg[result]);
     return result;
   }
 };

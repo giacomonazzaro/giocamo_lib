@@ -89,9 +89,7 @@ Agent* make_duel(
 }
 
 void draw_game_over_screen(
-  Table_State&            table_state,
-  const std::string&      result_text,
-  const std::vector<int>& scores
+  const std::string& result_text, const std::vector<int>& scores
 ) {
   const int   W          = tt::WINDOW_WIDTH;
   const int   H          = tt::WINDOW_HEIGHT;
@@ -99,12 +97,7 @@ void draw_game_over_screen(
   std::string score_line = std::to_string(scores[0]) + " - " +
                            std::to_string(scores[1]);
 
-  while (!WindowShouldClose()) {
-    Input input = capture_input();
-    BeginDrawing();
-    begin_screen_fit();
-    draw_background(input, 0.0f);
-    draw_table(table_state, input);
+  {
     DrawRectangle(0, 0, W, H, Color{0, 0, 0, 160});
     render_text(
       title,
@@ -127,8 +120,6 @@ void draw_game_over_screen(
       30,
       Color{200, 200, 200, 255}
     );
-    end_screen_fit();
-    EndDrawing();
   }
 }
 
@@ -199,6 +190,12 @@ static void run_game(
   std::function<void(const nlohmann::json&)> on_message
 ) {
   auto current_choice = std::optional<Choice>();
+
+  // Set once the game is over, so the loop switches from playing to showing
+  // the result instead of ending.
+  bool             game_ended = false;
+  std::string      result_text;
+  std::vector<int> scores;
 
   if (update_table_from_game) update_table_from_game();
 
@@ -305,10 +302,28 @@ static void run_game(
       return false;
     }
 
+    // The game is over: its screen is drawn here, frame after frame, like any
+    // other one. The loop ends when the window does.
+    if (state.is_game_over() && compute_scores) {
+      if (!game_ended) {
+        scores = compute_scores();
+        if (scores[0] > scores[1])
+          result_text = "Player 1 wins!";
+        else if (scores[1] > scores[0])
+          result_text = "Player 2 wins!";
+        else
+          result_text = "It's a tie.";
+        game_ended = true;
+      }
+      draw_game_over_screen(result_text, scores);
+      return false;
+    }
+
     bool state_changed = game_frame(state, agent);
     if (state_changed && update_table_from_game) {
       update_table_from_game();
     }
+    // Without a score screen to show, the game ending ends the loop.
     return state.is_game_over();
   };
 
@@ -316,21 +331,9 @@ static void run_game(
     table, update, input_feed, tt::WINDOW_WIDTH, tt::WINDOW_HEIGHT, window_title
   );
 
-  if (state.is_game_over() && compute_scores) {
-    auto scores      = compute_scores();
-    auto result_text = std::string();
-    if (scores[0] > scores[1])
-      result_text = "Player 1 wins!";
-    else if (scores[1] > scores[0])
-      result_text = "Player 2 wins!";
-    else
-      result_text = "It's a tie.";
-    draw_game_over_screen(table, result_text, scores);
-  }
-
-  // run_tabletop already closed the window when it was the one that opened it
-  // (no menu ran first). Closing it twice frees raylib's render batch twice.
-  if (IsWindowReady()) CloseWindow();
+  // The menu, the game and the game-over screen all drew into one window;
+  // this is the end of all of them.
+  close_table_window();
 }
 
 void play_game(
