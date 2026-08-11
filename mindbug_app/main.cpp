@@ -188,8 +188,9 @@ struct Mindbug_Giocamo : Giocamo {
   // in the snapshot, so those are lost.
   bool load_game(const std::string& path) override {
     try {
-      mindbug_game() =
-        load_from_json<mindbug::Game_State>(path.empty() ? SNAPSHOT_PATH : path);
+      mindbug_game() = load_from_json<mindbug::Game_State>(
+        path.empty() ? SNAPSHOT_PATH : path
+      );
     } catch (const std::exception& error) {
       std::cerr << error.what() << "\n";
       return false;
@@ -201,7 +202,7 @@ struct Mindbug_Giocamo : Giocamo {
   Agent* agent_opponent() override {
     return new Agent_Minimax_Stochastic<mindbug::Game_State>(
       /* max_depth   */ 13
-      // /* num_samples */ 15
+      /* num_samples */ 15
     );
   }
 
