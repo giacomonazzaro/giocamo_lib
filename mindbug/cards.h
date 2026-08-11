@@ -2,7 +2,7 @@
 
 #include <mindbug/models.h>
 
-namespace mindbug {
+// namespace mindbug {
 
 // The three moments a card can act on, each looked up by the creature's
 // design. An ability that asks the players something pushes the choices onto
@@ -12,4 +12,4 @@ void trigger_attack(Game_State& state, int card);
 // A defeated creature has already left play, so its controller is passed in.
 void trigger_defeated(Game_State& state, int card, int controller);
 
-}  // namespace mindbug
+// }  // namespace mindbug

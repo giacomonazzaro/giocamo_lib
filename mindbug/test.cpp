@@ -11,7 +11,7 @@
 #include <cmath>
 #include <iostream>
 
-using namespace mindbug;
+// using namespace mindbug;
 
 static int failures = 0;
 
@@ -77,8 +77,8 @@ static void test_power() {
 static void test_keywords() {
   auto      state   = Game_State();
   const int thrower = put(state, SNAIL_THROWER, 0);
-  const int dog     = put(state, SHARK_DOG, 0);       // Power 4.
-  const int bear    = put(state, BEE_BEAR, 0);        // Power 8.
+  const int dog     = put(state, SHARK_DOG, 0);  // Power 4.
+  const int bear    = put(state, BEE_BEAR, 0);   // Power 8.
   check(
     (effective_keywords(state, dog) & POISONOUS) != 0,
     "Snail Thrower arms a small ally"
@@ -106,12 +106,14 @@ static void test_keywords() {
 }
 
 static void test_blocking() {
-  auto      state    = Game_State();
-  const int sniper   = put(state, CHAMELEON_SNIPER, 0);  // Sneaky.
-  const int owl      = put(state, SPIDER_OWL, 1);        // Sneaky.
+  auto      state     = Game_State();
+  const int sniper    = put(state, CHAMELEON_SNIPER, 0);  // Sneaky.
+  const int owl       = put(state, SPIDER_OWL, 1);        // Sneaky.
   const int gorillion = put(state, GORILLION, 1);
   check(can_block(state, sniper, owl), "sneaky blocks sneaky");
-  check(!can_block(state, sniper, gorillion), "sneaky is not blocked by others");
+  check(
+    !can_block(state, sniper, gorillion), "sneaky is not blocked by others"
+  );
 
   const int bear = put(state, BEE_BEAR, 0);
   check(can_block(state, bear, gorillion), "Bee Bear is blocked by power 10");
@@ -146,7 +148,9 @@ static void test_mindbug_steal() {
   state.begin_game();
 
   resolve_choice(state, 0);  // Player 0 plays Gorillion.
-  check(pending_choice(state).description == "mindbug", "the Mindbug is offered");
+  check(
+    pending_choice(state).description == "mindbug", "the Mindbug is offered"
+  );
   check(pending_choice(state).player_index == 1, "offered to the opponent");
 
   resolve_choice(state, 0);  // Player 1 uses a Mindbug.
@@ -214,8 +218,7 @@ static void test_sampling() {
         );
       }
       check(
-        sampled.players[seat].hand.size() ==
-          state.players[seat].hand.size(),
+        sampled.players[seat].hand.size() == state.players[seat].hand.size(),
         "hand sizes are kept"
       );
       check(
@@ -279,9 +282,10 @@ static void test_search_keeps_the_best_move() {
 // A frenzy creature attacks a second time only if it is still in play: here
 // the Explosive Toad it defeats takes it down with its Defeated ability.
 static void test_frenzy_second_attack() {
-  auto      state  = Game_State();
-  const int bull   = put(state, LUCHATAUR, 0);       // Frenzy, power 9.
-  const int toad   = put(state, EXPLOSIVE_TOAD, 1);  // Defeated: defeat a creature.
+  auto      state = Game_State();
+  const int bull  = put(state, LUCHATAUR, 0);  // Frenzy, power 9.
+  const int toad =
+    put(state, EXPLOSIVE_TOAD, 1);  // Defeated: defeat a creature.
   deal(state, GORILLION, 0);
   deal(state, GORILLION, 1);
   state.begin_game();
@@ -324,6 +328,24 @@ static void test_frenzy_is_optional() {
   check(state.current_player == 1, "and the turn passes");
 }
 
+// A choice indexes its options by combination, and every combination lists its
+// targets in the order the target list has them. The app matches what the
+// player picked against these, so the order is part of the contract.
+static void test_combinations_follow_target_order() {
+  // A hand that has been played from and drawn back into is not sorted.
+  auto targets = std::vector<int>{12, 10, 14, 11};
+  for (const auto& combination : target_combinations(targets, 2, false)) {
+    int previous = -1;
+    for (int target : combination) {
+      const int position =
+        (int)(std::find(targets.begin(), targets.end(), target) -
+              targets.begin());
+      check(position > previous, "a combination follows the target order");
+      previous = position;
+    }
+  }
+}
+
 static void test_random_games() {
   const int num_games = 200;
   for (int game_index = 0; game_index < num_games; ++game_index) {
@@ -348,18 +370,17 @@ static void test_random_games() {
 // A searching agent has to beat a random one clearly, or the state evaluation
 // is pointing the wrong way.
 static void test_search_agent() {
-  const int                                num_games = 10;
-  Agent_Minimax_Stochastic<Game_State>     searching(3, 8);
-  Agent_Random                             random_agent(7);
-  int                                      search_wins = 0;
+  const int                            num_games = 10;
+  Agent_Minimax_Stochastic<Game_State> searching(3, 8);
+  Agent_Random                         random_agent(7);
+  int                                  search_wins = 0;
   for (int game_index = 0; game_index < num_games; ++game_index) {
     // Alternate seats so neither agent benefits from leading.
     const bool search_is_player_0 = game_index % 2 == 0;
     Agent_Duel duel(&searching, &random_agent, !search_is_player_0);
     Game_State state = quick_setup(1000 + game_index);
     game_loop(state, duel);
-    search_wins +=
-      compute_player_score(state, search_is_player_0 ? 0 : 1);
+    search_wins += compute_player_score(state, search_is_player_0 ? 0 : 1);
   }
   std::cout << "minimax won " << search_wins << "/" << num_games
             << " against random\n";
@@ -381,6 +402,7 @@ int main() {
   test_search_keeps_the_best_move();
   test_frenzy_second_attack();
   test_frenzy_is_optional();
+  test_combinations_follow_target_order();
   test_sampling();
   test_random_games();
   test_search_agent();

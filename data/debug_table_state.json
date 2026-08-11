@@ -1,1361 +1,1714 @@
 {
   "things": [
     {
-      "name": "",
-      "id": 0,
-      "image_path": "gods/card-images/00.png",
-      "color": {
-        "r": 255,
-        "g": 255,
-        "b": 255,
-        "a": 50
-      },
-      "size": {
-        "x": 150,
-        "y": 211
-      },
-      "transform": {
-        "x": 0,
-        "y": 12,
-        "rotation": 0
-      },
-      "face_up": true,
-      "depth": 0,
-      "capacity": 0,
-      "children": [],
-      "spread_x": 0,
-      "spread_y": 0
-    },
-    {
-      "name": "",
-      "id": 1,
-      "image_path": "gods/card-images/01.png",
-      "color": {
-        "r": 255,
-        "g": 255,
-        "b": 255,
-        "a": 50
-      },
-      "size": {
-        "x": 150,
-        "y": 211
-      },
-      "transform": {
-        "x": 0,
-        "y": -36,
-        "rotation": 0
-      },
-      "face_up": true,
-      "depth": 0,
-      "capacity": 0,
-      "children": [],
-      "spread_x": 0,
-      "spread_y": 0
-    },
-    {
-      "name": "",
-      "id": 2,
-      "image_path": "gods/card-images/02.png",
-      "color": {
-        "r": 255,
-        "g": 255,
-        "b": 255,
-        "a": 50
-      },
-      "size": {
-        "x": 150,
-        "y": 211
-      },
-      "transform": {
-        "x": 160,
-        "y": 0,
-        "rotation": 0
-      },
-      "face_up": true,
-      "depth": 0,
-      "capacity": 0,
-      "children": [],
-      "spread_x": 0,
-      "spread_y": 0
-    },
-    {
-      "name": "",
-      "id": 3,
-      "image_path": "gods/card-images/03.png",
-      "color": {
-        "r": 255,
-        "g": 255,
-        "b": 255,
-        "a": 50
-      },
-      "size": {
-        "x": 150,
-        "y": 211
-      },
-      "transform": {
-        "x": 0,
-        "y": -6,
-        "rotation": 0
-      },
-      "face_up": true,
-      "depth": 0,
-      "capacity": 0,
-      "children": [],
-      "spread_x": 0,
-      "spread_y": 0
-    },
-    {
-      "name": "",
-      "id": 4,
-      "image_path": "gods/card-images/04.png",
-      "color": {
-        "r": 255,
-        "g": 255,
-        "b": 255,
-        "a": 50
-      },
-      "size": {
-        "x": 150,
-        "y": 211
-      },
-      "transform": {
-        "x": 0,
-        "y": 36,
-        "rotation": 0
-      },
-      "face_up": true,
-      "depth": 0,
-      "capacity": 0,
-      "children": [],
-      "spread_x": 0,
-      "spread_y": 0
-    },
-    {
-      "name": "",
-      "id": 5,
-      "image_path": "gods/card-images/05.png",
-      "color": {
-        "r": 255,
-        "g": 255,
-        "b": 255,
-        "a": 50
-      },
-      "size": {
-        "x": 150,
-        "y": 211
-      },
-      "transform": {
-        "x": 160,
-        "y": 0,
-        "rotation": 0
-      },
-      "face_up": true,
-      "depth": 0,
-      "capacity": 0,
-      "children": [],
-      "spread_x": 0,
-      "spread_y": 0
-    },
-    {
-      "name": "",
-      "id": 6,
-      "image_path": "gods/card-images/06.png",
-      "color": {
-        "r": 255,
-        "g": 255,
-        "b": 255,
-        "a": 50
-      },
-      "size": {
-        "x": 150,
-        "y": 211
-      },
-      "transform": {
-        "x": 0,
-        "y": -15,
-        "rotation": 0
-      },
-      "face_up": true,
-      "depth": 0,
-      "capacity": 0,
-      "children": [],
-      "spread_x": 0,
-      "spread_y": 0
-    },
-    {
-      "name": "",
-      "id": 7,
-      "image_path": "gods/card-images/07.png",
-      "color": {
-        "r": 255,
-        "g": 255,
-        "b": 255,
-        "a": 50
-      },
-      "size": {
-        "x": 150,
-        "y": 211
-      },
-      "transform": {
-        "x": 0,
-        "y": 39,
-        "rotation": 0
-      },
-      "face_up": true,
-      "depth": 0,
-      "capacity": 0,
-      "children": [],
-      "spread_x": 0,
-      "spread_y": 0
-    },
-    {
-      "name": "",
-      "id": 8,
-      "image_path": "gods/card-images/08.png",
-      "color": {
-        "r": 255,
-        "g": 255,
-        "b": 255,
-        "a": 50
-      },
-      "size": {
-        "x": 150,
-        "y": 211
-      },
-      "transform": {
-        "x": 0,
-        "y": 0,
-        "rotation": 360
-      },
-      "face_up": true,
-      "depth": 0,
-      "capacity": 0,
-      "children": [],
-      "spread_x": 0,
-      "spread_y": 0
-    },
-    {
-      "name": "",
-      "id": 9,
-      "image_path": "gods/card-images/09.png",
-      "color": {
-        "r": 255,
-        "g": 255,
-        "b": 255,
-        "a": 50
-      },
-      "size": {
-        "x": 150,
-        "y": 211
-      },
-      "transform": {
-        "x": 0,
-        "y": 42,
-        "rotation": 0
-      },
-      "face_up": true,
-      "depth": 0,
-      "capacity": 0,
-      "children": [],
-      "spread_x": 0,
-      "spread_y": 0
-    },
-    {
-      "name": "",
-      "id": 10,
-      "image_path": "gods/card-images/10.png",
-      "color": {
-        "r": 255,
-        "g": 255,
-        "b": 255,
-        "a": 50
-      },
-      "size": {
-        "x": 150,
-        "y": 211
-      },
-      "transform": {
-        "x": 320,
-        "y": 0,
-        "rotation": 0
-      },
-      "face_up": true,
-      "depth": 0,
-      "capacity": 0,
-      "children": [],
-      "spread_x": 0,
-      "spread_y": 0
-    },
-    {
-      "name": "",
-      "id": 11,
-      "image_path": "gods/card-images/11.png",
-      "color": {
-        "r": 255,
-        "g": 255,
-        "b": 255,
-        "a": 50
-      },
-      "size": {
-        "x": 150,
-        "y": 211
-      },
-      "transform": {
-        "x": 0,
-        "y": 6,
-        "rotation": 0
-      },
-      "face_up": true,
-      "depth": 0,
-      "capacity": 0,
-      "children": [],
-      "spread_x": 0,
-      "spread_y": 0
-    },
-    {
-      "name": "",
-      "id": 12,
-      "image_path": "gods/card-images/12.png",
-      "color": {
-        "r": 255,
-        "g": 255,
-        "b": 255,
-        "a": 50
-      },
-      "size": {
-        "x": 150,
-        "y": 211
-      },
-      "transform": {
-        "x": -320,
-        "y": 0,
-        "rotation": 0
-      },
-      "face_up": true,
-      "depth": 0,
-      "capacity": 0,
-      "children": [],
-      "spread_x": 0,
-      "spread_y": 0
-    },
-    {
-      "name": "",
-      "id": 13,
-      "image_path": "gods/card-images/13.png",
-      "color": {
-        "r": 255,
-        "g": 255,
-        "b": 255,
-        "a": 50
-      },
-      "size": {
-        "x": 150,
-        "y": 211
-      },
-      "transform": {
-        "x": 80,
-        "y": 0,
-        "rotation": 0
-      },
-      "face_up": true,
-      "depth": 0,
-      "capacity": 0,
-      "children": [],
-      "spread_x": 0,
-      "spread_y": 0
-    },
-    {
-      "name": "",
-      "id": 14,
-      "image_path": "gods/card-images/14.png",
-      "color": {
-        "r": 255,
-        "g": 255,
-        "b": 255,
-        "a": 50
-      },
-      "size": {
-        "x": 150,
-        "y": 211
-      },
-      "transform": {
-        "x": -80,
-        "y": 0,
-        "rotation": 360
-      },
-      "face_up": true,
-      "depth": 0,
-      "capacity": 0,
-      "children": [],
-      "spread_x": 0,
-      "spread_y": 0
-    },
-    {
-      "name": "",
-      "id": 15,
-      "image_path": "gods/card-images/15.png",
-      "color": {
-        "r": 255,
-        "g": 255,
-        "b": 255,
-        "a": 50
-      },
-      "size": {
-        "x": 150,
-        "y": 211
-      },
-      "transform": {
-        "x": 0,
-        "y": 33,
-        "rotation": 0
-      },
-      "face_up": true,
-      "depth": 0,
-      "capacity": 0,
-      "children": [],
-      "spread_x": 0,
-      "spread_y": 0
-    },
-    {
-      "name": "",
-      "id": 16,
-      "image_path": "gods/card-images/16.png",
-      "color": {
-        "r": 255,
-        "g": 255,
-        "b": 255,
-        "a": 50
-      },
-      "size": {
-        "x": 150,
-        "y": 211
-      },
-      "transform": {
-        "x": -160,
-        "y": 0,
-        "rotation": 0
-      },
-      "face_up": true,
-      "depth": 0,
-      "capacity": 0,
-      "children": [],
-      "spread_x": 0,
-      "spread_y": 0
-    },
-    {
-      "name": "",
-      "id": 17,
-      "image_path": "gods/card-images/17.png",
-      "color": {
-        "r": 255,
-        "g": 255,
-        "b": 255,
-        "a": 50
-      },
-      "size": {
-        "x": 150,
-        "y": 211
-      },
-      "transform": {
-        "x": 0,
-        "y": -24,
-        "rotation": 0
-      },
-      "face_up": true,
-      "depth": 0,
-      "capacity": 0,
-      "children": [],
-      "spread_x": 0,
-      "spread_y": 0
-    },
-    {
-      "name": "",
-      "id": 18,
-      "image_path": "gods/card-images/18.png",
-      "color": {
-        "r": 255,
-        "g": 255,
-        "b": 255,
-        "a": 50
-      },
-      "size": {
-        "x": 150,
-        "y": 211
-      },
-      "transform": {
-        "x": 0,
-        "y": 15,
-        "rotation": 0
-      },
-      "face_up": true,
-      "depth": 0,
-      "capacity": 0,
-      "children": [],
-      "spread_x": 0,
-      "spread_y": 0
-    },
-    {
-      "name": "",
-      "id": 19,
-      "image_path": "gods/card-images/19.png",
-      "color": {
-        "r": 255,
-        "g": 255,
-        "b": 255,
-        "a": 50
-      },
-      "size": {
-        "x": 150,
-        "y": 211
-      },
-      "transform": {
-        "x": 0,
-        "y": -9,
-        "rotation": 0
-      },
-      "face_up": true,
-      "depth": 0,
-      "capacity": 0,
-      "children": [],
-      "spread_x": 0,
-      "spread_y": 0
-    },
-    {
-      "name": "",
-      "id": 20,
-      "image_path": "gods/card-images/20.png",
-      "color": {
-        "r": 255,
-        "g": 255,
-        "b": 255,
-        "a": 50
-      },
-      "size": {
-        "x": 150,
-        "y": 211
-      },
-      "transform": {
-        "x": 0,
-        "y": -18,
-        "rotation": 0
-      },
-      "face_up": true,
-      "depth": 0,
-      "capacity": 0,
-      "children": [],
-      "spread_x": 0,
-      "spread_y": 0
-    },
-    {
-      "name": "",
-      "id": 21,
-      "image_path": "gods/card-images/21.png",
-      "color": {
-        "r": 255,
-        "g": 255,
-        "b": 255,
-        "a": 50
-      },
-      "size": {
-        "x": 150,
-        "y": 211
-      },
-      "transform": {
-        "x": 0,
-        "y": 27,
-        "rotation": 0
-      },
-      "face_up": true,
-      "depth": 0,
-      "capacity": 0,
-      "children": [],
-      "spread_x": 0,
-      "spread_y": 0
-    },
-    {
-      "name": "",
-      "id": 22,
-      "image_path": "gods/card-images/22.png",
-      "color": {
-        "r": 255,
-        "g": 255,
-        "b": 255,
-        "a": 50
-      },
-      "size": {
-        "x": 150,
-        "y": 211
-      },
-      "transform": {
-        "x": 0,
-        "y": 0,
-        "rotation": 0
-      },
-      "face_up": true,
-      "depth": 0,
-      "capacity": 0,
-      "children": [],
-      "spread_x": 0,
-      "spread_y": 0
-    },
-    {
-      "name": "",
-      "id": 23,
-      "image_path": "gods/card-images/23.png",
-      "color": {
-        "r": 255,
-        "g": 255,
-        "b": 255,
-        "a": 50
-      },
-      "size": {
-        "x": 150,
-        "y": 211
-      },
-      "transform": {
-        "x": 0,
-        "y": 0,
-        "rotation": 0
-      },
-      "face_up": true,
-      "depth": 0,
-      "capacity": 0,
-      "children": [],
-      "spread_x": 0,
-      "spread_y": 0
-    },
-    {
-      "name": "",
-      "id": 24,
-      "image_path": "gods/card-images/24.png",
-      "color": {
-        "r": 255,
-        "g": 255,
-        "b": 255,
-        "a": 50
-      },
-      "size": {
-        "x": 150,
-        "y": 211
-      },
-      "transform": {
-        "x": 0,
-        "y": -42,
-        "rotation": 0
-      },
-      "face_up": true,
-      "depth": 0,
-      "capacity": 0,
-      "children": [],
-      "spread_x": 0,
-      "spread_y": 0
-    },
-    {
-      "name": "",
-      "id": 25,
-      "image_path": "gods/card-images/25.png",
-      "color": {
-        "r": 255,
-        "g": 255,
-        "b": 255,
-        "a": 50
-      },
-      "size": {
-        "x": 150,
-        "y": 211
-      },
-      "transform": {
-        "x": 0,
-        "y": 21,
-        "rotation": 0
-      },
-      "face_up": true,
-      "depth": 0,
-      "capacity": 0,
-      "children": [],
-      "spread_x": 0,
-      "spread_y": 0
-    },
-    {
-      "name": "",
-      "id": 26,
-      "image_path": "gods/card-images/26.png",
-      "color": {
-        "r": 255,
-        "g": 255,
-        "b": 255,
-        "a": 50
-      },
-      "size": {
-        "x": 150,
-        "y": 211
-      },
-      "transform": {
-        "x": 0,
-        "y": 30,
-        "rotation": 0
-      },
-      "face_up": true,
-      "depth": 0,
-      "capacity": 0,
-      "children": [],
-      "spread_x": 0,
-      "spread_y": 0
-    },
-    {
-      "name": "",
-      "id": 27,
-      "image_path": "gods/card-images/27.png",
-      "color": {
-        "r": 255,
-        "g": 255,
-        "b": 255,
-        "a": 50
-      },
-      "size": {
-        "x": 150,
-        "y": 211
-      },
-      "transform": {
-        "x": 0,
-        "y": 18,
-        "rotation": 0
-      },
-      "face_up": true,
-      "depth": 0,
-      "capacity": 0,
-      "children": [],
-      "spread_x": 0,
-      "spread_y": 0
-    },
-    {
-      "name": "",
-      "id": 28,
-      "image_path": "gods/card-images/28.png",
-      "color": {
-        "r": 255,
-        "g": 255,
-        "b": 255,
-        "a": 50
-      },
-      "size": {
-        "x": 150,
-        "y": 211
-      },
-      "transform": {
-        "x": 0,
-        "y": 9,
-        "rotation": 0
-      },
-      "face_up": true,
-      "depth": 0,
-      "capacity": 0,
-      "children": [],
-      "spread_x": 0,
-      "spread_y": 0
-    },
-    {
-      "name": "",
-      "id": 29,
-      "image_path": "gods/card-images/29.png",
-      "color": {
-        "r": 255,
-        "g": 255,
-        "b": 255,
-        "a": 50
-      },
-      "size": {
-        "x": 150,
-        "y": 211
-      },
-      "transform": {
-        "x": 0,
-        "y": -3,
-        "rotation": 0
-      },
-      "face_up": true,
-      "depth": 0,
-      "capacity": 0,
-      "children": [],
-      "spread_x": 0,
-      "spread_y": 0
-    },
-    {
-      "name": "",
-      "id": 30,
-      "image_path": "gods/card-images/30.png",
-      "color": {
-        "r": 255,
-        "g": 255,
-        "b": 255,
-        "a": 50
-      },
-      "size": {
-        "x": 150,
-        "y": 211
-      },
-      "transform": {
-        "x": 0,
-        "y": -33,
-        "rotation": 0
-      },
-      "face_up": true,
-      "depth": 0,
-      "capacity": 0,
-      "children": [],
-      "spread_x": 0,
-      "spread_y": 0
-    },
-    {
-      "name": "",
-      "id": 31,
-      "image_path": "gods/card-images/31.png",
-      "color": {
-        "r": 255,
-        "g": 255,
-        "b": 255,
-        "a": 50
-      },
-      "size": {
-        "x": 150,
-        "y": 211
-      },
-      "transform": {
-        "x": 0,
-        "y": -12,
-        "rotation": 0
-      },
-      "face_up": true,
-      "depth": 0,
-      "capacity": 0,
-      "children": [],
-      "spread_x": 0,
-      "spread_y": 0
-    },
-    {
-      "name": "",
-      "id": 32,
-      "image_path": "gods/card-images/32.png",
-      "color": {
-        "r": 255,
-        "g": 255,
-        "b": 255,
-        "a": 50
-      },
-      "size": {
-        "x": 150,
-        "y": 211
-      },
-      "transform": {
-        "x": 0,
-        "y": -27,
-        "rotation": 0
-      },
-      "face_up": true,
-      "depth": 0,
-      "capacity": 0,
-      "children": [],
-      "spread_x": 0,
-      "spread_y": 0
-    },
-    {
-      "name": "",
-      "id": 33,
-      "image_path": "gods/card-images/33.png",
-      "color": {
-        "r": 255,
-        "g": 255,
-        "b": 255,
-        "a": 50
-      },
-      "size": {
-        "x": 150,
-        "y": 211
-      },
-      "transform": {
-        "x": 0,
-        "y": 24,
-        "rotation": 0
-      },
-      "face_up": true,
-      "depth": 0,
-      "capacity": 0,
-      "children": [],
-      "spread_x": 0,
-      "spread_y": 0
-    },
-    {
-      "name": "",
-      "id": 34,
-      "image_path": "gods/card-images/34.png",
-      "color": {
-        "r": 255,
-        "g": 255,
-        "b": 255,
-        "a": 50
-      },
-      "size": {
-        "x": 150,
-        "y": 211
-      },
-      "transform": {
-        "x": 0,
-        "y": 3,
-        "rotation": 0
-      },
-      "face_up": true,
-      "depth": 0,
-      "capacity": 0,
-      "children": [],
-      "spread_x": 0,
-      "spread_y": 0
-    },
-    {
-      "name": "",
-      "id": 35,
-      "image_path": "gods/card-images/35.png",
-      "color": {
-        "r": 255,
-        "g": 255,
-        "b": 255,
-        "a": 50
-      },
-      "size": {
-        "x": 150,
-        "y": 211
-      },
-      "transform": {
-        "x": 0,
-        "y": -21,
-        "rotation": 0
-      },
-      "face_up": true,
-      "depth": 0,
-      "capacity": 0,
-      "children": [],
-      "spread_x": 0,
-      "spread_y": 0
-    },
-    {
-      "name": "",
-      "id": 36,
-      "image_path": "gods/card-images/36.png",
-      "color": {
-        "r": 255,
-        "g": 255,
-        "b": 255,
-        "a": 50
-      },
-      "size": {
-        "x": 150,
-        "y": 211
-      },
-      "transform": {
-        "x": 0,
-        "y": -30,
-        "rotation": 0
-      },
-      "face_up": true,
-      "depth": 0,
-      "capacity": 0,
-      "children": [],
-      "spread_x": 0,
-      "spread_y": 0
-    },
-    {
-      "name": "",
-      "id": 37,
-      "image_path": "gods/card-images/37.png",
-      "color": {
-        "r": 255,
-        "g": 255,
-        "b": 255,
-        "a": 50
-      },
-      "size": {
-        "x": 150,
-        "y": 211
-      },
-      "transform": {
-        "x": 0,
-        "y": -39,
-        "rotation": 0
-      },
-      "face_up": true,
-      "depth": 0,
-      "capacity": 0,
-      "children": [],
-      "spread_x": 0,
-      "spread_y": 0
-    },
-    {
-      "name": "",
-      "id": 38,
-      "image_path": "gods/card-images/38.png",
-      "color": {
-        "r": 255,
-        "g": 255,
-        "b": 255,
-        "a": 50
-      },
-      "size": {
-        "x": 150,
-        "y": 211
-      },
-      "transform": {
-        "x": -160,
-        "y": 0,
-        "rotation": 0
-      },
-      "face_up": true,
-      "depth": 0,
-      "capacity": 0,
-      "children": [],
-      "spread_x": 0,
-      "spread_y": 0
-    },
-    {
-      "name": "p0_deck",
-      "id": 39,
+      "name": "thing",
       "image_path": "",
       "color": {
         "r": 255,
         "g": 255,
         "b": 255,
-        "a": 100
+        "a": 255
       },
-      "size": {
-        "x": 150,
-        "y": 211
+      "border_color": {
+        "r": 0,
+        "g": 0,
+        "b": 0,
+        "a": 255
+      },
+      "border_width": 0,
+      "shape": {
+        "index": 3,
+        "value": {
+          "size": {
+            "x": 150,
+            "y": 211
+          },
+          "corner_radius": 18
+        }
+      },
+      "counter": {
+        "value": 0,
+        "min": 0,
+        "max": 0
       },
       "transform": {
-        "x": -433,
-        "y": 374.5,
+        "x": 0,
+        "y": 0,
+        "rotation": 0
+      },
+      "face_up": true,
+      "depth": 0,
+      "capacity": 0,
+      "_children": [],
+      "spread_x": 0,
+      "spread_y": 0
+    },
+    {
+      "name": "thing",
+      "image_path": "",
+      "color": {
+        "r": 255,
+        "g": 255,
+        "b": 255,
+        "a": 255
+      },
+      "border_color": {
+        "r": 0,
+        "g": 0,
+        "b": 0,
+        "a": 255
+      },
+      "border_width": 0,
+      "shape": {
+        "index": 3,
+        "value": {
+          "size": {
+            "x": 150,
+            "y": 211
+          },
+          "corner_radius": 18
+        }
+      },
+      "counter": {
+        "value": 0,
+        "min": 0,
+        "max": 0
+      },
+      "transform": {
+        "x": 0,
+        "y": 0,
+        "rotation": 0
+      },
+      "face_up": true,
+      "depth": 0,
+      "capacity": 0,
+      "_children": [],
+      "spread_x": 0,
+      "spread_y": 0
+    },
+    {
+      "name": "thing",
+      "image_path": "",
+      "color": {
+        "r": 255,
+        "g": 255,
+        "b": 255,
+        "a": 255
+      },
+      "border_color": {
+        "r": 0,
+        "g": 0,
+        "b": 0,
+        "a": 255
+      },
+      "border_width": 0,
+      "shape": {
+        "index": 3,
+        "value": {
+          "size": {
+            "x": 150,
+            "y": 211
+          },
+          "corner_radius": 18
+        }
+      },
+      "counter": {
+        "value": 0,
+        "min": 0,
+        "max": 0
+      },
+      "transform": {
+        "x": 0,
+        "y": 0,
+        "rotation": 0
+      },
+      "face_up": true,
+      "depth": 0,
+      "capacity": 0,
+      "_children": [],
+      "spread_x": 0,
+      "spread_y": 0
+    },
+    {
+      "name": "thing",
+      "image_path": "",
+      "color": {
+        "r": 255,
+        "g": 255,
+        "b": 255,
+        "a": 255
+      },
+      "border_color": {
+        "r": 0,
+        "g": 0,
+        "b": 0,
+        "a": 255
+      },
+      "border_width": 0,
+      "shape": {
+        "index": 3,
+        "value": {
+          "size": {
+            "x": 150,
+            "y": 211
+          },
+          "corner_radius": 18
+        }
+      },
+      "counter": {
+        "value": 0,
+        "min": 0,
+        "max": 0
+      },
+      "transform": {
+        "x": 0,
+        "y": 0,
+        "rotation": 0
+      },
+      "face_up": true,
+      "depth": 0,
+      "capacity": 0,
+      "_children": [],
+      "spread_x": 0,
+      "spread_y": 0
+    },
+    {
+      "name": "thing",
+      "image_path": "",
+      "color": {
+        "r": 255,
+        "g": 255,
+        "b": 255,
+        "a": 255
+      },
+      "border_color": {
+        "r": 0,
+        "g": 0,
+        "b": 0,
+        "a": 255
+      },
+      "border_width": 0,
+      "shape": {
+        "index": 3,
+        "value": {
+          "size": {
+            "x": 150,
+            "y": 211
+          },
+          "corner_radius": 18
+        }
+      },
+      "counter": {
+        "value": 0,
+        "min": 0,
+        "max": 0
+      },
+      "transform": {
+        "x": 0,
+        "y": 0,
+        "rotation": 0
+      },
+      "face_up": true,
+      "depth": 0,
+      "capacity": 0,
+      "_children": [],
+      "spread_x": 0,
+      "spread_y": 0
+    },
+    {
+      "name": "thing",
+      "image_path": "",
+      "color": {
+        "r": 255,
+        "g": 255,
+        "b": 255,
+        "a": 255
+      },
+      "border_color": {
+        "r": 0,
+        "g": 0,
+        "b": 0,
+        "a": 255
+      },
+      "border_width": 0,
+      "shape": {
+        "index": 3,
+        "value": {
+          "size": {
+            "x": 150,
+            "y": 211
+          },
+          "corner_radius": 18
+        }
+      },
+      "counter": {
+        "value": 0,
+        "min": 0,
+        "max": 0
+      },
+      "transform": {
+        "x": 0,
+        "y": 0,
+        "rotation": 0
+      },
+      "face_up": true,
+      "depth": 0,
+      "capacity": 0,
+      "_children": [],
+      "spread_x": 0,
+      "spread_y": 0
+    },
+    {
+      "name": "thing",
+      "image_path": "",
+      "color": {
+        "r": 255,
+        "g": 255,
+        "b": 255,
+        "a": 255
+      },
+      "border_color": {
+        "r": 0,
+        "g": 0,
+        "b": 0,
+        "a": 255
+      },
+      "border_width": 0,
+      "shape": {
+        "index": 3,
+        "value": {
+          "size": {
+            "x": 150,
+            "y": 211
+          },
+          "corner_radius": 18
+        }
+      },
+      "counter": {
+        "value": 0,
+        "min": 0,
+        "max": 0
+      },
+      "transform": {
+        "x": 0,
+        "y": 0,
+        "rotation": 0
+      },
+      "face_up": true,
+      "depth": 0,
+      "capacity": 0,
+      "_children": [],
+      "spread_x": 0,
+      "spread_y": 0
+    },
+    {
+      "name": "thing",
+      "image_path": "",
+      "color": {
+        "r": 255,
+        "g": 255,
+        "b": 255,
+        "a": 255
+      },
+      "border_color": {
+        "r": 0,
+        "g": 0,
+        "b": 0,
+        "a": 255
+      },
+      "border_width": 0,
+      "shape": {
+        "index": 3,
+        "value": {
+          "size": {
+            "x": 150,
+            "y": 211
+          },
+          "corner_radius": 18
+        }
+      },
+      "counter": {
+        "value": 0,
+        "min": 0,
+        "max": 0
+      },
+      "transform": {
+        "x": 0,
+        "y": 0,
+        "rotation": 0
+      },
+      "face_up": true,
+      "depth": 0,
+      "capacity": 0,
+      "_children": [],
+      "spread_x": 0,
+      "spread_y": 0
+    },
+    {
+      "name": "thing",
+      "image_path": "",
+      "color": {
+        "r": 255,
+        "g": 255,
+        "b": 255,
+        "a": 255
+      },
+      "border_color": {
+        "r": 0,
+        "g": 0,
+        "b": 0,
+        "a": 255
+      },
+      "border_width": 0,
+      "shape": {
+        "index": 3,
+        "value": {
+          "size": {
+            "x": 150,
+            "y": 211
+          },
+          "corner_radius": 18
+        }
+      },
+      "counter": {
+        "value": 0,
+        "min": 0,
+        "max": 0
+      },
+      "transform": {
+        "x": 0,
+        "y": 0,
+        "rotation": 0
+      },
+      "face_up": true,
+      "depth": 0,
+      "capacity": 0,
+      "_children": [],
+      "spread_x": 0,
+      "spread_y": 0
+    },
+    {
+      "name": "thing",
+      "image_path": "",
+      "color": {
+        "r": 255,
+        "g": 255,
+        "b": 255,
+        "a": 255
+      },
+      "border_color": {
+        "r": 0,
+        "g": 0,
+        "b": 0,
+        "a": 255
+      },
+      "border_width": 0,
+      "shape": {
+        "index": 3,
+        "value": {
+          "size": {
+            "x": 150,
+            "y": 211
+          },
+          "corner_radius": 18
+        }
+      },
+      "counter": {
+        "value": 0,
+        "min": 0,
+        "max": 0
+      },
+      "transform": {
+        "x": 0,
+        "y": 0,
+        "rotation": 0
+      },
+      "face_up": true,
+      "depth": 0,
+      "capacity": 0,
+      "_children": [],
+      "spread_x": 0,
+      "spread_y": 0
+    },
+    {
+      "name": "thing",
+      "image_path": "",
+      "color": {
+        "r": 255,
+        "g": 255,
+        "b": 255,
+        "a": 255
+      },
+      "border_color": {
+        "r": 0,
+        "g": 0,
+        "b": 0,
+        "a": 255
+      },
+      "border_width": 0,
+      "shape": {
+        "index": 3,
+        "value": {
+          "size": {
+            "x": 150,
+            "y": 211
+          },
+          "corner_radius": 18
+        }
+      },
+      "counter": {
+        "value": 0,
+        "min": 0,
+        "max": 0
+      },
+      "transform": {
+        "x": 0,
+        "y": 0,
+        "rotation": 0
+      },
+      "face_up": true,
+      "depth": 0,
+      "capacity": 0,
+      "_children": [],
+      "spread_x": 0,
+      "spread_y": 0
+    },
+    {
+      "name": "thing",
+      "image_path": "",
+      "color": {
+        "r": 255,
+        "g": 255,
+        "b": 255,
+        "a": 255
+      },
+      "border_color": {
+        "r": 0,
+        "g": 0,
+        "b": 0,
+        "a": 255
+      },
+      "border_width": 0,
+      "shape": {
+        "index": 3,
+        "value": {
+          "size": {
+            "x": 150,
+            "y": 211
+          },
+          "corner_radius": 18
+        }
+      },
+      "counter": {
+        "value": 0,
+        "min": 0,
+        "max": 0
+      },
+      "transform": {
+        "x": 0,
+        "y": 0,
+        "rotation": 0
+      },
+      "face_up": true,
+      "depth": 0,
+      "capacity": 0,
+      "_children": [],
+      "spread_x": 0,
+      "spread_y": 0
+    },
+    {
+      "name": "thing",
+      "image_path": "",
+      "color": {
+        "r": 255,
+        "g": 255,
+        "b": 255,
+        "a": 255
+      },
+      "border_color": {
+        "r": 0,
+        "g": 0,
+        "b": 0,
+        "a": 255
+      },
+      "border_width": 0,
+      "shape": {
+        "index": 3,
+        "value": {
+          "size": {
+            "x": 150,
+            "y": 211
+          },
+          "corner_radius": 18
+        }
+      },
+      "counter": {
+        "value": 0,
+        "min": 0,
+        "max": 0
+      },
+      "transform": {
+        "x": 0,
+        "y": 0,
+        "rotation": 0
+      },
+      "face_up": true,
+      "depth": 0,
+      "capacity": 0,
+      "_children": [],
+      "spread_x": 0,
+      "spread_y": 0
+    },
+    {
+      "name": "thing",
+      "image_path": "",
+      "color": {
+        "r": 255,
+        "g": 255,
+        "b": 255,
+        "a": 255
+      },
+      "border_color": {
+        "r": 0,
+        "g": 0,
+        "b": 0,
+        "a": 255
+      },
+      "border_width": 0,
+      "shape": {
+        "index": 3,
+        "value": {
+          "size": {
+            "x": 150,
+            "y": 211
+          },
+          "corner_radius": 18
+        }
+      },
+      "counter": {
+        "value": 0,
+        "min": 0,
+        "max": 0
+      },
+      "transform": {
+        "x": 0,
+        "y": 0,
+        "rotation": 0
+      },
+      "face_up": true,
+      "depth": 0,
+      "capacity": 0,
+      "_children": [],
+      "spread_x": 0,
+      "spread_y": 0
+    },
+    {
+      "name": "thing",
+      "image_path": "",
+      "color": {
+        "r": 255,
+        "g": 255,
+        "b": 255,
+        "a": 255
+      },
+      "border_color": {
+        "r": 0,
+        "g": 0,
+        "b": 0,
+        "a": 255
+      },
+      "border_width": 0,
+      "shape": {
+        "index": 3,
+        "value": {
+          "size": {
+            "x": 150,
+            "y": 211
+          },
+          "corner_radius": 18
+        }
+      },
+      "counter": {
+        "value": 0,
+        "min": 0,
+        "max": 0
+      },
+      "transform": {
+        "x": 0,
+        "y": 0,
+        "rotation": 0
+      },
+      "face_up": true,
+      "depth": 0,
+      "capacity": 0,
+      "_children": [],
+      "spread_x": 0,
+      "spread_y": 0
+    },
+    {
+      "name": "thing",
+      "image_path": "",
+      "color": {
+        "r": 255,
+        "g": 255,
+        "b": 255,
+        "a": 255
+      },
+      "border_color": {
+        "r": 0,
+        "g": 0,
+        "b": 0,
+        "a": 255
+      },
+      "border_width": 0,
+      "shape": {
+        "index": 3,
+        "value": {
+          "size": {
+            "x": 150,
+            "y": 211
+          },
+          "corner_radius": 18
+        }
+      },
+      "counter": {
+        "value": 0,
+        "min": 0,
+        "max": 0
+      },
+      "transform": {
+        "x": 0,
+        "y": 0,
+        "rotation": 0
+      },
+      "face_up": true,
+      "depth": 0,
+      "capacity": 0,
+      "_children": [],
+      "spread_x": 0,
+      "spread_y": 0
+    },
+    {
+      "name": "thing",
+      "image_path": "",
+      "color": {
+        "r": 255,
+        "g": 255,
+        "b": 255,
+        "a": 255
+      },
+      "border_color": {
+        "r": 0,
+        "g": 0,
+        "b": 0,
+        "a": 255
+      },
+      "border_width": 0,
+      "shape": {
+        "index": 3,
+        "value": {
+          "size": {
+            "x": 150,
+            "y": 211
+          },
+          "corner_radius": 18
+        }
+      },
+      "counter": {
+        "value": 0,
+        "min": 0,
+        "max": 0
+      },
+      "transform": {
+        "x": 0,
+        "y": 0,
+        "rotation": 0
+      },
+      "face_up": true,
+      "depth": 0,
+      "capacity": 0,
+      "_children": [],
+      "spread_x": 0,
+      "spread_y": 0
+    },
+    {
+      "name": "thing",
+      "image_path": "",
+      "color": {
+        "r": 255,
+        "g": 255,
+        "b": 255,
+        "a": 255
+      },
+      "border_color": {
+        "r": 0,
+        "g": 0,
+        "b": 0,
+        "a": 255
+      },
+      "border_width": 0,
+      "shape": {
+        "index": 3,
+        "value": {
+          "size": {
+            "x": 150,
+            "y": 211
+          },
+          "corner_radius": 18
+        }
+      },
+      "counter": {
+        "value": 0,
+        "min": 0,
+        "max": 0
+      },
+      "transform": {
+        "x": 0,
+        "y": 0,
+        "rotation": 0
+      },
+      "face_up": true,
+      "depth": 0,
+      "capacity": 0,
+      "_children": [],
+      "spread_x": 0,
+      "spread_y": 0
+    },
+    {
+      "name": "thing",
+      "image_path": "",
+      "color": {
+        "r": 255,
+        "g": 255,
+        "b": 255,
+        "a": 255
+      },
+      "border_color": {
+        "r": 0,
+        "g": 0,
+        "b": 0,
+        "a": 255
+      },
+      "border_width": 0,
+      "shape": {
+        "index": 3,
+        "value": {
+          "size": {
+            "x": 150,
+            "y": 211
+          },
+          "corner_radius": 18
+        }
+      },
+      "counter": {
+        "value": 0,
+        "min": 0,
+        "max": 0
+      },
+      "transform": {
+        "x": 0,
+        "y": 0,
+        "rotation": 0
+      },
+      "face_up": true,
+      "depth": 0,
+      "capacity": 0,
+      "_children": [],
+      "spread_x": 0,
+      "spread_y": 0
+    },
+    {
+      "name": "thing",
+      "image_path": "",
+      "color": {
+        "r": 255,
+        "g": 255,
+        "b": 255,
+        "a": 255
+      },
+      "border_color": {
+        "r": 0,
+        "g": 0,
+        "b": 0,
+        "a": 255
+      },
+      "border_width": 0,
+      "shape": {
+        "index": 3,
+        "value": {
+          "size": {
+            "x": 150,
+            "y": 211
+          },
+          "corner_radius": 18
+        }
+      },
+      "counter": {
+        "value": 0,
+        "min": 0,
+        "max": 0
+      },
+      "transform": {
+        "x": 0,
+        "y": 0,
+        "rotation": 0
+      },
+      "face_up": true,
+      "depth": 0,
+      "capacity": 0,
+      "_children": [],
+      "spread_x": 0,
+      "spread_y": 0
+    },
+    {
+      "name": "thing",
+      "image_path": "mindbug/card-images/mindbug.png",
+      "color": {
+        "r": 255,
+        "g": 255,
+        "b": 255,
+        "a": 255
+      },
+      "border_color": {
+        "r": 0,
+        "g": 0,
+        "b": 0,
+        "a": 255
+      },
+      "border_width": 0,
+      "shape": {
+        "index": 3,
+        "value": {
+          "size": {
+            "x": 150,
+            "y": 211
+          },
+          "corner_radius": 18
+        }
+      },
+      "counter": {
+        "value": 0,
+        "min": 0,
+        "max": 0
+      },
+      "transform": {
+        "x": -45,
+        "y": 0,
+        "rotation": 0
+      },
+      "face_up": true,
+      "depth": 0,
+      "capacity": 0,
+      "_children": [],
+      "spread_x": 0,
+      "spread_y": 0
+    },
+    {
+      "name": "thing",
+      "image_path": "mindbug/card-images/mindbug.png",
+      "color": {
+        "r": 255,
+        "g": 255,
+        "b": 255,
+        "a": 255
+      },
+      "border_color": {
+        "r": 0,
+        "g": 0,
+        "b": 0,
+        "a": 255
+      },
+      "border_width": 0,
+      "shape": {
+        "index": 3,
+        "value": {
+          "size": {
+            "x": 150,
+            "y": 211
+          },
+          "corner_radius": 18
+        }
+      },
+      "counter": {
+        "value": 0,
+        "min": 0,
+        "max": 0
+      },
+      "transform": {
+        "x": 45,
+        "y": 0,
+        "rotation": 0
+      },
+      "face_up": true,
+      "depth": 0,
+      "capacity": 0,
+      "_children": [],
+      "spread_x": 0,
+      "spread_y": 0
+    },
+    {
+      "name": "thing",
+      "image_path": "mindbug/card-images/mindbug.png",
+      "color": {
+        "r": 255,
+        "g": 255,
+        "b": 255,
+        "a": 255
+      },
+      "border_color": {
+        "r": 0,
+        "g": 0,
+        "b": 0,
+        "a": 255
+      },
+      "border_width": 0,
+      "shape": {
+        "index": 3,
+        "value": {
+          "size": {
+            "x": 150,
+            "y": 211
+          },
+          "corner_radius": 18
+        }
+      },
+      "counter": {
+        "value": 0,
+        "min": 0,
+        "max": 0
+      },
+      "transform": {
+        "x": -45,
+        "y": 0,
+        "rotation": 0
+      },
+      "face_up": true,
+      "depth": 0,
+      "capacity": 0,
+      "_children": [],
+      "spread_x": 0,
+      "spread_y": 0
+    },
+    {
+      "name": "thing",
+      "image_path": "mindbug/card-images/mindbug.png",
+      "color": {
+        "r": 255,
+        "g": 255,
+        "b": 255,
+        "a": 255
+      },
+      "border_color": {
+        "r": 0,
+        "g": 0,
+        "b": 0,
+        "a": 255
+      },
+      "border_width": 0,
+      "shape": {
+        "index": 3,
+        "value": {
+          "size": {
+            "x": 150,
+            "y": 211
+          },
+          "corner_radius": 18
+        }
+      },
+      "counter": {
+        "value": 0,
+        "min": 0,
+        "max": 0
+      },
+      "transform": {
+        "x": 45,
+        "y": 0,
+        "rotation": 0
+      },
+      "face_up": true,
+      "depth": 0,
+      "capacity": 0,
+      "_children": [],
+      "spread_x": 0,
+      "spread_y": 0
+    },
+    {
+      "name": "thing",
+      "image_path": "",
+      "color": {
+        "r": 190,
+        "g": 40,
+        "b": 45,
+        "a": 255
+      },
+      "border_color": {
+        "r": 0,
+        "g": 0,
+        "b": 0,
+        "a": 255
+      },
+      "border_width": 0,
+      "shape": {
+        "index": 0,
+        "value": {
+          "radius": 45
+        }
+      },
+      "counter": {
+        "value": 3,
+        "min": 0,
+        "max": 20
+      },
+      "transform": {
+        "x": 0,
+        "y": 0,
         "rotation": 0
       },
       "face_up": true,
       "depth": 0,
       "capacity": -1,
-      "children": [],
+      "_children": [],
       "spread_x": 0,
-      "spread_y": -3
+      "spread_y": 0
+    },
+    {
+      "name": "thing",
+      "image_path": "",
+      "color": {
+        "r": 190,
+        "g": 40,
+        "b": 45,
+        "a": 255
+      },
+      "border_color": {
+        "r": 0,
+        "g": 0,
+        "b": 0,
+        "a": 255
+      },
+      "border_width": 0,
+      "shape": {
+        "index": 0,
+        "value": {
+          "radius": 45
+        }
+      },
+      "counter": {
+        "value": 3,
+        "min": 0,
+        "max": 20
+      },
+      "transform": {
+        "x": 0,
+        "y": 0,
+        "rotation": 0
+      },
+      "face_up": true,
+      "depth": 0,
+      "capacity": -1,
+      "_children": [],
+      "spread_x": 0,
+      "spread_y": 0
     },
     {
       "name": "p0_hand",
-      "id": 40,
       "image_path": "",
       "color": {
         "r": 255,
         "g": 255,
         "b": 255,
-        "a": 100
+        "a": 0
       },
-      "size": {
-        "x": 876,
-        "y": 211
+      "border_color": {
+        "r": 0,
+        "g": 0,
+        "b": 0,
+        "a": 255
+      },
+      "border_width": 0,
+      "shape": {
+        "index": 3,
+        "value": {
+          "size": {
+            "x": 760,
+            "y": 211
+          },
+          "corner_radius": 18
+        }
+      },
+      "counter": {
+        "value": 0,
+        "min": 0,
+        "max": 0
       },
       "transform": {
-        "x": 100,
-        "y": 374.5,
-        "rotation": 360
+        "x": 0,
+        "y": 370.5,
+        "rotation": 0
       },
       "face_up": true,
       "depth": 0,
       "capacity": -1,
-      "children": [
-        38,
-        8,
-        5
-      ],
+      "_children": [],
       "spread_x": 160,
       "spread_y": 0
+    },
+    {
+      "name": "p0_creatures",
+      "image_path": "",
+      "color": {
+        "r": 255,
+        "g": 255,
+        "b": 255,
+        "a": 0
+      },
+      "border_color": {
+        "r": 0,
+        "g": 0,
+        "b": 0,
+        "a": 255
+      },
+      "border_width": 0,
+      "shape": {
+        "index": 3,
+        "value": {
+          "size": {
+            "x": 760,
+            "y": 211
+          },
+          "corner_radius": 18
+        }
+      },
+      "counter": {
+        "value": 0,
+        "min": 0,
+        "max": 0
+      },
+      "transform": {
+        "x": 0,
+        "y": 135.5,
+        "rotation": 0
+      },
+      "face_up": true,
+      "depth": 0,
+      "capacity": -1,
+      "_children": [],
+      "spread_x": 160,
+      "spread_y": 0
+    },
+    {
+      "name": "p0_draw",
+      "image_path": "",
+      "color": {
+        "r": 255,
+        "g": 255,
+        "b": 255,
+        "a": 0
+      },
+      "border_color": {
+        "r": 0,
+        "g": 0,
+        "b": 0,
+        "a": 255
+      },
+      "border_width": 0,
+      "shape": {
+        "index": 3,
+        "value": {
+          "size": {
+            "x": 150,
+            "y": 211
+          },
+          "corner_radius": 18
+        }
+      },
+      "counter": {
+        "value": 0,
+        "min": 0,
+        "max": 0
+      },
+      "transform": {
+        "x": -479,
+        "y": 370.5,
+        "rotation": 0
+      },
+      "face_up": false,
+      "depth": 0,
+      "capacity": -1,
+      "_children": [],
+      "spread_x": 0,
+      "spread_y": -3
     },
     {
       "name": "p0_discard",
-      "id": 41,
       "image_path": "",
       "color": {
         "r": 255,
         "g": 255,
         "b": 255,
-        "a": 100
+        "a": 0
       },
-      "size": {
-        "x": 150,
-        "y": 211
+      "border_color": {
+        "r": 0,
+        "g": 0,
+        "b": 0,
+        "a": 255
+      },
+      "border_width": 0,
+      "shape": {
+        "index": 3,
+        "value": {
+          "size": {
+            "x": 150,
+            "y": 211
+          },
+          "corner_radius": 18
+        }
+      },
+      "counter": {
+        "value": 0,
+        "min": 0,
+        "max": 0
       },
       "transform": {
-        "x": -603,
-        "y": 374.5,
+        "x": 479,
+        "y": 370.5,
         "rotation": 0
       },
       "face_up": true,
       "depth": 0,
       "capacity": -1,
-      "children": [],
+      "_children": [],
       "spread_x": 0,
-      "spread_y": -3
+      "spread_y": 35
     },
     {
-      "name": "p0_peoples",
-      "id": 42,
+      "name": "p0_mindbugs",
       "image_path": "",
       "color": {
         "r": 255,
         "g": 255,
         "b": 255,
-        "a": 100
+        "a": 0
       },
-      "size": {
-        "x": 460,
-        "y": 211
+      "border_color": {
+        "r": 0,
+        "g": 0,
+        "b": 0,
+        "a": 255
+      },
+      "border_width": 0,
+      "shape": {
+        "index": 3,
+        "value": {
+          "size": {
+            "x": 240,
+            "y": 211
+          },
+          "corner_radius": 18
+        }
+      },
+      "counter": {
+        "value": 0,
+        "min": 0,
+        "max": 0
       },
       "transform": {
-        "x": -588,
-        "y": 143.5,
+        "x": -524,
+        "y": 135.5,
         "rotation": 0
       },
       "face_up": true,
       "depth": 0,
       "capacity": -1,
-      "children": [],
-      "spread_x": 160,
-      "spread_y": 0
-    },
-    {
-      "name": "p0_wonders",
-      "id": 43,
-      "image_path": "",
-      "color": {
-        "r": 255,
-        "g": 255,
-        "b": 255,
-        "a": 100
-      },
-      "size": {
-        "x": 876,
-        "y": 211
-      },
-      "transform": {
-        "x": 100,
-        "y": 143.5,
-        "rotation": 360
-      },
-      "face_up": true,
-      "depth": 0,
-      "capacity": -1,
-      "children": [
-        14,
-        13
+      "_children": [
+        20,
+        21
       ],
-      "spread_x": 160,
+      "spread_x": 90,
       "spread_y": 0
     },
     {
-      "name": "p1_deck",
-      "id": 44,
+      "name": "p0_life",
       "image_path": "",
       "color": {
         "r": 255,
         "g": 255,
         "b": 255,
-        "a": 100
+        "a": 0
       },
-      "size": {
-        "x": 150,
-        "y": 211
+      "border_color": {
+        "r": 0,
+        "g": 0,
+        "b": 0,
+        "a": 255
+      },
+      "border_width": 0,
+      "shape": {
+        "index": 3,
+        "value": {
+          "size": {
+            "x": 90,
+            "y": 90
+          },
+          "corner_radius": 18
+        }
+      },
+      "counter": {
+        "value": 0,
+        "min": 0,
+        "max": 0
       },
       "transform": {
-        "x": -433,
-        "y": -511.5,
+        "x": -623,
+        "y": 370.5,
         "rotation": 0
       },
       "face_up": true,
       "depth": 0,
       "capacity": -1,
-      "children": [],
+      "_children": [
+        24
+      ],
       "spread_x": 0,
-      "spread_y": -3
+      "spread_y": 0
     },
     {
       "name": "p1_hand",
-      "id": 45,
       "image_path": "",
       "color": {
         "r": 255,
         "g": 255,
         "b": 255,
-        "a": 100
+        "a": 0
       },
-      "size": {
-        "x": 876,
-        "y": 211
+      "border_color": {
+        "r": 0,
+        "g": 0,
+        "b": 0,
+        "a": 255
+      },
+      "border_width": 0,
+      "shape": {
+        "index": 3,
+        "value": {
+          "size": {
+            "x": 760,
+            "y": 211
+          },
+          "corner_radius": 18
+        }
+      },
+      "counter": {
+        "value": 0,
+        "min": 0,
+        "max": 0
       },
       "transform": {
-        "x": 100,
-        "y": -511.5,
+        "x": 0,
+        "y": -370.5,
         "rotation": 0
       },
-      "face_up": true,
+      "face_up": false,
       "depth": 0,
       "capacity": -1,
-      "children": [
-        12,
-        16,
-        23,
-        2,
-        10
-      ],
+      "_children": [],
       "spread_x": 160,
       "spread_y": 0
     },
     {
-      "name": "p1_discard",
-      "id": 46,
+      "name": "p1_creatures",
       "image_path": "",
       "color": {
         "r": 255,
         "g": 255,
         "b": 255,
-        "a": 100
+        "a": 0
       },
-      "size": {
-        "x": 150,
-        "y": 211
+      "border_color": {
+        "r": 0,
+        "g": 0,
+        "b": 0,
+        "a": 255
+      },
+      "border_width": 0,
+      "shape": {
+        "index": 3,
+        "value": {
+          "size": {
+            "x": 760,
+            "y": 211
+          },
+          "corner_radius": 18
+        }
+      },
+      "counter": {
+        "value": 0,
+        "min": 0,
+        "max": 0
       },
       "transform": {
-        "x": -603,
-        "y": -511.5,
+        "x": 0,
+        "y": -135.5,
         "rotation": 0
       },
       "face_up": true,
       "depth": 0,
       "capacity": -1,
-      "children": [],
+      "_children": [],
+      "spread_x": 160,
+      "spread_y": 0
+    },
+    {
+      "name": "p1_draw",
+      "image_path": "",
+      "color": {
+        "r": 255,
+        "g": 255,
+        "b": 255,
+        "a": 0
+      },
+      "border_color": {
+        "r": 0,
+        "g": 0,
+        "b": 0,
+        "a": 255
+      },
+      "border_width": 0,
+      "shape": {
+        "index": 3,
+        "value": {
+          "size": {
+            "x": 150,
+            "y": 211
+          },
+          "corner_radius": 18
+        }
+      },
+      "counter": {
+        "value": 0,
+        "min": 0,
+        "max": 0
+      },
+      "transform": {
+        "x": -479,
+        "y": -370.5,
+        "rotation": 0
+      },
+      "face_up": false,
+      "depth": 0,
+      "capacity": -1,
+      "_children": [],
       "spread_x": 0,
       "spread_y": -3
     },
     {
-      "name": "p1_peoples",
-      "id": 47,
+      "name": "p1_discard",
       "image_path": "",
       "color": {
         "r": 255,
         "g": 255,
         "b": 255,
-        "a": 100
+        "a": 0
       },
-      "size": {
-        "x": 460,
-        "y": 211
+      "border_color": {
+        "r": 0,
+        "g": 0,
+        "b": 0,
+        "a": 255
+      },
+      "border_width": 0,
+      "shape": {
+        "index": 3,
+        "value": {
+          "size": {
+            "x": 150,
+            "y": 211
+          },
+          "corner_radius": 18
+        }
+      },
+      "counter": {
+        "value": 0,
+        "min": 0,
+        "max": 0
       },
       "transform": {
-        "x": -588,
-        "y": -280.5,
+        "x": 479,
+        "y": -370.5,
         "rotation": 0
       },
       "face_up": true,
       "depth": 0,
       "capacity": -1,
-      "children": [],
-      "spread_x": 160,
-      "spread_y": 0
+      "_children": [],
+      "spread_x": 0,
+      "spread_y": -35
     },
     {
-      "name": "p1_wonders",
-      "id": 48,
+      "name": "p1_mindbugs",
       "image_path": "",
       "color": {
         "r": 255,
         "g": 255,
         "b": 255,
-        "a": 100
+        "a": 0
       },
-      "size": {
-        "x": 876,
-        "y": 211
+      "border_color": {
+        "r": 0,
+        "g": 0,
+        "b": 0,
+        "a": 255
+      },
+      "border_width": 0,
+      "shape": {
+        "index": 3,
+        "value": {
+          "size": {
+            "x": 240,
+            "y": 211
+          },
+          "corner_radius": 18
+        }
+      },
+      "counter": {
+        "value": 0,
+        "min": 0,
+        "max": 0
       },
       "transform": {
-        "x": 100,
-        "y": -280.5,
+        "x": -524,
+        "y": -135.5,
         "rotation": 0
       },
       "face_up": true,
       "depth": 0,
       "capacity": -1,
-      "children": [],
-      "spread_x": 160,
+      "_children": [
+        22,
+        23
+      ],
+      "spread_x": 90,
       "spread_y": 0
     },
     {
-      "name": "shared_deck",
-      "id": 49,
+      "name": "p1_life",
       "image_path": "",
       "color": {
         "r": 255,
         "g": 255,
         "b": 255,
-        "a": 100
+        "a": 0
       },
-      "size": {
-        "x": 150,
-        "y": 211
+      "border_color": {
+        "r": 0,
+        "g": 0,
+        "b": 0,
+        "a": 255
+      },
+      "border_width": 0,
+      "shape": {
+        "index": 3,
+        "value": {
+          "size": {
+            "x": 90,
+            "y": 90
+          },
+          "corner_radius": 18
+        }
+      },
+      "counter": {
+        "value": 0,
+        "min": 0,
+        "max": 0
       },
       "transform": {
-        "x": 765,
+        "x": -623,
+        "y": -370.5,
+        "rotation": 0
+      },
+      "face_up": true,
+      "depth": 0,
+      "capacity": -1,
+      "_children": [
+        25
+      ],
+      "spread_x": 0,
+      "spread_y": 0
+    },
+    {
+      "name": "played",
+      "image_path": "",
+      "color": {
+        "r": 255,
+        "g": 255,
+        "b": 255,
+        "a": 0
+      },
+      "border_color": {
+        "r": 0,
+        "g": 0,
+        "b": 0,
+        "a": 255
+      },
+      "border_width": 0,
+      "shape": {
+        "index": 3,
+        "value": {
+          "size": {
+            "x": 150,
+            "y": 211
+          },
+          "corner_radius": 18
+        }
+      },
+      "counter": {
+        "value": 0,
+        "min": 0,
+        "max": 0
+      },
+      "transform": {
+        "x": 200,
         "y": 0,
         "rotation": 0
       },
       "face_up": true,
       "depth": 0,
       "capacity": -1,
-      "children": [
-        9,
-        7,
-        4,
-        15,
-        26,
-        21,
-        33,
-        25,
-        27,
-        18,
-        0,
-        28,
-        11,
-        34,
-        22,
-        29,
-        3,
-        19,
-        31,
-        6,
-        20,
-        35,
-        17,
-        32,
-        36,
-        30,
-        1,
-        37,
-        24
-      ],
+      "_children": [],
       "spread_x": 0,
       "spread_y": -3
     },
     {
       "name": "root",
-      "id": 50,
       "image_path": "",
       "color": {
-        "r": 255,
+        "r": 0,
+        "g": 0,
+        "b": 0,
+        "a": 0
+      },
+      "border_color": {
+        "r": 0,
         "g": 0,
         "b": 0,
         "a": 255
       },
-      "size": {
-        "x": 1700,
-        "y": 1000
+      "border_width": 0,
+      "shape": {
+        "index": 3,
+        "value": {
+          "size": {
+            "x": 1700,
+            "y": 1000
+          },
+          "corner_radius": 0
+        }
+      },
+      "counter": {
+        "value": 0,
+        "min": 0,
+        "max": 0
       },
       "transform": {
         "x": 850,
@@ -1364,23 +1717,25 @@
       },
       "face_up": true,
       "depth": 0,
-      "capacity": 0,
-      "children": [
-        39,
-        40,
-        41,
-        42,
-        43,
-        44,
-        45,
-        46,
-        47,
-        48,
-        49
+      "capacity": -1,
+      "_children": [
+        26,
+        27,
+        28,
+        29,
+        30,
+        31,
+        32,
+        33,
+        34,
+        35,
+        36,
+        37,
+        38
       ],
       "spread_x": 0,
       "spread_y": 0
     }
   ],
-  "root": 50
+  "root": 39
 }

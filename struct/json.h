@@ -149,6 +149,20 @@ auto to_json(T* ptr, int = 0, bool = true)
   return oss.str();
 }
 
+// A fixed-size array has no size() to ask, so it gets its own helper.
+template <typename T, std::size_t N>
+static std::string array_to_json(const T (&arr)[N], int indent, bool pretty) {
+  std::string result = "[" + json_newline(pretty);
+  for (std::size_t i = 0; i < N; i++) {
+    result += json_indent(indent + 1, pretty);
+    result += to_json(arr[i], indent + 1, pretty);
+    if (i < N - 1) result += ",";
+    result += json_newline(pretty);
+  }
+  result += json_indent(indent, pretty) + "]";
+  return result;
+}
+
 // Array/vector to JSON helper
 template <typename Array>
 static std::string array_to_json(const Array& arr, int indent, bool pretty) {
@@ -174,6 +188,7 @@ template <typename T, typename Alloc>
 std::string to_json(const std::vector<T, Alloc>& arr, int indent, bool pretty) {
   return array_to_json(arr, indent, pretty);
 }
+
 
 // Array_Inline — serialized as a JSON array, same as a vector.
 template <class T, int Capacity>
@@ -219,7 +234,15 @@ std::string to_json(const T& t, int indent, bool pretty) {
     first = false;
     result += json_indent(indent + 1, pretty);
     result += "\"" + std::string(name) + "\":" + json_space(pretty);
-    result += to_json(value, indent + 1, pretty);
+    // A fixed-size array member, e.g. `Player players[2]`. Left to overload
+    // resolution it would decay to a pointer and be written as its address.
+    using Value = std::remove_reference_t<decltype(value)>;
+    if constexpr (std::is_array_v<Value> &&
+                  !std::is_same_v<std::remove_extent_t<Value>, const char>) {
+      result += array_to_json(value, indent + 1, pretty);
+    } else {
+      result += to_json(value, indent + 1, pretty);
+    }
   });
   result += json_newline(pretty) + json_indent(indent, pretty) + "}";
   return result;
@@ -289,6 +312,9 @@ bool from_json_impl(JsonParser& p, std::vector<T, Alloc>& out);
 
 template <class T, int Capacity>
 bool from_json_impl(JsonParser& p, Array_Inline<T, Capacity>& out);
+
+template <typename T, std::size_t N>
+bool from_json_impl(JsonParser& p, T (&out)[N]);
 
 template <typename T>
 auto from_json_impl(JsonParser& p, T& out) -> std::
@@ -513,6 +539,21 @@ inline bool from_json_impl(JsonParser& p, std::vector<T, Alloc>& out) {
     if (!from_json_impl(p, elem)) return false;
     out.push_back(std::move(elem));
   }
+}
+
+// A fixed-size array member. The JSON array must hold exactly N entries.
+template <typename T, std::size_t N>
+bool from_json_impl(JsonParser& p, T (&out)[N]) {
+  p.skip_whitespace();
+  if (!p.expect('[')) return false;
+
+  for (std::size_t i = 0; i < N; ++i) {
+    p.skip_whitespace();
+    if (i > 0 && !p.expect(',')) return false;
+    if (!from_json_impl(p, out[i])) return false;
+  }
+  p.skip_whitespace();
+  return p.expect(']');
 }
 
 // Array_Inline — parsed from a JSON array, same as a vector.

@@ -11,9 +11,7 @@
 #include <raylib.h>
 
 std::function<void(const Table_State&, const Input&, bool)>
-make_card_draw_callback(
-  const mindbug::Game_State& state, int card, bool highlighted
-) {
+make_card_draw_callback(const Game_State& state, int card, bool highlighted) {
   return [&state,
           card,
           highlighted](const Table_State&, const Input&, bool face_up) {
@@ -23,8 +21,8 @@ make_card_draw_callback(
 
     // Power is only worth showing while the card is in play, where auras and
     // the turn can push it away from the printed number.
-    if (mindbug::is_in_play(state, card)) {
-      const auto  power = std::to_string(mindbug::effective_power(state, card));
+    if (is_in_play(state, card)) {
+      const auto  power   = std::to_string(effective_power(state, card));
       const float badge_x = -half_width + 22.0f;
       const float badge_y = -half_height + 22.0f;
       DrawCircle((int)badge_x, (int)badge_y, 21.0f, ::Color{20, 20, 20, 235});
@@ -55,7 +53,7 @@ make_card_draw_callback(
 
       // An exhausted creature has used up the save its Tough keyword gives
       // it.
-      if (mindbug::is_exhausted(state, card)) {
+      if (is_exhausted(state, card)) {
         DrawRectangleRounded(
           Rectangle{
             -half_width,
@@ -89,7 +87,7 @@ make_card_draw_callback(
   };
 }
 
-void draw_mindbug_hud(const mindbug::Game_State& state, int local_seat) {
+void draw_mindbug_hud(const Game_State& state, int local_seat) {
   render_text("Mindbug", 16.0f, 16.0f, 28, Color{235, 235, 235, 255});
   render_text(
     state.current_player == local_seat ? "Your turn" : "Opponent's turn",

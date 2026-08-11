@@ -14,7 +14,7 @@
 // otherwise.
 #include <raylib.h>
 
-using namespace mindbug;
+// using namespace mindbug;
 
 // The attacking creature, named so the defender knows what is coming.
 static std::string attacker_name(const Game_State& state) {
@@ -64,14 +64,12 @@ static std::vector<int> targets_of(const Choose& actions) {
 }
 
 static void highlight_card(
-  Table_State& table, const mindbug::Game_State& state, int card
+  Table_State& table, const Game_State& state, int card
 ) {
   table.draw_callbacks[card] = make_card_draw_callback(state, card, true);
 }
 
-static void clear_highlights(
-  Table_State& table, const mindbug::Game_State& state
-) {
+static void clear_highlights(Table_State& table, const Game_State& state) {
   for (int card = 0; card < state.all_cards.size(); ++card) {
     table.draw_callbacks[card] = make_card_draw_callback(state, card);
   }
@@ -152,12 +150,20 @@ int Mindbug_Agent_UI::choose_action(Game& game, const Choice& choice) {
                             "/" + std::to_string(multiple.count);
   if (!immediate_button(button, label, input)) return -1;
 
-  // Answer with the option holding exactly the picked targets.
+  // Answer with the option holding exactly the picked targets. A combination
+  // lists its targets in the order `targets` has them, so the picks go in that
+  // order too — neither the order they were clicked in nor a sorted one.
+  auto picked = std::vector<int>();
+  for (int target : targets) {
+    if (std::find(selection.begin(), selection.end(), target) !=
+        selection.end())
+      picked.push_back(target);
+  }
+
   std::vector<std::vector<int>> combinations =
     target_combinations(targets, multiple.count, multiple.up_to);
-  std::sort(selection.begin(), selection.end());
   for (int i = 0; i < (int)combinations.size(); ++i) {
-    if (combinations[i] != selection) continue;
+    if (combinations[i] != picked) continue;
     selection.clear();
     clear_highlights(table, state);
     return i;

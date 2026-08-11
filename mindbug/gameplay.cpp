@@ -4,7 +4,7 @@
 
 #include "cards.h"
 
-namespace mindbug {
+// namespace mindbug {
 
 // ---- Queries ----
 
@@ -184,6 +184,12 @@ static void end_game(Game_State& state, int winner) {
   state.queue.clear();
 }
 
+static void add_creature(Game_State& state, int card, int controller) {
+  // Already in play?
+  if (controller_of(state, card) != -1) return;
+  state.players[controller].creatures.push_back(card);
+}
+
 void lose_life(Game_State& state, int player, int amount) {
   state.players[player].life -= amount;
   if (state.players[player].life <= 0) end_game(state, 1 - player);
@@ -191,11 +197,11 @@ void lose_life(Game_State& state, int player, int amount) {
 
 void take_control(Game_State& state, int card, int controller) {
   remove_card(state.players[1 - controller].creatures, card);
-  state.players[controller].creatures.push_back(card);
+  add_creature(state, card, controller);
 }
 
 void enter_play(Game_State& state, int card, int controller) {
-  state.players[controller].creatures.push_back(card);
+  add_creature(state, card, controller);
   remove_card(state.exhausted_cards, card);  // Tough starts over.
 
   // A Deathweaver on the other side switches the Play ability off.
@@ -507,4 +513,4 @@ Game_State quick_setup(int seed) {
   return state;
 }
 
-}  // namespace mindbug
+// }  // namespace mindbug

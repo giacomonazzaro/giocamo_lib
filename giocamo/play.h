@@ -75,12 +75,16 @@ void draw_game_over_screen(
 //                       a value.
 //   --record=PATH     → play live and write the input stream to PATH.
 //   --playback=PATH   → replay the input stream in PATH instead of the mouse.
+//   --load[=PATH]     → start from the game saved on disk, not from a deal.
+//                       Without a path the game reads its usual one.
 struct Play_Options {
   bool        vs_ai      = true;
   bool        skip_menu  = false;
   int         seed       = 0;
   Input_Mode  input_mode = Input_Mode::Live;
   std::string input_file_path;  // Where to write it, or where to read it.
+  bool        load_from_disk = false;
+  std::string load_path      = "data/debug_game_state.json";
 
   // --local-host / --local-join.
   std::optional<Online_Connection> local_connection;
@@ -115,8 +119,12 @@ struct Giocamo {
   Giocamo(Game& game, Agent_UI& agent_ui)
       : game(game), agent_ui(agent_ui), table(agent_ui.table) {}
 
-  virtual ~Giocamo()                                = default;
-  virtual void             init_table()             = 0;
+  virtual ~Giocamo()        = default;
+  virtual void init_table() = 0;
+  // Read the game back from disk instead of dealing one, for --load. `path` is
+  // empty unless one was given, and the game reads its usual one. Returns false
+  // when there is nothing to read, and play_game deals instead.
+  virtual bool             load_game(const std::string& path) { return false; }
   virtual void             update_table_from_game() = 0;
   virtual Agent*           agent_opponent()         = 0;
   virtual std::vector<int> player_scores() = 0;  // TODO(giacomo): not needed

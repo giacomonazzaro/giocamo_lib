@@ -153,6 +153,11 @@ Play_Options parse_play_args(int argc, char** argv) {
     } else if (arg.rfind("--playback=", 0) == 0) {
       options.input_mode      = Input_Mode::Playback;
       options.input_file_path = arg.substr(11);
+    } else if (arg == "--load") {
+      options.load_from_disk = true;
+    } else if (arg.rfind("--load=", 0) == 0) {
+      options.load_from_disk = true;
+      options.load_path      = arg.substr(7);
     }
   }
   // Make seed always carry a real value so callers never have to think about
@@ -195,9 +200,6 @@ static void run_game(
 ) {
   auto current_choice = std::optional<Choice>();
 
-  // Deal the game the seat agreed on. A game its caller set up already has
-  // nothing left to do here.
-  state.init(menu_result.seed);
   if (update_table_from_game) update_table_from_game();
 
   // Nullable handle to the remote peer. Outside online mode this stays null
@@ -380,13 +382,19 @@ void play_game(
   giocamo.bottom_player = menu_result.player_index;
   giocamo.hot_seat      = !options.vs_ai && !menu_result.is_online();
 
-  giocamo.init_table();
+  // A saved game stands in for the deal when one was asked for and found.
+  if (options.load_from_disk) {
+    auto loaded = giocamo.load_game(options.load_path);
+    if (!loaded) giocamo.init_table();
+  } else {
+    giocamo.init_table();
+  }
 
   Agent* agent = make_agent_pair(
     &giocamo.agent_ui, giocamo.agent_opponent(), menu_result, options.vs_ai
   );
 
-  Agent_UI& agent_ui  = giocamo.agent_ui;
+  Agent_UI& agent_ui   = giocamo.agent_ui;
   bool      playground = false;
 
   run_game(

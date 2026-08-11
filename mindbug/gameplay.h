@@ -8,7 +8,7 @@
 #include <string>
 #include <vector>
 
-namespace mindbug {
+// namespace mindbug {
 
 // Fill card_designs from a cards.json file. Must be called once before any
 // game is set up. Returns false if the file is missing or malformed.
@@ -149,6 +149,11 @@ inline float evaluate_state(const Game_State& state, int player) {
   else
     score = 0.5f;
 
+  // Encourage search attacking.
+  if (state.attacker != -1 && state.current_player == player) {
+    score += 0.001f;
+  }
+
   assert(score >= 0.0f && score <= 1.0f);
   return score;
 }
@@ -190,4 +195,4 @@ inline Game_State sample_state(
 
 void draw_back_up_to_hand_size(Game_State& state);
 
-}  // namespace mindbug
+// }  // namespace mindbug

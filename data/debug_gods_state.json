@@ -1,419 +1,80 @@
 {
   "all_cards": [
-    {
-      "id": 0,
-      "card_type": 1,
-      "color": 2,
-      "power": 2,
-      "counters": 0,
-      "destroyed": false,
-      "owner": -1
-    },
-    {
-      "id": 1,
-      "card_type": 1,
-      "color": 2,
-      "power": 4,
-      "counters": 0,
-      "destroyed": false,
-      "owner": -1
-    },
-    {
-      "id": 2,
-      "card_type": 1,
-      "color": 2,
-      "power": 2,
-      "counters": 0,
-      "destroyed": false,
-      "owner": -1
-    },
-    {
-      "id": 3,
-      "card_type": 1,
-      "color": 0,
-      "power": 1,
-      "counters": 0,
-      "destroyed": false,
-      "owner": -1
-    },
-    {
-      "id": 4,
-      "card_type": 1,
-      "color": 0,
-      "power": 1,
-      "counters": 0,
-      "destroyed": false,
-      "owner": -1
-    },
-    {
-      "id": 5,
-      "card_type": 1,
-      "color": 0,
-      "power": 5,
-      "counters": 0,
-      "destroyed": false,
-      "owner": -1
-    },
-    {
-      "id": 6,
-      "card_type": 1,
-      "color": 1,
-      "power": 5,
-      "counters": 0,
-      "destroyed": false,
-      "owner": -1
-    },
-    {
-      "id": 7,
-      "card_type": 1,
-      "color": 1,
-      "power": 4,
-      "counters": 0,
-      "destroyed": false,
-      "owner": -1
-    },
-    {
-      "id": 8,
-      "card_type": 1,
-      "color": 2,
-      "power": 4,
-      "counters": 0,
-      "destroyed": false,
-      "owner": -1
-    },
-    {
-      "id": 9,
-      "card_type": 1,
-      "color": 2,
-      "power": 3,
-      "counters": 0,
-      "destroyed": false,
-      "owner": -1
-    },
-    {
-      "id": 10,
-      "card_type": 1,
-      "color": 2,
-      "power": 4,
-      "counters": 0,
-      "destroyed": false,
-      "owner": -1
-    },
-    {
-      "id": 11,
-      "card_type": 1,
-      "color": 0,
-      "power": 5,
-      "counters": 0,
-      "destroyed": false,
-      "owner": -1
-    },
-    {
-      "id": 12,
-      "card_type": 1,
-      "color": 0,
-      "power": 5,
-      "counters": 0,
-      "destroyed": false,
-      "owner": -1
-    },
-    {
-      "id": 13,
-      "card_type": 1,
-      "color": 1,
-      "power": 1,
-      "counters": 0,
-      "destroyed": false,
-      "owner": 0
-    },
-    {
-      "id": 14,
-      "card_type": 1,
-      "color": 1,
-      "power": 5,
-      "counters": 0,
-      "destroyed": false,
-      "owner": 0
-    },
-    {
-      "id": 15,
-      "card_type": 1,
-      "color": 1,
-      "power": 2,
-      "counters": 0,
-      "destroyed": false,
-      "owner": -1
-    },
-    {
-      "id": 16,
-      "card_type": 0,
-      "color": 2,
-      "power": 2,
-      "counters": 0,
-      "destroyed": false,
-      "owner": -1
-    },
-    {
-      "id": 17,
-      "card_type": 0,
-      "color": 2,
-      "power": 3,
-      "counters": 0,
-      "destroyed": false,
-      "owner": -1
-    },
-    {
-      "id": 18,
-      "card_type": 0,
-      "color": 0,
-      "power": 1,
-      "counters": 0,
-      "destroyed": false,
-      "owner": -1
-    },
-    {
-      "id": 19,
-      "card_type": 0,
-      "color": 0,
-      "power": 4,
-      "counters": 0,
-      "destroyed": false,
-      "owner": -1
-    },
-    {
-      "id": 20,
-      "card_type": 0,
-      "color": 0,
-      "power": 2,
-      "counters": 0,
-      "destroyed": false,
-      "owner": -1
-    },
-    {
-      "id": 21,
-      "card_type": 0,
-      "color": 1,
-      "power": 3,
-      "counters": 0,
-      "destroyed": false,
-      "owner": -1
-    },
-    {
-      "id": 22,
-      "card_type": 0,
-      "color": 1,
-      "power": 3,
-      "counters": 0,
-      "destroyed": false,
-      "owner": -1
-    },
-    {
-      "id": 23,
-      "card_type": 0,
-      "color": 1,
-      "power": 4,
-      "counters": 0,
-      "destroyed": false,
-      "owner": -1
-    },
-    {
-      "id": 24,
-      "card_type": 0,
-      "color": 2,
-      "power": 3,
-      "counters": 0,
-      "destroyed": false,
-      "owner": -1
-    },
-    {
-      "id": 25,
-      "card_type": 0,
-      "color": 2,
-      "power": 5,
-      "counters": 0,
-      "destroyed": false,
-      "owner": -1
-    },
-    {
-      "id": 26,
-      "card_type": 0,
-      "color": 2,
-      "power": 4,
-      "counters": 0,
-      "destroyed": false,
-      "owner": -1
-    },
-    {
-      "id": 27,
-      "card_type": 0,
-      "color": 0,
-      "power": 1,
-      "counters": 0,
-      "destroyed": false,
-      "owner": -1
-    },
-    {
-      "id": 28,
-      "card_type": 0,
-      "color": 0,
-      "power": 1,
-      "counters": 0,
-      "destroyed": false,
-      "owner": -1
-    },
-    {
-      "id": 29,
-      "card_type": 0,
-      "color": 0,
-      "power": 4,
-      "counters": 0,
-      "destroyed": false,
-      "owner": -1
-    },
-    {
-      "id": 30,
-      "card_type": 0,
-      "color": 1,
-      "power": 3,
-      "counters": 0,
-      "destroyed": false,
-      "owner": -1
-    },
-    {
-      "id": 31,
-      "card_type": 0,
-      "color": 1,
-      "power": 3,
-      "counters": 0,
-      "destroyed": false,
-      "owner": -1
-    },
-    {
-      "id": 32,
-      "card_type": 2,
-      "color": 3,
-      "power": 3,
-      "counters": 0,
-      "destroyed": false,
-      "owner": -1
-    },
-    {
-      "id": 33,
-      "card_type": 2,
-      "color": 3,
-      "power": 2,
-      "counters": 0,
-      "destroyed": false,
-      "owner": -1
-    },
-    {
-      "id": 34,
-      "card_type": 2,
-      "color": 3,
-      "power": 3,
-      "counters": 0,
-      "destroyed": false,
-      "owner": -1
-    },
-    {
-      "id": 35,
-      "card_type": 2,
-      "color": 3,
-      "power": 5,
-      "counters": 0,
-      "destroyed": false,
-      "owner": -1
-    },
-    {
-      "id": 36,
-      "card_type": 2,
-      "color": 3,
-      "power": 4,
-      "counters": 0,
-      "destroyed": false,
-      "owner": -1
-    },
-    {
-      "id": 37,
-      "card_type": 2,
-      "color": 3,
-      "power": 4,
-      "counters": 0,
-      "destroyed": false,
-      "owner": -1
-    },
-    {
-      "id": 38,
-      "card_type": 2,
-      "color": 3,
-      "power": 3,
-      "counters": 0,
-      "destroyed": false,
-      "owner": -1
-    }
+    31,
+    4,
+    18,
+    4,
+    15,
+    19,
+    30,
+    23,
+    15,
+    21,
+    12,
+    24,
+    25,
+    14,
+    7,
+    6,
+    0,
+    12,
+    19,
+    28
   ],
   "players": [
     {
-      "name": "Player 1",
-      "deck": [],
       "hand": [
-        38,
-        8,
-        5
+        0,
+        1,
+        3,
+        4,
+        9
+      ],
+      "draw_pile": [
+        5,
+        6,
+        7,
+        8
+      ],
+      "creatures": [
+        2
       ],
       "discard": [],
-      "wonders": [
-        14,
-        13
-      ]
+      "life": 7,
+      "mindbugs": 2
     },
     {
-      "name": "Player 2",
-      "deck": [],
       "hand": [
+        10,
         12,
+        13,
+        14,
+        19
+      ],
+      "draw_pile": [
+        15,
         16,
-        23,
-        2,
-        10
+        17,
+        18
+      ],
+      "creatures": [
+        11
       ],
       "discard": [],
-      "wonders": []
+      "life": 2,
+      "mindbugs": 2
     }
   ],
-  "peoples": [],
-  "shared_deck": [
-    9,
-    7,
-    4,
-    15,
-    26,
-    21,
-    33,
-    25,
-    27,
-    18,
-    0,
-    28,
-    11,
-    34,
-    22,
-    29,
-    3,
-    19,
-    31,
-    6,
-    20,
-    35,
-    17,
-    32,
-    36,
-    30,
-    1,
-    37,
-    24
-  ],
+  "exhausted_cards": [],
   "current_player": 0,
-  "current_phase": 1,
-  "game_over": false
+  "phase": 0,
+  "game_over": false,
+  "winner": -1,
+  "played_card": -1,
+  "attacker": -1,
+  "blocker": -1,
+  "attack_count": 0,
+  "hunter_declined": false,
+  "extra_turn": false,
+  "random_seed": 1599380060
 }

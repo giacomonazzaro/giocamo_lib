@@ -6,7 +6,7 @@
 #include <iostream>
 #include <nlohmann/json.hpp>
 
-namespace mindbug {
+// namespace mindbug {
 
 std::vector<Card_Design> card_designs;
 
@@ -250,7 +250,7 @@ void trigger_defeated(Game_State& state, int card, int controller) {
       state.queue.push_back(make_multi_choice(
         me,
         "take-control",
-        [](Game_State& game) { return creature_targets(game, -1, 0, 5); },
+        [them](Game_State& game) { return creature_targets(game, them, 0, 5); },
         2,
         true,
         [me](Game_State& game, const std::vector<int>& targets) {
@@ -274,4 +274,4 @@ void trigger_defeated(Game_State& state, int card, int controller) {
   }
 }
 
-}  // namespace mindbug
+// }  // namespace mindbug
