@@ -201,7 +201,7 @@ struct Mindbug_Giocamo : Giocamo {
 
   Agent* agent_opponent() override {
     return new Agent_Minimax_Stochastic<mindbug::Game_State>(
-      /* max_depth   */ 13
+      /* max_depth   */ 13,
       /* num_samples */ 15
     );
   }
