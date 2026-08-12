@@ -344,13 +344,12 @@ struct Agent_MCTS : Agent {
   std::chrono::steady_clock::time_point start_time;
 
   Agent_MCTS(
-    int   num_iterations           = 1000,
-    int   rollout_depth            = 64,
-    float exploration_constant     = 1.41421356f,
-    float total_time_budget        = 0.0f,
-    float frame_time_budget        = 0.0f,
-    float iteration_budget_seconds = 0.0f,
-    int   num_threads              = 0
+    int   num_iterations       = 1000,
+    int   rollout_depth        = 64,
+    float exploration_constant = 1.41421356f,
+    float total_time_budget    = 0.0f,
+    float frame_time_budget    = 0.0f,
+    int   num_threads          = 0
   )
       : num_iterations(num_iterations)
       , rollout_depth(rollout_depth)
