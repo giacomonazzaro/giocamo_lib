@@ -393,6 +393,8 @@ struct Agent_MCTS : Agent {
       this->start_time     = time_now();
       this->nodes.clear();
       this->states.clear();
+      this->scores.assign(num_actions, 0.0);
+        
       // Reserve so push_back never reallocates, keeping references and the
       // parallel index relationship between `nodes` and `states` stable
       // across iterations.
@@ -431,7 +433,16 @@ struct Agent_MCTS : Agent {
       }
     }
 
-    return argmax_randomized(this->scores);
+    // One score per root action: how often the search went that way. The root
+    // stays unexpanded when too few iterations ran, and then every score is
+    // zero and the pick is uniform.
+    scores.assign(num_actions, 0.0f);
+    if ((int)nodes[0].children.size() >= num_actions) {
+      for (int i = 0; i < num_actions; ++i) {
+        scores[i] = (float)nodes[nodes[0].children[i]].visits;
+      }
+    }
+    return argmax_randomized(scores);
   }
 
   void run_one_iteration(

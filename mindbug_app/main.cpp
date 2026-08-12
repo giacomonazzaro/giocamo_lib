@@ -206,9 +206,11 @@ struct Mindbug_Giocamo : Giocamo {
       /* num_iterations       */ 10000000,
       /* rollout_depth        */ 64,
       /* exploration_constant */ 1.41421356f,
-      /* time_budget_seconds  */ 3.0,
-      /* num_threads          */ 1  // The sampling owns the threads.
+      /* total_time_budget */ 3.0,
+      /* fram_time_budget  */ 0.0,
+      /* num_threads       */ 1
     );
+
     //     // On web, agent is not asyc but interleaved with rendering frames.
     //     So we
     //     // give try to hit 30 FPS.

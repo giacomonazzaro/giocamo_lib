@@ -167,7 +167,7 @@ inline float evaluate_state(const Game_State& state, int player) {
     score += 0.001f;
   }
 
-  assert(score >= 0.0f && score <= 1.0f);
+  assert(score >= 0.0f && score <= 1.001f);
   return score;
 }
 
