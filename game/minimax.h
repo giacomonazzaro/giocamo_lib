@@ -11,27 +11,11 @@
 
 #include "agent.h"
 #include "game.h"
+#include "stochastic.h"
 
 #ifndef __EMSCRIPTEN__
 #include <thread>
 #endif
-
-template <typename T>
-inline size_t argmax(const std::vector<T>& v) {
-  return static_cast<size_t>(
-    std::distance(v.begin(), std::max_element(v.begin(), v.end()))
-  );
-}
-template <typename T>
-inline size_t argmax_randomized(const std::vector<T>& v) {
-  float            max = *std::max_element(v.begin(), v.end());
-  std::vector<int> argmaxes;
-  for (int i = 0; i < v.size(); ++i) {
-    if (v[i] == max) argmaxes.push_back(i);
-  }
-  if (argmaxes.size() == 1) return argmaxes[0];
-  return argmaxes[rand() % argmaxes.size()];
-}
 
 namespace minimax_detail {
 
@@ -347,72 +331,15 @@ struct Agent_Minimax_Timed : Agent {
   }
 };
 
+// Minimax on sampled deals, for a game with hidden information. The sampling
+// itself is Agent_Stochastic's; this is only the shape the callers ask for.
 template <class Game_T>
-struct Agent_Minimax_Stochastic : Agent_Minimax<Game_T> {
-  int num_samples = 20;
-  // Where the sampled deals come from. Fixed, so the same position searched
-  // again gives the same answer and a change to the search can be measured.
-  unsigned int sampling_seed = 1;
-
+struct Agent_Minimax_Stochastic
+    : Agent_Stochastic<Game_T, Agent_Minimax<Game_T>> {
   Agent_Minimax_Stochastic(int max_depth = 6, int num_samples = 20)
-      : Agent_Minimax<Game_T>(max_depth), num_samples(num_samples) {}
-
-  void message(const std::string&) override {}
-
-  int choose_action(Game& state, const Choice&) override {
-    Game_T&   concrete     = static_cast<Game_T&>(state);
-    int       num_actions  = pending_action_count(state);
-    const int player_index = pending_choice(state).player_index;
-    if (num_actions <= 0) return 0;
-    if (num_actions == 1) return 0;
-    printf("Num actions: %d\n", num_actions);
-
-    static thread_local std::mt19937 rng{std::random_device{}()};
-    std::vector<int>                 votes(num_actions, 0);
-
-    // Each sample searches serially (num_threads = 1); the parallelism is over
-    // the samples instead, since they are independent and never share state.
-    // A sampled state is a copy, so it carries the same pending choice and the
-    // action indices line up with the ones the caller will resolve.
-#ifdef __EMSCRIPTEN__
-    for (int s = 0; s < num_samples; ++s) {
-      Game_T sampled = sample_state(concrete, player_index, rng);
-      auto   result  = minimax_scores<Game_T>(
-        sampled, num_actions, player_index, this->max_depth, 1, [] {
-          return false;
-        }
-      );
-      votes[result.best_action] += 1;
-    }
-#else
-    // results[s] is written by exactly one thread (index s), so no
-    // synchronisation is needed when reading them after joining.
-    auto results = std::vector<Search_Result>(num_samples);
-    auto avg     = std::vector<float>(num_actions, 0.0f);
-    auto threads = std::vector<std::thread>(num_samples);
-    for (int s = 0; s < num_samples; ++s) {
-      threads[s] = std::thread([&, s] {
-        // Local rng per thread: avoids contention and gives distinct sequences.
-        std::mt19937 local_rng{sampling_seed * 2654435761u + (unsigned)s};
-        Game_T       sampled = sample_state(concrete, player_index, local_rng);
-        results[s]           = minimax_scores<Game_T>(
-          sampled, num_actions, player_index, this->max_depth, 1, [] {
-            return false;
-          }
-        );
-      });
-    }
-    for (auto& t : threads) t.join();
-    for (int s = 0; s < num_samples; ++s) {
-      for (int a = 0; a < num_actions; ++a)
-        avg[a] += results[s].scores[a] / num_samples;
-      votes[results[s].best_action] += 1;
-    }
-#endif
-
-    sampling_seed += 1;
-    auto result = argmax_randomized(votes);
-    // printf("Score: %f\n", avg[result]);
-    return result;
-  }
+      : Agent_Stochastic<Game_T, Agent_Minimax<Game_T>>(
+          // The sampling owns the threads, so each search runs on one.
+          [max_depth] { return Agent_Minimax<Game_T>(max_depth, 1); },
+          num_samples
+        ) {}
 };

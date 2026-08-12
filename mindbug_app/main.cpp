@@ -1,6 +1,8 @@
 #include <game/agent.h>
 #include <game/game.h>
+#include <game/mcts.h>
 #include <game/minimax.h>
+#include <game/stochastic.h>
 #include <giocamo/menu.h>
 #include <giocamo/play.h>
 #include <mindbug/gameplay.h>
@@ -200,8 +202,26 @@ struct Mindbug_Giocamo : Giocamo {
   }
 
   Agent* agent_opponent() override {
-    return new Agent_Minimax_Stochastic<mindbug::Game_State>(
-      /* max_depth   */ 13,
+    // MCTS on sampled deals: the opponent's hand is hidden, so each sample
+    // guesses one and the guesses vote. On the web the samples are taken one
+    // per frame, so the page keeps drawing while it thinks — which is why the
+    // budget below is one frame's worth there and a whole move's worth here.
+#ifdef __EMSCRIPTEN__
+    const float budget_seconds = 0.05f;
+#else
+    const float budget_seconds = 1.0f;
+#endif
+    using Game_State = mindbug::Game_State;
+    return new Agent_Stochastic<Game_State, Agent_MCTS<Game_State>>(
+      [budget_seconds] {
+        return Agent_MCTS<Game_State>(
+          /* num_iterations       */ 100000,
+          /* rollout_depth        */ 64,
+          /* exploration_constant */ 1.41421356f,
+          /* time_budget_seconds  */ budget_seconds,
+          /* num_threads          */ 1  // The sampling owns the threads.
+        );
+      },
       /* num_samples */ 15
     );
   }

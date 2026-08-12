@@ -12,7 +12,7 @@
 
 #include "agent.h"
 #include "game.h"
-#include "minimax.h"  // For argmax / argmax_randomized.
+#include "stochastic.h"
 
 #ifndef __EMSCRIPTEN__
 #include <thread>
@@ -309,7 +309,7 @@ std::vector<float> mcts_scores(
 // (each running the full iteration / time budget) and sums their root visit
 // counts. At a fixed wall-clock budget this multiplies the total simulations by
 // the core count, which is the cheapest way to make the agent stronger.
-template <class Game_T>
+template <class Game_T, class Rollout_Agent_T = Agent_Random>
 struct Agent_MCTS : Agent {
   int   num_iterations;
   int   rollout_depth;
@@ -325,6 +325,10 @@ struct Agent_MCTS : Agent {
   // minimax — which is far stronger than random playouts in tactical games.
   // Shared (read-only) across the search threads.
   std::function<float(const Game_T&, int)> leaf_evaluator = nullptr;
+  // Builds the agent that plays the rollouts, once per tree. Set for you when
+  // the policy is default-constructible (Agent_Random is); a policy that needs
+  // arguments is handed in by the caller.
+  std::function<Rollout_Agent_T()> rollout_agent_factory;
 
   Agent_MCTS(
     int   num_iterations       = 1000,
@@ -337,7 +341,13 @@ struct Agent_MCTS : Agent {
       , rollout_depth(rollout_depth)
       , exploration_constant(exploration_constant)
       , time_budget_seconds(time_budget_seconds)
-      , num_threads(num_threads) {}
+      , num_threads(num_threads) {
+    if constexpr (std::is_default_constructible_v<Rollout_Agent_T>) {
+      rollout_agent_factory = []() -> Rollout_Agent_T {
+        return Rollout_Agent_T();
+      };
+    }
+  }
 
   void message(const std::string&) override {}
 
@@ -350,9 +360,9 @@ struct Agent_MCTS : Agent {
 
 #ifdef __EMSCRIPTEN__
     // No worker threads on the web: grow a single tree.
-    static thread_local Agent_Random rollout_agent;
     static thread_local std::mt19937 rng{std::random_device{}()};
-    std::vector<float>               scores = mcts_scores<Game_T>(
+    Rollout_Agent_T    rollout_agent = rollout_agent_factory();
+    std::vector<float> scores        = mcts_scores<Game_T>(
       concrete,
       num_actions,
       player_index,
@@ -377,8 +387,8 @@ struct Agent_MCTS : Agent {
     auto threads           = std::vector<std::thread>(thread_count);
     for (int t = 0; t < thread_count; ++t) {
       threads[t] = std::thread([&, t] {
-        Agent_Random rollout_agent;
-        std::mt19937 rng{std::random_device{}()};
+        Rollout_Agent_T rollout_agent = rollout_agent_factory();
+        std::mt19937    rng{std::random_device{}()};
         per_thread_scores[t] = mcts_scores<Game_T>(
           concrete,
           num_actions,
@@ -405,33 +415,20 @@ struct Agent_MCTS : Agent {
   }
 };
 
-// Stochastic MCTS: shuffles hidden information each sample, runs MCTS on the
-// resulting determinization, and aggregates votes — mirrors the structure of
-// Agent_Minimax_Stochastic. Requires sample_state(state, player_index, rng) to
-// be defined for Game_T, just like the stochastic minimax agent.
-//
-// The rollout policy is configurable via the Rollout_Agent_T template
-// parameter (default Agent_Random). To use a different policy, pass the type
-// and set `rollout_agent_factory` to a callable that constructs one with the
-// desired arguments. The factory is called once per thread per choose_action
-// call, so each thread gets its own freshly constructed instance.
+// MCTS on sampled deals, for a game with hidden information. The sampling
+// itself is Agent_Stochastic's; this is only the shape the callers ask for.
+// The rollout policy is the second parameter, and a policy that needs
+// arguments is handed in through `rollout_agent_factory`.
 template <class Game_T, class Rollout_Agent_T = Agent_Random>
-struct Agent_MCTS_Stochastic : Agent_MCTS<Game_T> {
-  int num_samples;
-  // Factory called per-thread to allocate a rollout agent. When the rollout
-  // type is default-constructible (e.g. Agent_Random) the constructor sets a
-  // default factory that calls `Rollout_Agent_T()`; otherwise the caller must
-  // set it before the first `choose_action` call.
-  std::function<Rollout_Agent_T()> rollout_agent_factory;
+struct Agent_MCTS_Stochastic
+    : Agent_Stochastic<Game_T, Agent_MCTS<Game_T, Rollout_Agent_T>> {
+  int   num_iterations;
+  int   rollout_depth;
+  float exploration_constant;
+  float time_budget_seconds;
 
-#ifdef __EMSCRIPTEN__
-  // Web has no worker threads, so the search runs cooperatively: one
-  // determinization sample per frame, with the running vote tally kept here
-  // between frames. See the Emscripten branch of choose_action.
-  bool             web_search_active = false;
-  int              web_samples_done  = 0;
-  std::vector<int> web_votes;
-#endif
+  std::function<Rollout_Agent_T()>         rollout_agent_factory;
+  std::function<float(const Game_T&, int)> leaf_evaluator = nullptr;
 
   Agent_MCTS_Stochastic(
     int   num_iterations       = 1000,
@@ -440,95 +437,31 @@ struct Agent_MCTS_Stochastic : Agent_MCTS<Game_T> {
     float exploration_constant = 1.41421356f,
     float time_budget_seconds  = 0.0f
   )
-      : Agent_MCTS<Game_T>(
-          num_iterations,
-          rollout_depth,
-          exploration_constant,
-          time_budget_seconds
+      : Agent_Stochastic<Game_T, Agent_MCTS<Game_T, Rollout_Agent_T>>(
+          nullptr, num_samples
         )
-      , num_samples(num_samples) {
+      , num_iterations(num_iterations)
+      , rollout_depth(rollout_depth)
+      , exploration_constant(exploration_constant)
+      , time_budget_seconds(time_budget_seconds) {
     if constexpr (std::is_default_constructible_v<Rollout_Agent_T>) {
       rollout_agent_factory = []() -> Rollout_Agent_T {
         return Rollout_Agent_T();
       };
     }
-  }
-
-  void message(const std::string&) override {}
-
-  int choose_action(Game& state, const Choice&) override {
-    Game_T&   concrete     = static_cast<Game_T&>(state);
-    const int num_actions  = pending_action_count(state);
-    const int player_index = pending_choice(state).player_index;
-    if (num_actions <= 0) return 0;
-    if (num_actions == 1) return 0;
-
-#ifdef __EMSCRIPTEN__
-    // Web has no worker threads, so a blocking search would freeze the whole
-    // page until it finishes. Instead the search is spread across frames: each
-    // call runs a single determinization sample and returns -1, which tells the
-    // game loop to render this frame and ask again next frame. The vote tally
-    // is kept on the agent between frames; once enough samples have been
-    // gathered we return the voted-best action.
-    static thread_local std::mt19937 rng{std::random_device{}()};
-    if (!web_search_active) {
-      web_search_active = true;
-      web_samples_done  = 0;
-      web_votes.assign(num_actions, 0);
-    }
-    Rollout_Agent_T rollout_agent = rollout_agent_factory();
-    // Cap each frame's work by time so a single sample never stalls the loop on
-    // a slow device; num_iterations still bounds the tree (and its allocation).
-    const float        per_frame_budget = 0.010f;
-    Game_T             sampled = sample_state(concrete, player_index, rng);
-    std::vector<float> scores  = mcts_scores<Game_T>(
-      sampled,
-      num_actions,
-      player_index,
-      this->num_iterations,
-      this->rollout_depth,
-      this->exploration_constant,
-      rollout_agent,
-      rng,
-      per_frame_budget
-    );
-    web_votes[argmax(scores)] += 1;
-    web_samples_done += 1;
-    if (web_samples_done < num_samples) return -1;  // Keep thinking next frame.
-    web_search_active = false;
-    return argmax_randomized(web_votes);
-#else
-    std::vector<int> votes(num_actions, 0);
-
-    // Each sample is independent — run them on separate threads. Each thread
-    // gets its own sampling rng and its own Agent_Random so the two never
-    // share state. scoress[s] is written by exactly one thread (index s), so
-    // no synchronisation is needed after joining.
-    auto scoress = std::vector<std::vector<float>>(num_samples);
-    auto threads = std::vector<std::thread>(num_samples);
-    for (int sample_index = 0; sample_index < num_samples; ++sample_index) {
-      threads[sample_index] = std::thread([&, sample_index] {
-        std::mt19937    rng{std::random_device{}()};
-        Rollout_Agent_T local_rollout_agent = this->rollout_agent_factory();
-        Game_T          sampled = sample_state(concrete, player_index, rng);
-        // Parallel path: samples run in parallel, so each thread gets the
-        // full per-move budget and the total wall time stays ~budget.
-        scoress[sample_index] = mcts_scores<Game_T>(
-          sampled,
-          num_actions,
-          player_index,
-          this->num_iterations,
-          this->rollout_depth,
-          this->exploration_constant,
-          local_rollout_agent,
-          rng,
-          this->time_budget_seconds
-        );
-      });
-    }
-    for (auto& thread : threads) thread.join();
-    for (const auto& scores : scoress) votes[argmax_randomized(scores)] += 1;
-    return argmax_randomized(votes);
-#endif
+    // Read when a sample starts, not now, so a caller can still set the
+    // rollout policy or the leaf evaluator after building this.
+    this->make_inner = [this] {
+      auto agent = Agent_MCTS<Game_T, Rollout_Agent_T>(
+        this->num_iterations,
+        this->rollout_depth,
+        this->exploration_constant,
+        this->time_budget_seconds,
+        1  // The sampling owns the threads.
+      );
+      agent.rollout_agent_factory = this->rollout_agent_factory;
+      agent.leaf_evaluator        = this->leaf_evaluator;
+      return agent;
+    };
   }
 };

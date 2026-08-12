@@ -1,5 +1,7 @@
 #pragma once
 
+#include <algorithm>
+
 #include <iostream>
 #include <random>
 #include <string>
@@ -10,6 +12,25 @@
 #endif
 
 #include "game.h"
+
+// Index of the largest value, and the same with ties broken at random. Used by
+// every agent that scores its options and then picks one.
+template <typename T>
+inline size_t argmax(const std::vector<T>& v) {
+  return static_cast<size_t>(
+    std::distance(v.begin(), std::max_element(v.begin(), v.end()))
+  );
+}
+template <typename T>
+inline size_t argmax_randomized(const std::vector<T>& v) {
+  float            max = *std::max_element(v.begin(), v.end());
+  std::vector<int> argmaxes;
+  for (int i = 0; i < (int)v.size(); ++i) {
+    if (v[i] == max) argmaxes.push_back(i);
+  }
+  if (argmaxes.size() == 1) return argmaxes[0];
+  return argmaxes[rand() % argmaxes.size()];
+}
 
 struct Agent {
   virtual ~Agent() = default;
