@@ -202,28 +202,35 @@ struct Mindbug_Giocamo : Giocamo {
   }
 
   Agent* agent_opponent() override {
-    // MCTS on sampled deals: the opponent's hand is hidden, so each sample
-    // guesses one and the guesses vote. On the web the samples are taken one
-    // per frame, so the page keeps drawing while it thinks — which is why the
-    // budget below is one frame's worth there and a whole move's worth here.
-#ifdef __EMSCRIPTEN__
-    const float budget_seconds = 0.05f;
-#else
-    const float budget_seconds = 1.0f;
-#endif
-    using Game_State = mindbug::Game_State;
-    return new Agent_Stochastic<Game_State, Agent_MCTS<Game_State>>(
-      [budget_seconds] {
-        return Agent_MCTS<Game_State>(
-          /* num_iterations       */ 100000,
-          /* rollout_depth        */ 64,
-          /* exploration_constant */ 1.41421356f,
-          /* time_budget_seconds  */ budget_seconds,
-          /* num_threads          */ 1  // The sampling owns the threads.
-        );
-      },
-      /* num_samples */ 15
+    return new Agent_MCTS<mindbug::Game_State>(
+      /* num_iterations       */ 10000000,
+      /* rollout_depth        */ 64,
+      /* exploration_constant */ 1.41421356f,
+      /* time_budget_seconds  */ 3.0,
+      /* num_threads          */ 1  // The sampling owns the threads.
     );
+    //     // On web, agent is not asyc but interleaved with rendering frames.
+    //     So we
+    //     // give try to hit 30 FPS.
+    //     const float budget_seconds =
+    // #ifdef __EMSCRIPTEN__
+    //       1.0 / 30.0f;
+    // #else
+    //       3.0f;
+    // #endif
+    //     using Game_State = mindbug::Game_State;
+    //     return new Agent_Stochastic<Game_State, Agent_MCTS<Game_State>>(
+    //       [budget_seconds] {
+    //         return Agent_MCTS<Game_State>(
+    //           /* num_iterations       */ 100000,
+    //           /* rollout_depth        */ 64,
+    //           /* exploration_constant */ 1.41421356f,
+    //           /* time_budget_seconds  */ budget_seconds,
+    //           /* num_threads          */ 1  // The sampling owns the threads.
+    //         );
+    //       },
+    //       /* num_samples */ 15
+    //     );
   }
 
   std::vector<int> player_scores() override {

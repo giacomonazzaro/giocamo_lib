@@ -227,7 +227,8 @@ std::vector<float> mcts_scores(
   float        exploration_constant,
   Agent&       rollout_agent,
   std::mt19937 rng,
-  float        time_budget_seconds = 0.0f,
+  float        time_budget_seconds      = 0.0f,
+  float        iteration_budget_seconds = 0.0f,
   // Optional: when set, the simulation step replaces the random rollout with a
   // direct value lookup at the leaf — AlphaZero-style "neural value at leaf"
   // instead of Monte Carlo. Use a callable like
@@ -273,7 +274,7 @@ std::vector<float> mcts_scores(
     const float reward =
       leaf_evaluator
         ? leaf_evaluator(states[node_index], root_player)
-        : rollout<Game_T>(
+        : mcts_detail::rollout<Game_T>(
             states[node_index], root_player, rollout_agent, rollout_depth
           );
 
@@ -311,15 +312,17 @@ std::vector<float> mcts_scores(
 // the core count, which is the cheapest way to make the agent stronger.
 template <class Game_T, class Rollout_Agent_T = Agent_Random>
 struct Agent_MCTS : Agent {
-  int   num_iterations;
-  int   rollout_depth;
-  float exploration_constant;
+  const int   num_iterations;
+  const int   rollout_depth;
+  const float exploration_constant;
   // Soft wall-clock budget per choose_action call. 0 disables the bound and
   // the agent runs the full `num_iterations`.
-  float time_budget_seconds;
+  const float total_time_budget;
+  const float frame_time_budget;
+
   // Number of independent search trees to grow in parallel. 0 means "one per
   // hardware core". Always 1 under Emscripten, which has no worker threads.
-  int num_threads;
+  const int num_threads;
   // Optional leaf value function. When set, the simulation step replaces the
   // random rollout with a direct value lookup at each leaf — e.g. a shallow
   // minimax — which is far stronger than random playouts in tactical games.
@@ -330,88 +333,134 @@ struct Agent_MCTS : Agent {
   // arguments is handed in by the caller.
   std::function<Rollout_Agent_T()> rollout_agent_factory;
 
+  Choice* last_choice = nullptr;
+
+  // Cache.
+  std::vector<mcts_detail::Node>        nodes;
+  std::vector<Game_T>                   states;
+  std::vector<float>                    scores;
+  std::mt19937                          rng;
+  int                                   iterations_run;
+  std::chrono::steady_clock::time_point start_time;
+
   Agent_MCTS(
-    int   num_iterations       = 1000,
-    int   rollout_depth        = 64,
-    float exploration_constant = 1.41421356f,
-    float time_budget_seconds  = 0.0f,
-    int   num_threads          = 0
+    int   num_iterations           = 1000,
+    int   rollout_depth            = 64,
+    float exploration_constant     = 1.41421356f,
+    float total_time_budget        = 0.0f,
+    float frame_time_budget        = 0.0f,
+    float iteration_budget_seconds = 0.0f,
+    int   num_threads              = 0
   )
       : num_iterations(num_iterations)
       , rollout_depth(rollout_depth)
       , exploration_constant(exploration_constant)
-      , time_budget_seconds(time_budget_seconds)
+      , total_time_budget(total_time_budget)
+      , frame_time_budget(frame_time_budget)
       , num_threads(num_threads) {
     if constexpr (std::is_default_constructible_v<Rollout_Agent_T>) {
       rollout_agent_factory = []() -> Rollout_Agent_T {
         return Rollout_Agent_T();
       };
     }
+    rng = std::mt19937(std::random_device{}());
   }
 
   void message(const std::string&) override {}
 
-  int choose_action(Game& state, const Choice&) override {
-    Game_T&   concrete     = static_cast<Game_T&>(state);
+  int choose_action(Game& _state, const Choice& choice) override {
+    Game_T& state = static_cast<Game_T&>(_state);
+
     const int num_actions  = pending_action_count(state);
     const int player_index = pending_choice(state).player_index;
     if (num_actions <= 0) return 0;
     if (num_actions == 1) return 0;
 
-#ifdef __EMSCRIPTEN__
-    // No worker threads on the web: grow a single tree.
-    static thread_local std::mt19937 rng{std::random_device{}()};
-    Rollout_Agent_T    rollout_agent = rollout_agent_factory();
-    std::vector<float> scores        = mcts_scores<Game_T>(
-      concrete,
-      num_actions,
-      player_index,
-      num_iterations,
-      rollout_depth,
-      exploration_constant,
-      rollout_agent,
-      rng,
-      time_budget_seconds,
-      leaf_evaluator
+    Rollout_Agent_T rollout_agent = rollout_agent_factory();
+
+    auto start_time = time_now();
+
+    if (&choice != last_choice) {
+      using mcts_detail::best_ucb1_child;
+      using mcts_detail::initialize_node;
+      using mcts_detail::Node;
+      using mcts_detail::rollout;
+
+      // When `total_time_budget` is positive, iterations stop as soon as
+      // the wall-clock budget is exhausted (whichever happens first). Zero
+      // disables the time bound and the call runs the full `num_iterations`.
+      // const auto start_time = time_now
+      this->iterations_run = 0;
+      this->start_time     = time_now();
+      this->nodes.clear();
+      this->states.clear();
+      // Reserve so push_back never reallocates, keeping references and the
+      // parallel index relationship between `nodes` and `states` stable
+      // across iterations.
+      this->nodes.reserve(num_iterations + 1);
+      this->states.reserve(num_iterations + 1);
+
+      // Children stay empty until the root is expanded by the first traversal
+      // that revisits it.
+      Node root_node;
+      root_node.visits       = 0;
+      root_node.value_sum    = 0.0f;
+      root_node.player_index = pending_choice(state).player_index;
+      root_node.num_actions  = pending_action_count(state);
+      this->nodes.push_back(std::move(root_node));
+      this->states.push_back(state);
+    }
+
+    auto frame_start = time_now();
+    while (true) {
+      run_one_iteration(state, choice, rollout_agent);
+      auto elapsed_time = time_elapsed_seconds(start_time);
+      iterations_run += 1;
+
+      if (frame_time_budget > 0 &&  // if 0, no frame budget
+          time_elapsed_seconds(frame_start) >= frame_time_budget) {
+        return -1;  // return for now, will figure out next calls.
+      }
+
+      if (iterations_run >= num_iterations) {
+        break;
+      }
+
+      if (total_time_budget > 0 &&  // if 0, no time budget
+          elapsed_time >= total_time_budget) {
+        break;
+      }
+    }
+
+    return argmax_randomized(this->scores);
+  }
+
+  void run_one_iteration(
+    Game& state, const Choice& choice, Agent& rollout_agent
+  ) {
+    Game_T& concrete    = static_cast<Game_T&>(state);
+    auto    root_player = choice.player_index;
+
+    const auto path = mcts_detail::traverse_to_leaf_node(
+      nodes, states, root_player, exploration_constant, rng
     );
-    return argmax_randomized(scores);
-#else
-    int thread_count =
-      num_threads > 0 ? num_threads
-                      : (int)std::max(1u, std::thread::hardware_concurrency());
 
-    // Each thread grows its own tree with its own rollout agent and rng — no
-    // shared mutable state, so no locking. concrete is only read (mcts_scores
-    // copies the state into its own tree), so sharing it is safe.
-    auto per_thread_scores = std::vector<std::vector<float>>(thread_count);
-    auto threads           = std::vector<std::thread>(thread_count);
-    for (int t = 0; t < thread_count; ++t) {
-      threads[t] = std::thread([&, t] {
-        Rollout_Agent_T rollout_agent = rollout_agent_factory();
-        std::mt19937    rng{std::random_device{}()};
-        per_thread_scores[t] = mcts_scores<Game_T>(
-          concrete,
-          num_actions,
-          player_index,
-          num_iterations,
-          rollout_depth,
-          exploration_constant,
-          rollout_agent,
-          rng,
-          time_budget_seconds,
-          leaf_evaluator
-        );
-      });
-    }
-    for (auto& thread : threads) thread.join();
+    const int node_index = path.back();
 
-    // Sum visit counts across the independent trees, then pick the best.
-    auto scores = std::vector<float>(num_actions, 0.0f);
-    for (const auto& tree_scores : per_thread_scores) {
-      for (int i = 0; i < num_actions; ++i) scores[i] += tree_scores[i];
+    // 3) Simulation: either evaluate the leaf with the supplied value
+    // function, or fall back to a random rollout.
+    const float reward =
+      leaf_evaluator
+        ? leaf_evaluator(states[node_index], root_player)
+        : mcts_detail::rollout<Game_T>(
+            states[node_index], root_player, rollout_agent, rollout_depth
+          );
+
+    // 4) Backpropagation: update visit counts and value sums up to the root.
+    for (int i = (int)path.size() - 1; i >= 0; --i) {
+      nodes[path[i]].visits += 1;
+      nodes[path[i]].value_sum += reward;
     }
-    return argmax_randomized(scores);
-#endif
   }
 };
 

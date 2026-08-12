@@ -1,7 +1,6 @@
 #pragma once
 
 #include <algorithm>
-
 #include <iostream>
 #include <random>
 #include <string>
@@ -77,6 +76,11 @@ struct Agent_Duel : Agent {
   }
 };
 
+inline auto  time_now() { return std::chrono::steady_clock::now(); }
+inline float time_elapsed_seconds(std::chrono::steady_clock::time_point start) {
+  return std::chrono::duration<float>(time_now() - start).count();
+}
+
 // Wraps another Agent and records wall-clock time spent inside its
 // choose_action calls. Used to measure the per-agent compute budget the match
 // is actually spending.
@@ -92,11 +96,9 @@ struct Timing_Agent : Agent {
   void message(const std::string&) override {}
 
   int choose_action(Game& game, const Choice& choice) override {
-    const auto start_time   = std::chrono::steady_clock::now();
+    const auto start_time   = time_now();
     const int  action_index = inner->choose_action(game, choice);
-    const auto end_time     = std::chrono::steady_clock::now();
-    total_seconds +=
-      std::chrono::duration<double>(end_time - start_time).count();
+    total_seconds += time_elapsed_seconds(start_time);
     num_calls += 1;
     return action_index;
   }
@@ -109,14 +111,15 @@ struct Timing_Agent : Agent {
 
 // Aggregated outcome of benchmark_agents, from agent_a's perspective.
 struct Benchmark_Result {
-  int    a_wins    = 0;
-  int    b_wins    = 0;
-  int    draws     = 0;
-  int    a_points  = 0;
-  int    b_points  = 0;
-  double a_seconds = 0.0;  // Total wall-clock time agent_a spent choosing moves.
+  int    a_wins   = 0;
+  int    b_wins   = 0;
+  int    draws    = 0;
+  int    a_points = 0;
+  int    b_points = 0;
+  double a_seconds =
+    0.0;  // Total wall-clock time agent_a spent choosing moves.
   double b_seconds = 0.0;
-  int    a_calls   = 0;    // Number of moves each agent chose.
+  int    a_calls   = 0;  // Number of moves each agent chose.
   int    b_calls   = 0;
 
   double a_ms_per_move() const {
@@ -129,11 +132,11 @@ struct Benchmark_Result {
 
 // Plays `num_games` of a two-player game between agent_a and agent_b, swapping
 // which seat each holds every game so neither benefits from leading.
-//   make_state(game_index) -> Game_T   : a fresh game to play (e.g. a new deal).
-//   score(game, player_index) -> int   : that player's final score.
+//   make_state(game_index) -> Game_T   : a fresh game to play (e.g. a new
+//   deal). score(game, player_index) -> int   : that player's final score.
 // Each game runs through game_loop; a per-game line with the running win count
-// is printed to stderr. The agents are timed internally (move time goes into the
-// result). Tallies are returned from agent_a's perspective.
+// is printed to stderr. The agents are timed internally (move time goes into
+// the result). Tallies are returned from agent_a's perspective.
 template <class Game_T, class Make_State, class Score_Fn>
 Benchmark_Result benchmark_agents(
   int         num_games,
