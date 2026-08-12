@@ -333,9 +333,8 @@ struct Agent_MCTS : Agent {
   // arguments is handed in by the caller.
   std::function<Rollout_Agent_T()> rollout_agent_factory;
 
-  Choice last_choice;
-
   // Cache.
+  Choice                                last_choice;
   std::vector<mcts_detail::Node>        nodes;
   std::vector<Game_T>                   states;
   std::vector<float>                    scores;
@@ -377,11 +376,11 @@ struct Agent_MCTS : Agent {
 
     Rollout_Agent_T rollout_agent = rollout_agent_factory();
 
-    if (!(last_choice == choice)) {
-      printf("Start\n");
-      last_choice = choice;
-      using mcts_detail::best_ucb1_child;
+    using mcts_detail::best_ucb1_child;
+    if (last_choice != choice) {
+      printf("Start new choice, reset cache!\n");
       using mcts_detail::initialize_node;
+      last_choice = choice;
       using mcts_detail::Node;
       using mcts_detail::rollout;
 
@@ -463,6 +462,8 @@ struct Agent_MCTS : Agent {
         scores[i] = (float)nodes[nodes[0].children[i]].visits;
       }
     }
+
+    last_choice = Choice();
     return argmax_randomized(scores);
   }
 

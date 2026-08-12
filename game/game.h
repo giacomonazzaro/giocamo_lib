@@ -59,9 +59,10 @@ struct Choice {
     return player_index == -1 && description.empty() && !actions && !resolve;
   }
 };
-inline bool operator==(const Choice& a, const Choice& c) {
-  return a.player_index == c.player_index && a.description == c.description &&
-         a.text_description == c.text_description;
+
+inline bool operator!=(const Choice& a, const Choice& c) {
+  return a.player_index != c.player_index || a.description != c.description ||
+         a.text_description != c.text_description;
 }
 
 // Abstract base. A concrete game derives from it.

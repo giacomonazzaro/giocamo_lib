@@ -210,7 +210,7 @@ struct Mindbug_Giocamo : Giocamo {
       /* rollout_depth        */ 64,
       /* exploration_constant */ 1.41421356f,
       /* total_time_budget */ 5.0,
-      /* fram_time_budget  */ 1.0 / 30.0,
+      /* fram_time_budget  */ 1.0 / 60.0,
       /* num_threads       */ 1
     );
 
