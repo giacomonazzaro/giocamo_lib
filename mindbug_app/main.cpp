@@ -202,12 +202,15 @@ struct Mindbug_Giocamo : Giocamo {
   }
 
   Agent* agent_opponent() override {
+    // return new Agent_Minimax<mindbug::Game_State>(
+    //   /* max_depth       */ 13
+    // );
     return new Agent_MCTS<mindbug::Game_State>(
       /* num_iterations       */ 10000000,
       /* rollout_depth        */ 64,
       /* exploration_constant */ 1.41421356f,
-      /* total_time_budget */ 3.0,
-      /* fram_time_budget  */ 0.0,
+      /* total_time_budget */ 5.0,
+      /* fram_time_budget  */ 1.0 / 30.0,
       /* num_threads       */ 1
     );
 

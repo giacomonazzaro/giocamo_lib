@@ -333,7 +333,7 @@ struct Agent_MCTS : Agent {
   // arguments is handed in by the caller.
   std::function<Rollout_Agent_T()> rollout_agent_factory;
 
-  Choice* last_choice = nullptr;
+  Choice last_choice;
 
   // Cache.
   std::vector<mcts_detail::Node>        nodes;
@@ -377,9 +377,9 @@ struct Agent_MCTS : Agent {
 
     Rollout_Agent_T rollout_agent = rollout_agent_factory();
 
-    auto start_time = time_now();
-
-    if (&choice != last_choice) {
+    if (!(last_choice == choice)) {
+      printf("Start\n");
+      last_choice = choice;
       using mcts_detail::best_ucb1_child;
       using mcts_detail::initialize_node;
       using mcts_detail::Node;
@@ -394,7 +394,7 @@ struct Agent_MCTS : Agent {
       this->nodes.clear();
       this->states.clear();
       this->scores.assign(num_actions, 0.0);
-        
+
       // Reserve so push_back never reallocates, keeping references and the
       // parallel index relationship between `nodes` and `states` stable
       // across iterations.
@@ -412,23 +412,44 @@ struct Agent_MCTS : Agent {
       this->states.push_back(state);
     }
 
+    // printf(
+    //   "TIME: %f/%f time spent\n",
+    //   time_elapsed_seconds(this->start_time),
+    //   total_time_budget
+    // );
+
     auto frame_start = time_now();
     while (true) {
       run_one_iteration(state, choice, rollout_agent);
-      auto elapsed_time = time_elapsed_seconds(start_time);
+      auto total_elapsed_time = time_elapsed_seconds(this->start_time);
+      auto frame_elapsed_time = time_elapsed_seconds(frame_start);
       iterations_run += 1;
 
       if (frame_time_budget > 0 &&  // if 0, no frame budget
-          time_elapsed_seconds(frame_start) >= frame_time_budget) {
+          frame_elapsed_time >= frame_time_budget) {
+        // printf(
+        //   "frame: %d/%d %f/%f\n",
+        //   iterations_run,
+        //   num_iterations,
+        //   frame_elapsed_time,
+        //   frame_time_budget
+        // );
         return -1;  // return for now, will figure out next calls.
       }
 
       if (iterations_run >= num_iterations) {
+        printf("EXITED: %d iterations\n", iterations_run);
         break;
       }
 
       if (total_time_budget > 0 &&  // if 0, no time budget
-          elapsed_time >= total_time_budget) {
+          total_elapsed_time >= total_time_budget) {
+        printf(
+          "EXITED: %f/%f time spent, %d iterations\n",
+          total_elapsed_time,
+          total_time_budget,
+          iterations_run
+        );
         break;
       }
     }

@@ -76,9 +76,11 @@ struct Agent_Duel : Agent {
   }
 };
 
-inline auto  time_now() { return std::chrono::steady_clock::now(); }
-inline float time_elapsed_seconds(std::chrono::steady_clock::time_point start) {
-  return std::chrono::duration<float>(time_now() - start).count();
+inline auto   time_now() { return std::chrono::steady_clock::now(); }
+inline double time_elapsed_seconds(
+  std::chrono::steady_clock::time_point start
+) {
+  return std::chrono::duration<double>(time_now() - start).count();
 }
 
 // Wraps another Agent and records wall-clock time spent inside its

@@ -169,7 +169,7 @@ Agent* make_agent_pair(
 ) {
   // vs-AI: run the search on a worker thread so the main loop stays at 60 FPS.
   // Hot-seat: the local agent plays both seats.
-  Agent* opponent = vs_ai ? (Agent*)new Agent_Async(ai_opponent) : local_agent;
+  Agent* opponent = vs_ai ? ai_opponent : local_agent;
   return make_duel(local_agent, opponent, menu_result);
 }
 
