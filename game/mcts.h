@@ -312,10 +312,11 @@ struct MCTS_Search_Cache {
   int                                   iterations_run;
   std::chrono::steady_clock::time_point start_time;
   bool                                  initialized = false;
+  // The choice the tree was grown for. The search only makes sense while the
+  // game waits on this one.
+  Choice choice;
 
-  void initalize(
-    const Game_T& state, const Choice& choice, int num_iterations
-  ) {
+  void initalize(Game_T& state, const Choice& choice, int num_iterations) {
     printf("Start new choice, reset cache!\n");
     using mcts_detail::initialize_node;
     using mcts_detail::Node;
@@ -350,6 +351,7 @@ struct MCTS_Search_Cache {
     root_node.num_actions  = num_actions;
     this->nodes.push_back(std::move(root_node));
     this->states.push_back(state);
+    this->choice      = choice;
     this->initialized = true;
   }
 };
@@ -457,7 +459,7 @@ struct Agent_MCTS : Agent {
     Rollout_Agent_T rollout_agent = rollout_agent_factory();
 
     using mcts_detail::best_ucb1_child;
-    if (!cache.inialized) {
+    if (!cache.initialized || cache.choice != choice) {
       cache.initalize(state, choice, num_iterations);
     }
 
@@ -471,7 +473,7 @@ struct Agent_MCTS : Agent {
         rollout_depth,
         leaf_evaluator
       );
-      auto total_elapsed_time = time_elapsed_seconds(this->start_time);
+      auto total_elapsed_time = time_elapsed_seconds(cache.start_time);
       auto frame_elapsed_time = time_elapsed_seconds(frame_start);
       cache.iterations_run += 1;
 
@@ -508,14 +510,15 @@ struct Agent_MCTS : Agent {
     // stays unexpanded when too few iterations ran, and then every score is
     // zero and the pick is uniform.
     cache.scores.assign(num_actions, 0.0f);
-    if ((int)nodes[0].children.size() >= num_actions) {
+    if ((int)cache.nodes[0].children.size() >= num_actions) {
       for (int i = 0; i < num_actions; ++i) {
-        cache.scores[i] = (float)nodes[nodes[0].children[i]].visits;
+        cache.scores[i] = (float)cache.nodes[cache.nodes[0].children[i]].visits;
       }
     }
 
-    last_choice = Choice();
-    auto index  = argmax_randomized(cache.scores);
+    // The tree answered this choice; the next one starts from scratch.
+    cache.initialized = false;
+    auto index        = argmax_randomized(cache.scores);
     print(cache.scores);
     return index;
   }
