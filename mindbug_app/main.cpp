@@ -206,10 +206,10 @@ struct Mindbug_Giocamo : Giocamo {
     //   /* max_depth       */ 13
     // );
     return new Agent_MCTS<mindbug::Game_State>(
-      /* num_iterations       */ 10000000,
-      /* rollout_depth        */ 64,
+      /* num_iterations       */ 1000000,
+      /* rollout_depth        */ 999999,
       /* exploration_constant */ 1.41421356f,
-      /* total_time_budget */ 5.0,
+      /* total_time_budget */ 0.0,
       /* fram_time_budget  */ 1.0 / 60.0,
       /* num_threads       */ 1
     );
@@ -276,7 +276,7 @@ std::vector<Thing> make_mindbug_zones(
   Rectangle draw_pile =
     place_next(hand, card_width, card_height, "left", "center", margin);
   Rectangle discard =
-    place_next(hand, card_width, card_height, "right", "center", margin);
+    place_next(hand, card_width * 2, card_height, "right", "center", margin);
   // The two Mindbugs sit out on the flank, beside the creatures, and the life
   // counter on the flank opposite.
   Rectangle mindbugs = place_next(

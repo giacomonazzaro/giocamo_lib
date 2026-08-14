@@ -1,5 +1,7 @@
 #pragma once
 
+#include <struct/print.h>
+
 #include <algorithm>
 #include <chrono>
 #include <cmath>
@@ -68,17 +70,15 @@ inline int best_ucb1_child(
   const Node& parent = nodes[node_index];
   // Prefer any never-visited child: UCB1 is infinite for visits == 0, and
   // avoids a division-by-zero in the score formula below.
-  for (int action_index = 0; action_index < (int)parent.children.size();
-       ++action_index) {
-    if (nodes[parent.children[action_index]].visits == 0) return action_index;
+  for (int i = 0; i < (int)parent.children.size(); ++i) {
+    if (nodes[parent.children[i]].visits == 0) return i;
   }
   const bool  maximizing        = (parent.player_index == root_player);
   const float log_parent_visits = std::log((float)std::max(1, parent.visits));
   int         best_action       = 0;
   float       best_score        = -std::numeric_limits<float>::infinity();
-  for (int action_index = 0; action_index < (int)parent.children.size();
-       ++action_index) {
-    const Node& child   = nodes[parent.children[action_index]];
+  for (int i = 0; i < (int)parent.children.size(); ++i) {
+    const Node& child   = nodes[parent.children[i]];
     const float average = child.value_sum / (float)child.visits;
     const float exploit = maximizing ? average : -average;
     const float explore = exploration_constant *
@@ -86,7 +86,7 @@ inline int best_ucb1_child(
     const float score = exploit + explore;
     if (score > best_score) {
       best_score  = score;
-      best_action = action_index;
+      best_action = i;
     }
   }
   return best_action;
@@ -303,6 +303,93 @@ std::vector<float> mcts_scores(
   return scores;
 }
 
+template <typename Game_T>
+struct MCTS_Search_Cache {
+  std::vector<mcts_detail::Node>        nodes;
+  std::vector<Game_T>                   states;
+  std::vector<float>                    scores;
+  std::mt19937                          rng;
+  int                                   iterations_run;
+  std::chrono::steady_clock::time_point start_time;
+  bool                                  initialized = false;
+
+  void initalize(
+    const Game_T& state, const Choice& choice, int num_iterations
+  ) {
+    printf("Start new choice, reset cache!\n");
+    using mcts_detail::initialize_node;
+    using mcts_detail::Node;
+    using mcts_detail::rollout;
+
+    this->rng = std::mt19937(std::random_device{}());
+
+    int num_actions = action_options_count(choice.actions(state));
+
+    // When `total_time_budget` is positive, iterations stop as soon as
+    // the wall-clock budget is exhausted (whichever happens first). Zero
+    // disables the time bound and the call runs the full `num_iterations`.
+    // const auto start_time = time_now
+    this->iterations_run = 0;
+    this->start_time     = time_now();
+    this->nodes.clear();
+    this->states.clear();
+    this->scores.assign(num_actions, 0.0);
+
+    // Reserve so push_back never reallocates, keeping references and the
+    // parallel index relationship between `nodes` and `states` stable
+    // across iterations.
+    this->nodes.reserve(num_iterations + 1);
+    this->states.reserve(num_iterations + 1);
+
+    // Children stay empty until the root is expanded by the first traversal
+    // that revisits it.
+    Node root_node;
+    root_node.visits       = 0;
+    root_node.value_sum    = 0.0f;
+    root_node.player_index = choice.player_index;
+    root_node.num_actions  = num_actions;
+    this->nodes.push_back(std::move(root_node));
+    this->states.push_back(state);
+    this->initialized = true;
+  }
+};
+
+template <typename Game_T>
+void run_one_iteration(
+  Game_T&                                  state,
+  MCTS_Search_Cache<Game_T>&               cache,
+  Agent&                                   rollout_agent,
+  float                                    exploration_constant,
+  int                                      rollout_depth,
+  std::function<float(const Game_T&, int)> leaf_evaluator = nullptr
+) {
+  auto& choice      = cache.choice;
+  auto& states      = cache.states;
+  auto& nodes       = cache.nodes;
+  auto  root_player = choice.player_index;
+
+  const auto path = mcts_detail::traverse_to_leaf_node(
+    cache.nodes, cache.states, root_player, exploration_constant, cache.rng
+  );
+
+  const int node_index = path.back();
+
+  // 3) Simulation: either evaluate the leaf with the supplied value
+  // function, or fall back to a random rollout.
+  const float reward =
+    leaf_evaluator
+      ? leaf_evaluator(cache.states[node_index], root_player)
+      : mcts_detail::rollout<Game_T>(
+          cache.states[node_index], root_player, rollout_agent, rollout_depth
+        );
+
+  // 4) Backpropagation: update visit counts and value sums up to the root.
+  for (int i = (int)path.size() - 1; i >= 0; --i) {
+    cache.nodes[path[i]].visits += 1;
+    cache.nodes[path[i]].value_sum += reward;
+  }
+}
+
 // MCTS agent. Templated on the concrete Game subclass so the search can copy
 // state by value, in the same spirit as Agent_Minimax.
 //
@@ -334,13 +421,7 @@ struct Agent_MCTS : Agent {
   std::function<Rollout_Agent_T()> rollout_agent_factory;
 
   // Cache.
-  Choice                                last_choice;
-  std::vector<mcts_detail::Node>        nodes;
-  std::vector<Game_T>                   states;
-  std::vector<float>                    scores;
-  std::mt19937                          rng;
-  int                                   iterations_run;
-  std::chrono::steady_clock::time_point start_time;
+  MCTS_Search_Cache<Game_T> cache;
 
   Agent_MCTS(
     int   num_iterations       = 1000,
@@ -361,7 +442,6 @@ struct Agent_MCTS : Agent {
         return Rollout_Agent_T();
       };
     }
-    rng = std::mt19937(std::random_device{}());
   }
 
   void message(const std::string&) override {}
@@ -377,52 +457,23 @@ struct Agent_MCTS : Agent {
     Rollout_Agent_T rollout_agent = rollout_agent_factory();
 
     using mcts_detail::best_ucb1_child;
-    if (last_choice != choice) {
-      printf("Start new choice, reset cache!\n");
-      using mcts_detail::initialize_node;
-      last_choice = choice;
-      using mcts_detail::Node;
-      using mcts_detail::rollout;
-
-      // When `total_time_budget` is positive, iterations stop as soon as
-      // the wall-clock budget is exhausted (whichever happens first). Zero
-      // disables the time bound and the call runs the full `num_iterations`.
-      // const auto start_time = time_now
-      this->iterations_run = 0;
-      this->start_time     = time_now();
-      this->nodes.clear();
-      this->states.clear();
-      this->scores.assign(num_actions, 0.0);
-
-      // Reserve so push_back never reallocates, keeping references and the
-      // parallel index relationship between `nodes` and `states` stable
-      // across iterations.
-      this->nodes.reserve(num_iterations + 1);
-      this->states.reserve(num_iterations + 1);
-
-      // Children stay empty until the root is expanded by the first traversal
-      // that revisits it.
-      Node root_node;
-      root_node.visits       = 0;
-      root_node.value_sum    = 0.0f;
-      root_node.player_index = pending_choice(state).player_index;
-      root_node.num_actions  = pending_action_count(state);
-      this->nodes.push_back(std::move(root_node));
-      this->states.push_back(state);
+    if (!cache.inialized) {
+      cache.initalize(state, choice, num_iterations);
     }
-
-    // printf(
-    //   "TIME: %f/%f time spent\n",
-    //   time_elapsed_seconds(this->start_time),
-    //   total_time_budget
-    // );
 
     auto frame_start = time_now();
     while (true) {
-      run_one_iteration(state, choice, rollout_agent);
+      run_one_iteration(
+        state,
+        cache,
+        rollout_agent,
+        exploration_constant,
+        rollout_depth,
+        leaf_evaluator
+      );
       auto total_elapsed_time = time_elapsed_seconds(this->start_time);
       auto frame_elapsed_time = time_elapsed_seconds(frame_start);
-      iterations_run += 1;
+      cache.iterations_run += 1;
 
       if (frame_time_budget > 0 &&  // if 0, no frame budget
           frame_elapsed_time >= frame_time_budget) {
@@ -436,8 +487,8 @@ struct Agent_MCTS : Agent {
         return -1;  // return for now, will figure out next calls.
       }
 
-      if (iterations_run >= num_iterations) {
-        printf("EXITED: %d iterations\n", iterations_run);
+      if (cache.iterations_run >= num_iterations) {
+        printf("EXITED: %d iterations\n", cache.iterations_run);
         break;
       }
 
@@ -447,7 +498,7 @@ struct Agent_MCTS : Agent {
           "EXITED: %f/%f time spent, %d iterations\n",
           total_elapsed_time,
           total_time_budget,
-          iterations_run
+          cache.iterations_run
         );
         break;
       }
@@ -456,43 +507,17 @@ struct Agent_MCTS : Agent {
     // One score per root action: how often the search went that way. The root
     // stays unexpanded when too few iterations ran, and then every score is
     // zero and the pick is uniform.
-    scores.assign(num_actions, 0.0f);
+    cache.scores.assign(num_actions, 0.0f);
     if ((int)nodes[0].children.size() >= num_actions) {
       for (int i = 0; i < num_actions; ++i) {
-        scores[i] = (float)nodes[nodes[0].children[i]].visits;
+        cache.scores[i] = (float)nodes[nodes[0].children[i]].visits;
       }
     }
 
     last_choice = Choice();
-    return argmax_randomized(scores);
-  }
-
-  void run_one_iteration(
-    Game& state, const Choice& choice, Agent& rollout_agent
-  ) {
-    Game_T& concrete    = static_cast<Game_T&>(state);
-    auto    root_player = choice.player_index;
-
-    const auto path = mcts_detail::traverse_to_leaf_node(
-      nodes, states, root_player, exploration_constant, rng
-    );
-
-    const int node_index = path.back();
-
-    // 3) Simulation: either evaluate the leaf with the supplied value
-    // function, or fall back to a random rollout.
-    const float reward =
-      leaf_evaluator
-        ? leaf_evaluator(states[node_index], root_player)
-        : mcts_detail::rollout<Game_T>(
-            states[node_index], root_player, rollout_agent, rollout_depth
-          );
-
-    // 4) Backpropagation: update visit counts and value sums up to the root.
-    for (int i = (int)path.size() - 1; i >= 0; --i) {
-      nodes[path[i]].visits += 1;
-      nodes[path[i]].value_sum += reward;
-    }
+    auto index  = argmax_randomized(cache.scores);
+    print(cache.scores);
+    return index;
   }
 };
 
