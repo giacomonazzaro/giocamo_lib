@@ -245,6 +245,25 @@ Search_Result minimax_scores(
   return result;
 }
 
+// The value `max_depth` plies of alpha-beta give `state`, from `player_index`'s
+// point of view, whichever side is to move. This is what MCTS wants at a leaf:
+// a shallow search says far more about a tactical position than a random
+// rollout does. Plug it in with
+//   search.leaf_evaluator = [](const Game_T& state, int player) {
+//     return minimax_value(state, player, 2);
+//   };
+// Unlike minimax_scores, which maximizes over the actions because the agent
+// only ever searches its own turn, this takes the side to move at each node
+// from the node itself — a leaf where the opponent moves is a minimizing one.
+template <class Game_T>
+float minimax_value(const Game_T& state, int player_index, int max_depth) {
+  Game_T      copy = state;  // The search resolves choices, so it needs its own.
+  const float inf  = std::numeric_limits<float>::infinity();
+  return minimax_detail::minimax(
+    copy, max_depth, -inf, inf, player_index, [] { return false; }
+  );
+}
+
 // Alpha-beta minimax agent. Root-parallel: minimax_scores splits the root moves
 // across threads (each with a full window, so the split costs no pruning).
 template <class Game_T>

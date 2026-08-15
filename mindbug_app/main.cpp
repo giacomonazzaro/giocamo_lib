@@ -205,7 +205,8 @@ struct Mindbug_Giocamo : Giocamo {
     // return new Agent_Minimax<mindbug::Game_State>(
     //   /* max_depth       */ 13
     // );
-    return new Agent_MCTS_Stochastic<mindbug::Game_State>(
+    // auto f = []() { return new Agent_Minimax<mindbug::Game_State>(6, 1); };
+    auto* agent = new Agent_MCTS_Stochastic<mindbug::Game_State>(
       /* num_samples          */ 16,
       /* num_iterations       */ 99999999,
       /* rollout_depth        */ 999999,
@@ -214,6 +215,14 @@ struct Mindbug_Giocamo : Giocamo {
       /* fram_time_budget  */ 1.0 / 60.0,
       /* num_threads       */ 1
     );
+    // A shallow alpha-beta at every leaf instead of a random rollout. It costs
+    // far more per iteration, so fewer of them run in the same budget.
+    for (auto& search : agent->agents) {
+      search.leaf_evaluator = [](const mindbug::Game_State& state, int player) {
+        return minimax_value(state, player, /* max_depth */ 6);
+      };
+    }
+    return agent;
 
     //     // On web, agent is not asyc but interleaved with rendering frames.
     //     So we

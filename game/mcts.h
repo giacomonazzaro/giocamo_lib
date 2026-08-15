@@ -78,7 +78,8 @@ inline int best_ucb1_child(
   int         best_action       = 0;
   float       best_score        = -std::numeric_limits<float>::infinity();
   for (int i = 0; i < (int)parent.children.size(); ++i) {
-    const Node& child   = nodes[parent.children[i]];
+    const Node& child = nodes[parent.children[i]];
+    assert(child.visits > 0);
     const float average = child.value_sum / (float)child.visits;
     const float exploit = maximizing ? average : -average;
     const float explore = exploration_constant *
@@ -142,17 +143,17 @@ std::vector<int> traverse_to_leaf_node(
   const int parent_index = node_index;
   const int num_children = nodes[parent_index].num_actions;
   nodes[parent_index].children.resize(num_children);
-  for (int action_index = 0; action_index < num_children; ++action_index) {
+  for (int i = 0; i < num_children; ++i) {
     // A child starts as a copy of the parent, so it carries the same pending
-    // choice and `action_index` means the same thing in both.
+    // choice and `i` means the same thing in both.
     Game_T child_state = states[parent_index];
-    resolve_choice(child_state, action_index);
+    resolve_choice(child_state, i);
     Node child_node;
     initialize_node(child_node, child_state, parent_index);
     const int child_index = (int)nodes.size();
     nodes.push_back(std::move(child_node));
     states.push_back(std::move(child_state));
-    nodes[parent_index].children[action_index] = child_index;
+    nodes[parent_index].children[i] = child_index;
   }
   path.push_back(nodes[parent_index].children[rng() % num_children]);
   return path;
@@ -378,12 +379,14 @@ void run_one_iteration(
 
   // 3) Simulation: either evaluate the leaf with the supplied value
   // function, or fall back to a random rollout.
-  const float reward =
-    leaf_evaluator
-      ? leaf_evaluator(cache.states[node_index], root_player)
-      : mcts_detail::rollout<Game_T>(
-          cache.states[node_index], root_player, rollout_agent, rollout_depth
-        );
+  // const float reward =
+  //   leaf_evaluator
+  //     ? leaf_evaluator(cache.states[node_index], root_player)
+  //     : mcts_detail::rollout<Game_T>(
+  //         cache.states[node_index], root_player, rollout_agent, rollout_depth
+  //       );
+  float reward =
+    minimax_value(cache.states[node_index], choice.player_index, 6);
 
   // 4) Backpropagation: update visit counts and value sums up to the root.
   for (int i = (int)path.size() - 1; i >= 0; --i) {
