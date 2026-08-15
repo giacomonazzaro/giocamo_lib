@@ -392,8 +392,10 @@ void play_game(
   }
   giocamo.init_table();
 
+  auto player = giocamo.agent_player();
+  if (!player) player = &giocamo.agent_ui;
   Agent* agent = make_agent_pair(
-    &giocamo.agent_ui, giocamo.agent_opponent(), menu_result, options.vs_ai
+    player, giocamo.agent_opponent(), menu_result, options.vs_ai
   );
 
   Agent_UI& agent_ui   = giocamo.agent_ui;

@@ -48,7 +48,7 @@ static constexpr int LIFE_COUNTER_SIZE = 90;
 // Mindbug on the table. The table is laid out once here; play_game deals the
 // game and drives the loop through these hooks.
 struct Mindbug_Giocamo : Giocamo {
-  bool show_opponent_hand;
+  bool show_opponent_hand = true;
 
   Mindbug_Giocamo(mindbug::Game_State& game, Mindbug_Agent_UI& agent_ui)
       : Giocamo(game, agent_ui) {}
@@ -205,23 +205,25 @@ struct Mindbug_Giocamo : Giocamo {
     // return new Agent_Minimax<mindbug::Game_State>(
     //   /* max_depth       */ 13
     // );
-    // auto f = []() { return new Agent_Minimax<mindbug::Game_State>(6, 1); };
+
     auto* agent = new Agent_MCTS_Stochastic<mindbug::Game_State>(
       /* num_samples          */ 16,
       /* num_iterations       */ 99999999,
-      /* rollout_depth        */ 999999,
+      /* rollout_depth        */ 0,
       /* exploration_constant */ 1.41421356f,
       /* total_time_budget */ 5.0,
       /* fram_time_budget  */ 1.0 / 60.0,
       /* num_threads       */ 1
     );
+
     // A shallow alpha-beta at every leaf instead of a random rollout. It costs
     // far more per iteration, so fewer of them run in the same budget.
-    for (auto& search : agent->agents) {
-      search.leaf_evaluator = [](const mindbug::Game_State& state, int player) {
-        return minimax_value(state, player, /* max_depth */ 6);
-      };
-    }
+    // for (auto& search : agent->agents) {
+    //   search.leaf_evaluator = [](const mindbug::Game_State& state, int
+    //   player) {
+    //     return minimax_value(state, player, /* max_depth */ 6);
+    //   };
+    // }
     return agent;
 
     //     // On web, agent is not asyc but interleaved with rendering frames.
@@ -246,6 +248,10 @@ struct Mindbug_Giocamo : Giocamo {
     //       },
     //       /* num_samples */ 15
     //     );
+  }
+
+  Agent* agent_player() override {
+    return new Agent_Minimax_Stochastic<mindbug::Game_State>(12, 16);
   }
 
   std::vector<int> player_scores() override {

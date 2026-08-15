@@ -257,11 +257,11 @@ Search_Result minimax_scores(
 // from the node itself — a leaf where the opponent moves is a minimizing one.
 template <class Game_T>
 float minimax_value(const Game_T& state, int player_index, int max_depth) {
-  Game_T      copy = state;  // The search resolves choices, so it needs its own.
-  const float inf  = std::numeric_limits<float>::infinity();
-  return minimax_detail::minimax(
-    copy, max_depth, -inf, inf, player_index, [] { return false; }
-  );
+  Game_T copy     = state;  // The search resolves choices, so it needs its own.
+  const float inf = std::numeric_limits<float>::infinity();
+  return minimax_detail::minimax(copy, max_depth, -inf, inf, player_index, [] {
+    return false;
+  });
 }
 
 // Alpha-beta minimax agent. Root-parallel: minimax_scores splits the root moves
@@ -277,10 +277,11 @@ struct Agent_Minimax : Agent {
   void message(const std::string&) override {}
 
   int choose_action(Game& state, const Choice&) override {
+    auto      start_time  = time_now();
     Game_T&   concrete    = static_cast<Game_T&>(state);
     const int num_actions = pending_action_count(state);
     if (num_actions <= 0) return 0;
-    printf("Num actions: %d\n", num_actions);
+    // printf("Num actions: %d\n", num_actions);
 
     auto result = minimax_scores<Game_T>(
       concrete,
@@ -290,8 +291,9 @@ struct Agent_Minimax : Agent {
       num_threads,
       [] { return false; }
     );
-    printf("value: %f\n", result.scores[result.best_action]);
-    return result.best_action;
+    // printf("value: %f\n", result.scores[result.best_action]);
+    printf("MINIMAX time: %f\n", time_elapsed_seconds(start_time));
+    print(result) return result.best_action;
   }
 };
 

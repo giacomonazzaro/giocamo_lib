@@ -126,6 +126,7 @@ struct Giocamo {
   virtual bool             load_game(const std::string& path) { return false; }
   virtual void             update_table_from_game() = 0;
   virtual Agent*           agent_opponent()         = 0;
+  virtual Agent*           agent_player() { return nullptr; }
   virtual std::vector<int> player_scores() = 0;  // TODO(giacomo): not needed
   virtual void             update_game_from_table() {}
   virtual void             on_message(const nlohmann::json& msg) {}

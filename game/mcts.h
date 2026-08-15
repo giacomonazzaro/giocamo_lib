@@ -379,14 +379,15 @@ void run_one_iteration(
 
   // 3) Simulation: either evaluate the leaf with the supplied value
   // function, or fall back to a random rollout.
-  // const float reward =
-  //   leaf_evaluator
-  //     ? leaf_evaluator(cache.states[node_index], root_player)
-  //     : mcts_detail::rollout<Game_T>(
-  //         cache.states[node_index], root_player, rollout_agent, rollout_depth
-  //       );
-  float reward =
-    minimax_value(cache.states[node_index], choice.player_index, 6);
+  const float reward =
+    leaf_evaluator
+      ? leaf_evaluator(cache.states[node_index], root_player)
+      : mcts_detail::rollout<Game_T>(
+          cache.states[node_index], root_player, rollout_agent, rollout_depth
+        );
+  // printf("%d\n", path.size());
+  // float reward =
+  //   minimax_value(cache.states[node_index], choice.player_index, 6);
 
   // 4) Backpropagation: update visit counts and value sums up to the root.
   for (int i = (int)path.size() - 1; i >= 0; --i) {
@@ -493,7 +494,7 @@ struct Agent_MCTS : Agent {
       }
 
       if (cache.iterations_run >= num_iterations) {
-        printf("EXITED: %d iterations\n", cache.iterations_run);
+        // printf("EXITED: %d iterations\n", cache.iterations_run);
         break;
       }
 
