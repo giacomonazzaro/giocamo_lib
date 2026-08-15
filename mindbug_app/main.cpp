@@ -205,11 +205,12 @@ struct Mindbug_Giocamo : Giocamo {
     // return new Agent_Minimax<mindbug::Game_State>(
     //   /* max_depth       */ 13
     // );
-    return new Agent_MCTS<mindbug::Game_State>(
-      /* num_iterations       */ 1000000,
+    return new Agent_MCTS_Stochastic<mindbug::Game_State>(
+      /* num_samples          */ 16,
+      /* num_iterations       */ 99999999,
       /* rollout_depth        */ 999999,
       /* exploration_constant */ 1.41421356f,
-      /* total_time_budget */ 0.0,
+      /* total_time_budget */ 5.0,
       /* fram_time_budget  */ 1.0 / 60.0,
       /* num_threads       */ 1
     );

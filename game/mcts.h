@@ -317,7 +317,7 @@ struct MCTS_Search_Cache {
   Choice choice;
 
   void initalize(Game_T& state, const Choice& choice, int num_iterations) {
-    printf("Start new choice, reset cache!\n");
+    // printf("Start new choice, reset cache!\n");
     using mcts_detail::initialize_node;
     using mcts_detail::Node;
     using mcts_detail::rollout;
@@ -524,53 +524,244 @@ struct Agent_MCTS : Agent {
   }
 };
 
-// MCTS on sampled deals, for a game with hidden information. The sampling
-// itself is Agent_Stochastic's; this is only the shape the callers ask for.
-// The rollout policy is the second parameter, and a policy that needs
-// arguments is handed in through `rollout_agent_factory`.
 template <class Game_T, class Rollout_Agent_T = Agent_Random>
-struct Agent_MCTS_Stochastic
-    : Agent_Stochastic<Game_T, Agent_MCTS<Game_T, Rollout_Agent_T>> {
-  int   num_iterations;
-  int   rollout_depth;
-  float exploration_constant;
-  float time_budget_seconds;
+struct Agent_MCTS_Stochastic : Agent {
+  std::vector<Agent_MCTS<Game_T, Rollout_Agent_T>> agents;
+  std::mt19937                                     rng;
 
-  std::function<Rollout_Agent_T()>         rollout_agent_factory;
-  std::function<float(const Game_T&, int)> leaf_evaluator = nullptr;
+  // Cache: one deal per agent, and the vote it has cast (-1 while it is still
+  // searching). Kept across the calls that share a choice.
+  std::vector<Game_T> deals;
+  std::vector<int>    picks;
+  Choice              choice_in_progress;
 
   Agent_MCTS_Stochastic(
+    int   num_samples          = 8,
     int   num_iterations       = 1000,
     int   rollout_depth        = 64,
-    int   num_samples          = 20,
     float exploration_constant = 1.41421356f,
-    float time_budget_seconds  = 0.0f
+    float total_time_budget    = 0.0f,
+    float frame_time_budget    = 0.0f,
+    int   num_threads          = 0
   )
-      : Agent_Stochastic<Game_T, Agent_MCTS<Game_T, Rollout_Agent_T>>(
-          nullptr, num_samples
-        )
-      , num_iterations(num_iterations)
-      , rollout_depth(rollout_depth)
-      , exploration_constant(exploration_constant)
-      , time_budget_seconds(time_budget_seconds) {
-    if constexpr (std::is_default_constructible_v<Rollout_Agent_T>) {
-      rollout_agent_factory = []() -> Rollout_Agent_T {
-        return Rollout_Agent_T();
-      };
+      : agents(
+          num_samples,
+          Agent_MCTS<Game_T, Rollout_Agent_T>(
+            num_iterations,
+            rollout_depth,
+            exploration_constant,
+            total_time_budget,
+            frame_time_budget,
+            num_threads
+          )
+        ) {
+    // agents.resize(num_samplesm);
+    // for (size_t i = 0; i < num_samples; i++) {
+    //   this->agents[i] = Agent_MCTS<Game_T, Rollout_Agent_T>(
+    //     num_iterations,
+    //     rollout_depth,
+    //     exploration_constant,
+    //     total_time_budget,
+    //     frame_time_budget,
+    //     num_threads
+    //   );
+    // }
+    this->rng = std::mt19937(std::random_device{}());
+  }
+
+  int choose_action(Game& _state, const Choice& choice) override {
+    Game_T&   state       = static_cast<Game_T&>(_state);
+    const int num_samples = (int)agents.size();
+    const int num_actions = pending_action_count(state);
+    if (num_actions <= 0) return 0;
+    if (num_actions == 1) return 0;
+
+    // A new choice: deal again. The deals are drawn here, on the calling
+    // thread, so the generator is never shared, and they are kept so every
+    // agent goes on searching the deal its tree was grown for.
+    if (choice_in_progress != choice) {
+      choice_in_progress = choice;
+      picks.assign(num_samples, -1);
+      deals.clear();
+      for (int i = 0; i < num_samples; ++i) {
+        deals.push_back(sample_state(state, choice.player_index, rng));
+      }
     }
-    // Read when a sample starts, not now, so a caller can still set the
-    // rollout policy or the leaf evaluator after building this.
-    this->make_inner = [this] {
-      auto agent = Agent_MCTS<Game_T, Rollout_Agent_T>(
-        this->num_iterations,
-        this->rollout_depth,
-        this->exploration_constant,
-        this->time_budget_seconds,
-        1  // The sampling owns the threads.
-      );
-      agent.rollout_agent_factory = this->rollout_agent_factory;
-      agent.leaf_evaluator        = this->leaf_evaluator;
-      return agent;
-    };
+
+    // One more frame of search per deal that has not voted yet. An agent that
+    // already answered is left alone: asking it again would throw its tree
+    // away and start a new search, and the votes would never all be in.
+#ifdef __EMSCRIPTEN__
+    // The browser has one thread and it is the one drawing, so only one deal
+    // moves forward per call.
+    for (int i = 0; i < num_samples; ++i) {
+      if (picks[i] >= 0) continue;
+      picks[i] = agents[i].choose_action(deals[i], choice);
+      break;
+    }
+#else
+    // Each thread writes one entry of `picks`, so nothing needs locking.
+    auto threads = std::vector<std::thread>();
+    for (int i = 0; i < num_samples; ++i) {
+      if (picks[i] != -1) continue;  // Already finished.
+      threads.push_back(std::thread([this, i, &choice] {
+        picks[i] = agents[i].choose_action(deals[i], choice);
+      }));
+    }
+    for (auto& thread : threads) thread.join();
+#endif
+
+    for (int pick : picks) {
+      if (pick < 0) return -1;  // A sample is not done yet.
+    }
+
+    auto votes = std::vector<int>(num_actions, 0);
+    for (int pick : picks) votes[pick] += 1;
+    print(votes);
+
+    // The deals answered this choice; the next one deals again.
+    choice_in_progress = Choice();
+    return (int)argmax_randomized(votes);
   }
 };
+
+// // MCTS on sampled deals, for a game with hidden information.
+// //
+// // The searching player cannot see the opponent's hand, so the hidden
+// // cards are shuffled into deals it cannot tell apart from the real one,
+// // each deal gets its own Agent_MCTS, and the move with the most votes
+// // across them is played.
+// //
+// // The deals and their searches are kept across calls: a call advances
+// // every deal by one frame and answers -1 while any of them is still
+// // searching, so the app keeps drawing while the agent thinks. Off the web
+// // the deals are searched at the same time, one thread each; they share
+// // nothing.
+// //
+// // The rollout policy is the second parameter, and a policy that needs
+// // arguments is handed in through `rollout_agent_factory`.
+// template <class Game_T, class Rollout_Agent_T = Agent_Random>
+// struct Agent_MCTS_Stochastic : Agent {
+//   int   num_iterations;
+//   int   rollout_depth;
+//   int   num_samples;
+//   float exploration_constant;
+//   float total_time_budget;
+//   float frame_time_budget;
+
+//   std::function<Rollout_Agent_T()>         rollout_agent_factory;
+//   std::function<float(const Game_T&, int)> leaf_evaluator = nullptr;
+
+//   // Where the sampled deals come from. Fixed, so the same position
+//   // searched again gives the same answer, and a change to the search can
+//   // be measured.
+//   unsigned int sampling_seed = 1;
+
+//   // Cache. One deal and one search per sample, plus the vote each has
+//   // cast so far (-1 while it is still searching).
+//   std::vector<Game_T>                              deals;
+//   std::vector<Agent_MCTS<Game_T, Rollout_Agent_T>> searches;
+//   std::vector<int>                                 picks;
+//   Choice                                           choice_in_progress;
+
+//   Agent_MCTS_Stochastic(
+//     int   num_iterations       = 1000,
+//     int   rollout_depth        = 64,
+//     int   num_samples          = 20,
+//     float exploration_constant = 1.41421356f,
+//     float total_time_budget    = 0.0f,
+//     float frame_time_budget    = 0.0f
+//   )
+//       : num_iterations(num_iterations)
+//       , rollout_depth(rollout_depth)
+//       , num_samples(num_samples)
+//       , exploration_constant(exploration_constant)
+//       , total_time_budget(total_time_budget)
+//       , frame_time_budget(frame_time_budget) {
+//     if constexpr (std::is_default_constructible_v<Rollout_Agent_T>) {
+//       rollout_agent_factory = []() -> Rollout_Agent_T {
+//         return Rollout_Agent_T();
+//       };
+//     }
+//   }
+
+//   void message(const std::string&) override {}
+
+//   int choose_action(Game& _state, const Choice& choice) override {
+//     Game_T&   state        = static_cast<Game_T&>(_state);
+//     const int num_actions  = pending_action_count(state);
+//     const int player_index = pending_choice(state).player_index;
+//     if (num_actions <= 0) return 0;
+//     if (num_actions == 1) return 0;
+
+//     if (choice_in_progress != choice)
+//       start_samples(state, choice, player_index);
+//     run_one_frame(choice);
+
+//     for (int pick : picks) {
+//       if (pick < 0) return -1;  // A deal wants more frames.
+//     }
+
+//     auto votes = std::vector<int>(num_actions, 0);
+//     for (int pick : picks) votes[pick] += 1;
+
+//     // The samples answered this choice; the next one deals again.
+//     choice_in_progress = Choice();
+//     sampling_seed += 1;
+//     return (int)argmax_randomized(votes);
+//   }
+
+//   // Deals the hidden cards `num_samples` times and gives each deal its
+//   // own search. Every deal is dealt from its own generator, so the whole
+//   // thing stays reproducible however the samples are then spread over
+//   // threads.
+//   void start_samples(Game_T& state, const Choice& choice, int player_index) {
+//     deals.clear();
+//     searches.clear();
+//     deals.reserve(num_samples);
+//     searches.reserve(num_samples);
+//     for (int sample = 0; sample < num_samples; ++sample) {
+//       auto rng =
+//         std::mt19937(sampling_seed * 2654435761u + (unsigned int)sample);
+//       deals.push_back(sample_state(state, player_index, rng));
+
+//       auto search = Agent_MCTS<Game_T, Rollout_Agent_T>(
+//         num_iterations,
+//         rollout_depth,
+//         exploration_constant,
+//         total_time_budget,
+//         frame_time_budget,
+//         1  // The sampling owns the threads.
+//       );
+//       search.rollout_agent_factory = rollout_agent_factory;
+//       search.leaf_evaluator        = leaf_evaluator;
+//       searches.push_back(std::move(search));
+//     }
+//     picks.assign(num_samples, -1);
+//     choice_in_progress = choice;
+//   }
+
+//   // Gives every deal that has not voted yet one more frame of search.
+//   void run_one_frame(const Choice& choice) {
+// #ifdef __EMSCRIPTEN__
+//     // The browser has one thread and it is the one drawing, so only one
+//     // deal moves forward per call.
+//     for (int sample = 0; sample < num_samples; ++sample) {
+//       if (picks[sample] >= 0) continue;
+//       picks[sample] = searches[sample].choose_action(deals[sample], choice);
+//       break;
+//     }
+// #else
+//     // Each thread writes one entry of `picks`, so nothing needs locking.
+//     auto threads = std::vector<std::thread>();
+//     for (int sample = 0; sample < num_samples; ++sample) {
+//       if (picks[sample] >= 0) continue;
+//       threads.push_back(std::thread([this, sample, &choice] {
+//         picks[sample] = searches[sample].choose_action(deals[sample],
+//         choice);
+//       }));
+//     }
+//     for (auto& thread : threads) thread.join();
+// #endif
+//   }
+// };
