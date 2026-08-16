@@ -31,6 +31,13 @@ if(NOT TARGET mindbug_benchmark)
     target_link_libraries(mindbug_benchmark PRIVATE mindbug_lib)
 endif()
 
+# Headless minimax-vs-minimax match-up at two depths. Plays N games, prints
+# win counts and the time each side spent per move.
+if(NOT TARGET match_minimax)
+    add_executable(match_minimax match_minimax.cpp)
+    target_link_libraries(match_minimax PRIVATE mindbug_lib)
+endif()
+
 # Rules checks plus a batch of random games, to catch a rule that stops the
 # game from ever ending.
 if(NOT TARGET mindbug_test)

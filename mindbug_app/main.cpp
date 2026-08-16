@@ -206,6 +206,10 @@ struct Mindbug_Giocamo : Giocamo {
     //   /* max_depth       */ 13
     // );
 
+    return new Agent_Async(
+      new Agent_Minimax_Stochastic<mindbug::Game_State>(10, 64)
+    );
+
     auto* agent = new Agent_MCTS_Stochastic<mindbug::Game_State>(
       /* num_samples          */ 16,
       /* num_iterations       */ 99999999,
@@ -252,7 +256,7 @@ struct Mindbug_Giocamo : Giocamo {
 
   Agent* agent_player() override {
     return new Agent_Async(
-      new Agent_Minimax_Stochastic<mindbug::Game_State>(12, 16)
+      new Agent_Minimax_Stochastic<mindbug::Game_State>(12, 64)
     );
   }
 
