@@ -175,21 +175,15 @@ Agent* make_agent_pair(
 
 // The loop both call shapes share.
 static void run_game(
-  Game&                                      state,
-  Table_State&                               table,
-  std::function<void(const Input&)>          set_frame_input,
-  bool&                                      playground,
-  std::function<void()>                      clear_highlights,
-  Agent&                                     agent,
-  Input_Feed&                                input_feed,
-  const Menu_Result&                         menu_result,
-  const std::string&                         window_title,
-  std::function<void()>                      update_table_from_game,
-  std::function<std::vector<int>()>          compute_scores,
-  std::function<void()>                      update_game_from_table,
-  std::function<void(const nlohmann::json&)> on_message
+  Giocamo&           giocamo,
+  Input_Feed&        input_feed,
+  Agent&             agent,
+  const Online*      online,
+  const std::string& window_title
 ) {
-  auto current_choice = std::optional<Choice>();
+  auto& state      = giocamo.game;
+  auto& table      = giocamo.table;
+  bool  playground = false;
 
   // Set once the game is over, so the loop switches from playing to showing
   // the result instead of ending.
@@ -197,22 +191,14 @@ static void run_game(
   std::string      result_text;
   std::vector<int> scores;
 
-  if (update_table_from_game) update_table_from_game();
-
-  // Nullable handle to the remote peer. Outside online mode this stays null
-  // and every send/recv branch below short-circuits.
-  const Online* online = menu_result.is_online() ? &menu_result.online
-                                                 : nullptr;
+  giocamo.update_table_from_game();
 
   // Leaving playground: commit the rearranged table back into the game state
-  // when the game provides a way to (gods), otherwise restore the table from
+  // when the game provides a way to, otherwise restore the table from
   // the canonical game state — discarding the playground edits.
   auto leave_playground = [&] {
-    if (update_game_from_table) {
-      update_game_from_table();
-    } else if (update_table_from_game) {
-      update_table_from_game();
-    }
+    giocamo.update_game_from_table();
+    giocamo.update_table_from_game();
   };
 
   // Each frame: ask game_frame for the next move. When it resolves a choice
@@ -220,16 +206,14 @@ static void run_game(
   // updated game state.
   //
   // Playground mode pauses the game loop and lets the user rearrange the
-  // table freely; the toggle button in the top-right corner flips it. While
-  // ON the agent never sees drag/drop events, so games can't progress —
-  // useful for inspecting and tinkering with state. Toggling OFF resyncs
-  // the table from the canonical game state, discarding any layout edits.
+  // table freely; the toggle button flips it. While ON the agent never sees
+  // drag/drop events, so games can't progress.
   //
   // Returning true tells run_tabletop to exit the loop — we use that to
   // stop as soon as the game ends so the game-over screen can take over.
   auto update = [&](Table_State& table, const Input& input) {
     // The UI agent reads the current frame through the input it is handed.
-    set_frame_input(input);
+    giocamo.agent_ui.input = &input;
 
     // Drain any messages the remote sent us this frame. Two kinds matter
     // here: a "playground" flip from the other peer (mirror it locally) and a
@@ -244,15 +228,14 @@ static void run_game(
             playground = remote_on;
             if (playground) {
               table.is_drop_allowed = [](int, int, int) { return true; };
-              clear_highlights();
             } else {
               leave_playground();
             }
           }
         } else if (type == "table_state") {
           apply_table_state_message(table, (*incoming)["table_state"]);
-        } else if (on_message) {
-          on_message(*incoming);
+        } else {
+          giocamo.on_message(*incoming);
         }
       }
     }
@@ -267,14 +250,8 @@ static void run_game(
     if (immediate_button(button_rect, label, input, Color{20, 20, 20, 100})) {
       playground = !playground;
       if (playground) {
-        // Anything goes while playing around. Wipe the "legal move" borders
-        // the agent left over the player's hand — they're misleading while
-        // the game loop is paused.
         table.is_drop_allowed = [](int, int, int) { return true; };
-        clear_highlights();
       } else {
-        // Commit (or discard) the playground edits. The next game_frame call
-        // re-installs is_drop_allowed via the agent.
         leave_playground();
       }
       // Tell the remote peer about the toggle. On entry we also blast a
@@ -304,9 +281,9 @@ static void run_game(
 
     // The game is over: its screen is drawn here, frame after frame, like any
     // other one. The loop ends when the window does.
-    if (state.is_game_over() && compute_scores) {
+    if (state.is_game_over()) {
       if (!game_ended) {
-        scores = compute_scores();
+        scores = giocamo.player_scores();
         if (scores[0] > scores[1])
           result_text = "Player 1 wins!";
         else if (scores[1] > scores[0])
@@ -319,13 +296,14 @@ static void run_game(
       return false;
     }
 
-    bool state_changed = game_frame(state, agent);
-    if (state_changed && update_table_from_game) {
-      update_table_from_game();
+    bool action_taken = game_frame(state, agent);
+    if (action_taken) {
+      giocamo.update_table_from_game();
     }
+
     // Without a score screen to show, the game ending ends the loop. With one,
     // the loop goes on and the branch above draws it from the next frame.
-    return state.is_game_over() && !compute_scores;
+    return state.is_game_over();  // && !giocamo.player_scores;
   };
 
   run_tabletop(
@@ -335,36 +313,6 @@ static void run_game(
   // The menu, the game and the game-over screen all drew into one window;
   // this is the end of all of them.
   close_table_window();
-}
-
-void play_game(
-  Game&                                      state,
-  Table_State&                               table,
-  UI_State&                                  ui_state,
-  Agent&                                     agent,
-  Input_Feed&                                input_feed,
-  const Menu_Result&                         menu_result,
-  const std::string&                         window_title,
-  std::function<void()>                      update_table_from_game,
-  std::function<std::vector<int>()>          compute_scores,
-  std::function<void()>                      update_game_from_table,
-  std::function<void(const nlohmann::json&)> on_message
-) {
-  run_game(
-    state,
-    table,
-    [&ui_state](const Input& input) { ui_state.input = &input; },
-    ui_state.playground,
-    [&ui_state] { ui_state.highlighted_things.clear(); },
-    agent,
-    input_feed,
-    menu_result,
-    window_title,
-    update_table_from_game,
-    compute_scores,
-    update_game_from_table,
-    on_message
-  );
 }
 
 void play_game(
@@ -393,28 +341,14 @@ void play_game(
   }
   giocamo.init_table();
 
-  auto player = giocamo.agent_player();
-  if (!player) player = &giocamo.agent_ui;
   Agent* agent = make_agent_pair(
-    player, giocamo.agent_opponent(), menu_result, options.vs_ai
+    giocamo.agent_player(), giocamo.agent_opponent(), menu_result, options.vs_ai
   );
 
-  Agent_UI& agent_ui   = giocamo.agent_ui;
-  bool      playground = false;
+  // Nullable handle to the remote peer. Outside online mode this stays null
+  // and every send/recv branch below short-circuits.
+  const Online* online = menu_result.is_online() ? &menu_result.online
+                                                 : nullptr;
 
-  run_game(
-    giocamo.game,
-    giocamo.table,
-    [&agent_ui](const Input& input) { agent_ui.input = &input; },
-    playground,
-    [] {},  // Highlights are drawn as they are asked for, none are stored.
-    *agent,
-    input_feed,
-    menu_result,
-    window_title,
-    [&giocamo] { giocamo.update_table_from_game(); },
-    [&giocamo] { return giocamo.player_scores(); },
-    [&giocamo] { giocamo.update_game_from_table(); },
-    [&giocamo](const nlohmann::json& message) { giocamo.on_message(message); }
-  );
+  run_game(giocamo, input_feed, *agent, online, window_title);
 }
