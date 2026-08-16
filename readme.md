@@ -1,11 +1,7 @@
-# Gods
-This is a dueling card game designed by me, Giacomo Nazzaro. 
-In this project you will find an python app that lets you play the game against an agent or against another persshon online.
+# Giocamo
+Giocamo ("let's play" in Roman dialect) is a library to easily implement card and board games. Provided a definition of the game state and the logic of gameplay, this framework provides for free graphics, intelligent bots for single play, and online mode for multiplayer games.  
 
-To run the game simply run:
-~~~bash
-sh run.sh
-~~~
-This will create a virual environment, install the required libraries locally, and run the program.
+Project still under development, still plenty to fix.  
 
+Here'a an example implementation of [Mindbug](https://mindbug.me/).
 ![screenshot](./screenshot.png)
