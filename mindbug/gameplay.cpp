@@ -476,7 +476,14 @@ Choice Game_State::next_choice() {
 
       case Phase::COMBAT: resolve_combat(state); continue;
 
-      case Phase::FRENZY: return make_frenzy_choice(state);
+      case Phase::FRENZY:
+        // The attacker was in play when combat set this phase, but a Defeated
+        // ability waiting in the queue may have taken it out since.
+        if (!is_in_play(state, state.attacker)) {
+          state.phase = Phase::TURN_END;
+          continue;
+        }
+        return make_frenzy_choice(state);
 
       case Phase::TURN_END: end_turn(state); continue;
     }

@@ -337,11 +337,14 @@ struct MCTS_Search_Cache {
     this->states.clear();
     this->scores.assign(num_actions, 0.0);
 
-    // Reserve so push_back never reallocates, keeping references and the
-    // parallel index relationship between `nodes` and `states` stable
-    // across iterations.
-    this->nodes.reserve(num_iterations + 1);
-    this->states.reserve(num_iterations + 1);
+    // Room for a decent tree up front. The vectors grow past it when the
+    // search runs long: the tree links its nodes by index, so a reallocation
+    // moves nothing that matters. Reserving `num_iterations` would ask for
+    // one state per iteration — 96 GB per tree when the iteration count is a
+    // "no limit" sentinel and the real bound is the time budget.
+    const int reserved = std::min(num_iterations + 1, 64 * 1024);
+    this->nodes.reserve(reserved);
+    this->states.reserve(reserved);
 
     // Children stay empty until the root is expanded by the first traversal
     // that revisits it.

@@ -277,11 +277,9 @@ struct Agent_Minimax : Agent {
   void message(const std::string&) override {}
 
   int choose_action(Game& state, const Choice&) override {
-    auto      start_time  = time_now();
     Game_T&   concrete    = static_cast<Game_T&>(state);
     const int num_actions = pending_action_count(state);
     if (num_actions <= 0) return 0;
-    // printf("Num actions: %d\n", num_actions);
 
     auto result = minimax_scores<Game_T>(
       concrete,
@@ -291,9 +289,7 @@ struct Agent_Minimax : Agent {
       num_threads,
       [] { return false; }
     );
-    // printf("value: %f\n", result.scores[result.best_action]);
-    printf("MINIMAX time: %f\n", time_elapsed_seconds(start_time));
-    print(result) return result.best_action;
+    return result.best_action;
   }
 };
 

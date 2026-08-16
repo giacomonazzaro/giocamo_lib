@@ -251,7 +251,9 @@ struct Mindbug_Giocamo : Giocamo {
   }
 
   Agent* agent_player() override {
-    return new Agent_Minimax_Stochastic<mindbug::Game_State>(12, 16);
+    return new Agent_Async(
+      new Agent_Minimax_Stochastic<mindbug::Game_State>(12, 16)
+    );
   }
 
   std::vector<int> player_scores() override {

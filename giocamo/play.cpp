@@ -323,8 +323,9 @@ static void run_game(
     if (state_changed && update_table_from_game) {
       update_table_from_game();
     }
-    // Without a score screen to show, the game ending ends the loop.
-    return state.is_game_over();
+    // Without a score screen to show, the game ending ends the loop. With one,
+    // the loop goes on and the branch above draws it from the next frame.
+    return state.is_game_over() && !compute_scores;
   };
 
   run_tabletop(
