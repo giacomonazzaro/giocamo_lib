@@ -1,4 +1,5 @@
 #pragma once
+#include <array>
 #include <fstream>
 #include <iomanip>
 #include <iostream>
@@ -64,6 +65,11 @@ struct Array_Inline;
 template <class T, int Capacity>
 std::string to_json(
   const Array_Inline<T, Capacity>& arr, int indent = 0, bool pretty = true
+);
+
+template <class T, std::size_t N>
+std::string to_json(
+  const std::array<T, N>& arr, int indent = 0, bool pretty = true
 );
 
 template <typename T, std::enable_if_t<!std::is_enum_v<T>, int> = 0>
@@ -198,6 +204,12 @@ std::string to_json(
   return array_to_json(arr, indent, pretty);
 }
 
+// std::array — serialized as a JSON array, same as a vector.
+template <class T, std::size_t N>
+std::string to_json(const std::array<T, N>& arr, int indent, bool pretty) {
+  return array_to_json(arr, indent, pretty);
+}
+
 // Enum (scoped or unscoped) — serialize as underlying integer.
 template <typename T>
 auto to_json(const T& t, int = 0, bool = true)
@@ -315,6 +327,9 @@ bool from_json_impl(JsonParser& p, Array_Inline<T, Capacity>& out);
 
 template <typename T, std::size_t N>
 bool from_json_impl(JsonParser& p, T (&out)[N]);
+
+template <typename T, std::size_t N>
+bool from_json_impl(JsonParser& p, std::array<T, N>& out);
 
 template <typename T>
 auto from_json_impl(JsonParser& p, T& out) -> std::
@@ -544,6 +559,21 @@ inline bool from_json_impl(JsonParser& p, std::vector<T, Alloc>& out) {
 // A fixed-size array member. The JSON array must hold exactly N entries.
 template <typename T, std::size_t N>
 bool from_json_impl(JsonParser& p, T (&out)[N]) {
+  p.skip_whitespace();
+  if (!p.expect('[')) return false;
+
+  for (std::size_t i = 0; i < N; ++i) {
+    p.skip_whitespace();
+    if (i > 0 && !p.expect(',')) return false;
+    if (!from_json_impl(p, out[i])) return false;
+  }
+  p.skip_whitespace();
+  return p.expect(']');
+}
+
+// std::array — same fixed-size rule as a plain array member.
+template <typename T, std::size_t N>
+bool from_json_impl(JsonParser& p, std::array<T, N>& out) {
   p.skip_whitespace();
   if (!p.expect('[')) return false;
 

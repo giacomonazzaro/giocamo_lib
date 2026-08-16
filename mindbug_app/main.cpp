@@ -7,7 +7,8 @@
 #include <giocamo/play.h>
 #include <mindbug/gameplay.h>
 #include <mindbug/models.h>
-#include <struct/json.h>  // for save_to_json()
+#include <struct/imgui.h>  // for draw_editor_ui()
+#include <struct/json.h>   // for save_to_json()
 #include <tabletop/config.h>
 #include <tabletop/input_recorder.h>
 #include <tabletop/rendering.h>
@@ -265,6 +266,12 @@ struct Mindbug_Giocamo : Giocamo {
       mindbug::compute_player_score(this->mindbug_game(), 0),
       mindbug::compute_player_score(this->mindbug_game(), 1),
     };
+  }
+
+  void draw(const Input& input) override {
+    printf("dsfsd\n");
+    auto edited = draw_editor_ui(mindbug_game());
+    if (edited) update_table_from_game();
   }
 };
 

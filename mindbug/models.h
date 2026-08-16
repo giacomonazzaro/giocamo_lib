@@ -115,7 +115,7 @@ struct Game_State : Game {
   // The 20 cards dealt this game, each holding the design it shows. Fixed at
   // setup; every other list refers to a card by its index here.
   Array_Inline<int, 24> all_cards;
-  Player                players[2];
+  std::array<Player, 2> players;
   // Creatures in play whose Tough keyword has already saved them once.
   Array_Inline<int, 8> exhausted_cards;
 
@@ -188,10 +188,10 @@ inline int cards_left(const Game_State& state, int player) {
 
 // visit_struct opens its own namespace, so these belong at global scope.
 VISITABLE_STRUCT(
-  mindbug::Player, hand, draw_pile, creatures, discard, life, mindbugs);
+  mindbug::Player, hand, draw_pile, creatures, discard, life, mindbugs
+);
 
-VISITABLE_STRUCT(
-  mindbug::Turn_Action, is_attack, card);
+VISITABLE_STRUCT(mindbug::Turn_Action, is_attack, card);
 
 VISITABLE_STRUCT(
   mindbug::Game_State,
@@ -210,4 +210,3 @@ VISITABLE_STRUCT(
   extra_turn,
   random_seed
 );
-

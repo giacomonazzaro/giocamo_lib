@@ -198,7 +198,7 @@ static void run_game(
   // the canonical game state — discarding the playground edits.
   auto leave_playground = [&] {
     giocamo.update_game_from_table();
-    giocamo.update_table_from_game();
+    // giocamo.update_table_from_game();
   };
 
   // Each frame: ask game_frame for the next move. When it resolves a choice
@@ -278,6 +278,8 @@ static void run_game(
       if (online && table_dirty) send_table_state(*online, table);
       return false;
     }
+
+    giocamo.draw(input);
 
     // The game is over: its screen is drawn here, frame after frame, like any
     // other one. The loop ends when the window does.

@@ -124,6 +124,7 @@ struct Giocamo {
   // empty unless one was given, and the game reads its usual one. Returns false
   // when there is nothing to read, and play_game deals instead.
   virtual bool             load_game(const std::string& path) { return false; }
+  virtual void             draw(const Input& input) {}
   virtual void             update_table_from_game() = 0;
   virtual void             update_game_from_table() {}
   virtual Agent*           agent_opponent() = 0;
