@@ -254,11 +254,11 @@ struct Mindbug_Giocamo : Giocamo {
     //     );
   }
 
-  Agent* agent_player() override {
-    return new Agent_Async(
-      new Agent_Minimax_Stochastic<mindbug::Game_State>(12, 64)
-    );
-  }
+  // Agent* agent_player() override {
+  //   return new Agent_Async(
+  //     new Agent_Minimax_Stochastic<mindbug::Game_State>(12, 64)
+  //   );
+  // }
 
   std::vector<int> player_scores() override {
     return {
