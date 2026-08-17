@@ -178,3 +178,41 @@ void play_game(
 void play_game(
   Giocamo& giocamo, Play_Options& options, const std::string& window_title
 );
+
+template <typename Game_T>
+struct History {
+  std::vector<Game_T> states        = {};
+  int                 current_state = -1;
+
+  void save(const Game_T& game) {
+    this->current_state += 1;
+    if (this->state.size() <= this->current_state) {
+      this->push_back(game);
+    } else {
+      this->states[current_state] = game;
+    }
+  }
+
+  bool undo(Game_T& game) {
+    if (this->current_state <= 0) {
+      return false;
+    }
+    this->current_state -= 1;
+    game = this->states[current_state];
+    return true;
+  }
+
+  bool redo(Game_T& game) {
+    if (this->current_state >= this->states.size() - 1) {
+      return false;
+    }
+    this->current_state += 1;
+    game = this->states[current_state];
+    return true;
+  };
+};
+
+template <typename Game_T>
+struct Giocamo_2 : Giocamo {
+  History<Game_T> history;
+};
