@@ -8,6 +8,7 @@
 #include "config.h"
 #include "input_recorder.h"
 #include "raylib.h"
+#include "rlImGui.h"  // for the one ImGui frame per drawn frame.
 #include "rlgl.h"  // for rlPushMatrix, rlPopMatrix, rlTranslatef, rlRotatef, rlScalef
 #include "tabletop.h"
 
@@ -635,10 +636,14 @@ void open_table_window(int width, int height, const std::string& title) {
 #endif
   InitWindow(width, height, title.c_str());
   SetTargetFPS(tt::TARGET_FPS);
+  // One ImGui context for the whole program, set up once the window exists.
+  rlImGuiSetup(true);
 }
 
 void close_table_window() {
-  if (IsWindowReady()) CloseWindow();
+  if (!IsWindowReady()) return;
+  rlImGuiShutdown();
+  CloseWindow();
 }
 
 void run_tabletop(
@@ -657,6 +662,11 @@ void run_tabletop(
     process_input(table, input);
 
     BeginDrawing();
+    // One ImGui frame per drawn frame. ImGui decides what the mouse is over
+    // from the windows of the previous frame, so every panel has to be created
+    // inside the same frame or none of them ever gets the mouse. The panels
+    // themselves only call ImGui::Begin / ImGui::End.
+    rlImGuiBegin();
     begin_screen_fit();
     draw_background(input);
     draw_table(table, input);
@@ -667,6 +677,8 @@ void run_tabletop(
     // immediate-mode UI, so it stays inside the screen-fit transform.
     bool end = update(table, input);
     end_screen_fit();
+    // ImGui is drawn in screen pixels, so this is outside the screen fit.
+    rlImGuiEnd();
     EndDrawing();
     if (end) break;
   }

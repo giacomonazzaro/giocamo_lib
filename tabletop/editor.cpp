@@ -199,13 +199,6 @@ bool draw_field(const char* name, T& value) {
 }  // namespace
 
 bool draw_editor_ui(Table_State& table, const Input&) {
-  // run_tabletop opens the window, so this cannot happen any earlier.
-  static bool imgui_ready = false;
-  if (!imgui_ready) {
-    rlImGuiSetup(true);
-    imgui_ready = true;
-  }
-
   // The panel follows the last thing that was dropped, and keeps showing it
   // until the next drop. process_input clears dropped_thing at the start of
   // every frame, so the drop has to be caught on the frame it happens and kept
@@ -220,11 +213,8 @@ bool draw_editor_ui(Table_State& table, const Input&) {
     selected_thing  = table.dropped_thing->thing_id;
   }
 
-  // The table is drawn through the letterbox transform. The panel belongs in
-  // real screen pixels, so step out of that transform and back into it.
-  end_screen_fit();
-  rlImGuiBegin();
-
+  // run_tabletop opens the ImGui frame and renders it; this only adds a window
+  // to it.
   bool edited = false;
   ImGui::SetNextWindowPos(ImVec2(10, 10), ImGuiCond_FirstUseEver);
   ImGui::SetNextWindowSize(ImVec2(340, 560), ImGuiCond_FirstUseEver);
@@ -265,8 +255,5 @@ bool draw_editor_ui(Table_State& table, const Input&) {
     save_to_json<Table_Layout>(table, filename);
   }
   ImGui::End();
-
-  rlImGuiEnd();
-  begin_screen_fit();
   return edited;
 }

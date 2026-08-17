@@ -260,12 +260,12 @@ static void run_game(
       }
     }
 
-    giocamo.draw(input);
-
     if (playground) {
       auto edited = editor(giocamo, input);
 
-      if (online && edited) send_table_state(*online, table);
+      if (online && edited) {
+        send_table_state(*online, table);
+      }
       return false;
     }
 
@@ -353,10 +353,10 @@ void play_game(
     table_edited |= key_pressed(input, KEY_R);
     table_edited |= key_pressed(input, KEY_S);
 
-    // auto game_edited = draw_editor_ui(game);
+    auto game_edited = giocamo.draw_game_editor();
     // if (game_edited) game.update_table_from_game();
 
-    return table_edited;
+    return table_edited || game_edited;
   };
 
   run_game(giocamo, input_feed, *agent, online, editor, window_title);

@@ -2,6 +2,7 @@
 
 #include <game/agent.h>
 #include <online/models.h>
+#include <struct/json.h>
 #include <tabletop/input_recorder.h>
 #include <tabletop/tabletop.h>
 #include <tabletop/ui.h>
@@ -111,27 +112,23 @@ struct Giocamo {
   Giocamo(Game& game, Agent_UI& agent_ui)
       : game(game), agent_ui(agent_ui), table(agent_ui.table) {}
 
-  virtual ~Giocamo()        = default;
-  virtual void init_table() = 0;
-  // Read the game back from disk instead of dealing one, for --load. `path` is
-  // empty unless one was given, and the game reads its usual one. Returns false
-  // when there is nothing to read, and play_game deals instead.
-  virtual bool   load_game(const std::string& path) { return false; }
-  virtual void   draw(const Input& input) {}
+  virtual ~Giocamo()                      = default;
+  virtual void   init_table()             = 0;
   virtual void   update_table_from_game() = 0;
-  virtual void   update_game_from_table() {}
-  virtual Agent* agent_opponent() = 0;
-  virtual Agent* agent_player() { return &agent_ui; }
-  virtual std::vector<int>
-               player_scores() const = 0;  // TODO(giacomo): not needed
-  virtual void on_message(const nlohmann::json& msg) {}
+  virtual Agent* agent_opponent()         = 0;
+  virtual void   update_game_from_table() = 0;
+  // TODO(giacomo): Move to Game
+  virtual std::vector<int> player_scores() const = 0;
 
-  // Undo, implemented by Giocamo_With_History below — copying a position needs
-  // the concrete game type, and this base does not have it. A game that
-  // derives straight from Giocamo simply has no history.
+  virtual Agent* agent_player() { return &agent_ui; }
+  virtual void   on_message(const nlohmann::json& msg) {}
+
+  // Therse are implemented by Giocamo_With_History, no need to override.
   virtual void save_state() {}
   virtual bool undo() { return false; }
   virtual bool redo() { return false; }
+  virtual bool draw_game_editor() { return false; }
+  virtual bool load_game(const std::string& path) { return false; }
 };
 
 // Standard game loop. Initializes the game with the seat's seed, runs the
@@ -242,6 +239,26 @@ struct Giocamo_With_History : Giocamo {
   bool redo() override {
     if (!history.redo(typed_game())) return false;
     update_table_from_game();
+    return true;
+  }
+
+  bool draw_game_editor() override {
+    auto edited = draw_editor_ui(typed_game());
+    if (edited) update_table_from_game();
+    return edited;
+  }
+
+  // --load: carry on from the snapshot. The pending choice is worked out again
+  // from the phase that was saved; effects that still owed a decision are not
+  // in the snapshot, so those are lost.
+  bool load_game(const std::string& path) override {
+    try {
+      typed_game() = load_from_json<Game_T>(path);
+    } catch (const std::exception& error) {
+      std::cerr << error.what() << "\n";
+      return false;
+    }
+    game.begin_game();
     return true;
   }
 };

@@ -227,29 +227,13 @@ struct Mindbug_Giocamo : Giocamo_With_History<mindbug::Game_State> {
     state.played_card = played.empty() ? -1 : played.front();
   }
 
-  // --load: carry on from the snapshot. The pending choice is worked out again
-  // from the phase that was saved; effects that still owed a decision are not
-  // in the snapshot, so those are lost.
-  bool load_game(const std::string& path) override {
-    try {
-      mindbug_game() = load_from_json<mindbug::Game_State>(
-        path.empty() ? SNAPSHOT_PATH : path
-      );
-    } catch (const std::exception& error) {
-      std::cerr << error.what() << "\n";
-      return false;
-    }
-    game.begin_game();
-    return true;
-  }
-
   Agent* agent_opponent() override {
     // return new Agent_Minimax<mindbug::Game_State>(
     //   /* max_depth       */ 13
     // );
 
     return new Agent_Async(
-      new Agent_Minimax_Stochastic<mindbug::Game_State>(10, 64)
+      new Agent_Minimax_Stochastic<mindbug::Game_State>(13, 64)
     );
 
     auto* agent = new Agent_MCTS_Stochastic<mindbug::Game_State>(
@@ -307,12 +291,6 @@ struct Mindbug_Giocamo : Giocamo_With_History<mindbug::Game_State> {
       mindbug::compute_player_score(this->mindbug_game(), 0),
       mindbug::compute_player_score(this->mindbug_game(), 1),
     };
-  }
-
-  void draw(const Input& input) override {
-    // printf("dsfsd\n");
-    auto edited = draw_editor_ui(mindbug_game());
-    if (edited) update_table_from_game();
   }
 };
 

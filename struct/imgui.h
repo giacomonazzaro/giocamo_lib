@@ -205,18 +205,8 @@ bool draw_field(const char* name, T& value) {
 
 template <typename T>
 bool draw_editor_ui(T& value) {
-  // run_tabletop opens the window, so this cannot happen any earlier.
-  static bool imgui_ready = false;
-  if (!imgui_ready) {
-    rlImGuiSetup(true);
-    imgui_ready = true;
-  }
-
-  // The table is drawn through the letterbox transform. The panel belongs in
-  // real screen pixels, so step out of that transform and back into it.
-  // rlPopMatrix();
-  rlImGuiBegin();
-
+  // The caller opens the ImGui frame and renders it; this only adds a window
+  // to it.
   bool edited = false;
   ImGui::SetNextWindowPos(ImVec2(10, 10), ImGuiCond_FirstUseEver);
   ImGui::SetNextWindowSize(ImVec2(340, 560), ImGuiCond_FirstUseEver);
@@ -227,7 +217,5 @@ bool draw_editor_ui(T& value) {
     });
   }
   ImGui::End();
-
-  rlImGuiEnd();
   return edited;
 }
