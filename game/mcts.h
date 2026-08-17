@@ -455,6 +455,9 @@ struct Agent_MCTS : Agent {
 
   void message(const std::string&) override {}
 
+  // The tree belongs to the position it was grown for; drop it.
+  void reset() override { cache.initialized = false; }
+
   int choose_action(Game& _state, const Choice& choice) override {
     Game_T& state = static_cast<Game_T&>(_state);
 
@@ -574,6 +577,12 @@ struct Agent_MCTS_Stochastic : Agent {
     //   );
     // }
     this->rng = std::mt19937(std::random_device{}());
+  }
+
+  // The deals and their trees belong to the position they were dealt for.
+  void reset() override {
+    choice_in_progress = Choice();
+    for (auto& search : agents) search.reset();
   }
 
   int choose_action(Game& _state, const Choice& choice) override {

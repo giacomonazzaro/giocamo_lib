@@ -194,6 +194,7 @@ static void run_game(
   bool  playground = false;
 
   giocamo.update_table_from_game();
+  giocamo.save_state();  // The opening position, so undo has a floor.
 
   // Leaving playground: commit the rearranged table back into the game state
   // when the game provides a way to, otherwise restore the table from
@@ -268,6 +269,13 @@ static void run_game(
       return false;
     }
 
+    // Step back and forth through the positions played. The agents keep a
+    // search keyed on the pending choice, so a jump has to clear it: the
+    // restored choice can look like the one an agent is thinking about while
+    // the position behind it is a different one.
+    if (key_pressed(input, KEY_Z) && giocamo.undo()) agent.reset();
+    if (key_pressed(input, KEY_X) && giocamo.redo()) agent.reset();
+
     // The game is over: its screen is drawn here, frame after frame, like any
     // other one. The loop ends when the window does.
     if (state.is_game_over()) {
@@ -275,9 +283,14 @@ static void run_game(
       return false;
     }
 
-    bool action_taken = game_frame(state, agent);
-    if (action_taken) {
+    bool is_action_from_player = state._choice.player_index ==
+                                 giocamo.bottom_player;
+    bool was_action_taken = game_frame(state, agent);
+    if (was_action_taken) {
       giocamo.update_table_from_game();
+      if (is_action_from_player) {
+        giocamo.save_state();
+      }
     }
 
     // Without a score screen to show, the game ending ends the loop. With one,

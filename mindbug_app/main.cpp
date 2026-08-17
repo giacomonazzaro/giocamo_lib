@@ -48,9 +48,9 @@ static constexpr int LIFE_COUNTER_SIZE = 90;
 
 // Mindbug on the table. The table is laid out once here; play_game deals the
 // game and drives the loop through these hooks.
-struct Mindbug_Giocamo : Giocamo {
+struct Mindbug_Giocamo : Giocamo_With_History<mindbug::Game_State> {
   Mindbug_Giocamo(mindbug::Game_State& game, Mindbug_Agent_UI& agent_ui)
-      : Giocamo(game, agent_ui) {}
+      : Giocamo_With_History<mindbug::Game_State>(game, agent_ui) {}
 
   void init_table() override {
     auto bottom_player = this->bottom_player;

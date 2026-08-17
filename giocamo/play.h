@@ -125,6 +125,13 @@ struct Giocamo {
   virtual std::vector<int>
                player_scores() const = 0;  // TODO(giacomo): not needed
   virtual void on_message(const nlohmann::json& msg) {}
+
+  // Undo, implemented by Giocamo_With_History below — copying a position needs
+  // the concrete game type, and this base does not have it. A game that
+  // derives straight from Giocamo simply has no history.
+  virtual void save_state() {}
+  virtual bool undo() { return false; }
+  virtual bool redo() { return false; }
 };
 
 // Standard game loop. Initializes the game with the seat's seed, runs the
@@ -179,18 +186,19 @@ void play_game(
   Giocamo& giocamo, Play_Options& options, const std::string& window_title
 );
 
+// Every position the game has been in, and where in that list it is now. A
+// game is stateful and copyable, so a position is just a copy of it.
 template <typename Game_T>
 struct History {
   std::vector<Game_T> states        = {};
   int                 current_state = -1;
 
   void save(const Game_T& game) {
-    this->current_state += 1;
-    if (this->state.size() <= this->current_state) {
-      this->push_back(game);
-    } else {
-      this->states[current_state] = game;
-    }
+    // Playing on from an undone position drops what came after it: that
+    // future is not the game's any more.
+    this->states.resize(this->current_state + 1);
+    this->states.push_back(game);
+    this->current_state = (int)this->states.size() - 1;
   }
 
   bool undo(Game_T& game) {
@@ -203,7 +211,7 @@ struct History {
   }
 
   bool redo(Game_T& game) {
-    if (this->current_state >= this->states.size() - 1) {
+    if (this->current_state + 1 >= (int)this->states.size()) {
       return false;
     }
     this->current_state += 1;
@@ -212,7 +220,28 @@ struct History {
   };
 };
 
+// A game derives from this instead of Giocamo directly to get undo. Copying a
+// position needs the concrete game type, which is why this layer is a template
+// — run_game still only ever sees Giocamo and calls the three hooks above.
 template <typename Game_T>
-struct Giocamo_2 : Giocamo {
+struct Giocamo_With_History : Giocamo {
+  using Giocamo::Giocamo;
+
   History<Game_T> history;
+
+  Game_T& typed_game() { return static_cast<Game_T&>(game); }
+
+  void save_state() override { history.save(typed_game()); }
+
+  bool undo() override {
+    if (!history.undo(typed_game())) return false;
+    update_table_from_game();
+    return true;
+  }
+
+  bool redo() override {
+    if (!history.redo(typed_game())) return false;
+    update_table_from_game();
+    return true;
+  }
 };

@@ -41,6 +41,12 @@ struct Agent {
   // Pick an action index. Does NOT call resolve. Return -1 to indicate "not
   // ready yet".
   virtual int choose_action(Game& game, const Choice& choice) = 0;
+
+  // Forget whatever is kept between calls. The caller does this when the
+  // position changes under the agent — an undo, say — since a search cached
+  // for the choice it was thinking about would answer for a position that is
+  // no longer there.
+  virtual void reset() {}
 };
 
 struct Agent_Random : Agent {
@@ -73,6 +79,11 @@ struct Agent_Duel : Agent {
 
   int choose_action(Game& state, const Choice& choice) override {
     return agents[choice.player_index]->choose_action(state, choice);
+  }
+
+  void reset() override {
+    agents[0]->reset();
+    if (agents[1] != agents[0]) agents[1]->reset();
   }
 };
 
