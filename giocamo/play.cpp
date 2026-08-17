@@ -88,9 +88,16 @@ Agent* make_duel(
   );
 }
 
-void draw_game_over_screen(
-  const std::string& result_text, const std::vector<int>& scores
-) {
+static void draw_game_over_screen(const Giocamo& giocamo) {
+  auto scores      = giocamo.player_scores();
+  auto result_text = "";
+  if (scores[0] > scores[1])
+    result_text = "Player 1 wins!";
+  else if (scores[1] > scores[0])
+    result_text = "Player 2 wins!";
+  else
+    result_text = "It's a tie.";
+
   const int   W          = tt::WINDOW_WIDTH;
   const int   H          = tt::WINDOW_HEIGHT;
   const char* title      = "GAME OVER";
@@ -175,11 +182,12 @@ Agent* make_agent_pair(
 
 // The loop both call shapes share.
 static void run_game(
-  Giocamo&           giocamo,
-  Input_Feed&        input_feed,
-  Agent&             agent,
-  const Online*      online,
-  const std::string& window_title
+  Giocamo&                                          giocamo,
+  Input_Feed&                                       input_feed,
+  Agent&                                            agent,
+  const Online*                                     online,
+  const std::function<bool(Giocamo&, const Input&)> editor,
+  const std::string&                                window_title
 ) {
   auto& state      = giocamo.game;
   auto& table      = giocamo.table;
@@ -265,36 +273,19 @@ static void run_game(
       }
     }
 
-    if (playground) {
-      auto table_dirty = draw_editor_ui(table, input);
+    giocamo.draw(input);
 
-      // Replicate drop / rotate / shuffle to the remote so playground edits
-      // appear on both screens. Polling the drop also drains the event so it
-      // doesn't get replayed as a real move when we toggle off.
-      auto dropped = table.poll_dropped_thing();
-      table_dirty |= dropped.has_value();
-      table_dirty |= key_pressed(input, KEY_R);
-      table_dirty |= key_pressed(input, KEY_S);
-      if (online && table_dirty) send_table_state(*online, table);
+    if (playground) {
+      auto edited = editor(giocamo, input);
+
+      if (online && edited) send_table_state(*online, table);
       return false;
     }
-
-    giocamo.draw(input);
 
     // The game is over: its screen is drawn here, frame after frame, like any
     // other one. The loop ends when the window does.
     if (state.is_game_over()) {
-      if (!game_ended) {
-        scores = giocamo.player_scores();
-        if (scores[0] > scores[1])
-          result_text = "Player 1 wins!";
-        else if (scores[1] > scores[0])
-          result_text = "Player 2 wins!";
-        else
-          result_text = "It's a tie.";
-        game_ended = true;
-      }
-      draw_game_over_screen(result_text, scores);
+      draw_game_over_screen(giocamo);
       return false;
     }
 
@@ -352,5 +343,22 @@ void play_game(
   const Online* online = menu_result.is_online() ? &menu_result.online
                                                  : nullptr;
 
-  run_game(giocamo, input_feed, *agent, online, window_title);
+  auto editor = [](Giocamo& giocamo, const Input& input) {
+    auto table_edited = draw_editor_ui(giocamo.table, input);
+
+    // Replicate drop / rotate / shuffle to the remote so playground edits
+    // appear on both screens. Polling the drop also drains the event so it
+    // doesn't get replayed as a real move when we toggle off.
+    auto dropped = giocamo.table.poll_dropped_thing();
+    table_edited |= dropped.has_value();
+    table_edited |= key_pressed(input, KEY_R);
+    table_edited |= key_pressed(input, KEY_S);
+
+    // auto game_edited = draw_editor_ui(game);
+    // if (game_edited) game.update_table_from_game();
+
+    return table_edited;
+  };
+
+  run_game(giocamo, input_feed, *agent, online, editor, window_title);
 }

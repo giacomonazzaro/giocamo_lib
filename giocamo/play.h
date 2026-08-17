@@ -59,13 +59,6 @@ Agent* make_duel(
   Agent* local_agent, Agent* opponent, const Menu_Result& menu_result
 );
 
-// Game-over overlay for one frame: dims what has already been drawn and prints
-// `result_text` plus the two scores. Drawn from inside the game loop, like any
-// other screen, so nothing has to open or close a window for it.
-void draw_game_over_screen(
-  const std::string& result_text, const std::vector<int>& scores
-);
-
 // Parsed command-line options shared by every game app.
 //   --hot-seat        → vs_ai=false, skip_menu=true (one screen, two players).
 //   --skip-menu       → skip the menu, default to vs-AI.
@@ -123,14 +116,15 @@ struct Giocamo {
   // Read the game back from disk instead of dealing one, for --load. `path` is
   // empty unless one was given, and the game reads its usual one. Returns false
   // when there is nothing to read, and play_game deals instead.
-  virtual bool             load_game(const std::string& path) { return false; }
-  virtual void             draw(const Input& input) {}
-  virtual void             update_table_from_game() = 0;
-  virtual void             update_game_from_table() {}
-  virtual Agent*           agent_opponent() = 0;
-  virtual Agent*           agent_player() { return &agent_ui; }
-  virtual std::vector<int> player_scores() = 0;  // TODO(giacomo): not needed
-  virtual void             on_message(const nlohmann::json& msg) {}
+  virtual bool   load_game(const std::string& path) { return false; }
+  virtual void   draw(const Input& input) {}
+  virtual void   update_table_from_game() = 0;
+  virtual void   update_game_from_table() {}
+  virtual Agent* agent_opponent() = 0;
+  virtual Agent* agent_player() { return &agent_ui; }
+  virtual std::vector<int>
+               player_scores() const = 0;  // TODO(giacomo): not needed
+  virtual void on_message(const nlohmann::json& msg) {}
 };
 
 // Standard game loop. Initializes the game with the seat's seed, runs the

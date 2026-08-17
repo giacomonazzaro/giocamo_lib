@@ -118,6 +118,9 @@ struct Mindbug_Giocamo : Giocamo {
   mindbug::Game_State& mindbug_game() {
     return static_cast<mindbug::Game_State&>(game);
   }
+  const mindbug::Game_State& mindbug_game() const {
+    return static_cast<const mindbug::Game_State&>(game);
+  }
 
   Mindbug_Agent_UI& mindbug_agent_ui() {
     return static_cast<Mindbug_Agent_UI&>(agent_ui);
@@ -301,7 +304,7 @@ struct Mindbug_Giocamo : Giocamo {
   //   );
   // }
 
-  std::vector<int> player_scores() override {
+  std::vector<int> player_scores() const override {
     return {
       mindbug::compute_player_score(this->mindbug_game(), 0),
       mindbug::compute_player_score(this->mindbug_game(), 1),
@@ -309,7 +312,7 @@ struct Mindbug_Giocamo : Giocamo {
   }
 
   void draw(const Input& input) override {
-    printf("dsfsd\n");
+    // printf("dsfsd\n");
     auto edited = draw_editor_ui(mindbug_game());
     if (edited) update_table_from_game();
   }
