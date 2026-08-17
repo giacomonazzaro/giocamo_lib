@@ -186,6 +186,46 @@ struct Mindbug_Giocamo : Giocamo {
     printf("Saved debug snapshot to data/debug_*.json\n");
   }
 
+  // Leaving playground: the table is what the player arranged, so read it back
+  // into the game. Card Things carry the game's card indices, so a zone's
+  // children are the cards of that zone. The pending choice re-reads its
+  // targets from the game, so play continues from whatever was arranged.
+  void update_game_from_table() override {
+    table.is_drop_allowed = [](int, int, int) { return false; };
+
+    mindbug::Game_State& state = this->mindbug_game();
+
+    auto zone_cards = [&](const std::string& name) -> const std::vector<int>& {
+      return table.things[find_thing(table, name)].children();
+    };
+
+    for (int player = 0; player < 2; ++player) {
+      const std::string prefix = "p" + std::to_string(player) + "_";
+      mindbug::Player&  seat   = state.players[player];
+
+      auto& hand = zone_cards(prefix + "hand");
+      seat.hand.assign(hand.begin(), hand.end());
+      auto& draw_pile = zone_cards(prefix + "draw");
+      seat.draw_pile.assign(draw_pile.begin(), draw_pile.end());
+      auto& creatures = zone_cards(prefix + "creatures");
+      seat.creatures.assign(creatures.begin(), creatures.end());
+      auto& discard = zone_cards(prefix + "discard");
+      seat.discard.assign(discard.begin(), discard.end());
+
+      // A Mindbug is spent once its card is face down, so what is left is
+      // however many face-up ones sit in the container.
+      seat.mindbugs = 0;
+      for (int thing : zone_cards(prefix + "mindbugs")) {
+        if (table.things[thing].face_up) seat.mindbugs += 1;
+      }
+
+      seat.life = table.things[life_thing(player)].counter.value;
+    }
+
+    auto& played      = zone_cards("played");
+    state.played_card = played.empty() ? -1 : played.front();
+  }
+
   // --load: carry on from the snapshot. The pending choice is worked out again
   // from the phase that was saved; effects that still owed a decision are not
   // in the snapshot, so those are lost.
