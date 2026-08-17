@@ -127,6 +127,10 @@ struct Giocamo {
   virtual void save_state() {}
   virtual bool undo() { return false; }
   virtual bool redo() { return false; }
+  // The whole game state as JSON, and back. Online play sends this after every
+  // move, and the receiving side reads it and lays the table out again.
+  virtual std::string game_state_to_json() const { return ""; }
+  virtual void        game_state_from_json(const std::string& json) {}
   virtual bool draw_game_editor() { return false; }
   virtual bool load_game(const std::string& path) { return false; }
 };
@@ -191,8 +195,27 @@ struct Giocamo_With_History : Giocamo {
   History<Game_T> history;
 
   Game_T& typed_game() { return static_cast<Game_T&>(game); }
+  const Game_T& typed_game() const { return static_cast<const Game_T&>(game); }
 
   void save_state() override { history.save(typed_game()); }
+
+  std::string game_state_to_json() const override {
+    return to_json(typed_game(), 0, /*pretty=*/false);
+  }
+
+  // The pending choice holds functions, which JSON cannot carry, so the game
+  // works it out again from the state it just read, the same way load_game
+  // does.
+  void game_state_from_json(const std::string& json) override {
+    auto received = Game_T();
+    if (!from_json(json, received)) {
+      std::cerr << "could not read the game state sent by the other player\n";
+      return;
+    }
+    typed_game() = received;
+    game.begin_game();
+    update_table_from_game();
+  }
 
   bool undo() override {
     if (!history.undo(typed_game())) return false;

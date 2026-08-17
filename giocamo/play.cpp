@@ -40,6 +40,15 @@ void apply_table_state_message(
   }
 }
 
+// The whole game state, sent after every move the local player makes and after
+// every undo, so the other player reads it and lays the table out again.
+static void send_game_state(const Online& online, const Giocamo& giocamo) {
+  nlohmann::json message;
+  message["type"]       = "game_state";
+  message["game_state"] = giocamo.game_state_to_json();
+  send_message(online, message);
+}
+
 void send_table_state(const Online& online, const Table_State& table_state) {
   nlohmann::json msg;
   msg["type"]        = "table_state";
@@ -209,14 +218,23 @@ static void run_game(
     // The UI agent reads the current frame through the input it is handed.
     giocamo.agent_ui.input = &input;
 
-    // Drain any messages the remote sent us this frame. Two kinds matter
-    // here: a "playground" flip from the other peer (mirror it locally) and a
-    // "table_state" snapshot (apply it so both screens stay in sync). Anything
-    // else is handed to the game-specific on_message hook.
+    // Drain any messages the remote sent us this frame. Three kinds matter
+    // here: a "game_state" from the other player (read it and lay the table out
+    // again), a "playground" flip (mirror it locally) and a "table_state"
+    // snapshot, which only playground mode sends (apply it so both screens show
+    // the same arrangement). Anything else is handed to the game-specific
+    // on_message hook.
     if (online) {
       while (auto incoming = try_recv_message(*online)) {
         std::string type = incoming->value("type", "");
-        if (type == "playground") {
+        if (type == "game_state") {
+          giocamo.game_state_from_json(incoming->value("game_state", ""));
+          // The state already contains the move, and the action index that
+          // came before it is still queued. Agent_Remote must not resolve it a
+          // second time, so it is thrown away here.
+          while (try_recv_message(*online, "action")) {
+          }
+        } else if (type == "playground") {
           bool remote_on = incoming->value("on", false);
           if (remote_on != playground) {
             playground = remote_on;
@@ -276,6 +294,10 @@ static void run_game(
       if (online && table_edited) {
         send_table_state(*online, table);
       }
+      // Editing the game state by hand is a change like any other move.
+      if (online && game_edited) {
+        send_game_state(*online, giocamo);
+      }
       return false;
     }
 
@@ -283,8 +305,14 @@ static void run_game(
     // search keyed on the pending choice, so a jump has to clear it: the
     // restored choice can look like the one an agent is thinking about while
     // the position behind it is a different one.
-    if (key_pressed(input, KEY_Z) && giocamo.undo()) agent.reset();
-    if (key_pressed(input, KEY_X) && giocamo.redo()) agent.reset();
+    if (key_pressed(input, KEY_Z) && giocamo.undo()) {
+      agent.reset();
+      if (online) send_game_state(*online, giocamo);
+    }
+    if (key_pressed(input, KEY_X) && giocamo.redo()) {
+      agent.reset();
+      if (online) send_game_state(*online, giocamo);
+    }
 
     // The game is over: its screen is drawn here, frame after frame, like any
     // other one. The loop ends when the window does.
@@ -300,6 +328,10 @@ static void run_game(
       giocamo.update_table_from_game();
       if (is_action_from_player) {
         giocamo.save_state();
+        // The other player resolved the same action from the index it was
+        // sent, but the state says so directly, and it also covers whatever
+        // the action set that the index alone does not.
+        if (online) send_game_state(*online, giocamo);
       }
     }
 
