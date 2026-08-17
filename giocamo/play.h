@@ -143,42 +143,6 @@ void play_game(
   const std::string& window_title
 );
 
-// Standard game loop. Runs the table-top interactive loop until the window
-// closes or the game ends; on game-over draws the result screen.
-//
-// `state`          — game state (subclass of Game).
-// `table`          — fully built Table_State (cards + table_state + root).
-// `ui_state`       — shared UI state; play_game clears its highlighted_things
-//                    when toggling playground mode on so stale "legal move"
-//                    borders don't linger over a paused game.
-// `agent`          — the agent driving both seats (typically via Agent_Duel).
-// `input_feed`     — input source (live, record, or playback).
-// `window_title`          — used if `run_tabletop` opens the window itself.
-// `update_table_from_game`— invoked after every resolved Choice; copies the
-//                           game state into the matching table children.
-// `compute_scores`        — per-player final score for the game-over screen.
-//                           Skipped (no screen) if null.
-// `update_game_from_table`— invoked when leaving playground: reads the
-//                           rearranged table back into the game state so play
-//                           resumes from it. If null, the table is instead
-//                           restored from the game via update_table_from_game.
-// `on_message`            — handles online messages play_game doesn't itself
-//                           recognize (anything but
-//                           "playground"/"table_state").
-void play_game(
-  Game&                                      state,
-  Table_State&                               table,
-  UI_State&                                  ui_state,
-  Agent&                                     agent,
-  Input_Feed&                                input_feed,
-  const Menu_Result&                         menu_result,
-  const std::string&                         window_title,
-  std::function<void()>                      update_table_from_game,
-  std::function<std::vector<int>()>          compute_scores,
-  std::function<void()>                      update_game_from_table = nullptr,
-  std::function<void(const nlohmann::json&)> on_message             = nullptr
-);
-
 void play_game(
   Giocamo& giocamo, Play_Options& options, const std::string& window_title
 );

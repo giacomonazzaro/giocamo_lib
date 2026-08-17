@@ -182,12 +182,11 @@ Agent* make_agent_pair(
 
 // The loop both call shapes share.
 static void run_game(
-  Giocamo&                                          giocamo,
-  Input_Feed&                                       input_feed,
-  Agent&                                            agent,
-  const Online*                                     online,
-  const std::function<bool(Giocamo&, const Input&)> editor,
-  const std::string&                                window_title
+  Giocamo&           giocamo,
+  Input_Feed&        input_feed,
+  Agent&             agent,
+  const Online*      online,
+  const std::string& window_title
 ) {
   auto& state      = giocamo.game;
   auto& table      = giocamo.table;
@@ -261,9 +260,20 @@ static void run_game(
     }
 
     if (playground) {
-      auto edited = editor(giocamo, input);
+      auto table_edited = draw_editor_ui(giocamo.table, input);
 
-      if (online && edited) {
+      // Replicate drop / rotate / shuffle to the remote so playground edits
+      // appear on both screens. Polling the drop also drains the event so it
+      // doesn't get replayed as a real move when we toggle off.
+      auto dropped = giocamo.table.poll_dropped_thing();
+      table_edited |= dropped.has_value();
+      table_edited |= key_pressed(input, KEY_R);
+      table_edited |= key_pressed(input, KEY_S);
+
+      auto game_edited = giocamo.draw_game_editor();
+      if (game_edited) giocamo.update_table_from_game();
+
+      if (online && table_edited) {
         send_table_state(*online, table);
       }
       return false;
@@ -342,22 +352,5 @@ void play_game(
   const Online* online = menu_result.is_online() ? &menu_result.online
                                                  : nullptr;
 
-  auto editor = [](Giocamo& giocamo, const Input& input) {
-    auto table_edited = draw_editor_ui(giocamo.table, input);
-
-    // Replicate drop / rotate / shuffle to the remote so playground edits
-    // appear on both screens. Polling the drop also drains the event so it
-    // doesn't get replayed as a real move when we toggle off.
-    auto dropped = giocamo.table.poll_dropped_thing();
-    table_edited |= dropped.has_value();
-    table_edited |= key_pressed(input, KEY_R);
-    table_edited |= key_pressed(input, KEY_S);
-
-    auto game_edited = giocamo.draw_game_editor();
-    // if (game_edited) game.update_table_from_game();
-
-    return table_edited || game_edited;
-  };
-
-  run_game(giocamo, input_feed, *agent, online, editor, window_title);
+  run_game(giocamo, input_feed, *agent, online, window_title);
 }
