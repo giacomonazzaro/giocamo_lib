@@ -193,12 +193,6 @@ static void run_game(
   auto& table      = giocamo.table;
   bool  playground = false;
 
-  // Set once the game is over, so the loop switches from playing to showing
-  // the result instead of ending.
-  bool             game_ended = false;
-  std::string      result_text;
-  std::vector<int> scores;
-
   giocamo.update_table_from_game();
 
   // Leaving playground: commit the rearranged table back into the game state
@@ -209,17 +203,9 @@ static void run_game(
     // giocamo.update_table_from_game();
   };
 
-  // Each frame: ask game_frame for the next move. When it resolves a choice
-  // (returns nullopt), let the game-specific code refresh the table from the
-  // updated game state.
-  //
-  // Playground mode pauses the game loop and lets the user rearrange the
-  // table freely; the toggle button flips it. While ON the agent never sees
-  // drag/drop events, so games can't progress.
-  //
   // Returning true tells run_tabletop to exit the loop — we use that to
   // stop as soon as the game ends so the game-over screen can take over.
-  auto update = [&](Table_State& table, const Input& input) {
+  auto update = [&](Table_State& table, const Input& input) -> bool {
     // The UI agent reads the current frame through the input it is handed.
     giocamo.agent_ui.input = &input;
 
@@ -313,7 +299,7 @@ void play_game(
 ) {
   auto input_feed  = Input_Feed(options.input_mode, options.input_file_path);
   auto menu_result = run_menu(
-    "Mindbug",
+    window_title,
     tt::WINDOW_WIDTH,
     tt::WINDOW_HEIGHT,
     input_feed,

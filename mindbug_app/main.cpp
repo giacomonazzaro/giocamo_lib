@@ -49,8 +49,6 @@ static constexpr int LIFE_COUNTER_SIZE = 90;
 // Mindbug on the table. The table is laid out once here; play_game deals the
 // game and drives the loop through these hooks.
 struct Mindbug_Giocamo : Giocamo {
-  bool show_opponent_hand = true;
-
   Mindbug_Giocamo(mindbug::Game_State& game, Mindbug_Agent_UI& agent_ui)
       : Giocamo(game, agent_ui) {}
 
@@ -172,7 +170,7 @@ struct Mindbug_Giocamo : Giocamo {
 
       // You always see your own hand; the opponent's is face down unless both
       // players share this screen.
-      const bool visible = player == bottom_player || show_opponent_hand;
+      const bool visible = player == bottom_player || this->hot_seat;
       table.things[find_thing(table, prefix + "hand")].face_up = visible;
     }
 
