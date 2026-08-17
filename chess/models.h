@@ -1,6 +1,7 @@
 #pragma once
 
 #include <game/game.h>
+#include <struct/visit.hpp>
 
 #include <array>
 
@@ -73,3 +74,17 @@ struct Game_State : Game {
 };
 
 }  // namespace chess
+
+VISITABLE_STRUCT(
+  chess::Game_State,
+  board,
+  current_player,
+  winner,
+  en_passant_target,
+  halfmove_clock,
+  white_can_castle_kingside,
+  white_can_castle_queenside,
+  black_can_castle_kingside,
+  black_can_castle_queenside,
+  game_over
+);

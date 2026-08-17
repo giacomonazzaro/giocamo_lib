@@ -19,6 +19,9 @@
 #include <string>
 #include <vector>
 
+#include <struct/imgui.h>  // for draw_editor_ui()
+#include <struct/json.h>   // for to_json()
+
 #include "agent_ui.h"
 #include "ui.h"
 
@@ -88,13 +91,13 @@ static Agent* make_mcts_agent() {
 
 // Chess on the table. The table is laid out once here; play_game sets the
 // position up and drives the loop through these hooks.
-struct Chess_Giocamo : Giocamo {
+struct Chess_Giocamo : Giocamo_With_History<chess::Game_State> {
   // --watch: the two bots play each other (White = minimax, Black = MCTS) and
   // we just spectate.
   bool watch = false;
 
   Chess_Giocamo(chess::Game_State& game, Chess_Agent_UI& agent_ui)
-      : Giocamo(game, agent_ui) {}
+      : Giocamo_With_History<chess::Game_State>(game, agent_ui) {}
 
   chess::Game_State& chess_game() {
     return static_cast<chess::Game_State&>(game);
