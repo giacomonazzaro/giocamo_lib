@@ -180,7 +180,13 @@ Choice make_play_choice(Game_State& state) {
 }
 
 Game_State quick_setup(std::optional<int> seed) {
-  auto rng = std::mt19937(seed ? (unsigned)*seed : std::random_device{}());
+  auto game = Game_State();
+  game.init(seed ? *seed : (int)std::random_device{}());
+  return game;
+}
+
+void Game_State::init(int seed) {
+  auto rng = std::mt19937((unsigned)seed);
 
   auto game = Game_State();
 
@@ -213,8 +219,9 @@ Game_State quick_setup(std::optional<int> seed) {
 
   sort_hand(game, 0);
   sort_hand(game, 1);
-  game.begin_game();  // The opening decision to present.
-  return game;
+
+  *this = game;
+  begin_game();  // The opening decision to present.
 }
 
 }  // namespace tressette

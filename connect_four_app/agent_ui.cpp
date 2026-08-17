@@ -12,8 +12,8 @@ int Connect_Four_Agent_UI::choose_action(Game& game, const Choice&) {
   // the column's position in `columns`, which matches the action ordering
   // next_choice exposes (both call legal_columns). Returns -1 until a click.
   for (int i = 0; i < (int)columns.size(); ++i) {
-    int column_id = columns_offset + columns[i];
-    if (thing_pressed(column_id, *table_state, *ui_state->input)) {
+    int column_id = COLUMNS_OFFSET + columns[i];
+    if (thing_pressed(column_id, table, *input)) {
       return i;
     }
   }

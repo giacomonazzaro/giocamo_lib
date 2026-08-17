@@ -244,7 +244,13 @@ Choice Game_State::next_choice() {
 }
 
 Game_State quick_setup(std::optional<int> seed) {
-  std::mt19937 rng(seed ? (unsigned)*seed : std::random_device{}());
+  Game_State game;
+  game.init(seed ? *seed : (int)std::random_device{}());
+  return game;
+}
+
+void Game_State::init(int seed) {
+  std::mt19937 rng((unsigned)seed);
 
   Game_State game;
 
@@ -277,8 +283,9 @@ Game_State quick_setup(std::optional<int> seed) {
 
   sort_hand(game, 0);
   sort_hand(game, 1);
-  game.begin_game();  // The opening decision to present.
-  return game;
+
+  *this = game;
+  begin_game();  // The opening decision to present.
 }
 
 }  // namespace scopa

@@ -69,29 +69,29 @@ void update_stacks(Table_State& table_state, Game_State& gods_state) {
   refresh(find_thing(table_state, "shared_deck"), gods_state.shared_deck);
 }
 
-int Agent_UI::choose_action(Game& state, const Choice& choice) {
+int Gods_Agent_UI::choose_action(Game& state, const Choice& choice) {
   Game_State& gods_state  = static_cast<Game_State&>(state);
   Choose      action_type = choice.actions(state);
 
   int total_options = action_options_count(action_type);
   if (total_options == 1 && choice.description != "main") return 0;
 
-  Stack_Indices my_zones   = stack_indices(*table_state, choice.player_index);
+  Stack_Indices my_zones   = stack_indices(table, choice.player_index);
   int           hand_stack = my_zones.hand;
   int           play_stack = my_zones.wonders;
 
   // Set drag-and-drop permission (safe to call every frame).
-  table_state->is_drop_allowed = [hand_stack,
+  table.is_drop_allowed = [hand_stack,
                                   play_stack](int src, int dst, int) {
     if (src == dst) return true;
     return src == hand_stack && dst == play_stack;
   };
 
   // Clear highlights — repopulated below for this frame.
-  ui_state->highlighted_things.clear();
+  ui_state.highlighted_things.clear();
 
   // Handle dropped card (drag-and-drop to play from hand).
-  auto dropped = table_state->poll_dropped_thing();
+  auto dropped = table.poll_dropped_thing();
   if (dropped) {
     auto [orig, target, dropped_card_id] = *dropped;
     if (choice.description == "main" && orig == hand_stack &&
@@ -126,12 +126,12 @@ int Agent_UI::choose_action(Game& state, const Choice& choice) {
   int       button_width  = 140;
   int       all_buttons_w = button_count * button_width + button_count * gap;
   Rectangle all_buttons =
-    ui_state->place(all_buttons_w, button_height, "right", "center", gap);
+    ui_state.place(all_buttons_w, button_height, "right", "center", gap);
   Rectangle button = {
     all_buttons.x, all_buttons.y, (float)button_width, (float)button_height
   };
 
-  const Input& input         = *(this->ui_state->input);
+  const Input& input         = *(this->input);
   bool         mouse_clicked = input.left_pressed;
 
   if (auto* opt = std::get_if<Choose_Option>(&action_type)) {
@@ -149,16 +149,16 @@ int Agent_UI::choose_action(Game& state, const Choice& choice) {
       Card_Id cid = unpack_card_id(cc->targets[i]);
       if (Card_Id::is_null(cid)) {
         if (immediate_button(button, done_label, input)) {
-          ui_state->highlighted_things.clear();
+          ui_state.highlighted_things.clear();
           return i;
         }
         button.x += button.width + (float)gap;
       } else {
         int kt_card_id                  = gods_state.get_card(cid).id;
-        ui_state->highlighted_things[i] = kt_card_id;
+        ui_state.highlighted_things[i] = kt_card_id;
         if (mouse_clicked && choice.description != "main") {
-          if (thing_pressed(kt_card_id, *table_state, input)) {
-            ui_state->highlighted_things.clear();
+          if (thing_pressed(kt_card_id, table, input)) {
+            ui_state.highlighted_things.clear();
             return i;
           }
         }
@@ -191,9 +191,9 @@ int Agent_UI::choose_action(Game& state, const Choice& choice) {
     for (const Card_Id& cid : all_card_ids) {
       int kt_card_id = gods_state.get_card(cid).id;
       if (card_multiselection.find(cid) == card_multiselection.end()) {
-        ui_state->highlighted_things[kt_card_id] = kt_card_id;
+        ui_state.highlighted_things[kt_card_id] = kt_card_id;
         if (frame_mouse_clicked) {
-          if (thing_pressed(kt_card_id, *table_state, input)) {
+          if (thing_pressed(kt_card_id, table, input)) {
             card_multiselection.insert(cid);
             frame_mouse_clicked = 0;
           }
@@ -220,7 +220,7 @@ int Agent_UI::choose_action(Game& state, const Choice& choice) {
           // Without combination decoding we resolve by trial; fallback to 0.
           (void)idx;
         }
-        ui_state->highlighted_things.clear();
+        ui_state.highlighted_things.clear();
         card_multiselection.clear();
         return 0;
       }

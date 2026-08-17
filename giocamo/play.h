@@ -41,14 +41,13 @@ void send_table_state(const Online& online, const Table_State& table_state);
 // mode == ONLINE). `cli_seed` is folded into the result's seed for solo
 // play; online uses the matchmaker's seed instead.
 Menu_Result run_menu(
-  const std::string& title,
-  int                window_width,
-  int                window_height,
-  Input_Feed&        inputs,
-  int                argc,
-  char**             argv,
-  bool               skip_menu,
-  int                cli_seed
+  const std::string&               title,
+  int                              window_width,
+  int                              window_height,
+  Input_Feed&                      inputs,
+  std::optional<Online_Connection> local_connection,
+  bool                             skip_menu,
+  int                              cli_seed
 );
 
 // Wrap a local Agent into the right duel for the chosen mode:
@@ -135,18 +134,8 @@ struct Giocamo {
   virtual bool load_game(const std::string& path) { return false; }
 };
 
-// Standard game loop. Initializes the game with the seat's seed, runs the
-// table-top loop until the window closes or the game ends, then draws the
-// result screen.
-void play_game(
-  Giocamo&           giocamo,
-  UI_State&          ui_state,
-  Agent&             agent,
-  Input_Feed&        input_feed,
-  const Menu_Result& menu_result,
-  const std::string& window_title
-);
-
+// Standard game loop. Runs the menu, initializes the game with the seat's seed,
+// lays the table out, then runs the table-top loop until the window closes.
 void play_game(
   Giocamo& giocamo, Play_Options& options, const std::string& window_title
 );

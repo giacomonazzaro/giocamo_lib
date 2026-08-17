@@ -66,6 +66,7 @@ struct Game_State : Game {
 
   bool   is_game_over() const override { return game_over; }
   Choice next_choice() override;
+  void   init(int seed = 0) override;
 };
 
 // The deck of cards. Fixed at setup and never modified during play, so it lives

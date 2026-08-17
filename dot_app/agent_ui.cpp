@@ -15,7 +15,7 @@
 
 int Dot_Agent_UI::choose_action(Game& game, const Choice& choice) {
   auto&        state = static_cast<dot::Game_State&>(game);
-  const Input& input = *ui_state->input;
+  const Input& input = *this->input;
 
   // The Commit / Ok button sits in the gap between the hand and the play area.
   Rectangle button = {1010.0f, 862.0f, 170.0f, 56.0f};
@@ -23,7 +23,7 @@ int Dot_Agent_UI::choose_action(Game& game, const Choice& choice) {
   // Acknowledge pause: the shared pool is revealed; wait for the player to
   // look at what the opponent played and press Ok before it is scored.
   if (choice.description == "acknowledge") {
-    ui_state->highlighted_things.clear();
+    ui_state.highlighted_things.clear();
     render_text(
       "Cards revealed - press Ok to score",
       640.0f,
@@ -48,13 +48,13 @@ int Dot_Agent_UI::choose_action(Game& game, const Choice& choice) {
                                ? array<const int>(state.players[seat].hand)
                                : array<const int>(state.players[1 - seat].pool);
 
-  int                     play_area_id = find_thing(*table_state, "play_area");
+  int                     play_area_id = find_thing(table, "play_area");
   const std::vector<int>& selected =
-    table_state->things[play_area_id].children();
+    table.things[play_area_id].children();
 
   // Highlight every card the player may drag this turn.
-  ui_state->highlighted_things.clear();
-  for (int id : targets) ui_state->highlighted_things[id] = id;
+  ui_state.highlighted_things.clear();
+  for (int id : targets) ui_state.highlighted_things[id] = id;
 
   // Instruction at the top center, Commit button between hand and play area.
   std::string instruction = split ? "Drag 3 cards to the play area, then Commit"
@@ -79,6 +79,6 @@ int Dot_Agent_UI::choose_action(Game& game, const Choice& choice) {
     }
   }
   std::sort(positions.begin(), positions.end());
-  ui_state->highlighted_things.clear();
+  ui_state.highlighted_things.clear();
   return (int)dot::combination_rank((int)targets.size(), positions);
 }

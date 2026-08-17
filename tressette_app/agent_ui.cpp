@@ -10,9 +10,9 @@
 int Tressette_Agent_UI::choose_action(Game& game, const Choice& choice) {
   auto actions = choice.actions(game);
   if (choice.description == "acknowledge") {
-    auto middle = world_rect(find_thing(*table_state, "table"), *table_state);
+    auto middle = world_rect(find_thing(table, "table"), table);
     auto rect   = place_next(middle, 100, 50, "right", "center", 100);
-    if (immediate_button(rect, "Ok", *this->ui_state->input)) {
+    if (immediate_button(rect, "Ok", *this->input)) {
       return 0;
     }
   }
@@ -22,11 +22,11 @@ int Tressette_Agent_UI::choose_action(Game& game, const Choice& choice) {
   auto legal_set = std::set<int>(cc->targets.begin(), cc->targets.end());
 
   int hand_id =
-    find_thing(*table_state, choice.player_index == 0 ? "p0_hand" : "p1_hand");
-  int table_id = find_thing(*table_state, "table");
+    find_thing(table, choice.player_index == 0 ? "p0_hand" : "p1_hand");
+  int table_id = find_thing(table, "table");
 
   auto* state_ptr = static_cast<tressette::Game_State*>(&game);
-  table_state->is_drop_allowed =
+  table.is_drop_allowed =
     [hand_id, table_id, legal_set, this, state_ptr](int src, int dst, int cid) {
       if (src == dst) return true;
       return state_ptr->current_player == this->player_index &&
@@ -34,15 +34,15 @@ int Tressette_Agent_UI::choose_action(Game& game, const Choice& choice) {
     };
 
   // Highlight legal cards so the draw callback can draw a border around them.
-  ui_state->highlighted_things.clear();
-  for (int cid : legal_set) ui_state->highlighted_things[cid] = cid;
+  ui_state.highlighted_things.clear();
+  for (int cid : legal_set) ui_state.highlighted_things[cid] = cid;
 
-  auto dropped = table_state->poll_dropped_thing();
+  auto dropped = table.poll_dropped_thing();
   if (!dropped) return -1;
 
   auto [src, dst, dropped_id] = *dropped;
   if (src == hand_id && dst == table_id && legal_set.count(dropped_id)) {
-    ui_state->highlighted_things.clear();
+    ui_state.highlighted_things.clear();
     for (int i = 0; i < (int)cc->targets.size(); ++i) {
       if (cc->targets[i] == dropped_id) return i;
     }

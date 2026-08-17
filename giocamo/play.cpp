@@ -43,9 +43,13 @@ void apply_table_state_message(
 // The whole game state, sent after every move the local player makes and after
 // every undo, so the other player reads it and lays the table out again.
 static void send_game_state(const Online& online, const Giocamo& giocamo) {
+  auto game_state = giocamo.game_state_to_json();
+  // A game that cannot be written as JSON sends nothing. The other player then
+  // moves forward on the action index alone, which Agent_Remote already sends.
+  if (game_state.empty()) return;
   nlohmann::json message;
   message["type"]       = "game_state";
-  message["game_state"] = giocamo.game_state_to_json();
+  message["game_state"] = game_state;
   send_message(online, message);
 }
 

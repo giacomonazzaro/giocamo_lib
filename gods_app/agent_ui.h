@@ -1,11 +1,18 @@
 #pragma once
 
-#include <game/agent.h>
+// gods/models.h before anything that pulls raylib in: raylib defines
+// RED/GREEN/BLUE as macros and they would expand inside Card_Color.
 #include <gods/models.h>
+//
+#include <game/agent.h>
+#include <giocamo/play.h>
+#include <tabletop/config.h>
 #include <tabletop/tabletop.h>
 #include <tabletop/ui.h>
 
 #include <set>
+
+#include "ui.h"
 
 // Thing-ids of a given player's zones, looked up by the names
 // make_gods_stacks() gives them ("p0_deck", "p1_hand", ...).
@@ -40,14 +47,13 @@ struct Card_Id_Less {
 
 // UI-driven agent: reads drag/drop, button clicks, and card presses from the
 // player to feed choose_action with an action index. Mirrors agent_ui.py.
-struct Agent_UI : Agent {
-  Table_State*                    table_state;
-  UI_State*                       ui_state;
-  int                             bottom_player;
-  std::set<Card_Id, Card_Id_Less> card_multiselection;
+struct Gods_Agent_UI : Agent_UI {
+  // The seat this screen plays. Set from Giocamo::bottom_player.
+  int bottom_player = 0;
+  // Highlights plus the power-edit target. The card draw callbacks read it.
+  Gods_UI ui_state = Gods_UI(tt::WINDOW_WIDTH, tt::WINDOW_HEIGHT);
 
-  Agent_UI(Table_State* t, UI_State* u, int bp)
-      : table_state(t), ui_state(u), bottom_player(bp) {}
+  std::set<Card_Id, Card_Id_Less> card_multiselection;
 
   void message(const std::string&) override {}
 

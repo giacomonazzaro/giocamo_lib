@@ -83,8 +83,8 @@ int Scopa_Agent_UI::choose_action(Game& game, const Choice& choice) {
   if (!option || option->targets.empty()) return -1;
 
   const int hand_id =
-    find_thing(*table_state, choice.player_index == 0 ? "p0_hand" : "p1_hand");
-  const int table_id = find_thing(*table_state, "table");
+    find_thing(table, choice.player_index == 0 ? "p0_hand" : "p1_hand");
+  const int table_id = find_thing(table, "table");
 
   // Cards in the hand that the rules let the player play. Every card in
   // hand is legal in Scopa — the action set just varies per card.
@@ -97,7 +97,7 @@ int Scopa_Agent_UI::choose_action(Game& game, const Choice& choice) {
   // we're not already mid-pick. Once a card has been played-but-not-resolved
   // (waiting on capture choice) the only thing allowed is clicking a button.
   Scopa_Agent_UI* self         = this;
-  table_state->is_drop_allowed = [hand_id,
+  table.is_drop_allowed = [hand_id,
                                   table_id,
                                   playable_hand,
                                   self,
@@ -110,31 +110,31 @@ int Scopa_Agent_UI::choose_action(Game& game, const Choice& choice) {
 
   // While picking, highlight the table cards that belong to at least one of
   // the remaining capture options.
-  ui_state->highlighted_things.clear();
+  ui_state.highlighted_things.clear();
   if (pending_played_card_id == -1) {
     for (int card_id : playable_hand)
-      ui_state->highlighted_things[card_id] = card_id;
+      ui_state.highlighted_things[card_id] = card_id;
   } else {
     for (const auto& subset : pending_capture_options) {
       for (int card_id : subset)
-        ui_state->highlighted_things[card_id] = card_id;
+        ui_state.highlighted_things[card_id] = card_id;
     }
-    ui_state->highlighted_things[pending_played_card_id] =
+    ui_state.highlighted_things[pending_played_card_id] =
       pending_played_card_id;
   }
 
   // Capture picker has priority: if we're already mid-pick, render it and
   // wait for the click.
   if (pending_played_card_id != -1) {
-    int chosen_action = draw_capture_picker(*this, state, *ui_state->input);
+    int chosen_action = draw_capture_picker(*this, state, *input);
     if (chosen_action == -1) return -1;
     clear_pending(*this);
-    ui_state->highlighted_things.clear();
+    ui_state.highlighted_things.clear();
     return chosen_action;
   }
 
   // Otherwise watch for a drop from the hand to the table.
-  auto dropped = table_state->poll_dropped_thing();
+  auto dropped = table.poll_dropped_thing();
   if (!dropped) return -1;
 
   auto [src, dst, dropped_id] = *dropped;
@@ -152,7 +152,7 @@ int Scopa_Agent_UI::choose_action(Game& game, const Choice& choice) {
   if (matching_indices.empty()) return -1;
 
   if (matching_indices.size() == 1) {
-    ui_state->highlighted_things.clear();
+    ui_state.highlighted_things.clear();
     return matching_indices[0];
   }
 

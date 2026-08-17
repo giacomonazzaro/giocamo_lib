@@ -32,6 +32,7 @@
 
 #include <nlohmann/json.hpp>
 
+#include "../struct/imgui.h"
 #include "../struct/json.h"
 #include "../tabletop/tabletop_json.h"
 #include "agent_ui.h"
@@ -74,51 +75,6 @@ static void load_card_designs() {
 }
 
 }  // namespace fs_helpers
-
-static int random_int(std::mt19937& rng, int lo, int hi) {
-  return std::uniform_int_distribution<int>(lo, hi)(rng);
-}
-
-// All cards drawn from the shared deck; players start with 5-card hands.
-static Game_State quick_setup(std::optional<int> seed) {
-  std::mt19937 rng(seed ? *seed : std::random_device{}());
-  fs_helpers::load_card_designs();
-
-  Game_State game;
-
-  // Build all_cards from card_designs.
-  for (const auto& d : card_designs) {
-    Card c;
-    c.id        = d->id;
-    c.card_type = d->card_type;
-    c.color     = d->color;
-    c.power     = random_int(rng, 1, 5);
-    game.all_cards.push_back(c);
-  }
-
-  // Two empty players; shared deck holds every card id, shuffled.
-  Player p0;
-  p0.name = "Player 1";
-  Player p1;
-  p1.name      = "Player 2";
-  game.players = {p0, p1};
-
-  for (const auto& c : game.all_cards) game.shared_deck.push_back(c.id);
-  std::shuffle(game.shared_deck.begin(), game.shared_deck.end(), rng);
-
-  // Deal opening 5-card hands.
-  for (Player& p : game.players) {
-    for (int i = 0; i < 5; ++i) {
-      if (game.shared_deck.empty()) break;
-      int cid = game.shared_deck.back();
-      game.shared_deck.pop_back();
-      p.hand.push_back(cid);
-    }
-  }
-
-  game.begin_game();  // The opening decision to present.
-  return game;
-}
 
 // Push gods_state's deck/hand/discard/peoples/wonders/shared_deck into the
 // matching stacks (looked up by name), then refresh each stack's card
@@ -389,7 +345,7 @@ static void handle_debug_save(
   // load path's per-frame update_stacks would snap cards back to
   // whatever gods_state.players[*] says.
   sync_game_state_from_table(table_state, gods_state);
-  save_to_json<Game_State>(gods_state, "data/debug_gods_state.json");
+  save_to_json<Game_State>(gods_state, "data/debug_game_state.json");
   save_to_json<Table_Layout>(table_state, "data/debug_table_state.json");
   printf("Saved debug snapshot to data/debug_*.json\n");
 }
@@ -453,210 +409,93 @@ static void handle_discard_expand(
   }
 }
 
-// Broadcast all card state to the remote player.
-static void broadcast_cards(
-  const Online& online, const Game_State& gods_state
-) {
-  nlohmann::json cards = nlohmann::json::array();
-  for (const Card& c : gods_state.all_cards) {
-    nlohmann::json j;
-    j["power"]     = c.power;
-    j["counters"]  = c.counters;
-    j["destroyed"] = c.destroyed;
-    j["owner"]     = c.owner;
-    cards.push_back(j);
+// Gods on the table. The table is laid out once here; play_game deals the game
+// and drives the loop through these hooks.
+struct Gods_Giocamo : Giocamo_With_History<Game_State> {
+  Gods_Giocamo(Game_State& game, Gods_Agent_UI& agent_ui)
+      : Giocamo_With_History<Game_State>(game, agent_ui) {}
+
+  Game_State& gods_game() { return static_cast<Game_State&>(game); }
+  const Game_State& gods_game() const {
+    return static_cast<const Game_State&>(game);
   }
-  nlohmann::json msg;
-  msg["type"]      = "all_cards";
-  msg["all_cards"] = cards;
-  send_message(online, msg);
-}
 
-// All CLI options understood by the binary.
-struct Cli_Args {
-  bool        skip_menu_vs_ai = false;
-  Input_Mode  input_mode      = Input_Mode::Live;
-  std::string input_file_path;  // For Record/Playback.
-  int         window_width  = tt::WINDOW_WIDTH;
-  int         window_height = tt::WINDOW_HEIGHT;
-  // When true, boot from data/debug_*.json (the saved layout + game state).
-  // Default is a fresh deal via quick_setup; --load opts into the snapshot.
-  bool load_from_disk = false;
-  // --hot-seat: two humans share the screen. Skips the menu and routes the
-  // opponent seat to the same Agent_UI as the local one.
-  bool hot_seat = false;
-};
-VISITABLE_STRUCT(
-  Cli_Args,
-  skip_menu_vs_ai,
-  input_mode,
-  input_file_path,
-  window_width,
-  window_height,
-  load_from_disk,
-  hot_seat
-);
-
-static Cli_Args parse_cli_args(int argc, char** argv) {
-  Cli_Args args;
-  for (int i = 1; i < argc; ++i) {
-    std::string a = argv[i];
-    if (a == "agent") {
-      args.skip_menu_vs_ai = true;
-    } else if (a == "--load") {
-      args.load_from_disk = true;
-    } else if (a == "--hot-seat") {
-      args.hot_seat = true;
-    } else if (a.rfind("--record=", 0) == 0) {
-      args.input_mode      = Input_Mode::Record;
-      args.input_file_path = a.substr(9);
-    } else if (a.rfind("--playback=", 0) == 0) {
-      args.input_mode      = Input_Mode::Playback;
-      args.input_file_path = a.substr(11);
-    } else if (a.rfind("--width=", 0) == 0) {
-      args.window_width = std::stoi(a.substr(8));
-    } else if (a.rfind("--height=", 0) == 0) {
-      args.window_height = std::stoi(a.substr(9));
-    }
+  Gods_Agent_UI& gods_agent_ui() {
+    return static_cast<Gods_Agent_UI&>(agent_ui);
   }
-  print(args);
-  return args;
-}
 
-static void init_table_and_gods_states(
-  Game_State&        gods_state,
-  Table_State&       table_state,
-  int                bottom_player,
-  int                window_width,
-  int                window_height,
-  bool               load_from_disk,
-  std::optional<int> seed
-) {
-  // Card hooks (Card::on_played etc.) dispatch through the global card_designs
-  // registry, so it must be populated before any gameplay runs — regardless of
-  // whether the game state comes from quick_setup or from a JSON snapshot.
-  fs_helpers::load_card_designs();
-  if (!load_from_disk) {
-    // Online peers pass the same seed (negotiated during the handshake) so
-    // both sides shuffle the deck identically.
-    gods_state = quick_setup(seed);
+  void init_table() override {
+    Game_State&    state  = this->gods_game();
+    Gods_Agent_UI& player = this->gods_agent_ui();
+    player.bottom_player  = bottom_player;
+
     init_table_layout(
-      table_state, gods_state, bottom_player, window_width, window_height
+      table, state, bottom_player, tt::WINDOW_WIDTH, tt::WINDOW_HEIGHT
     );
-  } else {
-    gods_state  = load_from_json<Game_State>("data/debug_gods_state.json");
-    auto layout = load_from_json<Table_Layout>("data/debug_table_state.json");
-    table_state = Table_State(window_width, window_height, layout);
+    init_card_draw_callbacks(table, state, player.ui_state);
+
+    // Per-frame overlay: gods-specific inputs (debug save, discard expand)
+    // plus the HUD drawing. The -1 callback runs every frame with the current
+    // input, so all the per-frame gods logic lives here.
+    table.draw_callbacks[-1] =
+      [this](const Table_State&, const Input& input, bool) {
+        Game_State&    state  = this->gods_game();
+        Gods_Agent_UI& player = this->gods_agent_ui();
+        handle_debug_save(table, state, input);
+        handle_discard_expand(
+          table, player.ui_state, this->bottom_player, input
+        );
+        draw_hud(&table, state, player.ui_state, this->bottom_player, input);
+      };
   }
-}
+
+  void update_table_from_game() override {
+    update_stacks(table, this->gods_game());
+  }
+
+  // Leaving playground: read the rearranged table back into the game so play
+  // resumes from the user's layout.
+  void update_game_from_table() override {
+    Gods_Agent_UI& player = this->gods_agent_ui();
+    sync_game_state_from_table(table, this->gods_game());
+    player.ui_state.power_edit_card_id = -1;
+    player.ui_state.playground         = false;
+  }
+
+  // Playground only: P opens the power editor for the hovered card, 1-9 / 0
+  // set the power. draw_hud draws the panel for the card being edited.
+  bool draw_game_editor() override {
+    Gods_Agent_UI& player      = this->gods_agent_ui();
+    player.ui_state.playground = true;
+    const Input& input         = *this->agent_ui.input;
+    return handle_power_editor(this->gods_game(), table, player.ui_state, input);
+  }
+
+  Agent* agent_opponent() override {
+    return new Agent_Minimax_Stochastic_Gods(6, 20);
+  }
+
+  std::vector<int> player_scores() const override {
+    Game_State copy = this->gods_game();  // The score is computed in place.
+    return {compute_player_score(copy, 0), compute_player_score(copy, 1)};
+  }
+};
 
 int main(int argc, char** argv) {
-  Cli_Args args = parse_cli_args(argc, argv);
+  auto options = parse_play_args(argc, argv);
+  // "agent" is the old spelling of --skip-menu.
+  for (int i = 1; i < argc; ++i) {
+    if (std::string(argv[i]) == "agent") options.skip_menu = true;
+  }
 
-  auto inputs = Input_Feed(args.input_mode, args.input_file_path);
+  // Card hooks (Card::on_played etc.) dispatch through the global card_designs
+  // registry, so it must be populated before any gameplay runs.
+  fs_helpers::load_card_designs();
 
-  // run_menu folds in --local-host / --local-join, the skip-menu fallback, and
-  // the menu itself. "agent" and --hot-seat both skip the menu (vs-AI duel).
-  bool skip_menu   = args.skip_menu_vs_ai || args.hot_seat;
-  auto menu_result = run_menu(
-    "Gods",
-    tt::WINDOW_WIDTH,
-    tt::WINDOW_HEIGHT,
-    inputs,
-    argc,
-    argv,
-    skip_menu,
-    /*cli_seed=*/(int)std::random_device{}()
-  );
+  auto game     = Game_State();
+  auto agent_ui = Gods_Agent_UI();
+  auto giocamo  = Gods_Giocamo(game, agent_ui);
 
-  // nullptr means local-only; otherwise borrow the bundle from menu_result.
-  const Online* online = menu_result.is_online() ? &menu_result.online
-                                                 : nullptr;
-
-  Game_State  gods_state;
-  Table_State table_state;
-  init_table_and_gods_states(
-    gods_state,
-    table_state,
-    menu_result.player_index,
-    tt::WINDOW_WIDTH,
-    tt::WINDOW_HEIGHT,
-    args.load_from_disk,
-    menu_result.seed
-  );
-
-  Gods_UI ui_state(tt::WINDOW_WIDTH, tt::WINDOW_HEIGHT);
-  init_card_draw_callbacks(table_state, gods_state, ui_state);
-
-  const int player_index = menu_result.player_index;
-
-  // UI agent for the local seat; AI for the opponent unless hot-seat (where the
-  // UI agent plays both seats). make_duel wires up the online/local pairing.
-  Agent* agent_ui = new Agent_UI(&table_state, &ui_state, player_index);
-  bool   vs_ai    = !args.hot_seat && menu_result.mode == Menu_Result::VS_AI;
-  Agent* opponent = vs_ai ? (Agent*)new Agent_Minimax_Stochastic_Gods(6, 20)
-                          : agent_ui;
-  Agent* agent    = make_duel(agent_ui, opponent, menu_result);
-
-  // Per-frame overlay: gods-specific inputs (power editor, debug save, discard
-  // expand) plus the HUD drawing. The -1 callback runs every frame with the
-  // current input, so all the per-frame gods logic lives here.
-  table_state.draw_callbacks[-1] =
-    [&](const Table_State&, const Input& input, bool) {
-      if (handle_power_editor(gods_state, table_state, ui_state, input)) {
-        if (online) broadcast_cards(*online, gods_state);
-      }
-      handle_debug_save(table_state, gods_state, input);
-      handle_discard_expand(table_state, ui_state, player_index, input);
-      draw_hud(&table_state, gods_state, ui_state, player_index, input);
-    };
-
-  // Refresh the table from gods_state after every resolved choice, and push
-  // the latest card state (power/owner/...) to the remote peer.
-  auto update_table_from_game = [&] {
-    update_stacks(table_state, gods_state);
-    if (online) broadcast_cards(*online, gods_state);
-  };
-
-  // Leaving playground: read the rearranged table back into gods_state so play
-  // resumes from the user's layout.
-  auto update_game_from_table = [&] {
-    sync_game_state_from_table(table_state, gods_state);
-    ui_state.power_edit_card_id = -1;
-  };
-
-  // Gods-specific online message: full card state from the remote peer.
-  auto on_message = [&](const nlohmann::json& msg) {
-    if (msg.value("type", "") != "all_cards") return;
-    const auto& arr = msg["all_cards"];
-    for (size_t i = 0; i < arr.size() && i < gods_state.all_cards.size(); ++i) {
-      Card& c     = gods_state.all_cards[i];
-      c.power     = arr[i].value("power", c.power);
-      c.counters  = arr[i].value("counters", c.counters);
-      c.destroyed = arr[i].value("destroyed", c.destroyed);
-      c.owner     = arr[i].value("owner", c.owner);
-    }
-  };
-
-  play_game(
-    gods_state,
-    table_state,
-    ui_state,
-    *agent,
-    inputs,
-    menu_result,
-    "Gods",
-    update_table_from_game,
-    [&] {
-      return std::vector<int>{
-        compute_player_score(gods_state, 0),
-        compute_player_score(gods_state, 1),
-      };
-    },
-    update_game_from_table,
-    on_message
-  );
-
-  finalize_input_recorder(inputs);
+  play_game(giocamo, options, "Gods");
   return 0;
 }

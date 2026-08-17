@@ -442,3 +442,49 @@ Choice make_main_choice(Game_State& game) {
 }
 
 // ---- Bindings ----
+
+// ---- Setup ----
+
+static int random_int(std::mt19937& rng, int lo, int hi) {
+  return std::uniform_int_distribution<int>(lo, hi)(rng);
+}
+
+// All cards drawn from the shared deck; players start with 5-card hands.
+void Game_State::init(int seed) {
+  std::mt19937 rng((unsigned)seed);
+
+  Game_State game;
+
+  // Build all_cards from card_designs.
+  for (const auto& design : card_designs) {
+    Card card;
+    card.id        = design->id;
+    card.card_type = design->card_type;
+    card.color     = design->color;
+    card.power     = random_int(rng, 1, 5);
+    game.all_cards.push_back(card);
+  }
+
+  // Two empty players; shared deck holds every card id, shuffled.
+  Player player_0;
+  player_0.name = "Player 1";
+  Player player_1;
+  player_1.name = "Player 2";
+  game.players  = {player_0, player_1};
+
+  for (const auto& card : game.all_cards) game.shared_deck.push_back(card.id);
+  std::shuffle(game.shared_deck.begin(), game.shared_deck.end(), rng);
+
+  // Deal opening 5-card hands.
+  for (Player& player : game.players) {
+    for (int i = 0; i < 5; ++i) {
+      if (game.shared_deck.empty()) break;
+      int card_id = game.shared_deck.back();
+      game.shared_deck.pop_back();
+      player.hand.push_back(card_id);
+    }
+  }
+
+  *this = game;
+  begin_game();  // The opening decision to present.
+}

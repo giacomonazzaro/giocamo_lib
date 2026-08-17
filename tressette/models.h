@@ -86,6 +86,7 @@ struct Game_State : Game {
 
   bool   is_game_over() const override { return game_over; }
   Choice next_choice() override;
+  void   init(int seed = 0) override;
 
   void switch_turn() { current_player = 1 - current_player; }
 };

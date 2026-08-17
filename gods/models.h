@@ -144,6 +144,8 @@ struct Game_State : Game {
   // Game interface.
   bool   is_game_over() const override { return game_over; }
   Choice next_choice() override;
+  // Deal a fresh game. The card_designs registry must already be loaded.
+  void init(int seed = 0) override;
 
   // Helpers (mirror gods/models.py methods).
   Player&              active_player() { return players[current_player]; }

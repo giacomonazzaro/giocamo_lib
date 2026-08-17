@@ -438,19 +438,25 @@ int compute_player_score(const Game_State& state, int player) {
   return state.winner == player ? 1 : 0;
 }
 
-Game_State quick_setup(int /*seed*/) {
-  Game_State       game;
+Game_State quick_setup(int seed) {
+  Game_State game;
+  game.init(seed);
+  return game;
+}
+
+void Game_State::init(int /*seed*/) {
+  *this = Game_State();
+
   static const int back_rank[8] = {
     ROOK, KNIGHT, BISHOP, QUEEN, KING, BISHOP, KNIGHT, ROOK
   };
   for (int col = 0; col < 8; ++col) {
-    game.board[0][col] = make_piece(back_rank[col], 0);  // White back rank.
-    game.board[1][col] = make_piece(PAWN, 0);            // White pawns.
-    game.board[6][col] = make_piece(PAWN, 1);            // Black pawns.
-    game.board[7][col] = make_piece(back_rank[col], 1);  // Black back rank.
+    board[0][col] = make_piece(back_rank[col], 0);  // White back rank.
+    board[1][col] = make_piece(PAWN, 0);            // White pawns.
+    board[6][col] = make_piece(PAWN, 1);            // Black pawns.
+    board[7][col] = make_piece(back_rank[col], 1);  // Black back rank.
   }
-  game.begin_game();  // The opening decision to present.
-  return game;
+  begin_game();  // The opening decision to present.
 }
 
 // Write a UCI-style label for a move, e.g. "e2e4" or "e7e8q", into `out` (which

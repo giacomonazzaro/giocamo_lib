@@ -169,6 +169,12 @@ static void start_round(Game_State& state) {
 
 Game_State quick_setup(int seed) {
   Game_State state;
+  state.init(seed);
+  return state;
+}
+
+void Game_State::init(int seed) {
+  Game_State state;
 
   // Rebuild the shared deck for this game.
   all_cards.clear();
@@ -194,8 +200,9 @@ Game_State quick_setup(int seed) {
 
   state.round = 0;
   start_round(state);
-  state.begin_game();  // The opening decision to present.
-  return state;
+
+  *this = state;
+  begin_game();  // The opening decision to present.
 }
 
 // Move the acting player's chosen 3 cards to the shared pool and the other 3

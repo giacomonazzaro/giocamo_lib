@@ -9,7 +9,7 @@ int Chess_Agent_UI::choose_action(Game& game, const Choice&) {
   // Which square (thing-id == board index) got left-clicked this frame, if any.
   int clicked_square = -1;
   for (int square = 0; square < 64; ++square) {
-    if (thing_pressed(square, *table_state, *ui_state->input)) {
+    if (thing_pressed(square, table, *input)) {
       clicked_square = square;
       break;
     }

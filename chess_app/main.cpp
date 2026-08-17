@@ -38,47 +38,6 @@ int value_of_thing[PIECE_THING_COUNT];  // Piece value each pool Thing shows, 0
                                         // if free.
 }  // namespace
 
-// One square Thing per board slot (id == board index), 32 detached piece
-// Things, then a screen-filling root that parents the squares.
-static Table_State init_table_state() {
-  Table_State table;
-  table.is_drop_allowed = [](int, int, int) { return false; };
-
-  std::vector<Thing> squares = make_chess_squares();
-  std::vector<int>   square_ids;
-  for (Thing& square : squares) {
-    // Ends up at 0..63 == row*8 + col.
-    square_ids.push_back(add_thing(table, std::move(square)));
-  }
-
-  // Piece Things: a square body that draws a piece image (set in update_board).
-  // A zero corner radius keeps the renderer from rounding the texture. They are
-  // children of the root, listed after the squares so every piece draws on top
-  // of every square — otherwise a sliding piece would be hidden behind squares
-  // drawn later in the tree. update_board positions them.
-  Shape piece_shape =
-    Shape_Rectangle{{(float)CHESS_CELL, (float)CHESS_CELL}, 0.0f};
-  for (int i = 0; i < PIECE_THING_COUNT; ++i) {
-    Thing piece;
-    piece.name  = "piece" + std::to_string(i);
-    // Lands at PIECE_THING_BASE + i.
-    piece.shape = piece_shape;
-    piece.color = Color{0, 0, 0, 0};  // Only used if the image fails to load.
-    table.things.push_back(piece);
-  }
-
-  auto root = create_table_root(
-    tt::WINDOW_WIDTH, tt::WINDOW_HEIGHT, "tabletop/data/wood.png"
-  );
-  root._children = square_ids;
-  for (int i = 0; i < PIECE_THING_COUNT; ++i) {
-    root._children.push_back(PIECE_THING_BASE + i);
-  }
-  table.root = add_thing(table, std::move(root));
-
-  return table;
-}
-
 // Root-local center of a board square. Pieces are root children, so they share
 // the squares' coordinate space; this matches make_chess_squares().
 static Transform2D square_transform(int square) {
@@ -96,90 +55,6 @@ static Transform2D square_transform(int square) {
 static std::string piece_image_path(int value) {
   std::string color = chess::piece_color(value) == 0 ? "w" : "b";
   return "chess_app/data/pieces/" + color + chess_piece_glyph(value) + ".png";
-}
-
-// Reconcile the piece Things with the board: the moving piece keeps its Thing
-// (matched by value) and is repositioned onto the destination square, which is
-// what makes the renderer slide it there.
-static void update_board(Table_State& table, chess::Game_State& state) {
-  static bool initialized = false;
-  if (!initialized) {
-    for (int s = 0; s < 64; ++s) thing_for_square[s] = -1;
-    for (int i = 0; i < PIECE_THING_COUNT; ++i) {
-      square_of_thing[i] = -1;
-      value_of_thing[i]  = 0;
-    }
-    initialized = true;
-  }
-
-  // Release every Thing whose square no longer holds its piece; remember them
-  // as free so the squares that still need a piece can reuse them.
-  int freed[PIECE_THING_COUNT];
-  int freed_count = 0;
-  for (int i = 0; i < PIECE_THING_COUNT; ++i) {
-    int square = square_of_thing[i];
-    if (square < 0) continue;
-    if (state.board[square / 8][square % 8] != value_of_thing[i]) {
-      thing_for_square[square] = -1;
-      square_of_thing[i]       = -1;
-      freed[freed_count++]     = i;
-    }
-  }
-
-  // Fill each square that needs a piece. Prefer a freed Thing of the same value
-  // (the piece that actually moved — it slides over), then any freed Thing (a
-  // promotion reuses the pawn's Thing), then a spare (first placement).
-  bool used[PIECE_THING_COUNT];
-  for (int k = 0; k < freed_count; ++k) used[k] = false;
-  for (int square = 0; square < 64; ++square) {
-    int value = state.board[square / 8][square % 8];
-    if (value == 0 || thing_for_square[square] != -1) continue;
-
-    int chosen = -1;
-    for (int k = 0; k < freed_count; ++k) {
-      if (!used[k] && value_of_thing[freed[k]] == value) {
-        chosen  = freed[k];
-        used[k] = true;
-        break;
-      }
-    }
-    if (chosen < 0) {
-      for (int k = 0; k < freed_count; ++k) {
-        if (!used[k]) {
-          chosen  = freed[k];
-          used[k] = true;
-          break;
-        }
-      }
-    }
-    if (chosen < 0) {
-      for (int i = 0; i < PIECE_THING_COUNT; ++i) {
-        if (square_of_thing[i] < 0 && value_of_thing[i] == 0) {
-          chosen = i;
-          break;
-        }
-      }
-    }
-    if (chosen < 0) continue;  // Pool exhausted — cannot happen with 32 pieces.
-
-    value_of_thing[chosen]   = value;
-    square_of_thing[chosen]  = square;
-    thing_for_square[square] = chosen;
-    Thing& piece             = table.things[PIECE_THING_BASE + chosen];
-    piece.image_path         = piece_image_path(value);
-    // Setting the target square moves the Thing; the renderer slides it from
-    // wherever it was (the source square) to here.
-    piece.transform = square_transform(square);
-  }
-
-  // Freed Things nobody reused were captured: blank them (no image, and they
-  // stay detached so they aren't drawn).
-  for (int k = 0; k < freed_count; ++k) {
-    if (!used[k]) {
-      value_of_thing[freed[k]]                             = 0;
-      table.things[PIECE_THING_BASE + freed[k]].image_path = "";
-    }
-  }
 }
 
 // Iterative-deepening alpha-beta with a wall-clock budget: it plays much more
@@ -211,98 +86,220 @@ static Agent* make_mcts_agent() {
   return agent;
 }
 
-// The human plays against the minimax bot by default.
-static Agent* make_ai_opponent() { return make_minimax_agent(); }
+// Chess on the table. The table is laid out once here; play_game sets the
+// position up and drives the loop through these hooks.
+struct Chess_Giocamo : Giocamo {
+  // --watch: the two bots play each other (White = minimax, Black = MCTS) and
+  // we just spectate.
+  bool watch = false;
+
+  Chess_Giocamo(chess::Game_State& game, Chess_Agent_UI& agent_ui)
+      : Giocamo(game, agent_ui) {}
+
+  chess::Game_State& chess_game() {
+    return static_cast<chess::Game_State&>(game);
+  }
+  const chess::Game_State& chess_game() const {
+    return static_cast<const chess::Game_State&>(game);
+  }
+
+  Chess_Agent_UI& chess_agent_ui() {
+    return static_cast<Chess_Agent_UI&>(agent_ui);
+  }
+
+  // One square Thing per board slot (id == board index), 32 detached piece
+  // Things, then a screen-filling root that parents the squares.
+  void init_table() override {
+    table.is_drop_allowed = [](int, int, int) { return false; };
+
+    std::vector<Thing> squares = make_chess_squares();
+    std::vector<int>   square_ids;
+    for (Thing& square : squares) {
+      // Ends up at 0..63 == row*8 + col.
+      square_ids.push_back(add_thing(table, std::move(square)));
+    }
+
+    // Piece Things: a square body that draws a piece image (set in
+    // update_table_from_game). A zero corner radius keeps the renderer from
+    // rounding the texture. They are children of the root, listed after the
+    // squares so every piece draws on top of every square — otherwise a sliding
+    // piece would be hidden behind squares drawn later in the tree.
+    Shape piece_shape =
+      Shape_Rectangle{{(float)CHESS_CELL, (float)CHESS_CELL}, 0.0f};
+    for (int i = 0; i < PIECE_THING_COUNT; ++i) {
+      Thing piece;
+      piece.name  = "piece" + std::to_string(i);
+      // Lands at PIECE_THING_BASE + i.
+      piece.shape = piece_shape;
+      piece.color = Color{0, 0, 0, 0};  // Only used if the image fails to load.
+      table.things.push_back(piece);
+    }
+
+    auto root = create_table_root(
+      tt::WINDOW_WIDTH, tt::WINDOW_HEIGHT, "tabletop/data/wood.png"
+    );
+    root._children = square_ids;
+    for (int i = 0; i < PIECE_THING_COUNT; ++i) {
+      root._children.push_back(PIECE_THING_BASE + i);
+    }
+    table.root = add_thing(table, std::move(root));
+
+    for (int square = 0; square < 64; ++square) thing_for_square[square] = -1;
+    for (int i = 0; i < PIECE_THING_COUNT; ++i) {
+      square_of_thing[i] = -1;
+      value_of_thing[i]  = 0;
+    }
+
+    // Per-frame overlay: cancel any table-top drag (chess is click-only) and
+    // pin the squares, highlight the picked piece's legal destinations, then the
+    // HUD. Pieces are Things now, so they're drawn and animated by the renderer
+    // itself.
+    table.draw_callbacks[-1] = [this](const Table_State&, const Input&, bool) {
+      chess::Game_State& state = this->chess_game();
+      table.drag_state         = Drag_State();
+      for (int square = 0; square < 64; ++square) {
+        table.world_transforms_animated[square] =
+          table.world_transforms[square];
+      }
+
+      const int selected = this->chess_agent_ui().selected_square;
+      if (selected >= 0) {
+        const float half = (float)CHESS_CELL / 2.0f;
+        float       sx   = table.world_transforms[selected].x;
+        float       sy   = table.world_transforms[selected].y;
+        DrawRectangleLinesEx(
+          Rectangle{sx - half, sy - half, (float)CHESS_CELL, (float)CHESS_CELL},
+          4.0f,
+          Color{60, 180, 90, 255}
+        );
+        for (const chess::Move& move : chess::legal_moves(state)) {
+          if (move.from != selected) continue;
+          float dx = table.world_transforms[move.to].x;
+          float dy = table.world_transforms[move.to].y;
+          DrawCircleV(Vector2{dx, dy}, 14.0f, Color{60, 180, 90, 160});
+        }
+      }
+
+      draw_chess_hud(state);
+    };
+  }
+
+  // Reconcile the piece Things with the board: the moving piece keeps its Thing
+  // (matched by value) and is repositioned onto the destination square, which is
+  // what makes the renderer slide it there.
+  void update_table_from_game() override {
+    chess::Game_State& state = this->chess_game();
+
+    // Release every Thing whose square no longer holds its piece; remember them
+    // as free so the squares that still need a piece can reuse them.
+    int freed[PIECE_THING_COUNT];
+    int freed_count = 0;
+    for (int i = 0; i < PIECE_THING_COUNT; ++i) {
+      int square = square_of_thing[i];
+      if (square < 0) continue;
+      if (state.board[square / 8][square % 8] != value_of_thing[i]) {
+        thing_for_square[square] = -1;
+        square_of_thing[i]       = -1;
+        freed[freed_count++]     = i;
+      }
+    }
+
+    // Fill each square that needs a piece. Prefer a freed Thing of the same
+    // value (the piece that actually moved — it slides over), then any freed
+    // Thing (a promotion reuses the pawn's Thing), then a spare (first
+    // placement).
+    bool used[PIECE_THING_COUNT];
+    for (int k = 0; k < freed_count; ++k) used[k] = false;
+    for (int square = 0; square < 64; ++square) {
+      int value = state.board[square / 8][square % 8];
+      if (value == 0 || thing_for_square[square] != -1) continue;
+
+      int chosen = -1;
+      for (int k = 0; k < freed_count; ++k) {
+        if (!used[k] && value_of_thing[freed[k]] == value) {
+          chosen  = freed[k];
+          used[k] = true;
+          break;
+        }
+      }
+      if (chosen < 0) {
+        for (int k = 0; k < freed_count; ++k) {
+          if (!used[k]) {
+            chosen  = freed[k];
+            used[k] = true;
+            break;
+          }
+        }
+      }
+      if (chosen < 0) {
+        for (int i = 0; i < PIECE_THING_COUNT; ++i) {
+          if (square_of_thing[i] < 0 && value_of_thing[i] == 0) {
+            chosen = i;
+            break;
+          }
+        }
+      }
+      if (chosen < 0) continue;  // Pool exhausted — cannot happen with 32
+                                 // pieces.
+
+      value_of_thing[chosen]   = value;
+      square_of_thing[chosen]  = square;
+      thing_for_square[square] = chosen;
+      Thing& piece             = table.things[PIECE_THING_BASE + chosen];
+      piece.image_path         = piece_image_path(value);
+      // Setting the target square moves the Thing; the renderer slides it from
+      // wherever it was (the source square) to here.
+      piece.transform = square_transform(square);
+    }
+
+    // Freed Things nobody reused were captured: blank them (no image, and they
+    // stay detached so they aren't drawn).
+    for (int k = 0; k < freed_count; ++k) {
+      if (!used[k]) {
+        value_of_thing[freed[k]]                             = 0;
+        table.things[PIECE_THING_BASE + freed[k]].image_path = "";
+      }
+    }
+  }
+
+  // Nothing is draggable, so the table never holds an arrangement the game
+  // does not already have.
+  void update_game_from_table() override {}
+
+  // Watch mode: Black is the MCTS bot. Otherwise the human plays against the
+  // minimax bot.
+  Agent* agent_opponent() override {
+    if (watch) return new Agent_Async(make_mcts_agent());
+    return new Agent_Async(make_minimax_agent());
+  }
+
+  // Watch mode: White is the minimax bot instead of the player.
+  Agent* agent_player() override {
+    if (watch) return new Agent_Async(make_minimax_agent());
+    return &agent_ui;
+  }
+
+  std::vector<int> player_scores() const override {
+    return {
+      chess::compute_player_score(this->chess_game(), 0),
+      chess::compute_player_score(this->chess_game(), 1),
+    };
+  }
+};
 
 int main(int argc, char** argv) {
   auto options = parse_play_args(argc, argv);
 
-  // --watch: the two bots play each other (White = minimax, Black = MCTS) and
-  // we just spectate. Skips the menu since there is no human to set up.
-  bool watch = false;
+  auto game     = chess::Game_State();
+  auto agent_ui = Chess_Agent_UI();
+  auto giocamo  = Chess_Giocamo(game, agent_ui);
+
   for (int i = 1; i < argc; ++i) {
-    if (std::string(argv[i]) == "--watch") watch = true;
+    if (std::string(argv[i]) == "--watch") giocamo.watch = true;
   }
+  // Nothing to choose when both seats are bots.
+  if (giocamo.watch) options.skip_menu = true;
 
-  auto inputs      = Input_Feed(Input_Mode::Live, "");
-  auto menu_result = run_menu(
-    "Chess",
-    tt::WINDOW_WIDTH,
-    tt::WINDOW_HEIGHT,
-    inputs,
-    argc,
-    argv,
-    options.skip_menu || watch,
-    options.seed
-  );
-
-  auto state    = chess::quick_setup(menu_result.seed);
-  auto ui_state = UI_State(tt::WINDOW_WIDTH, tt::WINDOW_HEIGHT);
-  auto table    = init_table_state();
-
-  auto agent_ui = Chess_Agent_UI(&table, &ui_state, menu_result.player_index);
-
-  // Per-frame overlay: cancel any table-top drag (chess is click-only) and pin
-  // the squares, highlight the picked piece's legal destinations, then the HUD.
-  // Pieces are Things now, so they're drawn and animated by the renderer
-  // itself.
-  table.draw_callbacks[-1] = [&](const Table_State&, const Input&, bool) {
-    table.drag_state = Drag_State();
-    for (int square = 0; square < 64; ++square) {
-      table.world_transforms_animated[square] = table.world_transforms[square];
-    }
-
-    if (agent_ui.selected_square >= 0) {
-      const float half = (float)CHESS_CELL / 2.0f;
-      float       sx   = table.world_transforms[agent_ui.selected_square].x;
-      float       sy   = table.world_transforms[agent_ui.selected_square].y;
-      DrawRectangleLinesEx(
-        Rectangle{sx - half, sy - half, (float)CHESS_CELL, (float)CHESS_CELL},
-        4.0f,
-        Color{60, 180, 90, 255}
-      );
-      for (const chess::Move& move : chess::legal_moves(state)) {
-        if (move.from != agent_ui.selected_square) continue;
-        float dx = table.world_transforms[move.to].x;
-        float dy = table.world_transforms[move.to].y;
-        DrawCircleV(Vector2{dx, dy}, 14.0f, Color{60, 180, 90, 160});
-      }
-    }
-
-    draw_chess_hud(state);
-  };
-
-  update_board(table, state);  // Place the starting position.
-
-  // Watch mode: White (player 0) is the minimax bot, Black (player 1) is MCTS.
-  // Both are wrapped in Agent_Async so their 6s search runs off the render
-  // thread. Otherwise it's the usual human-vs-AI / hot-seat pairing.
-  Agent* agent;
-  if (watch) {
-    auto* white = new Agent_Async(make_minimax_agent());
-    auto* black = new Agent_Async(make_mcts_agent());
-    agent       = new Agent_Duel(white, black, /*swap=*/false);
-  } else {
-    agent = make_agent_pair(
-      &agent_ui, make_ai_opponent(), menu_result, options.vs_ai
-    );
-  }
-
-  play_game(
-    state,
-    table,
-    ui_state,
-    *agent,
-    inputs,
-    menu_result,
-    "Chess",
-    [&] { update_board(table, state); },
-    [&] {
-      return std::vector<int>{
-        chess::compute_player_score(state, 0),
-        chess::compute_player_score(state, 1),
-      };
-    }
-  );
+  play_game(giocamo, options, "Chess");
   return 0;
 }
