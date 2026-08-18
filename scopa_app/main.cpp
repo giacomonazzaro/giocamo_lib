@@ -21,14 +21,17 @@
 #include <string>
 #include <vector>
 
+#include <struct/imgui.h>  // for draw_editor_ui()
+#include <struct/json.h>   // for to_json()
+
 #include "agent_ui.h"
 #include "ui.h"
 
 // Scopa on the table. The table is laid out once here; play_game deals the
 // game and drives the loop through these hooks.
-struct Scopa_Giocamo : Giocamo {
+struct Scopa_Giocamo : Giocamo_With_History<scopa::Game_State> {
   Scopa_Giocamo(scopa::Game_State& game, Scopa_Agent_UI& agent_ui)
-      : Giocamo(game, agent_ui) {}
+      : Giocamo_With_History<scopa::Game_State>(game, agent_ui) {}
 
   scopa::Game_State& scopa_game() {
     return static_cast<scopa::Game_State&>(game);

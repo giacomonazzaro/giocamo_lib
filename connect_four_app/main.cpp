@@ -18,16 +18,19 @@
 
 #include <vector>
 
+#include <struct/imgui.h>  // for draw_editor_ui()
+#include <struct/json.h>   // for to_json()
+
 #include "agent_ui.h"
 #include "ui.h"
 
 // Connect Four on the table. The table is laid out once here; play_game deals
 // the game and drives the loop through these hooks.
-struct Connect_Four_Giocamo : Giocamo {
+struct Connect_Four_Giocamo : Giocamo_With_History<connect_four::Game_State> {
   Connect_Four_Giocamo(
     connect_four::Game_State& game, Connect_Four_Agent_UI& agent_ui
   )
-      : Giocamo(game, agent_ui) {}
+      : Giocamo_With_History<connect_four::Game_State>(game, agent_ui) {}
 
   connect_four::Game_State& board_game() {
     return static_cast<connect_four::Game_State&>(game);

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <game/game.h>
+#include <struct/visit.hpp>
 
 #include <string>
 #include <vector>
@@ -83,3 +84,16 @@ struct Game_State : Game {
 };
 
 }  // namespace scopa
+
+VISITABLE_STRUCT(scopa::Card, id, rank, suit);
+VISITABLE_STRUCT(scopa::Player, name, hand, captured, scope);
+VISITABLE_STRUCT(
+  scopa::Game_State,
+  all_cards,
+  players,
+  table,
+  stock,
+  current_player,
+  last_capturer,
+  game_over
+);

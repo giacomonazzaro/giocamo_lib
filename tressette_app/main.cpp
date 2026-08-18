@@ -22,6 +22,9 @@
 #include <string>
 #include <vector>
 
+#include <struct/imgui.h>  // for draw_editor_ui()
+#include <struct/json.h>   // for to_json()
+
 #include "agent_ui.h"
 #include "ui.h"
 
@@ -50,9 +53,9 @@ static Agent* make_softmax_mcts(
 
 // Tressette on the table. The table is laid out once here; play_game deals the
 // game and drives the loop through these hooks.
-struct Tressette_Giocamo : Giocamo {
+struct Tressette_Giocamo : Giocamo_With_History<tressette::Game_State> {
   Tressette_Giocamo(tressette::Game_State& game, Tressette_Agent_UI& agent_ui)
-      : Giocamo(game, agent_ui) {}
+      : Giocamo_With_History<tressette::Game_State>(game, agent_ui) {}
 
   tressette::Game_State& tressette_game() {
     return static_cast<tressette::Game_State&>(game);

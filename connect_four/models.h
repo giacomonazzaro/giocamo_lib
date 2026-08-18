@@ -1,6 +1,7 @@
 #pragma once
 
 #include <game/game.h>
+#include <struct/visit.hpp>
 
 #include <array>
 #include <optional>
@@ -34,3 +35,7 @@ struct Game_State : Game {
 };
 
 }  // namespace connect_four
+
+VISITABLE_STRUCT(
+  connect_four::Game_State, board, current_player, winner, game_over
+);

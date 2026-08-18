@@ -67,6 +67,13 @@ std::string to_json(
   const Array_Inline<T, Capacity>& arr, int indent = 0, bool pretty = true
 );
 
+template <class T, int Capacity>
+struct Array_Static;
+template <class T, int Capacity>
+std::string to_json(
+  const Array_Static<T, Capacity>& arr, int indent = 0, bool pretty = true
+);
+
 template <class T, std::size_t N>
 std::string to_json(
   const std::array<T, N>& arr, int indent = 0, bool pretty = true
@@ -204,6 +211,14 @@ std::string to_json(
   return array_to_json(arr, indent, pretty);
 }
 
+// Array_Static — serialized as a JSON array, same as a vector.
+template <class T, int Capacity>
+std::string to_json(
+  const Array_Static<T, Capacity>& arr, int indent, bool pretty
+) {
+  return array_to_json(arr, indent, pretty);
+}
+
 // std::array — serialized as a JSON array, same as a vector.
 template <class T, std::size_t N>
 std::string to_json(const std::array<T, N>& arr, int indent, bool pretty) {
@@ -324,6 +339,9 @@ bool from_json_impl(JsonParser& p, std::vector<T, Alloc>& out);
 
 template <class T, int Capacity>
 bool from_json_impl(JsonParser& p, Array_Inline<T, Capacity>& out);
+
+template <class T, int Capacity>
+bool from_json_impl(JsonParser& p, Array_Static<T, Capacity>& out);
 
 template <typename T, std::size_t N>
 bool from_json_impl(JsonParser& p, T (&out)[N]);
@@ -589,6 +607,30 @@ bool from_json_impl(JsonParser& p, std::array<T, N>& out) {
 // Array_Inline — parsed from a JSON array, same as a vector.
 template <class T, int Capacity>
 inline bool from_json_impl(JsonParser& p, Array_Inline<T, Capacity>& out) {
+  p.skip_whitespace();
+  if (!p.expect('[')) return false;
+
+  out.clear();
+  bool first = true;
+  while (true) {
+    p.skip_whitespace();
+    if (p.peek() == ']') {
+      p.get();
+      return true;
+    }
+
+    if (!first && !p.expect(',')) return false;
+    first = false;
+
+    T elem;
+    if (!from_json_impl(p, elem)) return false;
+    out.push_back(std::move(elem));
+  }
+}
+
+// Array_Static — parsed from a JSON array, same as a vector.
+template <class T, int Capacity>
+inline bool from_json_impl(JsonParser& p, Array_Static<T, Capacity>& out) {
   p.skip_whitespace();
   if (!p.expect('[')) return false;
 

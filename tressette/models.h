@@ -3,6 +3,7 @@
 #include <basic/array_inline.h>
 #include <basic/array_static.h>
 #include <game/game.h>
+#include <struct/visit.hpp>
 
 #include <array>
 #include <functional>
@@ -97,3 +98,17 @@ struct Game_State : Game {
 extern std::vector<Card> all_cards;
 
 }  // namespace tressette
+
+VISITABLE_STRUCT(tressette::Card, id, rank, suit);
+VISITABLE_STRUCT(tressette::Player, name, hand, tricks_won);
+VISITABLE_STRUCT(
+  tressette::Game_State,
+  players,
+  stock,
+  trick,
+  trick_leader,
+  current_player,
+  last_trick_winner,
+  game_over,
+  human_player
+);

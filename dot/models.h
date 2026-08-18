@@ -2,6 +2,7 @@
 
 #include <basic/array_inline.h>
 #include <game/game.h>
+#include <struct/visit.hpp>
 
 #include <array>
 #include <optional>
@@ -75,3 +76,30 @@ struct Game_State : Game {
 extern std::vector<Card> all_cards;
 
 }  // namespace dot
+
+VISITABLE_STRUCT(dot::Card, id, blue_dots, black_dots, red_dots, is_star);
+VISITABLE_STRUCT(
+  dot::Player,
+  draw_deck,
+  star_deck,
+  hand,
+  pool,
+  revealed_pool_count,
+  tokens_blue,
+  tokens_black,
+  tokens_red
+);
+VISITABLE_STRUCT(
+  dot::Game_State,
+  players,
+  shared_pool,
+  pending_blue,
+  pending_black,
+  pending_red,
+  round,
+  phase,
+  acting_player,
+  discard_first,
+  human_player,
+  game_over
+);

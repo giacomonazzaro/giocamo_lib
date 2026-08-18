@@ -16,6 +16,7 @@
 // otherwise.
 #include <raylib.h>
 
+#include <algorithm>
 #include <string>
 #include <vector>
 
@@ -26,9 +27,20 @@
 #include "ui.h"
 
 // Square Things hold ids 0..63 (id == board index). The piece Things follow at
-// 64..95: a pool of 32, one per piece that can be on the board at once.
+// 64..95: a pool of 32, one per piece that can be on the board at once. The two
+// rows that hold the taken pieces come after them.
 static const int PIECE_THING_BASE  = 64;
 static const int PIECE_THING_COUNT = 32;
+static const int TAKEN_ROW_THING[2] = {
+  PIECE_THING_BASE + PIECE_THING_COUNT,      // White pieces, left of the board.
+  PIECE_THING_BASE + PIECE_THING_COUNT + 1,  // Black pieces, right of it.
+};
+
+// How wide a row of taken pieces is, and how far apart the pieces sit in it.
+// A full row of 16 does not fit at this spacing, so they overlap — the row
+// shrinks the spacing itself once they no longer fit.
+static const float TAKEN_ROW_WIDTH  = 470.0f;
+static const float TAKEN_ROW_SPREAD = 30.0f;
 
 // Piece identity, kept across moves so a piece keeps its Thing as it travels
 // and the renderer slides it. There is one board per process, so file-static is
@@ -38,7 +50,7 @@ int thing_for_square[64];  // Pool Thing on each square, or -1.
 int
   square_of_thing[PIECE_THING_COUNT];  // Square each pool Thing sits on, or -1.
 int value_of_thing[PIECE_THING_COUNT];  // Piece value each pool Thing shows, 0
-                                        // if free.
+                                        // if it has never held one.
 }  // namespace
 
 // Root-local center of a board square. Pieces are root children, so they share
@@ -138,14 +150,41 @@ struct Chess_Giocamo : Giocamo_With_History<chess::Game_State> {
       table.things.push_back(piece);
     }
 
+    // A row of taken pieces on each flank of the board, in root-local coords
+    // (the root is centered, so the board spans -360..360). White's taken
+    // pieces go on the left, black's on the right.
+    const float board_half = 4.0f * (float)CHESS_CELL;
+    const float row_y      = -(float)CHESS_CELL / 2.0f;
+    Rectangle   white_row  = {
+      -(board_half + 20.0f + TAKEN_ROW_WIDTH),
+      row_y,
+      TAKEN_ROW_WIDTH,
+      (float)CHESS_CELL
+    };
+    Rectangle black_row = {
+      board_half + 20.0f, row_y, TAKEN_ROW_WIDTH, (float)CHESS_CELL
+    };
+    // Land at TAKEN_ROW_THING[0] and [1].
+    add_thing(
+      table,
+      make_container_thing(
+        white_row, TAKEN_ROW_SPREAD, 0.0f, true, "white_taken"
+      )
+    );
+    add_thing(
+      table,
+      make_container_thing(
+        black_row, TAKEN_ROW_SPREAD, 0.0f, true, "black_taken"
+      )
+    );
+
     auto root = create_table_root(
       tt::WINDOW_WIDTH, tt::WINDOW_HEIGHT, "tabletop/data/wood.png"
     );
+    // update_table_from_game fills in the rest: the two rows and the pieces
+    // still on the board.
     root._children = square_ids;
-    for (int i = 0; i < PIECE_THING_COUNT; ++i) {
-      root._children.push_back(PIECE_THING_BASE + i);
-    }
-    table.root = add_thing(table, std::move(root));
+    table.root     = add_thing(table, std::move(root));
 
     for (int square = 0; square < 64; ++square) thing_for_square[square] = -1;
     for (int i = 0; i < PIECE_THING_COUNT; ++i) {
@@ -209,8 +248,8 @@ struct Chess_Giocamo : Giocamo_With_History<chess::Game_State> {
 
     // Fill each square that needs a piece. Prefer a freed Thing of the same
     // value (the piece that actually moved — it slides over), then any freed
-    // Thing (a promotion reuses the pawn's Thing), then a spare (first
-    // placement).
+    // Thing (a promotion reuses the pawn's Thing), then a piece taken earlier
+    // that is back on the board (an undo), then a spare (first placement).
     bool used[PIECE_THING_COUNT];
     for (int k = 0; k < freed_count; ++k) used[k] = false;
     for (int square = 0; square < 64; ++square) {
@@ -236,6 +275,14 @@ struct Chess_Giocamo : Giocamo_With_History<chess::Game_State> {
       }
       if (chosen < 0) {
         for (int i = 0; i < PIECE_THING_COUNT; ++i) {
+          if (square_of_thing[i] < 0 && value_of_thing[i] == value) {
+            chosen = i;
+            break;
+          }
+        }
+      }
+      if (chosen < 0) {
+        for (int i = 0; i < PIECE_THING_COUNT; ++i) {
           if (square_of_thing[i] < 0 && value_of_thing[i] == 0) {
             chosen = i;
             break;
@@ -255,14 +302,44 @@ struct Chess_Giocamo : Giocamo_With_History<chess::Game_State> {
       piece.transform = square_transform(square);
     }
 
-    // Freed Things nobody reused were captured: blank them (no image, and they
-    // stay detached so they aren't drawn).
-    for (int k = 0; k < freed_count; ++k) {
-      if (!used[k]) {
-        value_of_thing[freed[k]]                             = 0;
-        table.things[PIECE_THING_BASE + freed[k]].image_path = "";
+    // A Thing that holds a piece but sits on no square was taken. It keeps its
+    // image and goes to the row for its colour; the renderer slides it there
+    // from the square it was taken on.
+    auto on_board = std::vector<int>();
+    auto taken    = std::vector<std::vector<int>>(2);
+    for (int i = 0; i < PIECE_THING_COUNT; ++i) {
+      int value = value_of_thing[i];
+      if (value == 0) continue;  // Never held a piece.
+      if (square_of_thing[i] >= 0) {
+        on_board.push_back(PIECE_THING_BASE + i);
+      } else {
+        taken[chess::piece_color(value)].push_back(PIECE_THING_BASE + i);
       }
     }
+
+    // Strongest piece first, so a row reads the same however the Things were
+    // handed out.
+    for (int color = 0; color < 2; ++color) {
+      std::sort(
+        taken[color].begin(),
+        taken[color].end(),
+        [](int a, int b) {
+          return chess::piece_type(value_of_thing[a - PIECE_THING_BASE]) >
+                 chess::piece_type(value_of_thing[b - PIECE_THING_BASE]);
+        }
+      );
+      table.things[TAKEN_ROW_THING[color]]._children = taken[color];
+      update_children_positions(TAKEN_ROW_THING[color], table, false);
+    }
+
+    // The squares, then the two rows, then the pieces still on the board, so a
+    // piece always draws on top of the square it stands on.
+    std::vector<int>& root_children = table.things[table.root]._children;
+    root_children.clear();
+    for (int square = 0; square < 64; ++square) root_children.push_back(square);
+    root_children.push_back(TAKEN_ROW_THING[0]);
+    root_children.push_back(TAKEN_ROW_THING[1]);
+    for (int thing : on_board) root_children.push_back(thing);
   }
 
   // Nothing is draggable, so the table never holds an arrangement the game

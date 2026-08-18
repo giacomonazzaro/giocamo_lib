@@ -17,14 +17,17 @@
 
 #include <vector>
 
+#include <struct/imgui.h>  // for draw_editor_ui()
+#include <struct/json.h>   // for to_json()
+
 #include "agent_ui.h"
 #include "ui.h"
 
 // D.O.T on the table. The table is laid out once here; play_game deals the
 // game and drives the loop through these hooks.
-struct Dot_Giocamo : Giocamo {
+struct Dot_Giocamo : Giocamo_With_History<dot::Game_State> {
   Dot_Giocamo(dot::Game_State& game, Dot_Agent_UI& agent_ui)
-      : Giocamo(game, agent_ui) {}
+      : Giocamo_With_History<dot::Game_State>(game, agent_ui) {}
 
   dot::Game_State& dot_game() { return static_cast<dot::Game_State&>(game); }
   const dot::Game_State& dot_game() const {
