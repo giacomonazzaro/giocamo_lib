@@ -10,8 +10,9 @@
 #include <nlohmann/json.hpp>
 #include <optional>
 
+#include <giocamo/online/online.h>
+
 #include "menu.h"
-#include "online.h"
 
 // SPACE-to-zoom: zooms the thing under the cursor while SPACE is held,
 // clears the zoom otherwise. tabletop's process_input also handles this

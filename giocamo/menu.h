@@ -2,7 +2,7 @@
 
 #include <tabletop/input_recorder.h>
 
-#include "online.h"
+#include <giocamo/online/online.h>
 
 struct Menu_Result {
   enum Mode { VS_AI, ONLINE } mode = VS_AI;
