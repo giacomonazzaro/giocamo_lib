@@ -261,20 +261,24 @@ static void run_game(
       table_edited |= key_pressed(input, KEY_R);
       table_edited |= key_pressed(input, KEY_S);
 
-      auto game_edited = giocamo.draw_game_editor();
-      if (game_edited) giocamo.update_table_from_game();
-
       // Moving things on the table is the edit, but the game state is what
       // travels: it is worked out from the table and sent, and the other
       // player lays its own table out from it.
-      if (online && table_edited) {
+      if (table_edited) {
         giocamo.update_game_from_table();
-        send_game_state(*online, giocamo);
+        if (online) {
+          send_game_state(*online, giocamo);
+        }
       }
-      // Editing the game state by hand is a change like any other move.
-      if (online && game_edited) {
-        send_game_state(*online, giocamo);
+
+      auto game_edited = giocamo.draw_game_editor();
+      if (game_edited) {
+        giocamo.update_table_from_game();
+        if (online) {
+          send_game_state(*online, giocamo);
+        }
       }
+
       return false;
     }
 
@@ -312,8 +316,9 @@ static void run_game(
       }
     }
 
-    // Without a score screen to show, the game ending ends the loop. With one,
-    // the loop goes on and the branch above draws it from the next frame.
+    // Without a score screen to show, the game ending ends the loop. With
+    // one, the loop goes on and the branch above draws it from the next
+    // frame.
     return state.is_game_over();  // && !giocamo.player_scores;
   };
 
@@ -346,7 +351,8 @@ void play_game(
   giocamo.hot_seat      = !options.vs_ai && !menu_result.is_online();
 
   // A saved game stands in for the deal when one was asked for and found.
-  // Either way the game holds a position before the table is laid out over it.
+  // Either way the game holds a position before the table is laid out over
+  // it.
   if (!(options.load_from_disk && giocamo.load_game(options.load_path))) {
     giocamo.game.init(menu_result.seed);
   }
