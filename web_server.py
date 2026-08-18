@@ -28,6 +28,26 @@ def log(message: str) -> None:
     print(message, flush=True)
 
 
+def mangle_like_firebase(value):
+    """Firebase cannot store an empty array, an empty object or a null, so it
+    drops those keys, and an array with holes left in it comes back as an
+    object keyed by number. Doing the same here means a message that only
+    survives by luck fails the test instead of failing on a real database."""
+    if value is None or value == [] or value == {}:
+        return None
+    if isinstance(value, list):
+        kept = {str(i): mangle_like_firebase(item) for i, item in enumerate(value)}
+        kept = {key: item for key, item in kept.items() if item is not None}
+        if len(kept) > len(value) / 2:
+            return [kept[str(i)] for i in range(len(value)) if str(i) in kept]
+        return kept or None
+    if isinstance(value, dict):
+        kept = {key: mangle_like_firebase(item) for key, item in value.items()}
+        kept = {key: item for key, item in kept.items() if item is not None}
+        return kept or None
+    return value
+
+
 class Handler(http.server.SimpleHTTPRequestHandler):
     def log_message(self, *args, **kwargs):  # Silence the default access log.
         pass
@@ -48,6 +68,10 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             return
         length = int(self.headers.get("Content-Length", "0"))
         body = self.rfile.read(length).decode("utf-8") if length else ""
+        try:
+            body = json.dumps(mangle_like_firebase(json.loads(body)))
+        except json.JSONDecodeError:
+            pass
         with store_lock:
             store[path[1:-len(".json")]] = body
         log(f"PUT  {path}  {body[:100]}")

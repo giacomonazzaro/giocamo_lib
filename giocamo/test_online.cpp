@@ -108,6 +108,38 @@ void check_messages_arrive_in_order(const std::string& room_code) {
   }
 }
 
+// A message must come out the same shape it went in. The database cannot
+// store an empty array, an empty object or a null — it drops those keys —
+// and it turns an array with holes left in it into an object keyed by
+// number. So a message is stored as text, and this checks that it is.
+void check_a_message_keeps_its_shape(const std::string& room_code) {
+  auto host = Online{room_code, "host"};
+  auto join = Online{room_code, "join"};
+
+  auto sent     = nlohmann::json();
+  sent["type"]  = "shapes";
+  sent["holes"] = nlohmann::json::array(
+    {nlohmann::json::array({1, 2}),
+     nlohmann::json::array(),
+     nlohmann::json::array(),
+     nlohmann::json::array({5})}
+  );
+  sent["nothing"] = nlohmann::json::object();
+  send_message(host, sent);
+
+  auto received = std::optional<nlohmann::json>();
+  for (int step = 0; step < 400 && !received; ++step) {
+    send_message(host, nlohmann::json{{"type", "idle"}});
+    while (auto message = try_recv_message(join)) {
+      if (message->value("type", "") == "shapes") received = message;
+    }
+    wait_a_moment();
+  }
+
+  check(received.has_value(), "the message arrived");
+  if (received) check(*received == sent, "the message came back unchanged");
+}
+
 // The real agents, the real duel, the real transport: both players must
 // finish the same six turns.
 void check_a_whole_game_plays_out(const std::string& room_code) {
@@ -142,7 +174,8 @@ int main() {
   std::fprintf(stderr, "room %s\n", room_code.c_str());
 
   check_messages_arrive_in_order(room_code + "a");
-  check_a_whole_game_plays_out(room_code + "b");
+  check_a_message_keeps_its_shape(room_code + "b");
+  check_a_whole_game_plays_out(room_code + "c");
 
   std::fprintf(stderr, "%s\n", failed ? "FAILED" : "PASS");
   return failed ? 1 : 0;

@@ -88,7 +88,7 @@ struct Channel {
   std::deque<std::string> outbox;
   int                     send_index = 0;
   // Next slot to read from the other player.
-  int                     read_index = 0;
+  int read_index = 0;
 
   std::deque<nlohmann::json> actions;
   std::deque<nlohmann::json> others;
@@ -118,7 +118,8 @@ void forget_room(const std::string& room_code) {
 }
 
 // Read the answer to a read request. It is an object keyed by slot, like
-// {"000003":{...},"000004":{...}}, or "null" when there is nothing new.
+// {"000003":"…","000004":"…"}, or "null" when there is nothing new. Each
+// slot holds one message as text (see send_message).
 // Slots are taken in order and a gap stops the run, so a message that has
 // not landed yet is waited for instead of stepped over.
 void take_new_messages(Channel& channel, const std::string& body) {
@@ -132,10 +133,19 @@ void take_new_messages(Channel& channel, const std::string& body) {
   while (true) {
     auto found = answer.find(slot_key(channel.read_index));
     if (found == answer.end()) return;
-    if (found->value("type", "") == "action")
-      channel.actions.push_back(*found);
+    auto message = nlohmann::json();
+    try {
+      message = nlohmann::json::parse(found->get<std::string>());
+    } catch (...) {
+      // A slot we cannot read is skipped: reading it again would never
+      // work, and stopping here would hold up every message behind it.
+      channel.read_index += 1;
+      continue;
+    }
+    if (message.value("type", "") == "action")
+      channel.actions.push_back(std::move(message));
     else
-      channel.others.push_back(*found);
+      channel.others.push_back(std::move(message));
     channel.read_index += 1;
   }
 }
@@ -216,7 +226,13 @@ Connection_State matchmaking;
 
 void send_message(const Online& online, const nlohmann::json& message) {
   Channel& channel = get_channel(online);
-  channel.outbox.push_back(message.dump());
+  // Each slot holds the message as one piece of text, not as JSON that
+  // Firebase can look inside. Firebase cannot store an empty array or an
+  // empty object, so it drops those keys, and it turns what is left of an
+  // array into an object keyed by number. A table_state message is mostly
+  // empty arrays — one per thing with no children — so it would come back
+  // a different shape than it went in. Text comes back exactly as sent.
+  channel.outbox.push_back(nlohmann::json(message.dump()).dump());
   pump(online, channel);
 }
 
@@ -307,8 +323,10 @@ std::optional<Online_Connection> setup_local_from_argv(int argc, char** argv) {
   bool join = false;
   for (int i = 1; i < argc; ++i) {
     auto argument = std::string(argv[i]);
-    if (argument == "--local-host") host = true;
-    else if (argument == "--local-join") join = true;
+    if (argument == "--local-host")
+      host = true;
+    else if (argument == "--local-join")
+      join = true;
   }
   if (!host && !join) return std::nullopt;
   return setup_local(host);

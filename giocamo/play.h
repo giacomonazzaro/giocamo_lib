@@ -18,21 +18,6 @@
 // internally; calling both is harmless (idempotent).
 void update_zoomed_thing(Table_State& table_state, const Input& input);
 
-// Snapshot the children of every thing in `table_state` to a JSON array
-// (indexed by thing id). Used by the online sync to replicate the scene
-// tree across peers.
-nlohmann::json serialize_table_state(const Table_State& table_state);
-
-// Apply a previously-serialized table_state array onto `table_state`, updating
-// each affected thing's children and re-laying out its slots.
-void apply_table_state_message(
-  Table_State& table_state, const nlohmann::json& arr
-);
-
-// Wrap serialize_table_state in a {"type": "table_state", "table_state": [...]}
-// envelope and send it on `online`.
-void send_table_state(const Online& online, const Table_State& table_state);
-
 // Resolve the play mode in priority order:
 //   1. `--local-host` / `--local-join` on argv → loopback handshake; no menu.
 //   2. `skip_menu == true` → default Menu_Result (mode = VS_AI, no online).

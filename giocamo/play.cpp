@@ -20,23 +20,6 @@ void update_zoomed_thing(Table_State& table_state, const Input& input) {
   }
 }
 
-nlohmann::json serialize_table_state(const Table_State& table_state) {
-  nlohmann::json out = nlohmann::json::array();
-  for (const Thing& t : table_state.things) {
-    out.push_back(t.children());
-  }
-  return out;
-}
-
-void apply_table_state_message(
-  Table_State& table_state, const nlohmann::json& arr
-) {
-  for (size_t i = 0; i < arr.size() && i < table_state.things.size(); ++i) {
-    table_state.things[i]._children = arr[i].get<std::vector<int>>();
-    update_children_positions((int)i, table_state, false);
-  }
-}
-
 // The whole game state, sent after every move the local player makes and after
 // every undo, so the other player reads it and lays the table out again.
 static void send_game_state(const Online& online, const Giocamo& giocamo) {
@@ -48,13 +31,6 @@ static void send_game_state(const Online& online, const Giocamo& giocamo) {
   message["type"]       = "game_state";
   message["game_state"] = game_state;
   send_message(online, message);
-}
-
-void send_table_state(const Online& online, const Table_State& table_state) {
-  nlohmann::json msg;
-  msg["type"]        = "table_state";
-  msg["table_state"] = serialize_table_state(table_state);
-  send_message(online, msg);
 }
 
 Menu_Result run_menu(
@@ -219,12 +195,10 @@ static void run_game(
     // The UI agent reads the current frame through the input it is handed.
     giocamo.agent_ui.input = &input;
 
-    // Drain any messages the remote sent us this frame. Three kinds matter
+    // Drain any messages the remote sent us this frame. Two kinds matter
     // here: a "game_state" from the other player (read it and lay the table out
-    // again), a "playground" flip (mirror it locally) and a "table_state"
-    // snapshot, which only playground mode sends (apply it so both screens show
-    // the same arrangement). Anything else is handed to the game-specific
-    // on_message hook.
+    // again) and a "playground" flip (mirror it locally). Anything else is
+    // handed to the game-specific on_message hook.
     if (online) {
       while (auto incoming = try_recv_message(*online)) {
         std::string type = incoming->value("type", "");
@@ -245,8 +219,6 @@ static void run_game(
               leave_playground();
             }
           }
-        } else if (type == "table_state") {
-          apply_table_state_message(table, (*incoming)["table_state"]);
         } else {
           giocamo.on_message(*incoming);
         }
@@ -267,14 +239,14 @@ static void run_game(
       } else {
         leave_playground();
       }
-      // Tell the remote peer about the toggle. On entry we also blast a
-      // full table snapshot so the other side starts from the same layout.
+      // Tell the remote peer about the toggle. Nothing has changed yet, so
+      // there is nothing else to send: both tables are laid out from the
+      // same game state.
       if (online) {
         nlohmann::json msg;
         msg["type"] = "playground";
         msg["on"]   = playground;
         send_message(*online, msg);
-        if (playground) send_table_state(*online, table);
       }
     }
 
@@ -292,8 +264,12 @@ static void run_game(
       auto game_edited = giocamo.draw_game_editor();
       if (game_edited) giocamo.update_table_from_game();
 
+      // Moving things on the table is the edit, but the game state is what
+      // travels: it is worked out from the table and sent, and the other
+      // player lays its own table out from it.
       if (online && table_edited) {
-        send_table_state(*online, table);
+        giocamo.update_game_from_table();
+        send_game_state(*online, giocamo);
       }
       // Editing the game state by hand is a change like any other move.
       if (online && game_edited) {
