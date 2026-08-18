@@ -21,7 +21,6 @@ set(STANDALONE_CPP_ONLY ON CACHE BOOL "" FORCE)
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/../game      ${CMAKE_BINARY_DIR}/game_build)
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/../tabletop  ${CMAKE_BINARY_DIR}/tabletop_build)
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/../tressette ${CMAKE_BINARY_DIR}/tressette_build)
-add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/../online    ${CMAKE_BINARY_DIR}/online_build)
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/../giocamo   ${CMAKE_BINARY_DIR}/giocamo_build)
 
 add_executable(tressette_app
@@ -39,7 +38,6 @@ target_link_libraries(tressette_app PRIVATE
     tabletop_lib
     raylib
     giocamo
-    online_lib
 )
 
 if(EMSCRIPTEN)

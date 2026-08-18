@@ -22,8 +22,6 @@
 #include <game/game.h>
 #include <giocamo/menu.h>
 #include <giocamo/play.h>
-#include <online/agents.h>
-#include <online/protocol.h>
 #include <tabletop/config.h>
 #include <tabletop/input_recorder.h>
 #include <tabletop/rendering.h>

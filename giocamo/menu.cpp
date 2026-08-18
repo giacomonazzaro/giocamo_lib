@@ -7,7 +7,6 @@
 
 #include <algorithm>
 #include <cstdlib>
-#include <memory>
 
 #ifdef __EMSCRIPTEN__
 #include <emscripten.h>
@@ -16,11 +15,13 @@
 
 enum class Screen { MAIN, ONLINE, CREATING, JOINING, CONNECTING };
 
+// `connection` points at the one match being set up, owned by online.cpp.
+// Setting it back to null is how the menu walks away from a match.
 struct Menu_State {
-  Screen                            screen = Screen::MAIN;
-  std::string                       text_input;
-  std::shared_ptr<Connection_State> connection;
-  std::string                       error_message;
+  Screen            screen = Screen::MAIN;
+  std::string       text_input;
+  Connection_State* connection = nullptr;
+  std::string       error_message;
 };
 
 static void draw_text_input(
@@ -168,42 +169,27 @@ Menu_Result run_menu(
     }
 
     if (state.screen == Screen::CREATING && state.connection) {
-      std::string code;
-      {
-        std::lock_guard<std::mutex> lg(state.connection->state_lock);
-        code = state.connection->room_code;
-      }
+      const std::string& code = state.connection->room_code;
       if (!code.empty() && is_super_down(input) && key_pressed(input, KEY_C)) {
         SetClipboardText(code.c_str());
       }
     }
 
-    // Drive the ntfy.sh handshake one step per frame.
-    if (state.connection) state.connection->tick();
-
-    // Poll async connection result.
+    // Move the handshake one step per frame, then act on where it got to.
     if (state.connection) {
-      if (state.connection->ready.load()) {
+      state.connection->tick();
+      if (state.connection->ready) {
         Menu_Result r;
-        r.mode = Menu_Result::ONLINE;
-        std::lock_guard<std::mutex> lg(state.connection->state_lock);
+        r.mode         = Menu_Result::ONLINE;
         r.player_index = state.connection->player_index;
         r.seed         = state.connection->seed;
-        r.online       = {
-          state.connection->topic_send,
-          state.connection->topic_recv,
-        };
+        r.online       = state.connection->online;
         return r;
       }
-      std::string err;
-      {
-        std::lock_guard<std::mutex> lg(state.connection->state_lock);
-        err = state.connection->error;
-      }
-      if (!err.empty()) {
-        state.error_message = err;
-        state.connection.reset();
-        state.screen = Screen::ONLINE;
+      if (!state.connection->error.empty()) {
+        state.error_message = state.connection->error;
+        state.connection    = nullptr;
+        state.screen        = Screen::ONLINE;
       }
     }
 
@@ -308,11 +294,8 @@ Menu_Result run_menu(
         title, title_rect.x, title_rect.y, 54, Color{255, 255, 255, 255}
       );
 
-      std::string code;
-      if (state.connection) {
-        std::lock_guard<std::mutex> lg(state.connection->state_lock);
-        code = state.connection->room_code;
-      }
+      auto code = std::string();
+      if (state.connection) code = state.connection->room_code;
 
       // Instruction text.
       std::string instruction       = "Share this code with your friend:";
@@ -347,8 +330,8 @@ Menu_Result run_menu(
       auto back_rect =
         place_next(copy_button_rect, 180, 46, "center", "bottom", 60);
       if (menu_button(back_rect, "Back", input)) {
-        state.connection.reset();
-        state.screen = Screen::ONLINE;
+        state.connection = nullptr;
+        state.screen     = Screen::ONLINE;
       }
     } else if (state.screen == Screen::JOINING) {
       auto container =
@@ -422,8 +405,8 @@ Menu_Result run_menu(
       auto back_rect =
         place_next(connecting_rect, 180, 46, "center", "bottom", 80);
       if (menu_button(back_rect, "Back", input)) {
-        state.connection.reset();
-        state.screen = Screen::JOINING;
+        state.connection = nullptr;
+        state.screen     = Screen::JOINING;
       }
     }
 

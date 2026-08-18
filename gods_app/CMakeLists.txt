@@ -25,8 +25,6 @@ add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/../tabletop  ${CMAKE_BINARY_DIR}/ta
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/../gods           ${CMAKE_BINARY_DIR}/gods_build)
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/../giocamo           ${CMAKE_BINARY_DIR}/giocamo_build)
 
-add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/../online ${CMAKE_BINARY_DIR}/online_build)
-
 add_executable(gods_app main.cpp ui.cpp agent_ui.cpp)
 target_include_directories(gods_app PRIVATE
     .
@@ -40,7 +38,6 @@ target_link_libraries(gods_app PRIVATE
     giocamo
     nlohmann_json::nlohmann_json
 )
-target_link_libraries(gods_app PRIVATE online_lib)
 
 if(EMSCRIPTEN)
     # Flags from the raylib Working-for-Web guide.

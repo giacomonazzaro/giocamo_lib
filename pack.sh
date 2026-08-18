@@ -52,8 +52,8 @@ cp "$BUILD_DIR/${SOURCE_DIR}.wasm" "$TEMP_DIR/"
 cp "$BUILD_DIR/${SOURCE_DIR}.data" "$TEMP_DIR/"
 
 # 3. Launcher script: starts a local server and opens the browser. The wasm
-#    build talks to ntfy.sh for online matchmaking, so no relay is needed
-#    here — only a local HTTP server to serve the page.
+#    build talks to the Firebase database for online play, so nothing else
+#    is needed here — only a local HTTP server to serve the page.
 cat << 'EOF' > "$TEMP_DIR/run_app.sh"
 #!/bin/bash
 PORT=8000

@@ -1,7 +1,6 @@
 #pragma once
 
 #include <game/agent.h>
-#include <online/models.h>
 #include <struct/json.h>
 #include <tabletop/input_recorder.h>
 #include <tabletop/tabletop.h>
@@ -12,6 +11,7 @@
 #include <optional>
 
 #include "menu.h"
+#include "online.h"
 
 // SPACE-to-zoom: zooms the thing under the cursor while SPACE is held,
 // clears the zoom otherwise. tabletop's process_input also handles this

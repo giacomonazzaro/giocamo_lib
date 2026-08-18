@@ -19,7 +19,6 @@ set(STANDALONE_CPP_ONLY ON CACHE BOOL "" FORCE)
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/../game     ${CMAKE_BINARY_DIR}/game_build)
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/../tabletop ${CMAKE_BINARY_DIR}/tabletop_build)
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/../mindbug  ${CMAKE_BINARY_DIR}/mindbug_build)
-add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/../online   ${CMAKE_BINARY_DIR}/online_build)
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/../giocamo  ${CMAKE_BINARY_DIR}/giocamo_build)
 
 add_executable(mindbug_app
@@ -37,7 +36,6 @@ target_link_libraries(mindbug_app PRIVATE
     tabletop_lib
     raylib
     giocamo
-    online_lib
 )
 
 if(EMSCRIPTEN)

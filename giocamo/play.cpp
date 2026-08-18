@@ -1,8 +1,5 @@
 #include "play.h"
 
-#include <online/agents.h>
-#include <online/protocol.h>
-#include <online/setup.h>
 #include <raylib.h>
 #include <tabletop/config.h>
 #include <tabletop/editor.h>
@@ -69,7 +66,7 @@ Menu_Result run_menu(
   bool                             skip_menu,
   int                              cli_seed
 ) {
-  // --local-host / --local-join bypass the menu and STUN/ntfy entirely.
+  // --local-host / --local-join skip the menu: the room code is fixed.
   if (local_connection) {
     Menu_Result result;
     result.mode         = Menu_Result::ONLINE;
