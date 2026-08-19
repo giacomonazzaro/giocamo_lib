@@ -14,6 +14,7 @@
 
 #ifdef __EMSCRIPTEN__
 #include <emscripten.h>
+#include <emscripten/html5.h>
 #endif
 
 // --- Static globals (lazy initialized) ---
@@ -154,27 +155,6 @@ void draw_background(const Input& input, float turn) {
   if (s_bg_time_loc == -1) {
     load_background_shader();
   }
-
-#ifdef __EMSCRIPTEN__
-  // PLATFORM_WEB does not implement GetWindowScaleDPI (returns {1,1}).  After
-  // we resize the canvas pixel buffer to dpr × logical in menu.cpp, raylib's
-  // viewport is still clamped to the logical 1700×1000 window, leaving the
-  // rest of the physical canvas black.  Override the GL viewport and projection
-  // every frame to cover the full physical canvas.
-  {
-    double dpr = emscripten_get_device_pixel_ratio();
-    if (dpr > 1.0) {
-      int pw = (int)(tt::WINDOW_WIDTH * dpr);
-      int ph = (int)(tt::WINDOW_HEIGHT * dpr);
-      rlViewport(0, 0, pw, ph);
-      rlMatrixMode(RL_PROJECTION);
-      rlLoadIdentity();
-      rlOrtho(0, tt::WINDOW_WIDTH, tt::WINDOW_HEIGHT, 0, 0, 1);
-      rlMatrixMode(RL_MODELVIEW);
-      rlLoadIdentity();
-    }
-  }
-#endif
 
   // Smoothly interpolate toward the target turn value.
   float dt    = GetFrameTime();
@@ -618,13 +598,48 @@ void begin_screen_fit() {
 
 void end_screen_fit() { rlPopMatrix(); }
 
+#ifdef __EMSCRIPTEN__
+// Give the canvas the browser tab's size, in real screen pixels.
+//
+// The tab's size in CSS pixels is half the real pixels on a Retina screen,
+// so a canvas that big draws a soft picture. This makes the canvas hold
+// tab size times the device pixel ratio, and shows it at tab size with CSS,
+// so the picture is drawn at full resolution and shrunk down by the browser.
+//
+// SetWindowSize tells raylib the screen is that same size in real pixels.
+// Everything downstream then works in real pixels and agrees: screen_fit
+// scales the fixed logical layout up to fill the canvas, and the mouse
+// arrives in real pixels too, because the browser scales mouse positions by
+// the canvas size over its displayed size.
+static EM_BOOL fit_canvas_to_tab(int, const EmscriptenUiEvent*, void*) {
+  double ratio      = emscripten_get_device_pixel_ratio();
+  int    tab_width  = EM_ASM_INT(return window.innerWidth;);
+  int    tab_height = EM_ASM_INT(return window.innerHeight;);
+  if (tab_width <= 0 || tab_height <= 0) return EM_TRUE;
+  SetWindowSize((int)(tab_width * ratio), (int)(tab_height * ratio));
+  // SetWindowSize also writes the CSS size, in real pixels, which would show
+  // the canvas larger than the tab and bring up scroll bars. Put it back.
+  EM_ASM(
+    {
+      var canvas          = document.getElementById('canvas');
+      canvas.style.width  = $0 + 'px';
+      canvas.style.height = $1 + 'px';
+    },
+    tab_width,
+    tab_height
+  );
+  return EM_TRUE;
+}
+#endif
+
 void open_table_window(int width, int height, const std::string& title) {
   if (IsWindowReady()) return;
 #ifdef __EMSCRIPTEN__
-  // The browser sizes the canvas (the page's CSS does the fitting), and asking
-  // WebGL for multisampling or a resizable window gets a black canvas instead
-  // of a context.
-  SetConfigFlags(FLAG_WINDOW_HIGHDPI);
+  // Asking WebGL for multisampling gets a black canvas instead of a context.
+  // The canvas is sized by fit_canvas_to_tab below, not by raylib: leaving
+  // FLAG_WINDOW_RESIZABLE off keeps raylib's own browser resize from running
+  // at all, so only one piece of code decides the size.
+  SetConfigFlags(0);
 #else
   // Request 4x multisampling and high-DPI so on Retina displays the GL
   // framebuffer is created at physical pixel resolution (2x logical) —
@@ -635,6 +650,13 @@ void open_table_window(int width, int height, const std::string& title) {
   );
 #endif
   InitWindow(width, height, title.c_str());
+#ifdef __EMSCRIPTEN__
+  // `width` and `height` above only hold until this runs.
+  emscripten_set_resize_callback(
+    EMSCRIPTEN_EVENT_TARGET_WINDOW, nullptr, 1, fit_canvas_to_tab
+  );
+  fit_canvas_to_tab(0, nullptr, nullptr);
+#endif
   SetTargetFPS(tt::TARGET_FPS);
   // One ImGui context for the whole program, set up once the window exists.
   rlImGuiSetup(true);

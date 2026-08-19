@@ -8,11 +8,6 @@
 #include <algorithm>
 #include <cstdlib>
 
-#ifdef __EMSCRIPTEN__
-#include <emscripten.h>
-#include <emscripten/html5.h>
-#endif
-
 enum class Screen { MAIN, ONLINE, CREATING, JOINING, CONNECTING };
 
 // `connection` points at the one match being set up, owned by online.cpp.
@@ -110,38 +105,6 @@ Menu_Result run_menu(
   // own it: it is opened once here if nothing has yet, and closed by play_game
   // when everything is done with it.
   open_table_window(W, H, title);
-#ifdef __EMSCRIPTEN__
-  // FLAG_WINDOW_HIGHDPI is not implemented on PLATFORM_WEB. Resize the
-  // canvas pixel buffer to physical resolution for Retina sharpness
-  // (draw_background maps the logical coord space onto it every frame), then
-  // let CSS scale the displayed canvas to fit the browser window — preserving
-  // aspect ratio and centering it — so the whole layout stays visible at any
-  // size. Scaling the element uniformly keeps mouse coordinates correct.
-  double dpr = emscripten_get_device_pixel_ratio();
-  if (dpr > 1.0) {
-    emscripten_set_canvas_element_size(
-      "#canvas", (int)(tt::WINDOW_WIDTH * dpr), (int)(tt::WINDOW_HEIGHT * dpr)
-    );
-  }
-  EM_ASM(
-    {
-      var canvas = document.getElementById('canvas');
-      function fit_canvas() {
-        var scale =
-          Math.min(window.innerWidth / $0, window.innerHeight / $1);
-        canvas.style.position = 'absolute';
-        canvas.style.width    = ($0 * scale) + 'px';
-        canvas.style.height   = ($1 * scale) + 'px';
-        canvas.style.left     = ((window.innerWidth - $0 * scale) / 2) + 'px';
-        canvas.style.top      = ((window.innerHeight - $1 * scale) / 2) + 'px';
-      }
-      window.addEventListener('resize', fit_canvas);
-      fit_canvas();
-    },
-    tt::WINDOW_WIDTH,
-    tt::WINDOW_HEIGHT
-  );
-#endif
 
   Menu_State state;
 
